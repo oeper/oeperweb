@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Downloads</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --glass-bg: rgba(255,255,255,0.04);
+    --glass-border: rgba(255,255,255,0.10);
+    --glass-shine: rgba(255,255,255,0.07);
+    --accent-1: #0f0f0f;
+    --accent-2: #020202;
+    --text-primary: rgba(255,255,255,0.92);
+    --text-muted: rgba(255,255,255,0.45);
+  }
+
+  body { min-height:100vh;background:#080612;font-family:'Syne',sans-serif;color:var(--text-primary);overflow-x:hidden;position:relative; }
+
+  .bg-scene { position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none; }
+  .blob { position:absolute;border-radius:50%;filter:blur(90px);opacity:0.55;animation:drift linear infinite; }
+  .blob-1 { width:600px;height:600px;background:radial-gradient(circle,#5b21b6 0%,#1e1b4b 60%,transparent 100%);top:-120px;left:-160px;animation-duration:28s; }
+  .blob-2 { width:500px;height:500px;background:radial-gradient(circle,#0891b2 0%,#064e3b 60%,transparent 100%);bottom:-100px;right:-100px;animation-duration:22s;animation-direction:reverse; }
+  .blob-3 { width:420px;height:420px;background:radial-gradient(circle,#be185d 0%,#4a044e 60%,transparent 100%);top:40%;left:55%;animation-duration:35s; }
+  .blob-4 { width:340px;height:340px;background:radial-gradient(circle,#0369a1 0%,#1e3a5f 60%,transparent 100%);top:20%;right:10%;animation-duration:18s;animation-direction:reverse; }
+
+  @keyframes drift {
+    0%   { transform:translate(0,0) scale(1); }
+    25%  { transform:translate(40px,30px) scale(1.05); }
+    50%  { transform:translate(15px,60px) scale(0.95); }
+    75%  { transform:translate(-25px,20px) scale(1.03); }
+    100% { transform:translate(0,0) scale(1); }
+  }
+  .bg-scene::after {
+    content:'';position:absolute;inset:0;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    opacity:0.03;mix-blend-mode:overlay;
+  }
+
+  .page { position:relative;z-index:1;max-width:900px;margin:0 auto;padding:72px 24px 100px; }
+
+  .header { margin-bottom:56px;animation:fadeUp 0.7s ease both; }
+  .header-eyebrow { font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--accent-1);margin-bottom:14px;opacity:0.8; }
+  .header h1 { font-size:clamp(2.2rem,5vw,3.6rem);font-weight:800;line-height:1.08;background:linear-gradient(135deg,#fff 30%,var(--accent-2) 70%,var(--accent-1) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:16px; }
+  .header p { color:var(--text-muted);font-size:1rem;max-width:460px;line-height:1.65; }
+
+  .toolbar { display:flex;gap:12px;margin-bottom:32px;flex-wrap:wrap;animation:fadeUp 0.7s 0.1s ease both; }
+  .search-wrap { flex:1;min-width:200px;position:relative; }
+  .search-wrap svg { position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none; }
+  .search-input { width:100%;background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:12px;padding:12px 14px 12px 40px;color:var(--text-primary);font-family:'DM Mono',monospace;font-size:13px;outline:none;transition:border-color 0.25s,box-shadow 0.25s; }
+  .search-input::placeholder { color:var(--text-muted); }
+  .search-input:focus { border-color:rgba(126,232,250,0.35);box-shadow:0 0 0 3px rgba(126,232,250,0.08); }
+
+  .filter-pills { display:flex;gap:8px;flex-wrap:wrap;align-items:center; }
+  .pill {
+    background:var(--glass-bg);border:1px solid var(--glass-border);
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    border-radius:999px;padding:8px 16px;font-size:12px;font-weight:500;
+    letter-spacing:0.04em;color:var(--text-muted);cursor:pointer;
+    transition:all 0.2s;white-space:nowrap;
+  }
+  .pill:hover { color:var(--text-primary);border-color:rgba(255,255,255,0.2); }
+  .pill.active {
+    background:rgba(126,232,250,0.12);border-color:rgba(126,232,250,0.35);color:var(--accent-1);
+  }
+  /* per-category pill colour, set via JS inline style */
+  .pill[data-color]:hover,
+  .pill[data-color].active {
+    background: var(--cat-bg);
+    border-color: var(--cat-border);
+    color: var(--cat-color);
+  }
+
+  .stats { display:flex;gap:28px;margin-bottom:28px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted);animation:fadeUp 0.7s 0.05s ease both;flex-wrap:wrap; }
+  .stats strong { color:var(--text-primary);font-weight:500; }
+
+  /* ── Grid ── */
+  .file-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+  }
+
+  /* No-image: full-width horizontal row */
+  .file-card {
+    position:relative;background:var(--glass-bg);border:1px solid var(--glass-border);
+    border-radius:18px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+    overflow:hidden;cursor:pointer;
+    transition:transform 0.25s cubic-bezier(0.23,1,0.32,1),border-color 0.25s,box-shadow 0.25s;
+    animation:fadeUp 0.6s ease both;
+    display:flex;align-items:center;gap:20px;padding:22px 24px;
+    grid-column: 1 / -1;
+  }
+  /* With image: vertical tile */
+  .file-card.has-image {
+    flex-direction:column;align-items:stretch;gap:0;padding:0;
+    grid-column: auto;
+  }
+
+  .file-card::before {
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(135deg,var(--glass-shine) 0%,transparent 55%);
+    border-radius:inherit;pointer-events:none;opacity:0;transition:opacity 0.3s;
+  }
+  .file-card:hover::before { opacity:1; }
+  .file-card:hover {
+    transform:translateY(-2px);border-color:rgba(255,255,255,0.18);
+    box-shadow:0 20px 50px rgba(0,0,0,0.35);
+  }
+  /* category-coloured hover glow, set via JS */
+  .file-card[data-glow]:hover {
+    box-shadow: var(--card-glow);
+  }
+
+  /* ── Preview image ── */
+  .card-preview { width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-radius:18px 18px 0 0;flex-shrink:0; }
+  .card-preview-wrap { position:relative;flex-shrink:0; }
+  .card-preview-wrap::after { content:'';position:absolute;bottom:0;left:0;right:0;height:48px;background:linear-gradient(to bottom,transparent,rgba(8,6,18,0.55));pointer-events:none; }
+
+  .card-body { display:flex;align-items:center;gap:16px;padding:16px 18px; }
+
+  /* ── File icon ── */
+  .file-icon { width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;position:relative;background:rgba(255,255,255,0.07); }
+  .file-icon::after { content:'';position:absolute;inset:0;border-radius:inherit;border:1px solid rgba(255,255,255,0.12); }
+
+  .file-info { flex:1;min-width:0; }
+  .file-name { font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .file-desc { font-size:11px;color:var(--text-muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:'DM Mono',monospace; }
+
+  /* ── Category tag ── */
+  .cat-tag {
+    font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;
+    text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid;
+    opacity:0.8;flex-shrink:0;white-space:nowrap;
+  }
+
+  /* ── Download button ── */
+  .dl-btn { flex-shrink:0;width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:all 0.2s;cursor:pointer;text-decoration:none; }
+  .dl-btn:hover { background:rgba(126,232,250,0.14);border-color:rgba(126,232,250,0.35);color:var(--accent-1);transform:scale(1.08); }
+  .dl-btn.downloading { animation:spin 0.8s linear infinite;border-color:rgba(126,232,250,0.5);color:var(--accent-1); }
+
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .empty { text-align:center;padding:80px 0;color:var(--text-muted);display:none; }
+  .empty svg { opacity:0.25;margin-bottom:16px; }
+  .empty p { font-size:14px; }
+
+  @keyframes fadeUp {
+    from { opacity:0;transform:translateY(18px); }
+    to   { opacity:1;transform:translateY(0); }
+  }
+
+  .toast { position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(20,20,30,0.85);border:1px solid rgba(126,232,250,0.25);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:12px;padding:12px 22px;font-size:13px;color:var(--accent-1);font-family:'DM Mono',monospace;opacity:0;transition:opacity 0.3s,transform 0.3s;pointer-events:none;z-index:100;white-space:nowrap; }
+  .toast.show { opacity:1;transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="bg-scene">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="blob blob-4"></div>
+</div>
+
+<div class="page">
+  <header class="header">
+    <div class="header-eyebrow">// file repository</div>
+    <h1>Downloads</h1>
+    <p>All assets, documents, and resources in one place.</p>
+  </header>
+
+  <div class="stats">
+    <span><strong id="visibleCount">0</strong> files</span>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input class="search-input" type="text" placeholder="Search files…" id="searchInput">
+    </div>
+    <div class="filter-pills" id="filterPills">
+      <button class="pill active" data-filter="__all__">All</button>
+    </div>
+  </div>
+
+  <div class="file-list" id="fileList"></div>
+  <div class="empty" id="emptyState">
+    <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+      <path d="M9 12h6m-3-3v6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+    </svg>
+    <p>No files match your search.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   CATEGORY CONFIG
+   ─────────────────────────────────────────────────────────────
+   Define your own categories here. Each category needs:
+     id     — unique key used in FILES entries (no spaces)
+     label  — display name shown on the filter pill and tag
+     color  — text/tag colour  (any CSS colour)
+     icon   — emoji shown in the file icon badge
+
+   You can add as many as you like, or remove ones you don't need.
+   The filter pills are built automatically from this list.
+============================================================ */
+const CATEGORIES = [
+  { id: 'reports',  label: 'Reports',   color: '#f472b6', icon: '📄' },
+  { id: 'assets',   label: 'Assets',    color: '#34d399', icon: '🎨' },
+  { id: 'software', label: 'Software',  color: '#7ee8fa', icon: '💾' },
+  { id: 'guides',   label: 'Guides',    color: '#fbbf24', icon: '📖' },
+  { id: 'media',    label: 'Media',     color: '#a78bfa', icon: '🎬' },
+];
+
+/* ============================================================
+   FILE CONFIG
+   ─────────────────────────────────────────────────────────────
+   Each entry:
+     url      (required) — direct download link
+     category (required) — must match an id from CATEGORIES above
+     label    (optional) — display name; falls back to filename in URL
+     desc     (optional) — subtitle shown under the name
+     image    (optional) — preview image URL shown above the card
+                           Set to null or omit to show no image (horizontal row)
+============================================================ */
+const FILES = [
+  {
+    url:      'https://example.com/files/annual-report-2024.pdf',
+    category: 'reports',
+    label:    'Annual Report 2024',
+    desc:     'Full year financial summary',
+    image:    'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&q=80',
+  },
+  {
+    url:      'https://example.com/files/project-assets-v3.zip',
+    category: 'assets',
+    desc:     'Design assets for the Q1 campaign',
+    image:    'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=600&q=80',
+  },
+  {
+    url:      'https://example.com/files/brand-guidelines.docx',
+    category: 'guides',
+    label:    'Brand Guidelines',
+    image:    null, // no image → full-width horizontal row
+  },
+  {
+    url:      'https://example.com/files/setup-guide.pdf',
+    category: 'guides',
+    label:    'Setup Guide',
+    desc:     'Step-by-step installation instructions',
+    // no image key → same as null
+  },
+  {
+    url:      'https://example.com/files/product-demo-hd.mp4',
+    category: 'media',
+    label:    'Product Demo (HD)',
+    desc:     '3-minute walkthrough video',
+    image:    'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&q=80',
+  },
+  {
+    url:      'https://example.com/files/api-client-v2.tar.gz',
+    category: 'software',
+    desc:     'Source code + docs',
+    image:    'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=600&q=80',
+  },
+];
+/* ============================================================ */
+
+
+// ── Build category lookup ────────────────────────────────────
+const CAT_MAP = {};
+CATEGORIES.forEach(c => { CAT_MAP[c.id] = c; });
+
+function getCategory(id) {
+  return CAT_MAP[id] || { id: id, label: id, color: 'rgba(255,255,255,0.5)', icon: '📁' };
+}
+
+// Derive a subtle background from the category colour (used for tags + pills)
+function colorToGlassStyle(hex) {
+  // Convert any colour to rgba approximation for backgrounds
+  // We'll use inline CSS variables set on the element
+  return hex;
+}
+
+function filenameFromUrl(url) {
+  try { return decodeURIComponent(new URL(url).pathname.split('/').pop()) || url; }
+  catch { return url; }
+}
+
+// ── Build filter pills ───────────────────────────────────────
+// Only show pills for categories that actually appear in FILES
+const usedCatIds = [...new Set(FILES.map(f => f.category))];
+const pillsContainer = document.getElementById('filterPills');
+
+usedCatIds.forEach(id => {
+  const cat = getCategory(id);
+  const b = document.createElement('button');
+  b.className = 'pill';
+  b.dataset.filter = id;
+  b.dataset.color = cat.color;
+  b.textContent = cat.label;
+  // inject CSS variables for the coloured active state
+  b.style.setProperty('--cat-color', cat.color);
+  b.style.setProperty('--cat-bg', hexToAlpha(cat.color, 0.12));
+  b.style.setProperty('--cat-border', hexToAlpha(cat.color, 0.35));
+  pillsContainer.appendChild(b);
+});
+
+// Simple helper: turn any hex/rgb colour into rgba with given alpha
+// Works for #rrggbb and rgb() strings
+function hexToAlpha(color, alpha) {
+  // Try hex
+  const hex = color.replace('#','');
+  if (/^[0-9a-f]{6}$/i.test(hex)) {
+    const r = parseInt(hex.slice(0,2),16);
+    const g = parseInt(hex.slice(2,4),16);
+    const b = parseInt(hex.slice(4,6),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  // Fallback
+  return color;
+}
+
+// ── Render file cards ────────────────────────────────────────
+const fileList = document.getElementById('fileList');
+const DL_ICON = `<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+
+FILES.forEach((file, i) => {
+  const cat = getCategory(file.category);
+  const name = file.label || filenameFromUrl(file.url);
+  const hasImage = !!file.image;
+
+  const card = document.createElement('div');
+  card.className = 'file-card' + (hasImage ? ' has-image' : '');
+  card.dataset.category = file.category;
+  card.dataset.name = name.toLowerCase();
+  card.dataset.glow = '1';
+  card.style.setProperty('--card-glow',
+    `0 20px 50px ${hexToAlpha(cat.color, 0.18)}, 0 0 0 1px ${hexToAlpha(cat.color, 0.1)} inset`
+  );
+  card.style.animationDelay = (0.12 + i * 0.07) + 's';
+
+  const tagStyle = `color:${cat.color};border-color:${hexToAlpha(cat.color, 0.38)};`;
+  const iconBg   = `background:${hexToAlpha(cat.color, 0.14)};`;
+
+  const infoRow = `
+    <div class="file-icon" style="${iconBg}">${cat.icon}</div>
+    <div class="file-info">
+      <div class="file-name">${name}</div>
+      ${file.desc ? `<div class="file-desc">${file.desc}</div>` : ''}
+    </div>
+    <span class="cat-tag" style="${tagStyle}">${cat.label}</span>
+    <a class="dl-btn" href="${file.url}" download title="Download">${DL_ICON}</a>
+  `;
+
+  if (hasImage) {
+    card.innerHTML = `
+      <div class="card-preview-wrap">
+        <img class="card-preview" src="${file.image}" alt="${name}" loading="lazy">
+      </div>
+      <div class="card-body">${infoRow}</div>
+    `;
+  } else {
+    card.innerHTML = infoRow;
+  }
+
+  // whole-card click
+  card.addEventListener('click', e => {
+    if (e.target.closest('.dl-btn')) return;
+    card.querySelector('.dl-btn').click();
+  });
+
+  // download animation
+  card.querySelector('.dl-btn').addEventListener('click', function() {
+    const btn = this;
+    if (btn.classList.contains('downloading')) return;
+    btn.classList.add('downloading');
+    btn.innerHTML = `<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`;
+    setTimeout(() => {
+      btn.classList.remove('downloading');
+      btn.innerHTML = `<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`;
+      btn.style.color = '#34d399';
+      btn.style.borderColor = 'rgba(52,211,153,0.4)';
+      showToast('↓ ' + name);
+      setTimeout(() => {
+        btn.innerHTML = DL_ICON;
+        btn.style.color = '';
+        btn.style.borderColor = '';
+      }, 2500);
+    }, 800 + Math.random() * 300);
+  });
+
+  fileList.appendChild(card);
+});
+
+// ── Filter + search ──────────────────────────────────────────
+let activeFilter = '__all__';
+const visibleCount = document.getElementById('visibleCount');
+const emptyState   = document.getElementById('emptyState');
+const searchInput  = document.getElementById('searchInput');
+
+function applyFilters() {
+  const q = searchInput.value.toLowerCase().trim();
+  let count = 0;
+  fileList.querySelectorAll('.file-card').forEach(card => {
+    const show = (activeFilter === '__all__' || card.dataset.category === activeFilter)
+              && (!q || card.dataset.name.includes(q));
+    card.style.display = show ? '' : 'none';
+    if (show) count++;
+  });
+  visibleCount.textContent = count;
+  emptyState.style.display = count === 0 ? 'block' : 'none';
+}
+
+document.querySelectorAll('.pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    activeFilter = pill.dataset.filter;
+    applyFilters();
+  });
+});
+searchInput.addEventListener('input', applyFilters);
+applyFilters();
+
+// ── Toast ────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+</script>
+</body>
+</html>
