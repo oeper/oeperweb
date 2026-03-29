@@ -12,8 +12,8 @@
     --glass-bg: rgba(255,255,255,0.04);
     --glass-border: rgba(255,255,255,0.10);
     --glass-shine: rgba(255,255,255,0.07);
-    --accent-1: #0f0f0f;
-    --accent-2: #020202;
+    --accent-1: #e0e0e0;
+    --accent-2: #a0a0a0;
     --text-primary: rgba(255,255,255,0.92);
     --text-muted: rgba(255,255,255,0.45);
   }
@@ -22,10 +22,10 @@
 
   .bg-scene { position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none; }
   .blob { position:absolute;border-radius:50%;filter:blur(90px);opacity:0.55;animation:drift linear infinite; }
-  .blob-1 { width:600px;height:600px;background:radial-gradient(circle,#5b21b6 0%,#1e1b4b 60%,transparent 100%);top:-120px;left:-160px;animation-duration:28s; }
-  .blob-2 { width:500px;height:500px;background:radial-gradient(circle,#0891b2 0%,#064e3b 60%,transparent 100%);bottom:-100px;right:-100px;animation-duration:22s;animation-direction:reverse; }
-  .blob-3 { width:420px;height:420px;background:radial-gradient(circle,#be185d 0%,#4a044e 60%,transparent 100%);top:40%;left:55%;animation-duration:35s; }
-  .blob-4 { width:340px;height:340px;background:radial-gradient(circle,#0369a1 0%,#1e3a5f 60%,transparent 100%);top:20%;right:10%;animation-duration:18s;animation-direction:reverse; }
+  .blob-1 { width:600px;height:600px;background:radial-gradient(circle,#2a2a2a 0%,#141414 60%,transparent 100%);top:-120px;left:-160px;animation-duration:28s; }
+  .blob-2 { width:500px;height:500px;background:radial-gradient(circle,#1e1e1e 0%,#0e0e0e 60%,transparent 100%);bottom:-100px;right:-100px;animation-duration:22s;animation-direction:reverse; }
+  .blob-3 { width:420px;height:420px;background:radial-gradient(circle,#222222 0%,#111111 60%,transparent 100%);top:40%;left:55%;animation-duration:35s; }
+  .blob-4 { width:340px;height:340px;background:radial-gradient(circle,#1a1a1a 0%,#0c0c0c 60%,transparent 100%);top:20%;right:10%;animation-duration:18s;animation-direction:reverse; }
 
   @keyframes drift {
     0%   { transform:translate(0,0) scale(1); }
@@ -52,7 +52,7 @@
   .search-wrap svg { position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none; }
   .search-input { width:100%;background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:12px;padding:12px 14px 12px 40px;color:var(--text-primary);font-family:'DM Mono',monospace;font-size:13px;outline:none;transition:border-color 0.25s,box-shadow 0.25s; }
   .search-input::placeholder { color:var(--text-muted); }
-  .search-input:focus { border-color:rgba(126,232,250,0.35);box-shadow:0 0 0 3px rgba(126,232,250,0.08); }
+  .search-input:focus { border-color:rgba(255,255,255,0.30);box-shadow:0 0 0 3px rgba(255,255,255,0.06); }
 
   .filter-pills { display:flex;gap:8px;flex-wrap:wrap;align-items:center; }
   .pill {
@@ -64,7 +64,7 @@
   }
   .pill:hover { color:var(--text-primary);border-color:rgba(255,255,255,0.2); }
   .pill.active {
-    background:rgba(126,232,250,0.12);border-color:rgba(126,232,250,0.35);color:var(--accent-1);
+    background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.30);color:rgba(255,255,255,0.9);
   }
   /* per-category pill colour, set via JS inline style */
   .pill[data-color]:hover,
@@ -77,14 +77,14 @@
   .stats { display:flex;gap:28px;margin-bottom:28px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted);animation:fadeUp 0.7s 0.05s ease both;flex-wrap:wrap; }
   .stats strong { color:var(--text-primary);font-weight:500; }
 
-  /* ── Grid ── */
+  /* ── List ── */
   .file-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 14px;
   }
 
-  /* No-image: full-width horizontal row */
+  /* All cards: full-width horizontal row */
   .file-card {
     position:relative;background:var(--glass-bg);border:1px solid var(--glass-border);
     border-radius:18px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
@@ -92,12 +92,10 @@
     transition:transform 0.25s cubic-bezier(0.23,1,0.32,1),border-color 0.25s,box-shadow 0.25s;
     animation:fadeUp 0.6s ease both;
     display:flex;align-items:center;gap:20px;padding:22px 24px;
-    grid-column: 1 / -1;
   }
-  /* With image: vertical tile */
+  /* With image: image stacked above the info row */
   .file-card.has-image {
     flex-direction:column;align-items:stretch;gap:0;padding:0;
-    grid-column: auto;
   }
 
   .file-card::before {
@@ -115,12 +113,18 @@
     box-shadow: var(--card-glow);
   }
 
-  /* ── Preview image ── */
-  .card-preview { width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-radius:18px 18px 0 0;flex-shrink:0; }
-  .card-preview-wrap { position:relative;flex-shrink:0; }
-  .card-preview-wrap::after { content:'';position:absolute;bottom:0;left:0;right:0;height:48px;background:linear-gradient(to bottom,transparent,rgba(8,6,18,0.55));pointer-events:none; }
+  /* ── Preview image (top banner) ── */
+  .card-preview { width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-radius:18px 18px 0 0; }
+  .card-preview-wrap {
+    position:relative;flex-shrink:0;overflow:hidden;border-radius:18px 18px 0 0;
+  }
+  .card-preview-wrap::after {
+    content:'';position:absolute;bottom:0;left:0;right:0;height:48px;
+    background:linear-gradient(to bottom,transparent,rgba(8,6,18,0.5));
+    pointer-events:none;
+  }
 
-  .card-body { display:flex;align-items:center;gap:16px;padding:16px 18px; }
+  .card-body { display:flex;align-items:center;gap:20px;padding:18px 24px;flex:1;min-width:0; }
 
   /* ── File icon ── */
   .file-icon { width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;position:relative;background:rgba(255,255,255,0.07); }
@@ -139,8 +143,8 @@
 
   /* ── Download button ── */
   .dl-btn { flex-shrink:0;width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:all 0.2s;cursor:pointer;text-decoration:none; }
-  .dl-btn:hover { background:rgba(126,232,250,0.14);border-color:rgba(126,232,250,0.35);color:var(--accent-1);transform:scale(1.08); }
-  .dl-btn.downloading { animation:spin 0.8s linear infinite;border-color:rgba(126,232,250,0.5);color:var(--accent-1); }
+  .dl-btn:hover { background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.30);color:rgba(255,255,255,0.9);transform:scale(1.08); }
+  .dl-btn.downloading { animation:spin 0.8s linear infinite;border-color:rgba(255,255,255,0.4);color:rgba(255,255,255,0.8); }
 
   @keyframes spin { to { transform:rotate(360deg); } }
 
@@ -153,7 +157,7 @@
     to   { opacity:1;transform:translateY(0); }
   }
 
-  .toast { position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(20,20,30,0.85);border:1px solid rgba(126,232,250,0.25);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:12px;padding:12px 22px;font-size:13px;color:var(--accent-1);font-family:'DM Mono',monospace;opacity:0;transition:opacity 0.3s,transform 0.3s;pointer-events:none;z-index:100;white-space:nowrap; }
+  .toast { position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(20,20,20,0.90);border:1px solid rgba(255,255,255,0.15);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:12px;padding:12px 22px;font-size:13px;color:rgba(255,255,255,0.85);font-family:'DM Mono',monospace;opacity:0;transition:opacity 0.3s,transform 0.3s;pointer-events:none;z-index:100;white-space:nowrap; }
   .toast.show { opacity:1;transform:translateX(-50%) translateY(0); }
 </style>
 </head>
@@ -207,18 +211,18 @@
    Define your own categories here. Each category needs:
      id     — unique key used in FILES entries (no spaces)
      label  — display name shown on the filter pill and tag
-     color  — text/tag colour  (any CSS colour)
+     color  — text/tag colour (keep to greys/whites for monochrome look)
      icon   — emoji shown in the file icon badge
 
    You can add as many as you like, or remove ones you don't need.
    The filter pills are built automatically from this list.
 ============================================================ */
 const CATEGORIES = [
-  { id: 'reports',  label: 'Reports',   color: '#f472b6', icon: '📄' },
-  { id: 'assets',   label: 'Assets',    color: '#34d399', icon: '🎨' },
-  { id: 'software', label: 'Software',  color: '#7ee8fa', icon: '💾' },
-  { id: 'guides',   label: 'Guides',    color: '#fbbf24', icon: '📖' },
-  { id: 'media',    label: 'Media',     color: '#a78bfa', icon: '🎬' },
+  { id: 'reports',  label: 'Reports',   color: '#d4d4d4', icon: '📄' },
+  { id: 'assets',   label: 'Assets',    color: '#a3a3a3', icon: '🎨' },
+  { id: 'software', label: 'Software',  color: '#e5e5e5', icon: '💾' },
+  { id: 'guides',   label: 'Guides',    color: '#b5b5b5', icon: '📖' },
+  { id: 'media',    label: 'Media',     color: '#c9c9c9', icon: '🎬' },
 ];
 
 /* ============================================================
@@ -388,8 +392,8 @@ FILES.forEach((file, i) => {
     setTimeout(() => {
       btn.classList.remove('downloading');
       btn.innerHTML = `<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`;
-      btn.style.color = '#34d399';
-      btn.style.borderColor = 'rgba(52,211,153,0.4)';
+      btn.style.color = 'rgba(255,255,255,0.85)';
+      btn.style.borderColor = 'rgba(255,255,255,0.3)';
       showToast('↓ ' + name);
       setTimeout(() => {
         btn.innerHTML = DL_ICON;
