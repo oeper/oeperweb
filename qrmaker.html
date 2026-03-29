@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .tab-active {
+            color: #9333ea;
+            border-bottom: 2px solid #9333ea;
+            background-color: #f5f3ff;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-4">
+
+    <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl mb-4">
+                <i data-lucide="qr-code" class="w-8 h-8 text-white"></i>
+            </div>
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
+                QR Code Generator
+            </h1>
+            <p class="text-gray-600 text-lg">Generate QR codes for URLs, text, and contact information</p>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <div class="border-b border-gray-200">
+                <nav class="flex">
+                    <button onclick="switchTab('url')" id="tab-url" class="flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-all duration-200 tab-active">
+                        <i data-lucide="link" class="w-4 h-4"></i> URL
+                    </button>
+                    <button onclick="switchTab('text')" id="tab-text" class="flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-all duration-200 text-gray-500 hover:bg-gray-50">
+                        <i data-lucide="message-square" class="w-4 h-4"></i> Text
+                    </button>
+                    <button onclick="switchTab('contact')" id="tab-contact" class="flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-all duration-200 text-gray-500 hover:bg-gray-50">
+                        <i data-lucide="user" class="w-4 h-4"></i> Contact
+                    </button>
+                </nav>
+            </div>
+
+            <div class="p-8">
+                <div class="grid lg:grid-cols-2 gap-8">
+                    <div class="space-y-6">
+                        <h2 id="input-title" class="text-2xl font-semibold text-gray-800 mb-4">Enter URL</h2>
+
+                        <div id="view-url" class="input-view">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Website URL</label>
+                            <input type="url" id="urlInput" oninput="updateQR()" placeholder="example.com" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
+                            <p class="text-xs text-gray-500 mt-1">We'll add https:// automatically if missing.</p>
+                        </div>
+
+                        <div id="view-text" class="input-view hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Text Content</label>
+                            <textarea id="textInput" oninput="updateQR()" placeholder="Enter any text..." rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none resize-none"></textarea>
+                        </div>
+
+                        <div id="view-contact" class="input-view hidden space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <input type="text" id="c-first" oninput="updateQR()" placeholder="First Name" class="px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-purple-500">
+                                <input type="text" id="c-last" oninput="updateQR()" placeholder="Last Name" class="px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-purple-500">
+                            </div>
+                            <input type="tel" id="c-phone" oninput="updateQR()" placeholder="Phone Number" class="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-purple-500">
+                            <input type="email" id="c-email" oninput="updateQR()" placeholder="Email Address" class="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-purple-500">
+                            <input type="text" id="c-org" oninput="updateQR()" placeholder="Organization" class="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-purple-500">
+                        </div>
+
+                        <button onclick="resetAll()" class="w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-medium">Clear All Fields</button>
+                    </div>
+
+                    <div class="flex flex-col items-center space-y-6">
+                        <h2 class="text-2xl font-semibold text-gray-800">Generated QR Code</h2>
+                        <div class="bg-gray-50 rounded-2xl p-8 w-full max-w-sm flex flex-col items-center justify-center min-h-[350px]">
+                            <div id="qr-placeholder" class="text-center">
+                                <i data-lucide="qr-code" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+                                <p class="text-gray-500">Fill in the form to generate</p>
+                            </div>
+                            <canvas id="qr-canvas" class="hidden rounded-xl shadow-lg bg-white"></canvas>
+                        </div>
+
+                        <div id="action-buttons" class="hidden flex gap-4 w-full max-w-sm">
+                            <button onclick="downloadQR()" class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl shadow-lg font-medium">
+                                <i data-lucide="download" class="w-4 h-4"></i> Download
+                            </button>
+                            <button onclick="copyData()" class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium">
+                                <i data-lucide="copy" class="w-4 h-4" id="copy-icon"></i> <span id="copy-text">Copy</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'url';
+        const qrCanvas = document.getElementById('qr-canvas');
+        const qrPlaceholder = document.getElementById('qr-placeholder');
+        const actionButtons = document.getElementById('action-buttons');
+
+        // Initialize Icons
+        lucide.createIcons();
+
+        function switchTab(tab) {
+            currentTab = tab;
+            // Update UI
+            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('tab-active', 'text-purple-600'));
+            document.getElementById(`tab-${tab}`).classList.add('tab-active');
+            
+            document.querySelectorAll('.input-view').forEach(view => view.classList.add('hidden'));
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+
+            const titles = { url: 'Enter URL', text: 'Enter Text', contact: 'Contact Information' };
+            document.getElementById('input-title').innerText = titles[tab];
+            
+            updateQR();
+        }
+
+        function updateQR() {
+            let data = '';
+            if (currentTab === 'url') {
+                let val = document.getElementById('urlInput').value.trim();
+                if (val && !val.startsWith('http')) val = 'https://' + val;
+                data = val;
+            } else if (currentTab === 'text') {
+                data = document.getElementById('textInput').value;
+            } else if (currentTab === 'contact') {
+                const fn = document.getElementById('c-first').value;
+                const ln = document.getElementById('c-last').value;
+                const ph = document.getElementById('c-phone').value;
+                const em = document.getElementById('c-email').value;
+                const og = document.getElementById('c-org').value;
+                if (fn || ln || ph || em) {
+                    data = `BEGIN:VCARD\nVERSION:3.0\nFN:${fn} ${ln}\nN:${ln};${fn};;;\nORG:${og}\nTEL:${ph}\nEMAIL:${em}\nEND:VCARD`;
+                }
+            }
+
+            if (data.trim()) {
+                qrPlaceholder.classList.add('hidden');
+                qrCanvas.classList.remove('hidden');
+                actionButtons.classList.remove('hidden');
+                new QRious({
+                    element: qrCanvas,
+                    value: data,
+                    size: 300,
+                    level: 'M'
+                });
+            } else {
+                qrPlaceholder.classList.remove('hidden');
+                qrCanvas.classList.add('hidden');
+                actionButtons.classList.add('hidden');
+            }
+        }
+
+        function downloadQR() {
+            const link = document.createElement('a');
+            link.download = `qrcode-${currentTab}.png`;
+            link.href = qrCanvas.toDataURL();
+            link.click();
+        }
+
+        function copyData() {
+            let data = ""; 
+            // Reuse the logic from updateQR to get data
+            if (currentTab === 'url') data = document.getElementById('urlInput').value;
+            else if (currentTab === 'text') data = document.getElementById('textInput').value;
+            else data = "Contact vCard Data";
+
+            navigator.clipboard.writeText(data).then(() => {
+                document.getElementById('copy-text').innerText = "Copied!";
+                setTimeout(() => { document.getElementById('copy-text').innerText = "Copy"; }, 2000);
+            });
+        }
+
+        function resetAll() {
+            document.querySelectorAll('input, textarea').forEach(el => el.value = '');
+            updateQR();
+        }
+    </script>
+</body>
+</html>
