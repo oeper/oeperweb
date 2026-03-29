@@ -273,7 +273,7 @@
      color  — tag/pill colour (keep to greys/whites for monochrome)
 ============================================================ */
 const CATEGORIES = [
-  { id: 'essay',   label: 'Essay',   color: '#e5e5e5' },
+  { id: 'tools',   label: 'Tools',   color: '#e5e5e5' },
   { id: 'guide',   label: 'Guide',   color: '#c9c9c9' },
   { id: 'news',    label: 'News',    color: '#b5b5b5' },
   { id: 'opinion', label: 'Opinion', color: '#a3a3a3' },
@@ -297,110 +297,14 @@ const CATEGORIES = [
 ============================================================ */
 const ARTICLES = [
   {
-    title:    'The Quiet Revolution of Monochrome Design',
-    category: 'essay',
-    date:     'March 12, 2025',
-    excerpt:  'How stripping colour from interfaces paradoxically makes them feel more alive — and why restraint is the hardest discipline to master.',
-    image:    'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=80',
-    content:  `
-There is a certain arrogance in colour. It arrives before meaning, before structure, before the reader has had a chance to settle. Monochrome design refuses that first impression, forcing everything else to carry the weight.
-
-## Why restraint works
-
-When you remove the crutch of hue, every typographic decision becomes load-bearing. Spacing that might have been forgiven under a vivid palette becomes immediately, painfully obvious. This is not a limitation — it is a discipline that produces sharper work.
-
-> The best design is invisible. The second-best design is the one that teaches you to see.
-
-Practitioners of Swiss-style grid systems understood this intuitively. Their posters hold attention not through spectacle but through proportion, rhythm, and the confident use of negative space.
-
-## The digital context
-
-On screens, monochrome carries an additional resonance: it signals focus. In an attention economy saturated with chromatic noise, a grey-scale interface reads as deliberate, calm, serious. It says something about the intent of the thing without uttering a single word.
-
-Whether this effect persists as the aesthetic becomes more common is an open question. For now, it remains one of the more powerful moves available to a designer willing to give something up.
-    `,
-  },
-  {
-    title:    'Setting Up a Personal Knowledge Base in 2025',
-    category: 'guide',
-    date:     'Feb 28, 2025',
-    excerpt:  'A practical walkthrough for building a system that actually captures what matters, without becoming a project in itself.',
-    image:    'https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?w=900&q=80',
-    content:  `
-The irony of knowledge management is that maintaining the system can consume more energy than the thinking the system was meant to support. Every setup I've seen fail has failed for this reason.
-
-## Start with capture, not structure
-
-Before you design folders, tags, or databases, spend two weeks doing nothing but capturing. Drop things into a single inbox — a notes app, a text file, anything. The structure will reveal itself from what you actually save, not from what you imagine you'll save.
-
-## The three-layer model
-
-Once you have a month of material, you'll likely notice three natural layers: fleeting notes (half-thoughts, references), literature notes (summaries of things you've read), and permanent notes (your own synthesised ideas). These map roughly onto Zettelkasten's structure, which is worth understanding even if you don't adopt it wholesale.
-
-> A system you use imperfectly is infinitely more valuable than a system you design perfectly and abandon.
-
-Pick one tool. Learn it well. Resist the urge to migrate for at least a year.
-    `,
-  },
-  {
-    title:    'Liquid Glass UI: Where It Goes From Here',
-    category: 'news',
-    date:     'Mar 20, 2025',
-    excerpt:  'The frosted-glass aesthetic has become the dominant visual language of modern interfaces. What comes after saturation?',
-    // Example: load content from a remote .txt file
-    // content: 'https://yoursite.com/articles/liquid-glass.txt',
-    content:  `
-Glassmorphism arrived as a reaction to the flat design era's austerity. Where flat design stripped away all affordance in pursuit of purity, glass-style interfaces restored a sense of physicality — depth, translucency, the suggestion of layers beneath layers.
-
-Three years on, the style is everywhere. Which means it is, by the logic of visual culture, already approaching its end as a distinguishing choice.
-
-## The next move
-
-Early signals suggest a bifurcation: some interfaces will push further into the physical — textures, paper, grain, the deliberate imperfection of materials — while others will retreat into pure typography and structure, with no decorative surface treatment at all.
-
-Neither is more correct. Both are responses to the same underlying question: how do you make a screen feel like it was made by a human being?
-    `,
-  },
-  {
-    title:    'Against Productivity Culture',
-    category: 'opinion',
-    date:     'Jan 15, 2025',
-    excerpt:  'The compulsion to optimise every hour is not ambition. It is anxiety wearing ambition\'s clothes.',
-    image:    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80',
-    content:  `
-At some point in the last decade, the language of manufacturing crept into the way people talk about their interior lives. We speak of productivity, output, optimisation, systems. We treat attention as a resource to be allocated and time as a substrate to be mined.
-
-I want to suggest that this framing is not neutral, and that it costs something real.
-
-## What gets lost
-
-The activities that make life feel worth living — reading without purpose, conversation that goes nowhere in particular, the experience of being bored and sitting with it — are precisely the activities that resist measurement. They produce nothing that can be logged. They are, by the metrics of productivity culture, waste.
-
-> Rest is not the absence of work. It is a different kind of attention.
-
-I am not arguing for idleness. I am arguing for a richer account of what it means to use time well — one that includes the unquantifiable and refuses to treat every hour as a potential unit of output.
-
-The most interesting people I know are not the most productive. They are the most curious. These are not the same thing.
-    `,
-  },
-  {
-    title:    'Typography as Architecture',
-    category: 'essay',
-    date:     'Dec 3, 2024',
-    excerpt:  'The analogy between typefaces and buildings is older than modernism. It is also more precise than most people realise.',
-    content:  `
-A typeface, like a building, is a system of constraints that produces an experience. You do not see the structural decisions that make a great typeface work any more than you see the load-bearing walls that make a great room feel proportionate. You feel the result.
-
-## The structural analogy
-
-In architecture, the column is both function and symbol. In type, the stem performs the same double role: it is literally the thing holding the letterform together, and it is the primary carrier of the face's visual personality. A thin stem reads as delicate, considered, perhaps fragile. A thick stem reads as authoritative, loud, confident.
-
-Architects speak of fenestration — the arrangement of windows — as a primary element of a facade's character. Type designers speak of the counter: the enclosed or partially enclosed white space within a letter. In both cases, what is absent shapes the experience of what is present.
-
-> Great typography, like great architecture, is noticed only when it fails.
-
-This is the highest compliment available to either discipline.
-    `,
+    title:    'QR code generator',
+    category: 'tools',
+    date:     'March 29, 2026',
+    excerpt:  'Generate QR codes without being begged to sign up or pay.',
+    image:    'https://upload.wikimedia.org/wikipedia/commons/2/2f/Rickrolling_QR_code.png',
+    content:  `# This tool is a free QR code generator that obviously generates QR codes for you. It's instant, doesn't beg you to pay a fortune and easy to use.
+    # [Use it here](https://oeper.dev/qrmaker)
+    ### Made by anthropic`,
   },
 ];
 /* ============================================================ */
