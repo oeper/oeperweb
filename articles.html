@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Articles</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --glass-bg: rgba(255,255,255,0.04);
+    --glass-border: rgba(255,255,255,0.10);
+    --glass-shine: rgba(255,255,255,0.07);
+    --text-primary: rgba(255,255,255,0.92);
+    --text-muted: rgba(255,255,255,0.45);
+    --text-faint: rgba(255,255,255,0.25);
+  }
+
+  body { min-height:100vh;background:#0a0a0a;font-family:'Syne',sans-serif;color:var(--text-primary);overflow-x:hidden;position:relative; }
+
+  /* ── Background ── */
+  .bg-scene { position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none; }
+  .blob { position:absolute;border-radius:50%;filter:blur(90px);opacity:0.55;animation:drift linear infinite; }
+  .blob-1 { width:600px;height:600px;background:radial-gradient(circle,#2a2a2a 0%,#141414 60%,transparent 100%);top:-120px;left:-160px;animation-duration:28s; }
+  .blob-2 { width:500px;height:500px;background:radial-gradient(circle,#1e1e1e 0%,#0e0e0e 60%,transparent 100%);bottom:-100px;right:-100px;animation-duration:22s;animation-direction:reverse; }
+  .blob-3 { width:420px;height:420px;background:radial-gradient(circle,#222222 0%,#111111 60%,transparent 100%);top:40%;left:55%;animation-duration:35s; }
+  .blob-4 { width:340px;height:340px;background:radial-gradient(circle,#1a1a1a 0%,#0c0c0c 60%,transparent 100%);top:20%;right:10%;animation-duration:18s;animation-direction:reverse; }
+
+  @keyframes drift {
+    0%   { transform:translate(0,0) scale(1); }
+    25%  { transform:translate(40px,30px) scale(1.05); }
+    50%  { transform:translate(15px,60px) scale(0.95); }
+    75%  { transform:translate(-25px,20px) scale(1.03); }
+    100% { transform:translate(0,0) scale(1); }
+  }
+  .bg-scene::after {
+    content:'';position:absolute;inset:0;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    opacity:0.03;mix-blend-mode:overlay;
+  }
+
+  /* ── Page ── */
+  .page { position:relative;z-index:1;max-width:900px;margin:0 auto;padding:72px 24px 100px; }
+
+  /* ── Header ── */
+  .header { margin-bottom:56px;animation:fadeUp 0.7s ease both; }
+  .header-eyebrow { font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:14px; }
+  .header h1 { font-size:clamp(2.2rem,5vw,3.6rem);font-weight:800;line-height:1.08;background:linear-gradient(135deg,#fff 30%,#a0a0a0 70%,#e0e0e0 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:16px; }
+  .header p { color:var(--text-muted);font-size:1rem;max-width:460px;line-height:1.65; }
+
+  /* ── Toolbar ── */
+  .toolbar { display:flex;gap:12px;margin-bottom:32px;flex-wrap:wrap;animation:fadeUp 0.7s 0.1s ease both; }
+  .search-wrap { flex:1;min-width:200px;position:relative; }
+  .search-wrap svg { position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none; }
+  .search-input { width:100%;background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:12px;padding:12px 14px 12px 40px;color:var(--text-primary);font-family:'DM Mono',monospace;font-size:13px;outline:none;transition:border-color 0.25s,box-shadow 0.25s; }
+  .search-input::placeholder { color:var(--text-muted); }
+  .search-input:focus { border-color:rgba(255,255,255,0.30);box-shadow:0 0 0 3px rgba(255,255,255,0.06); }
+
+  .filter-pills { display:flex;gap:8px;flex-wrap:wrap;align-items:center; }
+  .pill { background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:999px;padding:8px 16px;font-size:12px;font-weight:500;letter-spacing:0.04em;color:var(--text-muted);cursor:pointer;transition:all 0.2s;white-space:nowrap; }
+  .pill:hover { color:var(--text-primary);border-color:rgba(255,255,255,0.2); }
+  .pill.active { background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.30);color:rgba(255,255,255,0.9); }
+  .pill[data-color]:hover,
+  .pill[data-color].active { background:var(--cat-bg);border-color:var(--cat-border);color:var(--cat-color); }
+
+  /* ── Stats ── */
+  .stats { display:flex;gap:28px;margin-bottom:28px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted);animation:fadeUp 0.7s 0.05s ease both; }
+  .stats strong { color:var(--text-primary);font-weight:500; }
+
+  /* ── Article list ── */
+  .article-list { display:flex;flex-direction:column;gap:14px; }
+
+  /* ── Article card ── */
+  .article-card {
+    position:relative;background:var(--glass-bg);border:1px solid var(--glass-border);
+    border-radius:18px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+    overflow:hidden;cursor:pointer;
+    transition:transform 0.25s cubic-bezier(0.23,1,0.32,1),border-color 0.25s,box-shadow 0.25s;
+    animation:fadeUp 0.6s ease both;
+  }
+  .article-card::before {
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(135deg,var(--glass-shine) 0%,transparent 55%);
+    border-radius:inherit;pointer-events:none;opacity:0;transition:opacity 0.3s;z-index:0;
+  }
+  .article-card:hover::before { opacity:1; }
+  .article-card:hover { transform:translateY(-2px);border-color:rgba(255,255,255,0.18);box-shadow:var(--card-glow,0 20px 50px rgba(0,0,0,0.35)); }
+
+  /* Image banner */
+  .article-card.has-image .card-image-wrap { position:relative;overflow:hidden; }
+  .article-card.has-image .card-image-wrap img { width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-radius:18px 18px 0 0;transition:transform 0.5s cubic-bezier(0.23,1,0.32,1); }
+  .article-card:hover.has-image .card-image-wrap img { transform:scale(1.03); }
+  .article-card.has-image .card-image-wrap::after { content:'';position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(to bottom,transparent,rgba(10,10,10,0.6));pointer-events:none; }
+
+  /* Card body */
+  .card-body { padding:22px 24px;position:relative;z-index:1; }
+  .article-card.has-image .card-body { padding:18px 24px 22px; }
+
+  /* Top row: category tag + date */
+  .card-meta { display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap; }
+  .cat-tag { font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid;opacity:0.8;white-space:nowrap; }
+  .article-date { font-family:'DM Mono',monospace;font-size:11px;color:var(--text-faint); }
+
+  /* Title */
+  .article-title {
+    font-family:'DM Serif Display',serif;
+    font-size:clamp(1.15rem,2.5vw,1.5rem);
+    font-weight:400;line-height:1.25;
+    color:var(--text-primary);
+    margin-bottom:10px;
+    transition:color 0.2s;
+  }
+  .article-card:hover .article-title { color:#fff; }
+
+  /* Excerpt */
+  .article-excerpt {
+    font-size:13px;line-height:1.7;color:var(--text-muted);
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+    margin-bottom:16px;
+  }
+
+  /* Read more */
+  .read-more {
+    display:inline-flex;align-items:center;gap:6px;
+    font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;
+    color:var(--text-faint);transition:color 0.2s,gap 0.2s;
+  }
+  .article-card:hover .read-more { color:rgba(255,255,255,0.7);gap:10px; }
+  .read-more svg { transition:transform 0.2s; }
+  .article-card:hover .read-more svg { transform:translateX(3px); }
+
+  /* ── Article reader (inline open) ── */
+  .reader-overlay {
+    position:fixed;inset:0;z-index:50;
+    background:rgba(0,0,0,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    opacity:0;pointer-events:none;transition:opacity 0.35s;
+  }
+  .reader-overlay.open { opacity:1;pointer-events:all; }
+
+  .reader-panel {
+    position:fixed;top:0;right:0;bottom:0;
+    width:min(680px,100vw);
+    background:#111;border-left:1px solid rgba(255,255,255,0.08);
+    overflow-y:auto;z-index:51;
+    transform:translateX(100%);transition:transform 0.4s cubic-bezier(0.23,1,0.32,1);
+    display:flex;flex-direction:column;
+  }
+  .reader-panel.open { transform:translateX(0); }
+
+  .reader-close {
+    position:sticky;top:0;z-index:2;
+    display:flex;justify-content:flex-end;
+    padding:20px 24px 0;
+    background:linear-gradient(to bottom,#111 70%,transparent);
+  }
+  .reader-close-btn {
+    width:36px;height:36px;border-radius:10px;
+    background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--text-muted);cursor:pointer;transition:all 0.2s;
+  }
+  .reader-close-btn:hover { background:rgba(255,255,255,0.12);color:#fff; }
+
+  .reader-content { padding:12px 40px 60px;flex:1; }
+
+  .reader-image { width:calc(100% + 80px);margin-left:-40px;aspect-ratio:16/9;object-fit:cover;display:block;margin-bottom:32px; }
+
+  .reader-cat-row { display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap; }
+  .reader-date { font-family:'DM Mono',monospace;font-size:11px;color:var(--text-faint); }
+
+  .reader-title {
+    font-family:'DM Serif Display',serif;
+    font-size:clamp(1.6rem,4vw,2.4rem);
+    font-weight:400;line-height:1.18;
+    color:#fff;margin-bottom:20px;
+  }
+
+  .reader-divider { height:1px;background:rgba(255,255,255,0.08);margin-bottom:28px; }
+
+  .reader-body {
+    font-size:15px;line-height:1.85;color:rgba(255,255,255,0.72);
+    font-family:'Georgia',serif;
+  }
+  .reader-body p  { margin-bottom:1.4em; }
+  .reader-body h1,.reader-body h2 { font-family:'Syne',sans-serif;font-weight:700;color:#fff;margin:2em 0 0.75em; }
+  .reader-body h1 { font-size:1.35rem; }
+  .reader-body h2 { font-size:1.15rem; }
+  .reader-body h3,.reader-body h4,.reader-body h5,.reader-body h6 { font-family:'Syne',sans-serif;font-weight:600;color:rgba(255,255,255,0.85);margin:1.6em 0 0.6em;font-size:1rem; }
+  .reader-body blockquote { border-left:2px solid rgba(255,255,255,0.2);padding-left:20px;color:var(--text-muted);margin:1.5em 0;font-style:italic; }
+  .reader-body ul,.reader-body ol { padding-left:1.4em;margin-bottom:1.4em; }
+  .reader-body li { margin-bottom:0.4em; }
+  .reader-body code { font-family:'DM Mono',monospace;font-size:13px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:1px 6px;color:rgba(255,255,255,0.85); }
+  .reader-body pre { background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px 20px;overflow-x:auto;margin-bottom:1.4em; }
+  .reader-body pre code { background:none;border:none;padding:0;font-size:13px; }
+  .reader-body hr { border:none;border-top:1px solid rgba(255,255,255,0.1);margin:2em 0; }
+  .reader-body a { color:inherit;text-decoration:underline;text-underline-offset:3px; }
+
+  /* ── Empty state ── */
+  .empty { text-align:center;padding:80px 0;color:var(--text-muted);display:none; }
+  .empty svg { opacity:0.25;margin-bottom:16px; }
+  .empty p { font-size:14px; }
+
+  @keyframes fadeUp {
+    from { opacity:0;transform:translateY(18px); }
+    to   { opacity:1;transform:translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-scene">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="blob blob-4"></div>
+</div>
+
+<div class="page">
+  <header class="header">
+    <div class="header-eyebrow">// articles</div>
+    <h1>Reading Room</h1>
+    <p>Writings, guides, and notes — all in one place.</p>
+  </header>
+
+  <div class="stats">
+    <span><strong id="visibleCount">0</strong> articles</span>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input class="search-input" type="text" placeholder="Search articles…" id="searchInput">
+    </div>
+    <div class="filter-pills" id="filterPills">
+      <button class="pill active" data-filter="__all__">All</button>
+    </div>
+  </div>
+
+  <div class="article-list" id="articleList"></div>
+  <div class="empty" id="emptyState">
+    <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+      <path d="M9 12h6m-3-3v6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+    </svg>
+    <p>No articles match your search.</p>
+  </div>
+</div>
+
+<!-- Slide-in reader panel -->
+<div class="reader-overlay" id="readerOverlay"></div>
+<div class="reader-panel" id="readerPanel">
+  <div class="reader-close">
+    <button class="reader-close-btn" id="readerCloseBtn" title="Close">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div class="reader-content" id="readerContent"></div>
+</div>
+
+<script>
+/* ============================================================
+   CATEGORY CONFIG
+   ─────────────────────────────────────────────────────────────
+   Define your categories here. Each needs:
+     id     — unique key used in ARTICLES entries (no spaces)
+     label  — display name on the filter pill and tag
+     color  — tag/pill colour (keep to greys/whites for monochrome)
+============================================================ */
+const CATEGORIES = [
+  { id: 'essay',   label: 'Essay',   color: '#e5e5e5' },
+  { id: 'guide',   label: 'Guide',   color: '#c9c9c9' },
+  { id: 'news',    label: 'News',    color: '#b5b5b5' },
+  { id: 'opinion', label: 'Opinion', color: '#a3a3a3' },
+];
+
+/* ============================================================
+   ARTICLE CONFIG
+   ─────────────────────────────────────────────────────────────
+   Each entry:
+     title    (required) — article headline
+     category (required) — must match an id from CATEGORIES
+     date     (required) — display string, e.g. "March 2025"
+     excerpt  (optional) — short description shown on the card
+     image    (optional) — banner image URL; omit or null for no image
+     content  (required) — article body. Three formats supported:
+                  1. Markdown string  — plain text with # headings, **bold**,
+                                        > blockquotes, etc. Auto-detected.
+                  2. HTML string      — raw HTML (auto-detected by presence of tags)
+                  3. URL string       — 'https://yoursite.com/article.txt'
+                                        Fetched at open time, rendered as Markdown.
+============================================================ */
+const ARTICLES = [
+  {
+    title:    'The Quiet Revolution of Monochrome Design',
+    category: 'essay',
+    date:     'March 12, 2025',
+    excerpt:  'How stripping colour from interfaces paradoxically makes them feel more alive — and why restraint is the hardest discipline to master.',
+    image:    'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=80',
+    content:  `
+There is a certain arrogance in colour. It arrives before meaning, before structure, before the reader has had a chance to settle. Monochrome design refuses that first impression, forcing everything else to carry the weight.
+
+## Why restraint works
+
+When you remove the crutch of hue, every typographic decision becomes load-bearing. Spacing that might have been forgiven under a vivid palette becomes immediately, painfully obvious. This is not a limitation — it is a discipline that produces sharper work.
+
+> The best design is invisible. The second-best design is the one that teaches you to see.
+
+Practitioners of Swiss-style grid systems understood this intuitively. Their posters hold attention not through spectacle but through proportion, rhythm, and the confident use of negative space.
+
+## The digital context
+
+On screens, monochrome carries an additional resonance: it signals focus. In an attention economy saturated with chromatic noise, a grey-scale interface reads as deliberate, calm, serious. It says something about the intent of the thing without uttering a single word.
+
+Whether this effect persists as the aesthetic becomes more common is an open question. For now, it remains one of the more powerful moves available to a designer willing to give something up.
+    `,
+  },
+  {
+    title:    'Setting Up a Personal Knowledge Base in 2025',
+    category: 'guide',
+    date:     'Feb 28, 2025',
+    excerpt:  'A practical walkthrough for building a system that actually captures what matters, without becoming a project in itself.',
+    image:    'https://images.unsplash.com/photo-1512486130939-2c4f79935e4f?w=900&q=80',
+    content:  `
+The irony of knowledge management is that maintaining the system can consume more energy than the thinking the system was meant to support. Every setup I've seen fail has failed for this reason.
+
+## Start with capture, not structure
+
+Before you design folders, tags, or databases, spend two weeks doing nothing but capturing. Drop things into a single inbox — a notes app, a text file, anything. The structure will reveal itself from what you actually save, not from what you imagine you'll save.
+
+## The three-layer model
+
+Once you have a month of material, you'll likely notice three natural layers: fleeting notes (half-thoughts, references), literature notes (summaries of things you've read), and permanent notes (your own synthesised ideas). These map roughly onto Zettelkasten's structure, which is worth understanding even if you don't adopt it wholesale.
+
+> A system you use imperfectly is infinitely more valuable than a system you design perfectly and abandon.
+
+Pick one tool. Learn it well. Resist the urge to migrate for at least a year.
+    `,
+  },
+  {
+    title:    'Liquid Glass UI: Where It Goes From Here',
+    category: 'news',
+    date:     'Mar 20, 2025',
+    excerpt:  'The frosted-glass aesthetic has become the dominant visual language of modern interfaces. What comes after saturation?',
+    // Example: load content from a remote .txt file
+    // content: 'https://yoursite.com/articles/liquid-glass.txt',
+    content:  `
+Glassmorphism arrived as a reaction to the flat design era's austerity. Where flat design stripped away all affordance in pursuit of purity, glass-style interfaces restored a sense of physicality — depth, translucency, the suggestion of layers beneath layers.
+
+Three years on, the style is everywhere. Which means it is, by the logic of visual culture, already approaching its end as a distinguishing choice.
+
+## The next move
+
+Early signals suggest a bifurcation: some interfaces will push further into the physical — textures, paper, grain, the deliberate imperfection of materials — while others will retreat into pure typography and structure, with no decorative surface treatment at all.
+
+Neither is more correct. Both are responses to the same underlying question: how do you make a screen feel like it was made by a human being?
+    `,
+  },
+  {
+    title:    'Against Productivity Culture',
+    category: 'opinion',
+    date:     'Jan 15, 2025',
+    excerpt:  'The compulsion to optimise every hour is not ambition. It is anxiety wearing ambition\'s clothes.',
+    image:    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80',
+    content:  `
+At some point in the last decade, the language of manufacturing crept into the way people talk about their interior lives. We speak of productivity, output, optimisation, systems. We treat attention as a resource to be allocated and time as a substrate to be mined.
+
+I want to suggest that this framing is not neutral, and that it costs something real.
+
+## What gets lost
+
+The activities that make life feel worth living — reading without purpose, conversation that goes nowhere in particular, the experience of being bored and sitting with it — are precisely the activities that resist measurement. They produce nothing that can be logged. They are, by the metrics of productivity culture, waste.
+
+> Rest is not the absence of work. It is a different kind of attention.
+
+I am not arguing for idleness. I am arguing for a richer account of what it means to use time well — one that includes the unquantifiable and refuses to treat every hour as a potential unit of output.
+
+The most interesting people I know are not the most productive. They are the most curious. These are not the same thing.
+    `,
+  },
+  {
+    title:    'Typography as Architecture',
+    category: 'essay',
+    date:     'Dec 3, 2024',
+    excerpt:  'The analogy between typefaces and buildings is older than modernism. It is also more precise than most people realise.',
+    content:  `
+A typeface, like a building, is a system of constraints that produces an experience. You do not see the structural decisions that make a great typeface work any more than you see the load-bearing walls that make a great room feel proportionate. You feel the result.
+
+## The structural analogy
+
+In architecture, the column is both function and symbol. In type, the stem performs the same double role: it is literally the thing holding the letterform together, and it is the primary carrier of the face's visual personality. A thin stem reads as delicate, considered, perhaps fragile. A thick stem reads as authoritative, loud, confident.
+
+Architects speak of fenestration — the arrangement of windows — as a primary element of a facade's character. Type designers speak of the counter: the enclosed or partially enclosed white space within a letter. In both cases, what is absent shapes the experience of what is present.
+
+> Great typography, like great architecture, is noticed only when it fails.
+
+This is the highest compliment available to either discipline.
+    `,
+  },
+];
+/* ============================================================ */
+
+
+// ── Category lookup ──────────────────────────────────────────
+const CAT_MAP = {};
+CATEGORIES.forEach(c => { CAT_MAP[c.id] = c; });
+function getCategory(id) {
+  return CAT_MAP[id] || { id, label: id, color: 'rgba(255,255,255,0.5)' };
+}
+function hexToAlpha(color, alpha) {
+  const hex = color.replace('#','');
+  if (/^[0-9a-f]{6}$/i.test(hex)) {
+    const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  return color;
+}
+
+// ── Build filter pills ───────────────────────────────────────
+const usedCatIds = [...new Set(ARTICLES.map(a => a.category))];
+const pillsContainer = document.getElementById('filterPills');
+usedCatIds.forEach(id => {
+  const cat = getCategory(id);
+  const b = document.createElement('button');
+  b.className = 'pill';
+  b.dataset.filter = id;
+  b.dataset.color = cat.color;
+  b.textContent = cat.label;
+  b.style.setProperty('--cat-color', cat.color);
+  b.style.setProperty('--cat-bg', hexToAlpha(cat.color, 0.10));
+  b.style.setProperty('--cat-border', hexToAlpha(cat.color, 0.32));
+  pillsContainer.appendChild(b);
+});
+
+// ── Render article cards ─────────────────────────────────────
+const articleList = document.getElementById('articleList');
+
+ARTICLES.forEach((article, i) => {
+  const cat = getCategory(article.category);
+  const hasImage = !!article.image;
+
+  const card = document.createElement('div');
+  card.className = 'article-card' + (hasImage ? ' has-image' : '');
+  card.dataset.category = article.category;
+  card.dataset.title = article.title.toLowerCase();
+  card.dataset.excerpt = (article.excerpt || '').toLowerCase();
+  card.dataset.index = i;
+  card.style.animationDelay = (0.12 + i * 0.07) + 's';
+  card.style.setProperty('--card-glow',
+    `0 20px 50px ${hexToAlpha(cat.color, 0.10)}, 0 0 0 1px ${hexToAlpha(cat.color, 0.07)} inset`
+  );
+
+  const tagStyle = `color:${cat.color};border-color:${hexToAlpha(cat.color, 0.35)};`;
+
+  const imageHtml = hasImage
+    ? `<div class="card-image-wrap"><img src="${article.image}" alt="${article.title}" loading="lazy"></div>`
+    : '';
+
+  card.innerHTML = `
+    ${imageHtml}
+    <div class="card-body">
+      <div class="card-meta">
+        <span class="cat-tag" style="${tagStyle}">${cat.label}</span>
+        <span class="article-date">${article.date}</span>
+      </div>
+      <div class="article-title">${article.title}</div>
+      ${article.excerpt ? `<div class="article-excerpt">${article.excerpt}</div>` : ''}
+      <span class="read-more">
+        Read article
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </span>
+    </div>
+  `;
+
+  card.addEventListener('click', () => openReader(i));
+  articleList.appendChild(card);
+});
+
+// ── Markdown parser ───────────────────────────────────────────
+// Lightweight renderer — handles headings, bold, italic, blockquotes,
+// inline code, code blocks, horizontal rules, unordered + ordered lists,
+// links, images, and paragraphs. No dependencies needed.
+function parseMarkdown(md) {
+  let html = md
+    // Normalise line endings
+    .replace(/\r\n/g, '\n')
+    // Fenced code blocks (``` ... ```)
+    .replace(/```[\w]*\n([\s\S]*?)```/g, (_, code) =>
+      `<pre><code>${escHtml(code.trimEnd())}</code></pre>`)
+    // Headings
+    .replace(/^######\s+(.+)$/gm, '<h6>$1</h6>')
+    .replace(/^#####\s+(.+)$/gm,  '<h5>$1</h5>')
+    .replace(/^####\s+(.+)$/gm,   '<h4>$1</h4>')
+    .replace(/^###\s+(.+)$/gm,    '<h3>$1</h3>')
+    .replace(/^##\s+(.+)$/gm,     '<h2>$1</h2>')
+    .replace(/^#\s+(.+)$/gm,      '<h1>$1</h1>')
+    // Blockquotes (support multi-line by joining consecutive > lines)
+    .replace(/((?:^>\s?.+\n?)+)/gm, match => {
+      const inner = match.replace(/^>\s?/gm, '').trim();
+      return `<blockquote>${inner}</blockquote>\n`;
+    })
+    // Horizontal rules
+    .replace(/^(-{3,}|\*{3,}|_{3,})$/gm, '<hr>')
+    // Unordered lists
+    .replace(/((?:^[ \t]*[-*+]\s+.+\n?)+)/gm, match => {
+      const items = match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*[-*+]\s+/, '')}</li>`).join('');
+      return `<ul>${items}</ul>\n`;
+    })
+    // Ordered lists
+    .replace(/((?:^[ \t]*\d+\.\s+.+\n?)+)/gm, match => {
+      const items = match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*\d+\.\s+/, '')}</li>`).join('');
+      return `<ol>${items}</ol>\n`;
+    })
+    // Bold + italic
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g,     '<strong>$1</strong>')
+    .replace(/__(.+?)__/g,         '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,         '<em>$1</em>')
+    .replace(/_(.+?)_/g,           '<em>$1</em>')
+    // Inline code
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Images before links (order matters)
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:1em 0;">')
+    // Links
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">$1</a>')
+    // Paragraphs — wrap lines that aren't already block elements
+    .replace(/^(?!<[hbuop]|<li|<bl|<pr|<hr|<img|<a)(.+)$/gm, '<p>$1</p>')
+    // Clean up extra blank lines
+    .replace(/\n{3,}/g, '\n\n');
+
+  return html;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Reader panel ─────────────────────────────────────────────
+const overlay       = document.getElementById('readerOverlay');
+const panel         = document.getElementById('readerPanel');
+const closeBtn      = document.getElementById('readerCloseBtn');
+const readerContent = document.getElementById('readerContent');
+
+function renderReader(article, bodyHtml) {
+  const cat = getCategory(article.category);
+  const tagStyle = `color:${cat.color};border-color:${hexToAlpha(cat.color, 0.35)};`;
+  readerContent.innerHTML = `
+    ${article.image ? `<img class="reader-image" src="${article.image}" alt="${article.title}">` : ''}
+    <div class="reader-cat-row">
+      <span class="cat-tag" style="${tagStyle}">${cat.label}</span>
+      <span class="reader-date">${article.date}</span>
+    </div>
+    <div class="reader-title">${article.title}</div>
+    <div class="reader-divider"></div>
+    <div class="reader-body">${bodyHtml}</div>
+  `;
+}
+
+async function openReader(index) {
+  const article = ARTICLES[index];
+
+  // Open panel immediately with a loading state
+  renderReader(article, `<p style="color:var(--text-faint);font-family:'DM Mono',monospace;font-size:13px;">Loading…</p>`);
+  overlay.classList.add('open');
+  panel.classList.add('open');
+  panel.scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+
+  // Sync URL
+  const url = new URL(window.location);
+  url.searchParams.set('article', index);
+  history.pushState({ article: index }, '', url);
+
+  // Resolve content: URL string → fetch, otherwise treat as markdown/html string
+  let bodyHtml;
+  if (typeof article.content === 'string' && /^https?:\/\//.test(article.content.trim())) {
+    try {
+      const res = await fetch(article.content.trim());
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      bodyHtml = parseMarkdown(text);
+    } catch (err) {
+      bodyHtml = `<p style="color:var(--text-faint);font-family:'DM Mono',monospace;font-size:13px;">Could not load content: ${err.message}</p>`;
+    }
+  } else {
+    // Inline content — detect if it looks like Markdown (no HTML tags) or HTML
+    const looksLikeHtml = /<[a-z][\s\S]*>/i.test(article.content);
+    bodyHtml = looksLikeHtml ? article.content : parseMarkdown(article.content);
+  }
+
+  renderReader(article, bodyHtml);
+}
+
+function closeReader() {
+  overlay.classList.remove('open');
+  panel.classList.remove('open');
+  document.body.style.overflow = '';
+
+  const url = new URL(window.location);
+  url.searchParams.delete('article');
+  history.pushState({}, '', url);
+}
+
+closeBtn.addEventListener('click', closeReader);
+overlay.addEventListener('click', closeReader);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReader(); });
+
+// ── Filter + search ──────────────────────────────────────────
+let activeFilter = '__all__';
+const visibleCount = document.getElementById('visibleCount');
+const emptyState   = document.getElementById('emptyState');
+const searchInput  = document.getElementById('searchInput');
+
+function setActiveFilter(id) {
+  activeFilter = id;
+  document.querySelectorAll('.pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.filter === id);
+  });
+  const url = new URL(window.location);
+  if (id === '__all__') { url.searchParams.delete('category'); }
+  else { url.searchParams.set('category', id); }
+  history.replaceState(null, '', url);
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = searchInput.value.toLowerCase().trim();
+  let count = 0;
+  articleList.querySelectorAll('.article-card').forEach(card => {
+    const show = (activeFilter === '__all__' || card.dataset.category === activeFilter)
+              && (!q || card.dataset.title.includes(q) || card.dataset.excerpt.includes(q));
+    card.style.display = show ? '' : 'none';
+    if (show) count++;
+  });
+  visibleCount.textContent = count;
+  emptyState.style.display = count === 0 ? 'block' : 'none';
+}
+
+document.querySelectorAll('.pill').forEach(pill => {
+  pill.addEventListener('click', () => setActiveFilter(pill.dataset.filter));
+});
+searchInput.addEventListener('input', applyFilters);
+
+// ── Read URL params on load ──────────────────────────────────
+const params = new URLSearchParams(window.location.search);
+const urlCategory = params.get('category');
+const urlArticle  = params.get('article');
+
+if (urlCategory && document.querySelector(`.pill[data-filter="${urlCategory}"]`)) {
+  setActiveFilter(urlCategory);
+} else {
+  applyFilters();
+}
+
+if (urlArticle !== null && ARTICLES[+urlArticle]) {
+  openReader(+urlArticle);
+}
+</script>
+</body>
+</html>
