@@ -412,6 +412,22 @@ const visibleCount = document.getElementById('visibleCount');
 const emptyState   = document.getElementById('emptyState');
 const searchInput  = document.getElementById('searchInput');
 
+function setActiveFilter(id) {
+  activeFilter = id;
+  document.querySelectorAll('.pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.filter === id);
+  });
+  // Sync the URL query param without reloading the page
+  const url = new URL(window.location);
+  if (id === '__all__') {
+    url.searchParams.delete('category');
+  } else {
+    url.searchParams.set('category', id);
+  }
+  history.replaceState(null, '', url);
+  applyFilters();
+}
+
 function applyFilters() {
   const q = searchInput.value.toLowerCase().trim();
   let count = 0;
@@ -426,15 +442,17 @@ function applyFilters() {
 }
 
 document.querySelectorAll('.pill').forEach(pill => {
-  pill.addEventListener('click', () => {
-    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-    pill.classList.add('active');
-    activeFilter = pill.dataset.filter;
-    applyFilters();
-  });
+  pill.addEventListener('click', () => setActiveFilter(pill.dataset.filter));
 });
 searchInput.addEventListener('input', applyFilters);
-applyFilters();
+
+// ── Read ?category= from URL on page load ────────────────────
+const urlCategory = new URLSearchParams(window.location.search).get('category');
+if (urlCategory && document.querySelector(`.pill[data-filter="${urlCategory}"]`)) {
+  setActiveFilter(urlCategory);
+} else {
+  applyFilters();
+}
 
 // ── Toast ────────────────────────────────────────────────────
 function showToast(msg) {
