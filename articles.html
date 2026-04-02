@@ -120,26 +120,28 @@
 
   .reader-overlay {
     position:fixed;inset:0;z-index:50;
-    background:rgba(0,0,0,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-    opacity:0;pointer-events:none;transition:opacity 0.35s;
+    background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    opacity:0;pointer-events:none;transition:opacity 0.3s;
   }
   .reader-overlay.open { opacity:1;pointer-events:all; }
 
+  /* Full-screen panel — slides up from bottom */
   .reader-panel {
-    position:fixed;top:0;right:0;bottom:0;
-    width:min(680px,100vw);
-    background:#111;border-left:1px solid rgba(255,255,255,0.08);
+    position:fixed;inset:0;
+    background:#0f0f0f;
     overflow-y:auto;z-index:51;
-    transform:translateX(100%);transition:transform 0.4s cubic-bezier(0.23,1,0.32,1);
+    transform:translateY(100%);
+    transition:transform 0.45s cubic-bezier(0.23,1,0.32,1);
     display:flex;flex-direction:column;
   }
-  .reader-panel.open { transform:translateX(0); }
+  .reader-panel.open { transform:translateY(0); }
 
+  /* Close bar — sticky across full width */
   .reader-close {
     position:sticky;top:0;z-index:2;
     display:flex;justify-content:flex-end;
-    padding:20px 24px 0;
-    background:linear-gradient(to bottom,#111 70%,transparent);
+    padding:20px 28px 0;
+    background:linear-gradient(to bottom,#0f0f0f 70%,transparent);
   }
   .reader-close-btn {
     width:36px;height:36px;border-radius:10px;
@@ -149,8 +151,23 @@
   }
   .reader-close-btn:hover { background:rgba(255,255,255,0.12);color:#fff; }
 
-  .reader-content { padding:12px 40px 60px;flex:1; }
-  .reader-image { width:calc(100% + 80px);margin-left:-40px;aspect-ratio:16/9;object-fit:cover;display:block;margin-bottom:32px; }
+  /* Centred reading column */
+  .reader-content {
+    flex:1;
+    width:100%;max-width:720px;
+    margin:0 auto;
+    padding:8px 24px 80px;
+  }
+
+  /* Hero image: full bleed across the panel */
+  .reader-image {
+    width:100vw;
+    margin-left:calc(-50vw + 50%);
+    max-height:420px;
+    object-fit:cover;
+    display:block;
+    margin-bottom:40px;
+  }
   .reader-cat-row { display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap; }
   .reader-date { font-family:'DM Mono',monospace;font-size:11px;color:var(--text-faint); }
 
@@ -254,7 +271,7 @@
 ============================================================ */
 const CATEGORIES = [
   { id: 'tools',   label: 'Tools',   color: '#e5e5e5' },
-  { id: 'textbooks',   label: 'Textbooks',   color: '#c9c9c9' },
+  { id: 'guide',   label: 'Guide',   color: '#c9c9c9' },
   { id: 'news',    label: 'News',    color: '#b5b5b5' },
   { id: 'opinion', label: 'Opinion', color: '#a3a3a3' },
 ];
@@ -278,37 +295,40 @@ const CATEGORIES = [
                                         Fetched at open time, rendered as Markdown.
 ============================================================ */
 const ARTICLES = [
-  {
-    title:    'QR code generator',
-    category: 'tools',                    // single string — still works fine
-    date:     'March 29, 2026',
-    excerpt:  'Generate QR codes without being begged to sign up or pay.',
-    image:    'https://upload.wikimedia.org/wikipedia/commons/2/2f/Rickrolling_QR_code.png',
-    content:  `
+{
+title:    'QR code generator',
+category: 'tools',                    // single string — still works fine
+date:     'March 29, 2026',
+excerpt:  'Generate QR codes without being begged to sign up or pay.',
+image:    'https://upload.wikimedia.org/wikipedia/commons/2/2f/Rickrolling_QR_code.png',
+content:  `
 # This tool is a free QR code generator that obviously generates QR codes for you. It's instant, doesn't beg you to pay a fortune and easy to use.
 
 ## [Use it here](https://oeper.dev/qrmaker)
 
 ### Made by anthropic`,
-  },
-  {
-    title:    'Sejarah Tingkatan 3 textbook (TRANSLATED)',
-    category: 'textbooks',                    // single string — still works fine
-    date:     'April 2, 2026',
-    excerpt:  'Form 3 History textbook translated into English and Chinese',
-    image:    'https://online.fliphtml5.com/faksy/sypg/files/large/1.webp?1606645644',
-    content:  `History may be a very hard and unnecessary subject that our schools have forced us to shove into our brains and ruin our day.
-    
-    However, with the power of technology, I have translated the miserable Form 3 History textbook and made it actually comprehensible! (if your Malay sucks)
-    
-# Here are the translated versions of the textbook below in:
-    - English: [https://drive.google.com/file/d/1jaEXCe8_ZKrrMawAayFmp_eL1W8BYFLX/view?usp=sharing](https://drive.google.com/file/d/1jaEXCe8_ZKrrMawAayFmp_eL1W8BYFLX/view?usp=sharing)
-    - Chinese: [https://drive.google.com/file/d/1QSYVFsjiThNFUbGtnSZxlCYHLMHm-Op2/view?usp=sharing](https://drive.google.com/file/d/1QSYVFsjiThNFUbGtnSZxlCYHLMHm-Op2/view?usp=sharing)
+},
+{
+  title:    'Sejarah Tingkatan 3 textbook (TRANSLATED)',
+  category: 'textbooks',
+  date:     'April 2, 2026',
+  excerpt:  'Form 3 History textbook translated into English and Chinese',
+  image:    'https://online.fliphtml5.com/faksy/sypg/files/large/1.webp?1606645644',
+  content:  `History may be a very hard and unnecessary subject that our schools have forced us to shove into our brains and ruin our day.
 
-    Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
-    
-    All the best for whatever you need these for!`,
-  },  // Example of multi-category:
+However, with the power of technology, I have translated the miserable Form 3 History textbook and made it actually comprehensible! (if your Malay sucks)
+
+# Here are the translated versions of the textbook below:
+
+- English: [click here](https://drive.google.com/file/d/1jaEXCe8_ZKrrMawAayFmp_eL1W8BYFLX/view?usp=sharing)
+- Chinese: [click here](https://drive.google.com/file/d/1QSYVFsjiThNFUbGtnSZxlCYHLMHm-Op2/view?usp=sharing)
+
+Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
+
+All the best for whatever you need these for!`,
+},
+ 
+ // Example of multi-category:
   // {
   //   title:    'My Article',
   //   category: ['guide', 'tools'],        // array — shows both tags, matches either filter
