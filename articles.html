@@ -19,7 +19,6 @@
 
   body { min-height:100vh;background:#0a0a0a;font-family:'Syne',sans-serif;color:var(--text-primary);overflow-x:hidden;position:relative; }
 
-  /* ── Background ── */
   .bg-scene { position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none; }
   .blob { position:absolute;border-radius:50%;filter:blur(90px);opacity:0.55;animation:drift linear infinite; }
   .blob-1 { width:600px;height:600px;background:radial-gradient(circle,#2a2a2a 0%,#141414 60%,transparent 100%);top:-120px;left:-160px;animation-duration:28s; }
@@ -40,16 +39,13 @@
     opacity:0.03;mix-blend-mode:overlay;
   }
 
-  /* ── Page ── */
   .page { position:relative;z-index:1;max-width:900px;margin:0 auto;padding:72px 24px 100px; }
 
-  /* ── Header ── */
   .header { margin-bottom:56px;animation:fadeUp 0.7s ease both; }
   .header-eyebrow { font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:14px; }
   .header h1 { font-size:clamp(2.2rem,5vw,3.6rem);font-weight:800;line-height:1.08;background:linear-gradient(135deg,#fff 30%,#a0a0a0 70%,#e0e0e0 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:16px; }
   .header p { color:var(--text-muted);font-size:1rem;max-width:460px;line-height:1.65; }
 
-  /* ── Toolbar ── */
   .toolbar { display:flex;gap:12px;margin-bottom:32px;flex-wrap:wrap;animation:fadeUp 0.7s 0.1s ease both; }
   .search-wrap { flex:1;min-width:200px;position:relative; }
   .search-wrap svg { position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none; }
@@ -64,14 +60,11 @@
   .pill[data-color]:hover,
   .pill[data-color].active { background:var(--cat-bg);border-color:var(--cat-border);color:var(--cat-color); }
 
-  /* ── Stats ── */
   .stats { display:flex;gap:28px;margin-bottom:28px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted);animation:fadeUp 0.7s 0.05s ease both; }
   .stats strong { color:var(--text-primary);font-weight:500; }
 
-  /* ── Article list ── */
   .article-list { display:flex;flex-direction:column;gap:14px; }
 
-  /* ── Article card ── */
   .article-card {
     position:relative;background:var(--glass-bg);border:1px solid var(--glass-border);
     border-radius:18px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
@@ -87,22 +80,19 @@
   .article-card:hover::before { opacity:1; }
   .article-card:hover { transform:translateY(-2px);border-color:rgba(255,255,255,0.18);box-shadow:var(--card-glow,0 20px 50px rgba(0,0,0,0.35)); }
 
-  /* Image banner */
   .article-card.has-image .card-image-wrap { position:relative;overflow:hidden; }
   .article-card.has-image .card-image-wrap img { width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-radius:18px 18px 0 0;transition:transform 0.5s cubic-bezier(0.23,1,0.32,1); }
   .article-card:hover.has-image .card-image-wrap img { transform:scale(1.03); }
   .article-card.has-image .card-image-wrap::after { content:'';position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(to bottom,transparent,rgba(10,10,10,0.6));pointer-events:none; }
 
-  /* Card body */
   .card-body { padding:22px 24px;position:relative;z-index:1; }
   .article-card.has-image .card-body { padding:18px 24px 22px; }
 
-  /* Top row: category tag + date */
-  .card-meta { display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap; }
+  /* tag row — wraps naturally for multiple tags */
+  .card-meta { display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap; }
   .cat-tag { font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid;opacity:0.8;white-space:nowrap; }
   .article-date { font-family:'DM Mono',monospace;font-size:11px;color:var(--text-faint); }
 
-  /* Title */
   .article-title {
     font-family:'DM Serif Display',serif;
     font-size:clamp(1.15rem,2.5vw,1.5rem);
@@ -113,14 +103,12 @@
   }
   .article-card:hover .article-title { color:#fff; }
 
-  /* Excerpt */
   .article-excerpt {
     font-size:13px;line-height:1.7;color:var(--text-muted);
     display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
     margin-bottom:16px;
   }
 
-  /* Read more */
   .read-more {
     display:inline-flex;align-items:center;gap:6px;
     font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;
@@ -130,7 +118,6 @@
   .read-more svg { transition:transform 0.2s; }
   .article-card:hover .read-more svg { transform:translateX(3px); }
 
-  /* ── Article reader (inline open) ── */
   .reader-overlay {
     position:fixed;inset:0;z-index:50;
     background:rgba(0,0,0,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
@@ -163,10 +150,8 @@
   .reader-close-btn:hover { background:rgba(255,255,255,0.12);color:#fff; }
 
   .reader-content { padding:12px 40px 60px;flex:1; }
-
   .reader-image { width:calc(100% + 80px);margin-left:-40px;aspect-ratio:16/9;object-fit:cover;display:block;margin-bottom:32px; }
-
-  .reader-cat-row { display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap; }
+  .reader-cat-row { display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap; }
   .reader-date { font-family:'DM Mono',monospace;font-size:11px;color:var(--text-faint); }
 
   .reader-title {
@@ -178,10 +163,7 @@
 
   .reader-divider { height:1px;background:rgba(255,255,255,0.08);margin-bottom:28px; }
 
-  .reader-body {
-    font-size:15px;line-height:1.85;color:rgba(255,255,255,0.72);
-    font-family:'Georgia',serif;
-  }
+  .reader-body { font-size:15px;line-height:1.85;color:rgba(255,255,255,0.72);font-family:'Georgia',serif; }
   .reader-body p  { margin-bottom:1.4em; }
   .reader-body h1,.reader-body h2 { font-family:'Syne',sans-serif;font-weight:700;color:#fff;margin:2em 0 0.75em; }
   .reader-body h1 { font-size:1.35rem; }
@@ -196,7 +178,6 @@
   .reader-body hr { border:none;border-top:1px solid rgba(255,255,255,0.1);margin:2em 0; }
   .reader-body a { color:inherit;text-decoration:underline;text-underline-offset:3px; }
 
-  /* ── Empty state ── */
   .empty { text-align:center;padding:80px 0;color:var(--text-muted);display:none; }
   .empty svg { opacity:0.25;margin-bottom:16px; }
   .empty p { font-size:14px; }
@@ -219,10 +200,10 @@
 <div class="page">
   <header class="header">
     <div class="header-container">
-    <a href="https://oeper.dev" class="header-link">
+      <a href="https://oeper.dev" class="header-link">
         <span class="header-eyebrow">⬅ back to oeper.dev</span>
-    </a>
-</div>
+      </a>
+    </div>
     <h1>Articles</h1>
     <p>Writings, guides, and notes — all in one place.</p>
   </header>
@@ -252,7 +233,6 @@
   </div>
 </div>
 
-<!-- Slide-in reader panel -->
 <div class="reader-overlay" id="readerOverlay"></div>
 <div class="reader-panel" id="readerPanel">
   <div class="reader-close">
@@ -284,7 +264,9 @@ const CATEGORIES = [
    ─────────────────────────────────────────────────────────────
    Each entry:
      title    (required) — article headline
-     category (required) — must match an id from CATEGORIES
+     category (required) — single id string OR array of up to 5 ids:
+                           'tools'  or  ['tools', 'guide']
+                           Filtering matches if ANY category matches.
      date     (required) — display string, e.g. "March 2025"
      excerpt  (optional) — short description shown on the card
      image    (optional) — banner image URL; omit or null for no image
@@ -298,26 +280,41 @@ const CATEGORIES = [
 const ARTICLES = [
   {
     title:    'QR code generator',
-    category: 'tools',
+    category: 'tools',                    // single string — still works fine
     date:     'March 29, 2026',
     excerpt:  'Generate QR codes without being begged to sign up or pay.',
     image:    'https://upload.wikimedia.org/wikipedia/commons/2/2f/Rickrolling_QR_code.png',
     content:  `# This tool is a free QR code generator that obviously generates QR codes for you. It's instant, doesn't beg you to pay a fortune and easy to use.
-    
-    ## [Use it here](https://oeper.dev/qrmaker)
-    
-    ### Made by anthropic`,
+
+## [Use it here](https://oeper.dev/qrmaker)
+
+### Made by anthropic`,
   },
+  // Example of multi-category:
+  // {
+  //   title:    'My Article',
+  //   category: ['guide', 'tools'],        // array — shows both tags, matches either filter
+  //   date:     'April 2026',
+  //   content:  'Content here...',
+  // },
 ];
 /* ============================================================ */
 
 
-// ── Category lookup ──────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────
 const CAT_MAP = {};
 CATEGORIES.forEach(c => { CAT_MAP[c.id] = c; });
+
 function getCategory(id) {
   return CAT_MAP[id] || { id, label: id, color: 'rgba(255,255,255,0.5)' };
 }
+
+// Normalise category field → always an array, max 5
+function getCategoryIds(raw) {
+  const arr = Array.isArray(raw) ? raw : [raw];
+  return arr.slice(0, 5).filter(Boolean);
+}
+
 function hexToAlpha(color, alpha) {
   const hex = color.replace('#','');
   if (/^[0-9a-f]{6}$/i.test(hex)) {
@@ -327,8 +324,17 @@ function hexToAlpha(color, alpha) {
   return color;
 }
 
-// ── Build filter pills ───────────────────────────────────────
-const usedCatIds = [...new Set(ARTICLES.map(a => a.category))];
+// Build a tags HTML string for a list of category ids
+function buildTags(ids) {
+  return ids.map(id => {
+    const cat = getCategory(id);
+    const style = `color:${cat.color};border-color:${hexToAlpha(cat.color, 0.35)};`;
+    return `<span class="cat-tag" style="${style}">${cat.label}</span>`;
+  }).join('');
+}
+
+// ── Build filter pills (union of all categories used) ────────
+const usedCatIds = [...new Set(ARTICLES.flatMap(a => getCategoryIds(a.category)))];
 const pillsContainer = document.getElementById('filterPills');
 usedCatIds.forEach(id => {
   const cat = getCategory(id);
@@ -347,21 +353,21 @@ usedCatIds.forEach(id => {
 const articleList = document.getElementById('articleList');
 
 ARTICLES.forEach((article, i) => {
-  const cat = getCategory(article.category);
+  const catIds = getCategoryIds(article.category);
+  const primaryCat = getCategory(catIds[0]);
   const hasImage = !!article.image;
 
   const card = document.createElement('div');
   card.className = 'article-card' + (hasImage ? ' has-image' : '');
-  card.dataset.category = article.category;
+  // Store all category ids space-separated for filter matching
+  card.dataset.categories = catIds.join(' ');
   card.dataset.title = article.title.toLowerCase();
   card.dataset.excerpt = (article.excerpt || '').toLowerCase();
   card.dataset.index = i;
   card.style.animationDelay = (0.12 + i * 0.07) + 's';
   card.style.setProperty('--card-glow',
-    `0 20px 50px ${hexToAlpha(cat.color, 0.10)}, 0 0 0 1px ${hexToAlpha(cat.color, 0.07)} inset`
+    `0 20px 50px ${hexToAlpha(primaryCat.color, 0.10)}, 0 0 0 1px ${hexToAlpha(primaryCat.color, 0.07)} inset`
   );
-
-  const tagStyle = `color:${cat.color};border-color:${hexToAlpha(cat.color, 0.35)};`;
 
   const imageHtml = hasImage
     ? `<div class="card-image-wrap"><img src="${article.image}" alt="${article.title}" loading="lazy"></div>`
@@ -371,7 +377,7 @@ ARTICLES.forEach((article, i) => {
     ${imageHtml}
     <div class="card-body">
       <div class="card-meta">
-        <span class="cat-tag" style="${tagStyle}">${cat.label}</span>
+        ${buildTags(catIds)}
         <span class="article-date">${article.date}</span>
       </div>
       <div class="article-title">${article.title}</div>
@@ -388,57 +394,40 @@ ARTICLES.forEach((article, i) => {
 });
 
 // ── Markdown parser ───────────────────────────────────────────
-// Lightweight renderer — handles headings, bold, italic, blockquotes,
-// inline code, code blocks, horizontal rules, unordered + ordered lists,
-// links, images, and paragraphs. No dependencies needed.
 function parseMarkdown(md) {
   let html = md
-    // Normalise line endings
     .replace(/\r\n/g, '\n')
-    // Fenced code blocks (``` ... ```)
     .replace(/```[\w]*\n([\s\S]*?)```/g, (_, code) =>
       `<pre><code>${escHtml(code.trimEnd())}</code></pre>`)
-    // Headings
     .replace(/^######\s+(.+)$/gm, '<h6>$1</h6>')
     .replace(/^#####\s+(.+)$/gm,  '<h5>$1</h5>')
     .replace(/^####\s+(.+)$/gm,   '<h4>$1</h4>')
     .replace(/^###\s+(.+)$/gm,    '<h3>$1</h3>')
     .replace(/^##\s+(.+)$/gm,     '<h2>$1</h2>')
     .replace(/^#\s+(.+)$/gm,      '<h1>$1</h1>')
-    // Blockquotes (support multi-line by joining consecutive > lines)
     .replace(/((?:^>\s?.+\n?)+)/gm, match => {
       const inner = match.replace(/^>\s?/gm, '').trim();
       return `<blockquote>${inner}</blockquote>\n`;
     })
-    // Horizontal rules
     .replace(/^(-{3,}|\*{3,}|_{3,})$/gm, '<hr>')
-    // Unordered lists
     .replace(/((?:^[ \t]*[-*+]\s+.+\n?)+)/gm, match => {
       const items = match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*[-*+]\s+/, '')}</li>`).join('');
       return `<ul>${items}</ul>\n`;
     })
-    // Ordered lists
     .replace(/((?:^[ \t]*\d+\.\s+.+\n?)+)/gm, match => {
       const items = match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*\d+\.\s+/, '')}</li>`).join('');
       return `<ol>${items}</ol>\n`;
     })
-    // Bold + italic
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g,     '<strong>$1</strong>')
     .replace(/__(.+?)__/g,         '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g,         '<em>$1</em>')
     .replace(/_(.+?)_/g,           '<em>$1</em>')
-    // Inline code
     .replace(/`([^`]+)`/g, '<code>$1</code>')
-    // Images before links (order matters)
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:1em 0;">')
-    // Links
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">$1</a>')
-    // Paragraphs — wrap lines that aren't already block elements
     .replace(/^(?!<[hbuop]|<li|<bl|<pr|<hr|<img|<a)(.+)$/gm, '<p>$1</p>')
-    // Clean up extra blank lines
     .replace(/\n{3,}/g, '\n\n');
-
   return html;
 }
 
@@ -453,12 +442,11 @@ const closeBtn      = document.getElementById('readerCloseBtn');
 const readerContent = document.getElementById('readerContent');
 
 function renderReader(article, bodyHtml) {
-  const cat = getCategory(article.category);
-  const tagStyle = `color:${cat.color};border-color:${hexToAlpha(cat.color, 0.35)};`;
+  const catIds = getCategoryIds(article.category);
   readerContent.innerHTML = `
     ${article.image ? `<img class="reader-image" src="${article.image}" alt="${article.title}">` : ''}
     <div class="reader-cat-row">
-      <span class="cat-tag" style="${tagStyle}">${cat.label}</span>
+      ${buildTags(catIds)}
       <span class="reader-date">${article.date}</span>
     </div>
     <div class="reader-title">${article.title}</div>
@@ -469,20 +457,16 @@ function renderReader(article, bodyHtml) {
 
 async function openReader(index) {
   const article = ARTICLES[index];
-
-  // Open panel immediately with a loading state
   renderReader(article, `<p style="color:var(--text-faint);font-family:'DM Mono',monospace;font-size:13px;">Loading…</p>`);
   overlay.classList.add('open');
   panel.classList.add('open');
   panel.scrollTop = 0;
   document.body.style.overflow = 'hidden';
 
-  // Sync URL
   const url = new URL(window.location);
   url.searchParams.set('article', index);
   history.pushState({ article: index }, '', url);
 
-  // Resolve content: URL string → fetch, otherwise treat as markdown/html string
   let bodyHtml;
   if (typeof article.content === 'string' && /^https?:\/\//.test(article.content.trim())) {
     try {
@@ -494,11 +478,9 @@ async function openReader(index) {
       bodyHtml = `<p style="color:var(--text-faint);font-family:'DM Mono',monospace;font-size:13px;">Could not load content: ${err.message}</p>`;
     }
   } else {
-    // Inline content — detect if it looks like Markdown (no HTML tags) or HTML
     const looksLikeHtml = /<[a-z][\s\S]*>/i.test(article.content);
     bodyHtml = looksLikeHtml ? article.content : parseMarkdown(article.content);
   }
-
   renderReader(article, bodyHtml);
 }
 
@@ -506,7 +488,6 @@ function closeReader() {
   overlay.classList.remove('open');
   panel.classList.remove('open');
   document.body.style.overflow = '';
-
   const url = new URL(window.location);
   url.searchParams.delete('article');
   history.pushState({}, '', url);
@@ -538,8 +519,10 @@ function applyFilters() {
   const q = searchInput.value.toLowerCase().trim();
   let count = 0;
   articleList.querySelectorAll('.article-card').forEach(card => {
-    const show = (activeFilter === '__all__' || card.dataset.category === activeFilter)
-              && (!q || card.dataset.title.includes(q) || card.dataset.excerpt.includes(q));
+    const cats = card.dataset.categories.split(' ');
+    const catMatch = activeFilter === '__all__' || cats.includes(activeFilter);
+    const searchMatch = !q || card.dataset.title.includes(q) || card.dataset.excerpt.includes(q);
+    const show = catMatch && searchMatch;
     card.style.display = show ? '' : 'none';
     if (show) count++;
   });
@@ -552,7 +535,6 @@ document.querySelectorAll('.pill').forEach(pill => {
 });
 searchInput.addEventListener('input', applyFilters);
 
-// ── Read URL params on load ──────────────────────────────────
 const params = new URLSearchParams(window.location.search);
 const urlCategory = params.get('category');
 const urlArticle  = params.get('article');
