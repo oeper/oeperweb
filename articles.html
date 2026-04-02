@@ -254,7 +254,7 @@
 ============================================================ */
 const CATEGORIES = [
   { id: 'tools',   label: 'Tools',   color: '#e5e5e5' },
-  { id: 'guide',   label: 'Guide',   color: '#c9c9c9' },
+  { id: 'textbooks',   label: 'Textbooks',   color: '#c9c9c9' },
   { id: 'news',    label: 'News',    color: '#b5b5b5' },
   { id: 'opinion', label: 'Opinion', color: '#a3a3a3' },
 ];
@@ -290,7 +290,24 @@ const ARTICLES = [
 
 ### Made by anthropic`,
   },
-  // Example of multi-category:
+  {
+    title:    'Sejarah Tingkatan 3 textbook (TRANSLATED)',
+    category: 'textbooks',                    // single string — still works fine
+    date:     'April 2, 2026',
+    excerpt:  'Form 3 History texbook translated into English and Chinese',
+    image:    'https://online.fliphtml5.com/faksy/sypg/files/large/1.webp?1606645644',
+    content:  `History may be a very hard and unnecessary subject that our schools have forced us to shove into our brains and ruin our day.
+    
+    However, with the power of technology, I have translated the miserable Form 3 History textbook and made it actually comprehensible! (if your Malay sucks)
+    
+    # Here are the translated versions of the textbook below in:
+    - English: https://drive.google.com/file/d/1jaEXCe8_ZKrrMawAayFmp_eL1W8BYFLX/view?usp=sharing
+    - Chinese: https://drive.google.com/file/d/1QSYVFsjiThNFUbGtnSZxlCYHLMHm-Op2/view?usp=sharing
+
+    Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
+    
+    All the best for whatever you need these for!`,
+  },  // Example of multi-category:
   // {
   //   title:    'My Article',
   //   category: ['guide', 'tools'],        // array — shows both tags, matches either filter
