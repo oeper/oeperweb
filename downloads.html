@@ -70,10 +70,8 @@
   .stats { display:flex;gap:28px;margin-bottom:28px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted);animation:fadeUp 0.7s 0.05s ease both;flex-wrap:wrap; }
   .stats strong { color:var(--text-primary);font-weight:500; }
 
-  /* ── List ── */
   .file-list { display:flex;flex-direction:column;gap:14px; }
 
-  /* All cards: full-width row */
   .file-card {
     position:relative;background:var(--glass-bg);border:1px solid var(--glass-border);
     border-radius:18px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
@@ -82,10 +80,7 @@
     animation:fadeUp 0.6s ease both;
     display:flex;align-items:center;gap:20px;padding:22px 24px;
   }
-  /* With image: image above, info below */
-  .file-card.has-image {
-    flex-direction:column;align-items:stretch;gap:0;padding:0;
-  }
+  .file-card.has-image { flex-direction:column;align-items:stretch;gap:0;padding:0; }
 
   .file-card::before {
     content:'';position:absolute;inset:0;
@@ -96,59 +91,31 @@
   .file-card:hover { transform:translateY(-2px);border-color:rgba(255,255,255,0.18);box-shadow:0 20px 50px rgba(0,0,0,0.35); }
   .file-card[data-glow]:hover { box-shadow:var(--card-glow); }
 
-  /* ── Preview image: contain so full image is visible ── */
   .card-preview-wrap {
     position:relative;flex-shrink:0;overflow:hidden;
-    border-radius:18px 18px 0 0;
-    background:#111;               /* neutral letterbox fill */
-    max-height:320px;              /* cap so very tall images don't dominate */
-    display:flex;align-items:center;justify-content:center;
+    border-radius:18px 18px 0 0;background:#111;
+    max-height:320px;display:flex;align-items:center;justify-content:center;
   }
-  .card-preview {
-    width:100%;
-    max-height:320px;
-    object-fit:contain;            /* show full image, no cropping */
-    display:block;
-    border-radius:18px 18px 0 0;
-  }
+  .card-preview { width:100%;max-height:320px;object-fit:contain;display:block;border-radius:18px 18px 0 0; }
   .card-preview-wrap::after {
     content:'';position:absolute;bottom:0;left:0;right:0;height:32px;
-    background:linear-gradient(to bottom,transparent,rgba(8,6,18,0.4));
-    pointer-events:none;
+    background:linear-gradient(to bottom,transparent,rgba(8,6,18,0.4));pointer-events:none;
   }
 
-  /* ── Card body (image cards) ── */
-  .card-body {
-    display:flex;align-items:flex-start;gap:20px;
-    padding:18px 24px 22px;flex:1;min-width:0;
-  }
+  .card-body { display:flex;align-items:flex-start;gap:20px;padding:18px 24px 22px;flex:1;min-width:0; }
 
-  /* ── File icon ── */
   .file-icon { width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;position:relative;background:rgba(255,255,255,0.07);margin-top:2px; }
   .file-icon::after { content:'';position:absolute;inset:0;border-radius:inherit;border:1px solid rgba(255,255,255,0.12); }
 
-  /* ── File text ── */
   .file-info { flex:1;min-width:0; }
   .file-name { font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px; }
+  .file-desc { font-size:12px;color:var(--text-muted);line-height:1.6;font-family:'DM Mono',monospace; }
 
-  /* DESC: fully visible, wraps onto multiple lines */
-  .file-desc {
-    font-size:12px;
-    color:var(--text-muted);
-    line-height:1.6;
-    font-family:'DM Mono',monospace;
-    /* no white-space:nowrap, no overflow:hidden, no text-overflow */
-  }
-
-  /* ── Right-side controls: tag + dl button, pinned to top of row ── */
-  .card-controls {
-    display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex-shrink:0;
-  }
-
-  /* ── Category tag ── */
+  /* tag row — wraps for multiple tags */
+  .card-controls { display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0; }
+  .cat-tags { display:flex;flex-direction:column;align-items:flex-end;gap:5px; }
   .cat-tag { font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid;opacity:0.8;white-space:nowrap; }
 
-  /* ── Download button ── */
   .dl-btn { width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:var(--text-muted);transition:all 0.2s;cursor:pointer;text-decoration:none;flex-shrink:0; }
   .dl-btn:hover { background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.30);color:rgba(255,255,255,0.9);transform:scale(1.08); }
   .dl-btn.downloading { animation:spin 0.8s linear infinite;border-color:rgba(255,255,255,0.4);color:rgba(255,255,255,0.8); }
@@ -238,11 +205,13 @@ const CATEGORIES = [
    ─────────────────────────────────────────────────────────────
    Each entry:
      url      (required) — direct download link
-     category (required) — must match an id from CATEGORIES above
+     category (required) — single id string OR array of up to 5 ids:
+                           'pock'  or  ['pock', 'software']
+                           Filtering matches if ANY category matches.
+                           The first category's icon is used for the badge.
      label    (optional) — display name; falls back to filename in URL
      desc     (optional) — subtitle shown under the name
      image    (optional) — preview image URL shown above the card
-                           Set to null or omit to show no image (horizontal row)
 ============================================================ */
 const FILES = [
   {
@@ -259,6 +228,12 @@ const FILES = [
     desc:     'Window control widget for your touch bar. Double-click traffic-light.pock.zip to unzip it, then choose traffic-light.pock and click Install Widget then Install.',
     image:    'https://raw.githubusercontent.com/oeper/traffic-lights/refs/heads/main/image.png',
   },
+  // Multi-category example:
+  // {
+  //   url:      'https://example.com/file.zip',
+  //   category: ['software', 'guides'],   // shows both tags, matches either filter
+  //   label:    'My Tool',
+  // },
 ];
 /* ============================================================ */
 
@@ -269,6 +244,12 @@ CATEGORIES.forEach(c => { CAT_MAP[c.id] = c; });
 
 function getCategory(id) {
   return CAT_MAP[id] || { id, label: id, color: 'rgba(255,255,255,0.5)', icon: '📁' };
+}
+
+// Normalise category field → always an array, max 5
+function getCategoryIds(raw) {
+  const arr = Array.isArray(raw) ? raw : [raw];
+  return arr.slice(0, 5).filter(Boolean);
 }
 
 function hexToAlpha(color, alpha) {
@@ -285,8 +266,17 @@ function filenameFromUrl(url) {
   catch { return url; }
 }
 
-// ── Build filter pills ───────────────────────────────────────
-const usedCatIds = [...new Set(FILES.map(f => f.category))];
+// Build stacked tags HTML for a list of category ids
+function buildTags(ids) {
+  return ids.map(id => {
+    const cat = getCategory(id);
+    const style = `color:${cat.color};border-color:${hexToAlpha(cat.color, 0.38)};`;
+    return `<span class="cat-tag" style="${style}">${cat.label}</span>`;
+  }).join('');
+}
+
+// ── Build filter pills (union of all categories used) ────────
+const usedCatIds = [...new Set(FILES.flatMap(f => getCategoryIds(f.category)))];
 const pillsContainer = document.getElementById('filterPills');
 
 usedCatIds.forEach(id => {
@@ -307,33 +297,34 @@ const fileList = document.getElementById('fileList');
 const DL_ICON = `<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
 
 FILES.forEach((file, i) => {
-  const cat = getCategory(file.category);
+  const catIds = getCategoryIds(file.category);
+  const primaryCat = getCategory(catIds[0]);
   const name = file.label || filenameFromUrl(file.url);
   const hasImage = !!file.image;
 
   const card = document.createElement('div');
   card.className = 'file-card' + (hasImage ? ' has-image' : '');
-  card.dataset.category = file.category;
+  // Store all category ids space-separated for filter matching
+  card.dataset.categories = catIds.join(' ');
   card.dataset.name = name.toLowerCase();
   card.dataset.glow = '1';
   card.style.setProperty('--card-glow',
-    `0 20px 50px ${hexToAlpha(cat.color, 0.18)}, 0 0 0 1px ${hexToAlpha(cat.color, 0.1)} inset`
+    `0 20px 50px ${hexToAlpha(primaryCat.color, 0.18)}, 0 0 0 1px ${hexToAlpha(primaryCat.color, 0.1)} inset`
   );
   card.style.animationDelay = (0.12 + i * 0.07) + 's';
 
-  const tagStyle = `color:${cat.color};border-color:${hexToAlpha(cat.color, 0.38)};`;
-  const iconBg   = `background:${hexToAlpha(cat.color, 0.14)};`;
+  const iconBg = `background:${hexToAlpha(primaryCat.color, 0.14)};`;
 
-  // Controls column: tag + download button stacked
+  // Controls: stacked tags + download button
   const controls = `
     <div class="card-controls">
-      <span class="cat-tag" style="${tagStyle}">${cat.label}</span>
+      <div class="cat-tags">${buildTags(catIds)}</div>
       <a class="dl-btn" href="${file.url}" download title="Download">${DL_ICON}</a>
     </div>
   `;
 
   const infoRow = `
-    <div class="file-icon" style="${iconBg}">${cat.icon}</div>
+    <div class="file-icon" style="${iconBg}">${primaryCat.icon}</div>
     <div class="file-info">
       <div class="file-name">${name}</div>
       ${file.desc ? `<div class="file-desc">${file.desc}</div>` : ''}
@@ -352,13 +343,11 @@ FILES.forEach((file, i) => {
     card.innerHTML = infoRow;
   }
 
-  // whole-card click
   card.addEventListener('click', e => {
     if (e.target.closest('.dl-btn')) return;
     card.querySelector('.dl-btn').click();
   });
 
-  // download animation
   card.querySelector('.dl-btn').addEventListener('click', function() {
     const btn = this;
     if (btn.classList.contains('downloading')) return;
@@ -403,8 +392,10 @@ function applyFilters() {
   const q = searchInput.value.toLowerCase().trim();
   let count = 0;
   fileList.querySelectorAll('.file-card').forEach(card => {
-    const show = (activeFilter === '__all__' || card.dataset.category === activeFilter)
-              && (!q || card.dataset.name.includes(q));
+    const cats = card.dataset.categories.split(' ');
+    const catMatch = activeFilter === '__all__' || cats.includes(activeFilter);
+    const searchMatch = !q || card.dataset.name.includes(q);
+    const show = catMatch && searchMatch;
     card.style.display = show ? '' : 'none';
     if (show) count++;
   });
