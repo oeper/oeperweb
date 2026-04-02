@@ -36,7 +36,8 @@
   .bg-scene::after {
     content:'';position:absolute;inset:0;
     background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-    opacity:0.03;mix-blend-mode:overlay;
+    opacity
+     :0.03;mix-blend-mode:overlay;
   }
 
   .page { position:relative;z-index:1;max-width:900px;margin:0 auto;padding:72px 24px 100px; }
@@ -154,7 +155,7 @@
   /* Centred reading column */
   .reader-content {
     flex:1;
-    width:100%;max-width:720px;
+    width:100%;max-width:700px;
     margin:0 auto;
     padding:8px 24px 80px;
   }
