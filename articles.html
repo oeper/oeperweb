@@ -36,8 +36,7 @@
   .bg-scene::after {
     content:'';position:absolute;inset:0;
     background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-    opacity
-     :0.03;mix-blend-mode:overlay;
+    opacity:0.03;mix-blend-mode:overlay;
   }
 
   .page { position:relative;z-index:1;max-width:900px;margin:0 auto;padding:72px 24px 100px; }
@@ -155,7 +154,7 @@
   /* Centred reading column */
   .reader-content {
     flex:1;
-    width:100%;max-width:700px;
+    width:100%;max-width:720px;
     margin:0 auto;
     padding:8px 24px 80px;
   }
@@ -296,40 +295,38 @@ const CATEGORIES = [
                                         Fetched at open time, rendered as Markdown.
 ============================================================ */
 const ARTICLES = [
-{
-title:    'QR code generator',
-category: 'tools',                    // single string — still works fine
-date:     'March 29, 2026',
-excerpt:  'Generate QR codes without being begged to sign up or pay.',
-image:    'https://upload.wikimedia.org/wikipedia/commons/2/2f/Rickrolling_QR_code.png',
-content:  `
-# This tool is a free QR code generator that obviously generates QR codes for you. It's instant, doesn't beg you to pay a fortune and easy to use.
+  {
+    title:    'QR code generator',
+    category: 'tools',                    // single string — still works fine
+    date:     'March 29, 2026',
+    excerpt:  'Generate QR codes without being begged to sign up or pay.',
+    image:    'https://upload.wikimedia.org/wikipedia/commons/2/2f/Rickrolling_QR_code.png',
+    content:  `# This tool is a free QR code generator that obviously generates QR codes for you. It's instant, doesn't beg you to pay a fortune and easy to use.
 
 ## [Use it here](https://oeper.dev/qrmaker)
 
 ### Made by anthropic`,
-},
-{
-  title:    'Sejarah Tingkatan 3 textbook (TRANSLATED)',
-  category: 'textbooks',
-  date:     'April 2, 2026',
-  excerpt:  'Form 3 History textbook translated into English and Chinese',
-  image:    'https://online.fliphtml5.com/faksy/sypg/files/large/1.webp?1606645644',
-  content:  `History may be a very hard and unnecessary subject that our schools have forced us to shove into our brains and ruin our day.
+  },
+  {
+    title:    'Sejarah Tingkatan 3 textbook (TRANSLATED)',
+    category: 'textbooks',
+    date:     'April 2, 2026',
+    excerpt:  'Form 3 History textbook translated into English and Chinese',
+    image:    'https://online.fliphtml5.com/faksy/sypg/files/large/1.webp?1606645644',
+    content:  `History may be a very hard and unnecessary subject that our schools have forced us to shove into our brains and ruin our day.
 
 However, with the power of technology, I have translated the miserable Form 3 History textbook and made it actually comprehensible! (if your Malay sucks)
 
 # Here are the translated versions of the textbook below:
 
-- English: [click here](https://drive.google.com/file/d/1jaEXCe8\_ZKrrMawAayFmp\_eL1W8BYFLX/view?usp=sharing)
+- English: [click here](https://drive.google.com/file/d/1jaEXCe8_ZKrrMawAayFmp_eL1W8BYFLX/view?usp=sharing)
 - Chinese: [click here](https://drive.google.com/file/d/1QSYVFsjiThNFUbGtnSZxlCYHLMHm-Op2/view?usp=sharing)
 
 Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
 
 All the best for whatever you need these for!`,
-},
- 
- // Example of multi-category:
+  },
+  // Example of multi-category:
   // {
   //   title:    'My Article',
   //   category: ['guide', 'tools'],        // array — shows both tags, matches either filter
@@ -460,11 +457,11 @@ function parseMarkdown(md) {
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g,     '<strong>$1</strong>')
     .replace(/__(.+?)__/g,         '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g,         '<em>$1</em>')
-    .replace(/_(.+?)_/g,           '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:1em 0;">')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">$1</a>')
+    .replace(/\*(.+?)\*/g,         '<em>$1</em>')
+    .replace(/(?<!\w)_([^_\s][^_]*)_(?!\w)/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/^(?!<[hbuop]|<li|<bl|<pr|<hr|<img|<a)(.+)$/gm, '<p>$1</p>')
     .replace(/\n{3,}/g, '\n\n');
   return html;
