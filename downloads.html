@@ -3,7 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Downloads</title>
+<title>Downloads — oeper.dev</title>
+<meta name="description" content="Downloads, tools and resources from oeper.dev">
+<meta property="og:title" content="Downloads — oeper.dev">
+<meta property="og:description" content="Downloads, tools and resources from oeper.dev">
+<meta property="og:url" content="https://oeper.dev/downloads">
+<meta property="og:type" content="website">
+<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -194,8 +200,8 @@
 ============================================================ */
 const CATEGORIES = [
   { id: 'pock',     label: 'Pock',     color: '#d4d4d4', icon: '◼️' },
-  { id: 'macos',   label: 'macOS',   color: '#a3a3a3', icon: '💻' },
-  { id: 'windows', label: 'Windows', color: '#e5e5e5', icon: '🪟' },
+  { id: 'assets',   label: 'Assets',   color: '#a3a3a3', icon: '🎨' },
+  { id: 'software', label: 'Software', color: '#e5e5e5', icon: '💾' },
   { id: 'guides',   label: 'Guides',   color: '#b5b5b5', icon: '📖' },
   { id: 'media',    label: 'Media',    color: '#c9c9c9', icon: '🎬' },
 ];
@@ -216,14 +222,14 @@ const CATEGORIES = [
 const FILES = [
   {
     url:      'https://github.com/oeper/pock.status/raw/refs/heads/main/Status.pock.zip',
-    category: ['pock', 'macos'],
+    category: 'pock',
     label:    'Status+',
     desc:     'Better status widget for your touch bar. Double-click Status.pock.zip to unzip it, then choose Status.pock and click Install Widget then Install.',
     image:    'https://raw.githubusercontent.com/oeper/pock.status/refs/heads/main/image.png',
   },
   {
     url:      'https://github.com/oeper/traffic-lights/raw/refs/heads/main/traffic-light.pock.zip',
-    category: ['pock', 'macos'],
+    category: 'pock',
     label:    'Traffic light',
     desc:     'Window control widget for your touch bar. Double-click traffic-light.pock.zip to unzip it, then choose traffic-light.pock and click Install Widget then Install.',
     image:    'https://raw.githubusercontent.com/oeper/traffic-lights/refs/heads/main/image.png',
