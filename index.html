@@ -114,6 +114,34 @@
     transform: scaleX(1);
   }
 
+  /* Mobile nav: icon-only circular buttons */
+  @media (max-width: 600px) {
+    .nav-item {
+      padding: 0;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      justify-content: center;
+    }
+
+    .nav-item::before {
+      border-radius: 50%;
+      transform: scale(0.7);
+    }
+
+    .nav-item:hover::before {
+      transform: scale(1);
+    }
+
+    .nav-item.active::before {
+      transform: scale(1);
+    }
+
+    .nav-item-label {
+      display: none;
+    }
+  }
+
   /* Content Wrapper */
   .page-container {
     max-width: 900px;
@@ -138,7 +166,6 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Structural Text Animations */
   .animate-text-hero {
     opacity: 0;
     clip-path: inset(0 0 100% 0);
@@ -255,12 +282,10 @@
       <span class="material-symbols-rounded">token</span>
       <span>oeper.dev</span>
     </a>
-    <div class="nav-links" id="navLinksContainer">
-      </div>
+    <div class="nav-links" id="navLinksContainer"></div>
   </nav>
 
-  <div class="page-container" id="pageContainer">
-    </div>
+  <div class="page-container" id="pageContainer"></div>
 
 <script>
 const PAGES = [
@@ -289,57 +314,32 @@ const PAGES = [
     id: 'downloads',
     title: 'Downloads',
     icon: 'download',
-    url: 'https://oeper.dev/downloads',   // ← direct redirect
+    url: 'https://oeper.dev/downloads',
     heroTitle: 'Available Packages',
-    heroSub: 'Direct setups and resource assets safely archived. Navigate here to see operational Touch Bar modifiers or application bundles.',
-    items: [
-      {
-        title: 'Status+ Widget',
-        desc: 'Better system data configurations structured cleanly for modern workspace panels.',
-        icon: 'widgets',
-        action: '#'
-      },
-      {
-        title: 'Traffic Light Control',
-        desc: 'Window control modular widget layouts mapped specifically to Touch Bar surfaces.',
-        icon: 'traffic',
-        action: '#'
-      }
-    ]
+    heroSub: 'Direct setups and resource assets safely archived.',
+    items: []
   },
   {
     id: 'articles',
     title: 'Articles',
     icon: 'book',
-    url: 'https://oeper.dev/articles',    // ← direct redirect
+    url: 'https://oeper.dev/articles',
     heroTitle: 'Project Showcases & Insights',
-    heroSub: 'A log of development workflows, active interface experiments, and functional custom utility frameworks.',
-    items: [
-      {
-        title: 'pock.status',
-        desc: 'Production stage application interface monitoring hooks written for customized macOS environments.',
-        icon: 'deployed_code',
-        action: '#'
-      }
-    ]
+    heroSub: 'A log of development workflows and experiments.',
+    items: []
   }
 ];
 
-/* ============================================================
-   DYNAMIC RENDERER
-============================================================ */
 const navContainer = document.getElementById('navLinksContainer');
 const pageContainer = document.getElementById('pageContainer');
 
 PAGES.forEach((page, index) => {
   const isFirst = index === 0;
 
-  // 1. Build Top Navigation Link
   const navLink = document.createElement('a');
   navLink.className = `nav-item ${isFirst ? 'active' : ''}`;
   navLink.setAttribute('data-tab', page.id);
 
-  // If the page has a direct URL, navigate there; otherwise switch tabs in-page
   if (page.url) {
     navLink.href = page.url;
   } else {
@@ -347,13 +347,13 @@ PAGES.forEach((page, index) => {
     navLink.setAttribute('onclick', `switchTab(event, '${page.id}')`);
   }
 
+  // Wrap label in a span so we can hide it on mobile via CSS
   navLink.innerHTML = `
     <span class="material-symbols-rounded">${page.icon}</span>
-    <span>${page.title}</span>
+    <span class="nav-item-label">${page.title}</span>
   `;
   navContainer.appendChild(navLink);
 
-  // 2. Build Page Layout (only rendered for pages without a direct URL)
   if (page.url) return;
 
   const pageSection = document.createElement('div');
@@ -384,9 +384,6 @@ PAGES.forEach((page, index) => {
   pageContainer.appendChild(pageSection);
 });
 
-/* ============================================================
-   MATERIAL ANIMATION INTERACTION ROUTER
-============================================================ */
 function switchTab(event, tabId) {
   event.preventDefault();
   
