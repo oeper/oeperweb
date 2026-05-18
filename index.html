@@ -263,24 +263,6 @@
     </div>
 
 <script>
-/* ============================================================
-   PAGES CONFIGURATION
-   ────────────────────────────────────────────────────────────
-   To add a page and its top navigation pill, add a new block here.
-   Icons use Google Material Symbols names (e.g. 'home', 'download', 'code').
-============================================================ */
-/* ============================================================
-   PAGES CONFIGURATION
-   ────────────────────────────────────────────────────────────
-   To add a page and its top navigation pill, add a new block here.
-   Icons use Google Material Symbols names (e.g. 'home', 'download', 'book').
-============================================================ */
-/* ============================================================
-   PAGES CONFIGURATION
-   ────────────────────────────────────────────────────────────
-   To add a page and its top navigation pill, add a new block here.
-   Icons use Google Material Symbols names (e.g. 'home', 'download', 'book').
-============================================================ */
 const PAGES = [
   {
     id: 'home',
@@ -293,13 +275,13 @@ const PAGES = [
         title: 'Resource Vault',
         desc: 'Access packages, customized widget configurations, and asset direct bundles.',
         icon: 'download_bundle',
-        action: "window.location.href='https://oeper.dev/downloads'" // Redirects directly to your downloads page
+        action: "window.location.href='https://oeper.dev/downloads'"
       },
       {
         title: 'Active Articles',
         desc: 'Check out active work records, system tools, and custom widgets setups.',
         icon: 'book',
-        action: "https://oeper.dev/articles" // Redirects directly to your articles page
+        action: "window.location.href='https://oeper.dev/articles'"
       }
     ]
   },
@@ -307,6 +289,7 @@ const PAGES = [
     id: 'downloads',
     title: 'Downloads',
     icon: 'download',
+    url: 'https://oeper.dev/downloads',   // ← direct redirect
     heroTitle: 'Available Packages',
     heroSub: 'Direct setups and resource assets safely archived. Navigate here to see operational Touch Bar modifiers or application bundles.',
     items: [
@@ -325,9 +308,10 @@ const PAGES = [
     ]
   },
   {
-    id: 'articles', // Updated from 'projects' to 'articles'
-    title: 'Articles', // Updated text label
-    icon: 'book',      // Updated icon to a book
+    id: 'articles',
+    title: 'Articles',
+    icon: 'book',
+    url: 'https://oeper.dev/articles',    // ← direct redirect
     heroTitle: 'Project Showcases & Insights',
     heroSub: 'A log of development workflows, active interface experiments, and functional custom utility frameworks.',
     items: [
@@ -352,22 +336,30 @@ PAGES.forEach((page, index) => {
 
   // 1. Build Top Navigation Link
   const navLink = document.createElement('a');
-  navLink.href = '#';
   navLink.className = `nav-item ${isFirst ? 'active' : ''}`;
   navLink.setAttribute('data-tab', page.id);
-  navLink.setAttribute('onclick', `switchTab(event, '${page.id}')`);
+
+  // If the page has a direct URL, navigate there; otherwise switch tabs in-page
+  if (page.url) {
+    navLink.href = page.url;
+  } else {
+    navLink.href = '#';
+    navLink.setAttribute('onclick', `switchTab(event, '${page.id}')`);
+  }
+
   navLink.innerHTML = `
     <span class="material-symbols-rounded">${page.icon}</span>
     <span>${page.title}</span>
   `;
   navContainer.appendChild(navLink);
 
-  // 2. Build Page Layout
+  // 2. Build Page Layout (only rendered for pages without a direct URL)
+  if (page.url) return;
+
   const pageSection = document.createElement('div');
   pageSection.id = page.id;
   pageSection.className = `page-content ${isFirst ? 'active' : ''}`;
 
-  // Generate grid cards inside the layout
   const cardsHtml = page.items.map(item => `
     <a href="#" class="interactive-card" onclick="${item.action}">
       <div class="card-header">
@@ -406,7 +398,7 @@ function switchTab(event, tabId) {
   });
   
   currentActiveTab.style.animation = 'none';
-  void currentActiveTab.offsetWidth; // Clear transition tracking timeline 
+  void currentActiveTab.offsetWidth;
   
   currentActiveTab.style.transition = 'opacity 150ms var(--md-easing-standard), transform 150ms var(--md-easing-standard)';
   currentActiveTab.style.opacity = '0';
@@ -420,7 +412,6 @@ function switchTab(event, tabId) {
     const targetTab = document.getElementById(tabId);
     targetTab.classList.add('active');
     
-    // Drop animation flags on dynamic tab switches to let grid render natively
     const h1 = targetTab.querySelector('h1');
     const p = targetTab.querySelector('p');
     if (h1) h1.classList.remove('animate-text-hero');
