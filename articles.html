@@ -10,236 +10,310 @@
 <meta property="og:url" content="https://oeper.dev/articles">
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  /* Material You Dark Palette (Pixel Style Neutral & Accent Tones) */
   :root {
-    --glass-bg: rgba(255,255,255,0.04);
-    --glass-border: rgba(255,255,255,0.10);
-    --glass-shine: rgba(255,255,255,0.07);
-    --text-primary: rgba(255,255,255,0.92);
-    --text-muted: rgba(255,255,255,0.45);
-    --text-faint: rgba(255,255,255,0.25);
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
   }
 
-  body { min-height:100vh;background:#0a0a0a;font-family:'Syne',sans-serif;color:var(--text-primary);overflow-x:hidden;position:relative; }
-
-  .bg-scene { position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none; }
-  .blob { position:absolute;border-radius:50%;filter:blur(90px);opacity:0.55;animation:drift linear infinite; }
-  .blob-1 { width:600px;height:600px;background:radial-gradient(circle,#2a2a2a 0%,#141414 60%,transparent 100%);top:-120px;left:-160px;animation-duration:28s; }
-  .blob-2 { width:500px;height:500px;background:radial-gradient(circle,#1e1e1e 0%,#0e0e0e 60%,transparent 100%);bottom:-100px;right:-100px;animation-duration:22s;animation-direction:reverse; }
-  .blob-3 { width:420px;height:420px;background:radial-gradient(circle,#222222 0%,#111111 60%,transparent 100%);top:40%;left:55%;animation-duration:35s; }
-  .blob-4 { width:340px;height:340px;background:radial-gradient(circle,#1a1a1a 0%,#0c0c0c 60%,transparent 100%);top:20%;right:10%;animation-duration:18s;animation-direction:reverse; }
-
-  @keyframes drift {
-    0%   { transform:translate(0,0) scale(1); }
-    25%  { transform:translate(40px,30px) scale(1.05); }
-    50%  { transform:translate(15px,60px) scale(0.95); }
-    75%  { transform:translate(-25px,20px) scale(1.03); }
-    100% { transform:translate(0,0) scale(1); }
-  }
-  .bg-scene::after {
-    content:'';position:absolute;inset:0;
-    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-    opacity:0.03;mix-blend-mode:overlay;
+  body { 
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    position: relative; 
+    -webkit-font-smoothing: antialiased;
   }
 
-  .page { position:relative;z-index:1;max-width:900px;margin:0 auto;padding:72px 24px 100px; }
+  .page { position: relative; max-width: 840px; margin: 0 auto; padding: 56px 24px 100px; }
 
-  .header { margin-bottom:56px;animation:fadeUp 0.7s ease both; }
-  .header-eyebrow { font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:14px; }
-  .header h1 { font-size:clamp(2.2rem,5vw,3.6rem);font-weight:800;line-height:1.08;background:linear-gradient(135deg,#fff 30%,#a0a0a0 70%,#e0e0e0 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:16px; }
-  .header p { color:var(--text-muted);font-size:1rem;max-width:460px;line-height:1.65; }
+  /* Header Section */
+  .header { margin-bottom: 36px; }
+  .header-container { margin-bottom: 24px; }
+  .header-link { 
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--md-sys-color-primary);
+    text-decoration: none;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header h1 { 
+    font-family: 'Product Sans', sans-serif;
+    font-size: clamp(2.5rem, 6vw, 3.5rem);
+    font-weight: 400; 
+    color: var(--md-sys-color-on-surface);
+    margin-bottom: 12px; 
+    letter-spacing: -0.5px;
+  }
+  .header p { 
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 16px;
+    max-width: 500px;
+    line-height: 1.5; 
+  }
 
-  .toolbar { display:flex;gap:12px;margin-bottom:32px;flex-wrap:wrap;animation:fadeUp 0.7s 0.1s ease both; }
-  .search-wrap { flex:1;min-width:200px;position:relative; }
-  .search-wrap svg { position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none; }
-  .search-input { width:100%;background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:12px;padding:12px 14px 12px 40px;color:var(--text-primary);font-family:'DM Mono',monospace;font-size:13px;outline:none;transition:border-color 0.25s,box-shadow 0.25s; }
-  .search-input::placeholder { color:var(--text-muted); }
-  .search-input:focus { border-color:rgba(255,255,255,0.30);box-shadow:0 0 0 3px rgba(255,255,255,0.06); }
+  /* Toolbar & Search Bar (Material Design Pill Layout) */
+  .toolbar { 
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .search-wrap { position: relative; width: 100%; }
+  .search-wrap .material-symbols-rounded { 
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 22px;
+    pointer-events: none; 
+  }
+  .search-input { 
+    width: 100%;
+    background-color: var(--md-sys-color-surface);
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 28px;
+    padding: 16px 20px 16px 56px;
+    color: var(--md-sys-color-on-surface);
+    font-family: 'Roboto Flex', sans-serif;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+  .search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
+  .search-input:focus { 
+    border-color: var(--md-sys-color-primary);
+    background-color: #1f2329;
+  }
 
-  .filter-pills { display:flex;gap:8px;flex-wrap:wrap;align-items:center; }
-  .pill { background:var(--glass-bg);border:1px solid var(--glass-border);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:999px;padding:8px 16px;font-size:12px;font-weight:500;letter-spacing:0.04em;color:var(--text-muted);cursor:pointer;transition:all 0.2s;white-space:nowrap; }
-  .pill:hover { color:var(--text-primary);border-color:rgba(255,255,255,0.2); }
-  .pill.active { background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.30);color:rgba(255,255,255,0.9); }
-  .pill[data-color]:hover,
-  .pill[data-color].active { background:var(--cat-bg);border-color:var(--cat-border);color:var(--cat-color); }
+  /* Filter Pills */
+  .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .pill { 
+    background: transparent;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap; 
+  }
+  .pill:hover { 
+    background-color: rgba(255, 255, 255, 0.04);
+    color: var(--md-sys-color-on-surface);
+  }
+  .pill.active { 
+    background-color: var(--md-sys-color-secondary-container);
+    border-color: transparent;
+    color: var(--md-sys-color-on-secondary-container);
+  }
 
-  .stats { display:flex;gap:28px;margin-bottom:28px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted);animation:fadeUp 0.7s 0.05s ease both; }
-  .stats strong { color:var(--text-primary);font-weight:500; }
+  .stats { 
+    font-family: 'Product Sans', sans-serif;
+    font-size: 14px;
+    color: var(--md-sys-color-on-surface-variant);
+    margin-bottom: 24px; 
+    padding-left: 4px;
+  }
+  .stats strong { color: var(--md-sys-color-primary); font-weight: 500; }
 
-  .article-list { display:flex;flex-direction:column;gap:14px; }
+  /* Article Cards Layout */
+  .article-list { display: flex; flex-direction: column; gap: 16px; }
 
   .article-card {
-    position:relative;background:var(--glass-bg);border:1px solid var(--glass-border);
-    border-radius:18px;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-    overflow:hidden;cursor:pointer;
-    transition:transform 0.25s cubic-bezier(0.23,1,0.32,1),border-color 0.25s,box-shadow 0.25s;
-    animation:fadeUp 0.6s ease both;
+    position: relative;
+    background-color: var(--md-sys-color-surface);
+    border: 1px solid transparent;
+    border-radius: 28px; /* Classic Material M3 Spec Rounded Corners */
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s, border-color 0.2s;
   }
-  .article-card::before {
-    content:'';position:absolute;inset:0;
-    background:linear-gradient(135deg,var(--glass-shine) 0%,transparent 55%);
-    border-radius:inherit;pointer-events:none;opacity:0;transition:opacity 0.3s;z-index:0;
+  .article-card:hover { 
+    background-color: #21242c;
+    border-color: var(--md-sys-color-outline-variant);
   }
-  .article-card:hover::before { opacity:1; }
-  .article-card:hover { transform:translateY(-2px);border-color:rgba(255,255,255,0.18);box-shadow:var(--card-glow,0 20px 50px rgba(0,0,0,0.35)); }
 
-  .article-card.has-image .card-image-wrap { position:relative;overflow:hidden; }
-  .article-card.has-image .card-image-wrap img { width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-radius:18px 18px 0 0;transition:transform 0.5s cubic-bezier(0.23,1,0.32,1); }
-  .article-card:hover.has-image .card-image-wrap img { transform:scale(1.03); }
-  .article-card.has-image .card-image-wrap::after { content:'';position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(to bottom,transparent,rgba(10,10,10,0.6));pointer-events:none; }
+  .article-card.has-image .card-image-wrap { position: relative; overflow: hidden; }
+  .article-card.has-image .card-image-wrap img { 
+    width: 100%;
+    aspect-ratio: 16/7;
+    object-fit: cover;
+    display: block;
+    border-radius: 28px 28px 0 0;
+  }
 
-  .card-body { padding:22px 24px;position:relative;z-index:1; }
-  .article-card.has-image .card-body { padding:18px 24px 22px; }
+  .card-body { padding: 24px; }
+  .article-card.has-image .card-body { padding: 20px 24px 24px; }
 
-  /* tag row — wraps naturally for multiple tags */
-  .card-meta { display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap; }
-  .cat-tag { font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid;opacity:0.8;white-space:nowrap; }
-  .article-date { font-family:'DM Mono',monospace;font-size:11px;color:var(--text-faint); }
+  .card-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .cat-tag { 
+    font-family: 'Product Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 8px;
+    background-color: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+  }
+  .article-date { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
 
   .article-title {
-    font-family:'DM Serif Display',serif;
-    font-size:clamp(1.15rem,2.5vw,1.5rem);
-    font-weight:400;line-height:1.25;
-    color:var(--text-primary);
-    margin-bottom:10px;
-    transition:color 0.2s;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1.3;
+    color: var(--md-sys-color-on-surface);
+    margin-bottom: 8px;
   }
-  .article-card:hover .article-title { color:#fff; }
 
   .article-excerpt {
-    font-size:13px;line-height:1.7;color:var(--text-muted);
-    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
-    margin-bottom:16px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--md-sys-color-on-surface-variant);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 16px;
   }
 
   .read-more {
-    display:inline-flex;align-items:center;gap:6px;
-    font-family:'DM Mono',monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;
-    color:var(--text-faint);transition:color 0.2s,gap 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--md-sys-color-primary);
   }
-  .article-card:hover .read-more { color:rgba(255,255,255,0.7);gap:10px; }
-  .read-more svg { transition:transform 0.2s; }
-  .article-card:hover .read-more svg { transform:translateX(3px); }
 
+  /* Full Screen Overlay Panel */
   .reader-overlay {
-    position:fixed;inset:0;z-index:50;
-    background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-    opacity:0;pointer-events:none;transition:opacity 0.3s;
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(0,0,0,0.6);
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
   }
-  .reader-overlay.open { opacity:1;pointer-events:all; }
+  .reader-overlay.open { opacity: 1; pointer-events: all; }
 
-  /* Full-screen panel — slides up from bottom */
   .reader-panel {
-    position:fixed;inset:0;
-    background:#0f0f0f;
-    overflow-y:auto;z-index:51;
-    transform:translateY(100%);
-    transition:transform 0.45s cubic-bezier(0.23,1,0.32,1);
-    display:flex;flex-direction:column;
+    position: fixed; inset: 0;
+    background-color: var(--md-sys-color-background);
+    overflow-y: auto; z-index: 51;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.05, 0.7, 0.1, 1);
+    display: flex; flex-direction: column;
   }
-  .reader-panel.open { transform:translateY(0); }
+  .reader-panel.open { transform: translateY(0); }
 
-  /* Close bar — sticky across full width */
   .reader-close {
-    position:sticky;top:0;z-index:2;
-    display:flex;justify-content:flex-end;
-    padding:20px 28px 0;
-    background:linear-gradient(to bottom,#0f0f0f 70%,transparent);
+    position: sticky; top: 0; z-index: 2;
+    display: flex; justify-content: flex-end;
+    padding: 16px 24px;
+    background: linear-gradient(to bottom, var(--md-sys-color-background) 70%, transparent);
   }
   .reader-close-btn {
-    width:36px;height:36px;border-radius:10px;
-    background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
-    display:flex;align-items:center;justify-content:center;
-    color:var(--text-muted);cursor:pointer;transition:all 0.2s;
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--md-sys-color-surface);
+    border: 1px solid var(--md-sys-color-outline);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--md-sys-color-on-surface); cursor: pointer; transition: background-color 0.2s;
   }
-  .reader-close-btn:hover { background:rgba(255,255,255,0.12);color:#fff; }
+  .reader-close-btn:hover { background-color: var(--md-sys-color-surface-variant); }
 
-  /* Centred reading column */
-  .reader-content {
-    flex:1;
-    width:100%;max-width:720px;
-    margin:0 auto;
-    padding:8px 24px 80px;
-  }
-
-  /* Hero image: full bleed across the panel */
+  .reader-content { flex: 1; width: 100%; max-width: 720px; margin: 0 auto; padding: 0 24px 100px; }
   .reader-image {
-    width:100vw;
-    margin-left:calc(-50vw + 50%);
-    max-height:420px;
-    object-fit:cover;
-    display:block;
-    margin-bottom:40px;
+    width: calc(100% + 48px); margin-left: -24px;
+    max-height: 380px; object-fit: cover; display: block;
+    border-radius: 0 0 28px 28px; margin-bottom: 32px;
   }
-  .reader-cat-row { display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap; }
-  .reader-date { font-family:'DM Mono',monospace;font-size:11px;color:var(--text-faint); }
-
+  .reader-cat-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .reader-date { font-size: 14px; color: var(--md-sys-color-on-surface-variant); }
   .reader-title {
-    font-family:'DM Serif Display',serif;
-    font-size:clamp(1.6rem,4vw,2.4rem);
-    font-weight:400;line-height:1.18;
-    color:#fff;margin-bottom:20px;
+    font-family: 'Product Sans', sans-serif;
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    font-weight: 400; line-height: 1.2;
+    color: var(--md-sys-color-on-surface); margin-bottom: 24px;
   }
+  .reader-divider { height: 1px; background: var(--md-sys-color-outline); margin-bottom: 32px; }
 
-  .reader-divider { height:1px;background:rgba(255,255,255,0.08);margin-bottom:28px; }
-
-  .reader-body { font-size:15px;line-height:1.85;color:rgba(255,255,255,0.72);font-family:'Georgia',serif; }
-  .reader-body p  { margin-bottom:1.4em; }
-  .reader-body h1,.reader-body h2 { font-family:'Syne',sans-serif;font-weight:700;color:#fff;margin:2em 0 0.75em; }
-  .reader-body h1 { font-size:1.35rem; }
-  .reader-body h2 { font-size:1.15rem; }
-  .reader-body h3,.reader-body h4,.reader-body h5,.reader-body h6 { font-family:'Syne',sans-serif;font-weight:600;color:rgba(255,255,255,0.85);margin:1.6em 0 0.6em;font-size:1rem; }
-  .reader-body blockquote { border-left:2px solid rgba(255,255,255,0.2);padding-left:20px;color:var(--text-muted);margin:1.5em 0;font-style:italic; }
-  .reader-body ul,.reader-body ol { padding-left:1.4em;margin-bottom:1.4em; }
-  .reader-body li { margin-bottom:0.4em; }
-  .reader-body code { font-family:'DM Mono',monospace;font-size:13px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:1px 6px;color:rgba(255,255,255,0.85); }
-  .reader-body pre { background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px 20px;overflow-x:auto;margin-bottom:1.4em; }
-  .reader-body pre code { background:none;border:none;padding:0;font-size:13px; }
-  .reader-body hr { border:none;border-top:1px solid rgba(255,255,255,0.1);margin:2em 0; }
-  .reader-body a { color:inherit;text-decoration:underline;text-underline-offset:3px; }
-
-  .empty { text-align:center;padding:80px 0;color:var(--text-muted);display:none; }
-  .empty svg { opacity:0.25;margin-bottom:16px; }
-  .empty p { font-size:14px; }
-
-  @keyframes fadeUp {
-    from { opacity:0;transform:translateY(18px); }
-    to   { opacity:1;transform:translateY(0); }
+  /* Typography inside Reader Panel */
+  .reader-body { font-size: 16px; line-height: 1.75; color: var(--md-sys-color-on-surface); }
+  .reader-body p { margin-bottom: 1.5em; }
+  .reader-body h1, .reader-body h2, .reader-body h3 { 
+    font-family: 'Product Sans', sans-serif; font-weight: 400; color: #fff; margin: 1.8em 0 0.6em; 
   }
+  .reader-body h1 { font-size: 26px; border-bottom: 1px solid var(--md-sys-color-outline); padding-bottom: 8px; }
+  .reader-body h2 { font-size: 22px; }
+  .reader-body h3 { font-size: 18px; }
+  .reader-body blockquote { 
+    background-color: var(--md-sys-color-surface);
+    border-left: 4px solid var(--md-sys-color-primary); 
+    padding: 16px 20px; border-radius: 0 16px 16px 0; margin: 1.5em 0; 
+  }
+  .reader-body ul, .reader-body ol { padding-left: 1.5em; margin-bottom: 1.5em; }
+  .reader-body li { margin-bottom: 0.5em; }
+  .reader-body code { 
+    font-family: monospace; font-size: 14px; 
+    background: var(--md-sys-color-surface-variant); border-radius: 6px; padding: 3px 6px; 
+    color: #fff;
+  }
+  .reader-body pre { 
+    background: #1e2025; border: 1px solid var(--md-sys-color-outline); 
+    border-radius: 16px; padding: 20px; overflow-x: auto; margin-bottom: 1.5em; 
+  }
+  .reader-body pre code { background: none; padding: 0; }
+  .reader-body a { color: var(--md-sys-color-primary); text-decoration: none; font-weight: 500; }
+  .reader-body a:hover { text-decoration: underline; }
+
+  .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
+  .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
 </style>
 </head>
 <body>
-
-<div class="bg-scene">
-  <div class="blob blob-1"></div>
-  <div class="blob blob-2"></div>
-  <div class="blob blob-3"></div>
-  <div class="blob blob-4"></div>
-</div>
 
 <div class="page">
   <header class="header">
     <div class="header-container">
       <a href="https://oeper.dev" class="header-link">
-        <span class="header-eyebrow">⬅ back to oeper.dev</span>
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>back to oeper.dev</span>
       </a>
     </div>
     <h1>Articles</h1>
     <p>Writings, guides, and notes — all in one place.</p>
   </header>
 
-  <div class="stats">
-    <span><strong id="visibleCount">0</strong> articles</span>
-  </div>
-
   <div class="toolbar">
     <div class="search-wrap">
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-      </svg>
+      <span class="material-symbols-rounded">search</span>
       <input class="search-input" type="text" placeholder="Search articles…" id="searchInput">
     </div>
     <div class="filter-pills" id="filterPills">
@@ -247,12 +321,15 @@
     </div>
   </div>
 
+  <div class="stats">
+    <span>Total: <strong id="visibleCount">0</strong> items displayed</span>
+  </div>
+
   <div class="article-list" id="articleList"></div>
+  
   <div class="empty" id="emptyState">
-    <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-      <path d="M9 12h6m-3-3v6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-    </svg>
-    <p>No articles match your search.</p>
+    <span class="material-symbols-rounded">search_off</span>
+    <p>No results match your search parameters.</p>
   </div>
 </div>
 
@@ -260,51 +337,26 @@
 <div class="reader-panel" id="readerPanel">
   <div class="reader-close">
     <button class="reader-close-btn" id="readerCloseBtn" title="Close">
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      <span class="material-symbols-rounded">close</span>
     </button>
   </div>
   <div class="reader-content" id="readerContent"></div>
 </div>
 
 <script>
-/* ============================================================
-   CATEGORY CONFIG
-   ─────────────────────────────────────────────────────────────
-   Define your categories here. Each needs:
-     id     — unique key used in ARTICLES entries (no spaces)
-     label  — display name on the filter pill and tag
-     color  — tag/pill colour (keep to greys/whites for monochrome)
-============================================================ */
 const CATEGORIES = [
-  { id: 'tools',   label: 'Tools',   color: '#e5e5e5' },
-  { id: 'guide',   label: 'Guide',   color: '#c9c9c9' },
-  { id: 'news',    label: 'News',    color: '#b5b5b5' },
-  { id: 'opinion', label: 'Opinion', color: '#a3a3a3' },
+  { id: 'tools',    label: 'Tools' },
+  { id: 'guide',    label: 'Guide' },
+  { id: 'news',     label: 'News' },
+  { id: 'opinion',  label: 'Opinion' },
+  { id: 'textbooks',label: 'Textbooks' }
 ];
 
-/* ============================================================
-   ARTICLE CONFIG
-   ─────────────────────────────────────────────────────────────
-   Each entry:
-     title    (required) — article headline
-     category (required) — single id string OR array of up to 5 ids:
-                           'tools'  or  ['tools', 'guide']
-                           Filtering matches if ANY category matches.
-     date     (required) — display string, e.g. "March 2025"
-     excerpt  (optional) — short description shown on the card
-     image    (optional) — banner image URL; omit or null for no image
-     content  (required) — article body. Three formats supported:
-                  1. Markdown string  — plain text with # headings, **bold**,
-                                        > blockquotes, etc. Auto-detected.
-                  2. HTML string      — raw HTML (auto-detected by presence of tags)
-                  3. URL string       — 'https://yoursite.com/article.txt'
-                                        Fetched at open time, rendered as Markdown.
-============================================================ */
 const ARTICLES = [
   {
     title:    'QR code generator',
-    category: 'tools',                    // single string — still works fine
-    date:     'March 29, 2026',
+    category: 'tools',                    
+    date:      'March 29, 2026',
     excerpt:  'Generate QR codes without being begged to sign up or pay.',
     image:    'https://upload.wikimedia.org/wikipedia/commons/2/2f/Rickrolling_QR_code.png',
     content:  `
@@ -317,7 +369,7 @@ const ARTICLES = [
   {
     title:    'Sejarah Tingkatan 3 textbook (TRANSLATED)',
     category: 'textbooks',
-    date:     'April 2, 2026',
+    date:      'April 2, 2026',
     excerpt:  'Form 3 History textbook translated into English and Chinese',
     image:    'https://online.fliphtml5.com/faksy/sypg/files/large/1.webp?1606645644',
     content:  `History may be a very hard and unnecessary subject that our schools have forced us to shove into our brains and ruin our day.
@@ -333,10 +385,10 @@ Please do note that the translations may not be accurate. I advise referring to 
 
 All the best for whatever you need these for!`,
   },
- {
+  {
     title:    'RBT Tingkatan 3 textbook (TRANSLATED)',
     category: 'textbooks',
-    date:     'April 2, 2026',
+    date:      'April 2, 2026',
     excerpt:  'Form 3 RBT textbook translated into English and Chinese',
     image:    'https://online.anyflip.com/xygpt/fvdt/files/mobile/1.webp',
     content:  `I find RBT (Reka Bentuk dan Teknologi for more content) a really useful subject for my future. It COULD HAVE HELPED ME A LOT MORE IF IT WERE IN ENGLISH.
@@ -352,10 +404,10 @@ Please do note that the translations may not be accurate. I advise referring to 
 
 All the best for whatever you need these for!`,
   },
- {
+  {
     title:    'Pendidikan Seni Visual (PSV) Tingkatan 3 textbook (TRANSLATED)',
     category: 'textbooks',
-    date:     'April 12, 2026',
+    date:      'April 12, 2026',
     excerpt:  'Form 3 Pendidikan Seni Visual (PSV) textbook translated into English and Chinese',
     image:    'https://online.anyflip.com/icbcu/xfxz/files/mobile/2.webp',
     content:  `Seni uhh
@@ -371,10 +423,10 @@ Also, Google translate might have mixed up the page order for the PDFs and rearr
 
 All the best for whatever you need these for!`,
   },
- {
+  {
     title:    'Geografi Tingkatan 3 textbook (TRANSLATED)',
     category: 'textbooks',
-    date:     'April 12, 2026',
+    date:      'April 12, 2026',
     excerpt:  'Form 3 Geografi/Geography textbook translated into English and Chinese',
     image:    'https://cdn1.npcdn.net/images/1592625400e88792792d295890e43144c99239231a.jpg',
     content:  `This took me soooooo long to translate
@@ -389,51 +441,28 @@ Please do note that the translations may not be accurate. I advise referring to 
 Also, Google translate might have mixed up the page order for the PDFs and rearranging them would take me a very long time so I apologize for that
 
 All the best for whatever you need these for!`,
-  },
- // Example of multi-category:
-  // {
-  //   title:    'My Article',
-  //   category: ['guide', 'tools'],        // array — shows both tags, matches either filter
-  //   date:     'April 2026',
-  //   content:  'Content here...',
-  // },
+  }
 ];
-/* ============================================================ */
 
-
-// ── Helpers ──────────────────────────────────────────────────
 const CAT_MAP = {};
 CATEGORIES.forEach(c => { CAT_MAP[c.id] = c; });
 
 function getCategory(id) {
-  return CAT_MAP[id] || { id, label: id, color: 'rgba(255,255,255,0.5)' };
+  return CAT_MAP[id] || { id, label: id };
 }
 
-// Normalise category field → always an array, max 5
 function getCategoryIds(raw) {
   const arr = Array.isArray(raw) ? raw : [raw];
   return arr.slice(0, 5).filter(Boolean);
 }
 
-function hexToAlpha(color, alpha) {
-  const hex = color.replace('#','');
-  if (/^[0-9a-f]{6}$/i.test(hex)) {
-    const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
-    return `rgba(${r},${g},${b},${alpha})`;
-  }
-  return color;
-}
-
-// Build a tags HTML string for a list of category ids
 function buildTags(ids) {
   return ids.map(id => {
     const cat = getCategory(id);
-    const style = `color:${cat.color};border-color:${hexToAlpha(cat.color, 0.35)};`;
-    return `<span class="cat-tag" style="${style}">${cat.label}</span>`;
+    return `<span class="cat-tag">${cat.label}</span>`;
   }).join('');
 }
 
-// ── Build filter pills (union of all categories used) ────────
 const usedCatIds = [...new Set(ARTICLES.flatMap(a => getCategoryIds(a.category)))];
 const pillsContainer = document.getElementById('filterPills');
 usedCatIds.forEach(id => {
@@ -441,33 +470,22 @@ usedCatIds.forEach(id => {
   const b = document.createElement('button');
   b.className = 'pill';
   b.dataset.filter = id;
-  b.dataset.color = cat.color;
   b.textContent = cat.label;
-  b.style.setProperty('--cat-color', cat.color);
-  b.style.setProperty('--cat-bg', hexToAlpha(cat.color, 0.10));
-  b.style.setProperty('--cat-border', hexToAlpha(cat.color, 0.32));
   pillsContainer.appendChild(b);
 });
 
-// ── Render article cards ─────────────────────────────────────
 const articleList = document.getElementById('articleList');
 
 ARTICLES.forEach((article, i) => {
   const catIds = getCategoryIds(article.category);
-  const primaryCat = getCategory(catIds[0]);
   const hasImage = !!article.image;
 
   const card = document.createElement('div');
   card.className = 'article-card' + (hasImage ? ' has-image' : '');
-  // Store all category ids space-separated for filter matching
   card.dataset.categories = catIds.join(' ');
   card.dataset.title = article.title.toLowerCase();
   card.dataset.excerpt = (article.excerpt || '').toLowerCase();
   card.dataset.index = i;
-  card.style.animationDelay = (0.12 + i * 0.07) + 's';
-  card.style.setProperty('--card-glow',
-    `0 20px 50px ${hexToAlpha(primaryCat.color, 0.10)}, 0 0 0 1px ${hexToAlpha(primaryCat.color, 0.07)} inset`
-  );
 
   const imageHtml = hasImage
     ? `<div class="card-image-wrap"><img src="${article.image}" alt="${article.title}" loading="lazy"></div>`
@@ -484,7 +502,6 @@ ARTICLES.forEach((article, i) => {
       ${article.excerpt ? `<div class="article-excerpt">${article.excerpt}</div>` : ''}
       <span class="read-more">
         Read article
-        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </span>
     </div>
   `;
@@ -493,7 +510,6 @@ ARTICLES.forEach((article, i) => {
   articleList.appendChild(card);
 });
 
-// ── Markdown parser ───────────────────────────────────────────
 function parseMarkdown(md) {
   let html = md
     .replace(/\r\n/g, '\n')
@@ -518,12 +534,12 @@ function parseMarkdown(md) {
       const items = match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*\d+\.\s+/, '')}</li>`).join('');
       return `<ol>${items}</ol>\n`;
     })
-    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-    .replace(/\*\*(.+?)\*\*/g,     '<strong>$1</strong>')
-    .replace(/__(.+?)__/g,         '<strong>$1</strong>')
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:1em 0;">')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-underline-offset:3px;">$1</a>')
-    .replace(/\*(.+?)\*/g,         '<em>$1</em>')
+    .replace(/\*\*\*(.+?)\*\*\txt/, '<strong><em>$1</em></strong>')
+    .replace(/\*\textbf{(.+?)}\*\*/g,     '<strong>$1</strong>')
+    .replace(/__(.+?)__/g,          '<strong>$1</strong>')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:12px;margin:1em 0;">')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\*(.+?)\*/g,          '<em>$1</em>')
     .replace(/(?<!\w)_([^_\s][^_]*)_(?!\w)/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/^(?!<[hbuop]|<li|<bl|<pr|<hr|<img|<a)(.+)$/gm, '<p>$1</p>')
@@ -535,7 +551,6 @@ function escHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-// ── Reader panel ─────────────────────────────────────────────
 const overlay       = document.getElementById('readerOverlay');
 const panel         = document.getElementById('readerPanel');
 const closeBtn      = document.getElementById('readerCloseBtn');
@@ -557,7 +572,7 @@ function renderReader(article, bodyHtml) {
 
 async function openReader(index) {
   const article = ARTICLES[index];
-  renderReader(article, `<p style="color:var(--text-faint);font-family:'DM Mono',monospace;font-size:13px;">Loading…</p>`);
+  renderReader(article, `<p style="opacity:0.5;">Loading…</p>`);
   overlay.classList.add('open');
   panel.classList.add('open');
   panel.scrollTop = 0;
@@ -575,7 +590,7 @@ async function openReader(index) {
       const text = await res.text();
       bodyHtml = parseMarkdown(text);
     } catch (err) {
-      bodyHtml = `<p style="color:var(--text-faint);font-family:'DM Mono',monospace;font-size:13px;">Could not load content: ${err.message}</p>`;
+      bodyHtml = `<p style="opacity:0.5;">Could not load content: ${err.message}</p>`;
     }
   } else {
     const looksLikeHtml = /<[a-z][\s\S]*>/i.test(article.content);
@@ -597,7 +612,6 @@ closeBtn.addEventListener('click', closeReader);
 overlay.addEventListener('click', closeReader);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReader(); });
 
-// ── Filter + search ──────────────────────────────────────────
 let activeFilter = '__all__';
 const visibleCount = document.getElementById('visibleCount');
 const emptyState   = document.getElementById('emptyState');
