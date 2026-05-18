@@ -269,6 +269,18 @@
    To add a page and its top navigation pill, add a new block here.
    Icons use Google Material Symbols names (e.g. 'home', 'download', 'code').
 ============================================================ */
+/* ============================================================
+   PAGES CONFIGURATION
+   ────────────────────────────────────────────────────────────
+   To add a page and its top navigation pill, add a new block here.
+   Icons use Google Material Symbols names (e.g. 'home', 'download', 'book').
+============================================================ */
+/* ============================================================
+   PAGES CONFIGURATION
+   ────────────────────────────────────────────────────────────
+   To add a page and its top navigation pill, add a new block here.
+   Icons use Google Material Symbols names (e.g. 'home', 'download', 'book').
+============================================================ */
 const PAGES = [
   {
     id: 'home',
@@ -281,13 +293,13 @@ const PAGES = [
         title: 'Resource Vault',
         desc: 'Access packages, customized widget configurations, and asset direct bundles.',
         icon: 'download_bundle',
-        action: "switchTab(event, 'downloads')" // Jumps tabs smoothly
+        action: "window.location.href='https://oeper.dev/downloads'" // Redirects directly to your downloads page
       },
       {
-        title: 'Active Repositories',
+        title: 'Active Articles',
         desc: 'Check out active work records, system tools, and custom widgets setups.',
-        icon: 'terminal',
-        action: "switchTab(event, 'projects')"
+        icon: 'book',
+        action: "window.location.href='https://oeper.dev/articles'" // Redirects directly to your articles page
       }
     ]
   },
@@ -313,10 +325,10 @@ const PAGES = [
     ]
   },
   {
-    id: 'projects',
-    title: 'Projects',
-    icon: 'code',
-    heroTitle: 'Project Showcases',
+    id: 'articles', // Updated from 'projects' to 'articles'
+    title: 'Articles', // Updated text label
+    icon: 'book',      // Updated icon to a book
+    heroTitle: 'Project Showcases & Insights',
     heroSub: 'A log of development workflows, active interface experiments, and functional custom utility frameworks.',
     items: [
       {
