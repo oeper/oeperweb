@@ -1,248 +1,420 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>oeper.dev</title>
-     <link rel="icon" href="icon.ico">
-    <link rel="stylesheet" href="css.css">
-<!--
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>oeper.dev — Portal</title>
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
-TemplateMo 592 glossy touch
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-https://templatemo.com/tm-592-glossy-touch
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline-variant: #8c9199;
+    
+    --md-transition-duration: 400ms;
+    --md-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+    --md-easing-emphasized: cubic-bezier(0.3, 0, 0, 1);
+  }
 
--->
-    <style>
-        
-    </style>
+  body { 
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Top Navigation Bar */
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: rgba(17, 19, 24, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(67, 71, 78, 0.4);
+    padding: 0 24px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--md-sys-color-on-surface);
+    text-decoration: none;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 22px;
+  }
+
+  .nav-logo .material-symbols-rounded {
+    color: var(--md-sys-color-primary);
+    font-size: 28px;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 8px;
+    height: 100%;
+    align-items: center;
+  }
+
+  .nav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    text-decoration: none;
+    color: var(--md-sys-color-on-surface-variant);
+    font-family: 'Product Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 20px;
+    transition: color var(--md-transition-duration) var(--md-easing-standard);
+  }
+
+  .nav-item .material-symbols-rounded { font-size: 20px; }
+
+  .nav-item::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--md-sys-color-surface-variant);
+    border-radius: 20px;
+    opacity: 0;
+    transform: scaleX(0.7);
+    transition: opacity var(--md-transition-duration) var(--md-easing-standard),
+                transform var(--md-transition-duration) var(--md-easing-emphasized);
+    z-index: -1;
+  }
+
+  .nav-item:hover { color: var(--md-sys-color-on-surface); }
+  .nav-item:hover::before { opacity: 0.5; transform: scaleX(1); }
+
+  .nav-item.active { color: var(--md-sys-color-on-secondary-container); }
+  .nav-item.active::before {
+    background-color: var(--md-sys-color-secondary-container);
+    opacity: 1;
+    transform: scaleX(1);
+  }
+
+  /* Content Wrapper */
+  .page-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 56px 24px 100px;
+  }
+
+  .page-content {
+    display: none;
+    opacity: 0;
+    transform: translateY(24px);
+    will-change: transform, opacity;
+  }
+
+  .page-content.active {
+    display: block;
+    animation: materialFadeIn var(--md-transition-duration) var(--md-easing-emphasized) forwards;
+  }
+
+  @keyframes materialFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Structural Text Animations */
+  .animate-text-hero {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+    animation: textReveal 700ms cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+  }
+  
+  .animate-text-sub {
+    opacity: 0;
+    animation: fadeInSub 600ms var(--md-easing-standard) forwards;
+    animation-delay: 200ms;
+  }
+
+  @keyframes textReveal {
+    from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(16px); }
+    to { opacity: 1; clip-path: inset(0 0 0 0); transform: translateY(0); }
+  }
+
+  @keyframes fadeInSub {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-section { margin-bottom: 48px; }
+  .hero-section h1 {
+    font-family: 'Product Sans', sans-serif;
+    font-size: clamp(2.8rem, 7vw, 4rem);
+    font-weight: 400;
+    letter-spacing: -1px;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .hero-section p {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 18px;
+    line-height: 1.6;
+    max-width: 560px;
+  }
+
+  .grid-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .interactive-card {
+    background-color: var(--md-sys-color-surface);
+    border-radius: 28px;
+    padding: 28px;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid transparent;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 180px;
+    transition: background-color 200ms var(--md-easing-standard),
+                border-color 200ms var(--md-easing-standard),
+                transform 250ms var(--md-easing-emphasized);
+  }
+
+  .interactive-card:hover {
+    background-color: #21242c;
+    border-color: var(--md-sys-color-outline-variant);
+    transform: translateY(-4px);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+
+  .card-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background-color: var(--md-sys-color-surface-variant);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--md-sys-color-primary);
+  }
+
+  .card-arrow {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 22px;
+    transition: transform 200ms var(--md-easing-standard);
+  }
+
+  .interactive-card:hover .card-arrow {
+    transform: translate(2px, -2px) scale(1.05);
+    color: var(--md-sys-color-primary);
+  }
+
+  .interactive-card h3 {
+    font-family: 'Product Sans', sans-serif;
+    font-size: 20px;
+    font-weight: 400;
+    margin-bottom: 6px;
+  }
+
+  .interactive-card p {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+</style>
 </head>
 <body>
-    <div class="bg-shapes">
-        <div class="shape"></div>
-        <div class="shape"></div>
-        <div class="shape"></div>
-        <div class="shape"></div>
-        <div class="shape"></div>
-        <div class="shape"></div>
+
+  <nav class="navbar">
+    <a href="#" class="nav-logo" onclick="switchTab(event, 'home')">
+      <span class="material-symbols-rounded">token</span>
+      <span>oeper.dev</span>
+    </a>
+    <div class="nav-links" id="navLinksContainer">
+      </div>
+  </nav>
+
+  <div class="page-container" id="pageContainer">
     </div>
 
-    <!-- SINGLE NAVIGATION HEADER -->
-    <header>
-        <div class="container">
-            <nav class="glass">
-                <div class="logo" onclick="showPage('home')">
-                    <div class="logo-icon">
-                        <svg viewBox="0 0 48 48" fill="white" xmlns="/icon.png">
-                            <!-- Grid of circles with varying sizes -->
-                            <circle cx="16" cy="16" r="5" opacity="0.9"/>
-                            <circle cx="32" cy="16" r="4" opacity="0.8"/>
-                            <circle cx="16" cy="32" r="4" opacity="0.7"/>
-                            <circle cx="32" cy="32" r="5" opacity="0.85"/>
-                            <!-- Small accent dots -->
-                            <circle cx="24" cy="8" r="2" opacity="1"/>
-                            <circle cx="8" cy="24" r="2" opacity="0.9"/>
-                            <circle cx="40" cy="24" r="2" opacity="0.9"/>
-                            <circle cx="24" cy="40" r="2" opacity="1"/>
-                            <!-- Tiny corner dots -->
-                            <circle cx="8" cy="8" r="1" opacity="0.6"/>
-                            <circle cx="40" cy="8" r="1" opacity="0.6"/>
-                            <circle cx="8" cy="40" r="1" opacity="0.6"/>
-                            <circle cx="40" cy="40" r="1" opacity="0.6"/>
-                        </svg>
-                    </div>
-                    <span>oeper.dev</span>
-                </div>
-                <div class="nav-links">
-                    <a href="#" onclick="showPage('home')" class="active">Home</a>
-                    <a href="#" onclick="showPage('about')">About</a>
-                    <a href="https://oeper.dev/articles">Articles</a>
-                    <a href="https://oeper.dev/downloads">Downloads</a>
-                </div>
-            </nav>
-        </div>
-    </header>
+<script>
+/* ============================================================
+   PAGES CONFIGURATION
+   ────────────────────────────────────────────────────────────
+   To add a page and its top navigation pill, add a new block here.
+   Icons use Google Material Symbols names (e.g. 'home', 'download', 'code').
+============================================================ */
+const PAGES = [
+  {
+    id: 'home',
+    title: 'Home',
+    icon: 'home',
+    heroTitle: 'Crafting clean web landscapes.',
+    heroSub: 'Welcome to my open-source portal. Explore modular Touch Bar extensions, micro-utilities, design resources, and system assets built around efficiency.',
+    items: [
+      {
+        title: 'Resource Vault',
+        desc: 'Access packages, customized widget configurations, and asset direct bundles.',
+        icon: 'download_bundle',
+        action: "switchTab(event, 'downloads')" // Jumps tabs smoothly
+      },
+      {
+        title: 'Active Repositories',
+        desc: 'Check out active work records, system tools, and custom widgets setups.',
+        icon: 'terminal',
+        action: "switchTab(event, 'projects')"
+      }
+    ]
+  },
+  {
+    id: 'downloads',
+    title: 'Downloads',
+    icon: 'download',
+    heroTitle: 'Available Packages',
+    heroSub: 'Direct setups and resource assets safely archived. Navigate here to see operational Touch Bar modifiers or application bundles.',
+    items: [
+      {
+        title: 'Status+ Widget',
+        desc: 'Better system data configurations structured cleanly for modern workspace panels.',
+        icon: 'widgets',
+        action: '#'
+      },
+      {
+        title: 'Traffic Light Control',
+        desc: 'Window control modular widget layouts mapped specifically to Touch Bar surfaces.',
+        icon: 'traffic',
+        action: '#'
+      }
+    ]
+  },
+  {
+    id: 'projects',
+    title: 'Projects',
+    icon: 'code',
+    heroTitle: 'Project Showcases',
+    heroSub: 'A log of development workflows, active interface experiments, and functional custom utility frameworks.',
+    items: [
+      {
+        title: 'pock.status',
+        desc: 'Production stage application interface monitoring hooks written for customized macOS environments.',
+        icon: 'deployed_code',
+        action: '#'
+      }
+    ]
+  }
+];
 
-    <!-- HOME PAGE -->
-    <div id="home" class="page active">
-        <div class="container">
-            <div class="content-wrapper">
-                <section class="hero glass">
-                    <div class="hero-image">
-                        <img src="/asgore.jpg" alt="as gor" />
-                    </div>
-                    <div class="hero-content">
-                        <h1>welcome to oeper.dev</h1>
-                        <p>oeper.dev is a website for some projects, games and whatnot.
-</p>
-                    </div>
-                </section>
+/* ============================================================
+   DYNAMIC RENDERER
+============================================================ */
+const navContainer = document.getElementById('navLinksContainer');
+const pageContainer = document.getElementById('pageContainer');
 
-                <section class="features">
-                    <div class="feature-card glass">
-                        <div class="feature-icon">🛠️</div>
-                        <h3>heavy renovation</h3>
-                        <p>this website is under heavy renovation</p>
-                    </div>
-                    
-                    <div class="feature-card glass">
-                        <div class="feature-icon">🛠️</div>
-                        <h3>How heavy?</h3>
-                        <p>very heavy</p>
-                    </div>
-                    
-                    <div class="feature-card glass">
-                        <div class="feature-icon">🛠️</div>
-                        <h3>Are you sure?</h3>
-                        <p>Pretty sure. Threw a trash bag. into space. at work today.</p>
-                    </div>
+PAGES.forEach((page, index) => {
+  const isFirst = index === 0;
 
-                    <div class="feature-card glass">
-                        <div class="feature-icon">🛠️</div>
-                        <h3>Why?</h3>
-                        <p>google sites is boring</p>
-                    </div>
+  // 1. Build Top Navigation Link
+  const navLink = document.createElement('a');
+  navLink.href = '#';
+  navLink.className = `nav-item ${isFirst ? 'active' : ''}`;
+  navLink.setAttribute('data-tab', page.id);
+  navLink.setAttribute('onclick', `switchTab(event, '${page.id}')`);
+  navLink.innerHTML = `
+    <span class="material-symbols-rounded">${page.icon}</span>
+    <span>${page.title}</span>
+  `;
+  navContainer.appendChild(navLink);
 
-                    <div class="feature-card glass">
-                        <div class="feature-icon">💔</div>
-                        <h3>are we deaduzz?</h3>
-                        <p>yes</p>
-                    </div>
+  // 2. Build Page Layout
+  const pageSection = document.createElement('div');
+  pageSection.id = page.id;
+  pageSection.className = `page-content ${isFirst ? 'active' : ''}`;
 
-                    <div class="feature-card glass">
-                        <div class="feature-icon">?</div>
-                        <h3>Ad</h3>
-                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6121800454226975"
-     crossorigin="anonymous"></script>
-                    </div>
-                </section>
-            </div>
-        </div>
+  // Generate grid cards inside the layout
+  const cardsHtml = page.items.map(item => `
+    <a href="#" class="interactive-card" onclick="${item.action}">
+      <div class="card-header">
+        <div class="card-icon-box"><span class="material-symbols-rounded">${item.icon}</span></div>
+        ${item.action !== '#' ? '<span class="material-symbols-rounded card-arrow">north_east</span>' : ''}
+      </div>
+      <div>
+        <h3>${item.title}</h3>
+        <p>${item.desc}</p>
+      </div>
+    </a>
+  `).join('');
+
+  pageSection.innerHTML = `
+    <div class="hero-section">
+      <h1 class="${isFirst ? 'animate-text-hero' : ''}">${page.heroTitle}</h1>
+      <p class="${isFirst ? 'animate-text-sub' : ''}">${page.heroSub}</p>
     </div>
+    <div class="grid-layout">${cardsHtml}</div>
+  `;
 
-    <!-- ABOUT PAGE -->
-    <div id="about" class="page">
-        <div class="container">
-            <div class="content-wrapper">
-                <section class="about-content">
-                    <div class="about-text glass">
-                        <h2>About Our Vision</h2>
-                       <script type='text/javascript' src='https://storage.ko-fi.com/cdn/widget/Widget_2.js'></script><script type='text/javascript'>kofiwidget2.init('Support me on Ko-fi', '#a1a1a1', 'E1E24OB6V');kofiwidget2.draw();</script>  </div>
-                    <div class="stats">
-                        <div class="stat-card glass">
-                            <div class="stat-number">150+</div>
-                            <div class="stat-label">Projects i worked halfway on and just gave up</div>
-                        </div>
-                        <div class="stat-card glass">
-                            <div class="stat-number">0</div>
-                            <div class="stat-label">Happy Clients</div>
-                        </div>
-                        <div class="stat-card glass">
-                            <div class="stat-number">14</div>
-                            <div class="stat-label">Years Experience</div>
-                        </div>
-                        <div class="stat-card glass">
-                            <div class="stat-number">0</div>
-                            <div class="stat-label">Support Available</div>
-                        </div>
-                    </div>
-                </section>
+  pageContainer.appendChild(pageSection);
+});
 
-                <section class="team-section">
-                    <h2>Meet Our Team</h2>
-                    <div class="team-grid">
-                        <div class="team-member glass">
-                            <div class="team-avatar">?‍?</div>
-                            <h3>dfgdfg</h3>
-                            <p class="role">CEO & Founder</p>
-                            <p class="bio">Visionary leader with 15+ years in digital innovation, driving our mission to create exceptional user experiences.</p>
-                            <div class="team-social">
-                                <a href="#" title="Email">?</a>
-                                <a href="#" title="LinkedIn">?</a>
-                                <a href="#" title="Twitter">?</a>
-                            </div>
-                        </div>
-                        <div class="team-member glass">
-                            <div class="team-avatar">?‍?</div>
-                            <h3>ddgdfdfg</h3>
-                            <p class="role">Creative Director</p>
-                            <p class="bio">Award-winning designer specializing in modern UI/UX, bringing artistic vision to every project.</p>
-                            <div class="team-social">
-                                <a href="#" title="Email">?</a>
-                                <a href="#" title="LinkedIn">?</a>
-                                <a href="#" title="Portfolio">?</a>
-                            </div>
-                        </div>
-                        <div class="team-member glass">
-                            <div class="team-avatar">?‍?</div>
-                            <h3>dfgdfg</h3>
-                            <p class="role">Lead Developer</p>
-                            <p class="bio">Full-stack expert passionate about clean code and innovative web technologies.</p>
-                            <div class="team-social">
-                                <a href="#" title="Email">?</a>
-                                <a href="#" title="LinkedIn">?</a>
-                                <a href="#" title="GitHub">?</a>
-                            </div>
-                        </div>
-                        <div class="team-member glass">
-                            <div class="team-avatar">?‍?</div>
-                            <h3>dfgdfg</h3>
-                            <p class="role">Senior Developer</p>
-                            <p class="bio">Frontend specialist with expertise in React and modern JavaScript frameworks.</p>
-                            <div class="team-social">
-                                <a href="#" title="Email">?</a>
-                                <a href="#" title="LinkedIn">?</a>
-                                <a href="#" title="GitHub">?</a>
-                            </div>
-                        </div>
-                        <div class="team-member glass">
-                            <div class="team-avatar">?‍?</div>
-                            <h3>dfgdfg</h3>
-                            <p class="role">UX Designer</p>
-                            <p class="bio">User experience expert focused on creating intuitive and accessible digital products.</p>
-                            <div class="team-social">
-                                <a href="#" title="Email">?</a>
-                                <a href="#" title="LinkedIn">?</a>
-                                <a href="#" title="Behance">?</a>
-                            </div>
-                        </div>
-                        <div class="team-member glass">
-                            <div class="team-avatar">?‍?</div>
-                            <h3>dfgdfg</h3>
-                            <p class="role">Project Manager</p>
-                            <p class="bio">Certified PMP with a track record of delivering complex projects on time and budget.</p>
-                            <div class="team-social">
-                                <a href="#" title="Email">?</a>
-                                <a href="#" title="LinkedIn">?</a>
-                                <a href="#" title="Calendar">?</a>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- SINGLE FOOTER -->
-    <div id="footer">
-        <div class="container">
-            <footer class="glass">
-                <div class="footer-content">
-                    <div class="footer-links">
-                        <a href="#" onclick="showPage('about')">About Us</a>
-                        <a href="#">Privacy Policy</a>
-                        <a href="#">Terms of Service</a>
-                        <a href="#">XML Sitemap</a>
-                        <a href="#" onclick="showPage('contact')">Contact</a>
-                    </div>
-                    <div class="copyright">
-                        Template provided by <a rel="nofollow" href="https://templatemo.com" target="_blank">TemplateMo</a>
-                    </div>
-                </div>
-            </footer>
-        </div>
-    </div>
-<script src="js.js"></script>
+/* ============================================================
+   MATERIAL ANIMATION INTERACTION ROUTER
+============================================================ */
+function switchTab(event, tabId) {
+  event.preventDefault();
+  
+  const currentActiveTab = document.querySelector('.page-content.active');
+  if (currentActiveTab.id === tabId) return;
+  
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.toggle('active', item.getAttribute('data-tab') === tabId);
+  });
+  
+  currentActiveTab.style.animation = 'none';
+  void currentActiveTab.offsetWidth; // Clear transition tracking timeline 
+  
+  currentActiveTab.style.transition = 'opacity 150ms var(--md-easing-standard), transform 150ms var(--md-easing-standard)';
+  currentActiveTab.style.opacity = '0';
+  currentActiveTab.style.transform = 'translateY(-12px)';
+  
+  setTimeout(() => {
+    currentActiveTab.classList.remove('active');
+    currentActiveTab.style.transition = '';
+    currentActiveTab.style.transform = '';
+    
+    const targetTab = document.getElementById(tabId);
+    targetTab.classList.add('active');
+    
+    // Drop animation flags on dynamic tab switches to let grid render natively
+    const h1 = targetTab.querySelector('h1');
+    const p = targetTab.querySelector('p');
+    if (h1) h1.classList.remove('animate-text-hero');
+    if (p) p.classList.remove('animate-text-sub');
+  }, 150);
+}
+</script>
 </body>
 </html>
