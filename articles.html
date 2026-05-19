@@ -113,6 +113,9 @@
   /* Filter Pills */
   .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .pill { 
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background: transparent;
     border: 1px solid var(--md-sys-color-outline);
     border-radius: 8px;
@@ -124,6 +127,9 @@
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap; 
+  }
+  .pill .material-symbols-rounded {
+    font-size: 18px;
   }
   .pill:hover { 
     background-color: rgba(255, 255, 255, 0.04);
@@ -174,7 +180,12 @@
   .article-card.has-image .card-body { padding: 20px 24px 24px; }
 
   .card-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  
+  /* Tag Badges with Icon Support */
   .cat-tag { 
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-family: 'Product Sans', sans-serif;
     font-size: 12px;
     font-weight: 500;
@@ -182,6 +193,9 @@
     border-radius: 8px;
     background-color: var(--md-sys-color-surface-variant);
     color: var(--md-sys-color-on-surface-variant);
+  }
+  .cat-tag .material-symbols-rounded {
+    font-size: 16px;
   }
   .article-date { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
 
@@ -347,7 +361,10 @@
       <input class="search-input" type="text" placeholder="Search articles…" id="searchInput">
     </div>
     <div class="filter-pills" id="filterPills">
-      <button class="pill active" data-filter="__all__">All</button>
+      <button class="pill active" data-filter="__all__">
+        <span class="material-symbols-rounded">clear_all</span>
+        All
+      </button>
     </div>
   </div>
 
@@ -374,12 +391,13 @@
 </div>
 
 <script>
+// Added a customizable 'icon' property to your category mapping objects
 const CATEGORIES = [
-  { id: 'tools',    label: 'Tools' },
-  { id: 'guide',    label: 'Guide' },
-  { id: 'news',     label: 'News' },
-  { id: 'opinion',  label: 'Opinion' },
-  { id: 'textbooks',label: 'Textbooks' }
+  { id: 'tools',     label: 'Tools',     icon: 'build' },
+  { id: 'guide',     label: 'Guide',     icon: 'explore' },
+  { id: 'news',      label: 'News',      icon: 'newspaper' },
+  { id: 'opinion',   label: 'Opinion',   icon: 'forum' },
+  { id: 'textbooks', label: 'Textbooks', icon: 'menu_book' }
 ];
 
 const ARTICLES = [
@@ -480,7 +498,8 @@ const CAT_MAP = {};
 CATEGORIES.forEach(c => { CAT_MAP[c.id] = c; });
 
 function getCategory(id) {
-  return CAT_MAP[id] || { id, label: id };
+  // Added a default fallback icon ('label') if a non-mapped category somehow drops in
+  return CAT_MAP[id] || { id, label: id, icon: 'label' };
 }
 
 function getCategoryIds(raw) {
@@ -488,10 +507,16 @@ function getCategoryIds(raw) {
   return arr.slice(0, 5).filter(Boolean);
 }
 
+// Updated tag renderer to print the icon dynamic payload string inside a typography span
 function buildTags(ids) {
   return ids.map(id => {
     const cat = getCategory(id);
-    return `<span class="cat-tag">${cat.label}</span>`;
+    return `
+      <span class="cat-tag">
+        <span class="material-symbols-rounded">${cat.icon}</span>
+        <span>${cat.label}</span>
+      </span>
+    `;
   }).join('');
 }
 
@@ -502,7 +527,10 @@ usedCatIds.forEach(id => {
   const b = document.createElement('button');
   b.className = 'pill';
   b.dataset.filter = id;
-  b.textContent = cat.label;
+  b.innerHTML = `
+    <span class="material-symbols-rounded">${cat.icon}</span>
+    <span>${cat.label}</span>
+  `;
   pillsContainer.appendChild(b);
 });
 
