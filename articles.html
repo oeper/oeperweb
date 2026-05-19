@@ -290,8 +290,38 @@
     border-radius: 16px; padding: 20px; overflow-x: auto; margin-bottom: 1.5em; 
   }
   .reader-body pre code { background: none; padding: 0; }
+  
   .reader-body a { color: var(--md-sys-color-primary); text-decoration: none; font-weight: 500; }
   .reader-body a:hover { text-decoration: underline; }
+
+  /* --- MATERIAL YOU CUSTOM MARKDOWN BUTTON STYLES --- */
+  .reader-body a.md-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    padding: 12px 24px;
+    border-radius: 100px;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    margin: 8px 0;
+  }
+  .reader-body a.md-button:hover {
+    text-decoration: none;
+    opacity: 0.9;
+    transform: translateY(-2px);
+  }
+  .reader-body a.md-button img {
+    margin: 0;
+    border-radius: 0;
+    height: 24px;
+    width: auto;
+  }
+  /* -------------------------------------------------- */
 
   .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
   .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
@@ -362,7 +392,7 @@ const ARTICLES = [
     content:  `
 # This tool is a free QR code generator that obviously generates QR codes for you. It's instant, doesn't beg you to pay a fortune and easy to use.
 
-## [Use it here](https://oeper.dev/qrmaker)
+## [[Use it here]](https://oeper.dev/qrmaker)
 
 ### Made by anthropic`,
   },
@@ -378,8 +408,8 @@ However, with the power of technology, I have translated the miserable Form 3 Hi
 
 # Here are the translated versions of the textbook below:
 
-- English: [click here](https://drive.google.com/file/d/1jaEXCe8_ZKrrMawAayFmp_eL1W8BYFLX/view?usp=sharing)
-- Chinese: [click here](https://drive.google.com/file/d/1QSYVFsjiThNFUbGtnSZxlCYHLMHm-Op2/view?usp=sharing)
+- English: [[click here]](https://drive.google.com/file/d/1jaEXCe8_ZKrrMawAayFmp_eL1W8BYFLX/view?usp=sharing)
+- Chinese: [[click here]](https://drive.google.com/file/d/1QSYVFsjiThNFUbGtnSZxlCYHLMHm-Op2/view?usp=sharing)
 
 Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
 
@@ -397,8 +427,8 @@ Hence, I translated the textbook into English and Chinese so you and I could und
 
 # Here are the translated versions of the textbook below:
 
-- English: [click here](https://drive.google.com/file/d/1BCSS1P_Xy7LsOYfRC1_D1EPcjFPf1nRp/view?usp=sharing)
-- Chinese: [click here](https://drive.google.com/file/d/1okWnovbnew13S8ynoU9uTE6aA2tRlS4u/view?usp=sharing)
+- English: [[click here]](https://drive.google.com/file/d/1BCSS1P_Xy7LsOYfRC1_D1EPcjFPf1nRp/view?usp=sharing)
+- Chinese: [[click here]](https://drive.google.com/file/d/1okWnovbnew13S8ynoU9uTE6aA2tRlS4u/view?usp=sharing)
 
 Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
 
@@ -414,8 +444,8 @@ All the best for whatever you need these for!`,
     
 # Here are the translated versions of the textbook below:
 
-- English: [click here](https://drive.google.com/file/d/1CC2RFVQVNM3tOp7-TQuVWqGIUTVuWkYz/view?usp=sharing)
-- Chinese: [click here](https://drive.google.com/file/d/1OMU6UrNOK7R1U-494klLUZM198wxOEv-/view?usp=sharing)
+- English: [[click here]](https://drive.google.com/file/d/1CC2RFVQVNM3tOp7-TQuVWqGIUTVuWkYz/view?usp=sharing)
+- Chinese: [[click here]](https://drive.google.com/file/d/1OMU6UrNOK7R1U-494klLUZM198wxOEv-/view?usp=sharing)
 
 Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
 
@@ -433,8 +463,8 @@ All the best for whatever you need these for!`,
     
 # Here are the translated versions of the textbook below:
 
-- English: [click here](https://drive.google.com/file/d/1OrWL0_Q0m7IIRJSZOyrWTQkiiqJ8LtYX/view?usp=sharing)
-- Chinese: [click here](https://drive.google.com/file/d/1NvXz5sgTjeLUtyctSOky5gJZDUvZqAyl/view?usp=sharing)
+- English: [[click here]](https://drive.google.com/file/d/1OrWL0_Q0m7IIRJSZOyrWTQkiiqJ8LtYX/view?usp=sharing)
+- Chinese: [[click here]](https://drive.google.com/file/d/1NvXz5sgTjeLUtyctSOky5gJZDUvZqAyl/view?usp=sharing)
 
 Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
 
@@ -510,6 +540,9 @@ ARTICLES.forEach((article, i) => {
   articleList.appendChild(card);
 });
 
+/* ============================================================
+   UPDATED PARSEMARKDOWN ENGINE
+============================================================ */
 function parseMarkdown(md) {
   let html = md
     .replace(/\r\n/g, '\n')
@@ -538,6 +571,11 @@ function parseMarkdown(md) {
     .replace(/\*\textbf{(.+?)}\*\*/g,     '<strong>$1</strong>')
     .replace(/__(.+?)__/g,          '<strong>$1</strong>')
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:12px;margin:1em 0;">')
+    
+    /* --- NEW MATERIAL YOU BUTTON GENERATOR (Double Brackets) --- */
+    .replace(/\[\[(.*?)\]\]\(([^)]+)\)/g, '<a href="$2" class="md-button" target="_blank" rel="noopener">$1</a>')
+    /* ----------------------------------------------------------- */
+    
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/\*(.+?)\*/g,          '<em>$1</em>')
     .replace(/(?<!\w)_([^_\s][^_]*)_(?!\w)/g, '<em>$1</em>')
