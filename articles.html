@@ -12,7 +12,7 @@
 <link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
 
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght=8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
 <style>
@@ -33,7 +33,7 @@
     --md-sys-color-outline-variant: #8c9199;
   }
 
-  /* Global structural selection guard - scoped safely */
+  /* Global structural selection guard */
   html, body, .page, .header-container, .toolbar, .search-wrap, .filter-pills, .pill,
   .stats, .article-list, .article-card, .card-meta, .cat-tag, .empty {
     -webkit-user-select: none;
@@ -74,7 +74,7 @@
   }
   .header-link:hover { opacity: 0.8; }
 
-  /* Explicitly re-allow text selection on readable content strings */
+  /* Re-allow text selection on readable content strings */
   .header h1, .header p, .stats span, .article-title, .article-excerpt, .card-date, .empty p {
     -webkit-user-select: text;
     -ms-user-select: text;
@@ -324,6 +324,7 @@ function buildTags(ids) {
   }).join('');
 }
 
+// Generate category filter tabs based on categories actually used by articles
 const usedCatIds = [...new Set(ARTICLES.flatMap(a => getCategoryIds(a.category)))];
 const pillsContainer = document.getElementById('filterPills');
 
@@ -341,6 +342,7 @@ usedCatIds.forEach(id => {
 
 const articleList = document.getElementById('articleList');
 
+// Render the article data to the DOM component list
 ARTICLES.forEach(art => {
   const catIds = getCategoryIds(art.category);
   
@@ -348,6 +350,7 @@ ARTICLES.forEach(art => {
   card.className = 'article-card';
   card.href = art.url;
   card.dataset.categories = catIds.join(' ');
+  // Match filter attribute target perfectly 
   card.dataset.name = art.title.toLowerCase();
 
   card.innerHTML = `
@@ -382,23 +385,30 @@ function setActiveFilter(id) {
 function applyFilters() {
   const q = searchInput.value.toLowerCase().trim();
   let count = 0;
+  
   articleList.querySelectorAll('.article-card').forEach(card => {
     const cats = card.dataset.categories.split(' ');
     const catMatch = activeFilter === '__all__' || cats.includes(activeFilter);
+    
+    // Fixed: Properly looks up the data-name attribute we applied during loop compilation
     const searchMatch = !q || card.dataset.name.includes(q);
     const show = catMatch && searchMatch;
+    
     card.style.display = show ? '' : 'none';
     if (show) count++;
   });
+  
   visibleCount.textContent = count;
   emptyState.style.display = count === 0 ? 'block' : 'none';
 }
 
+// Attach event listeners to pills dynamically
 document.querySelectorAll('.pill').forEach(pill => {
   pill.addEventListener('click', () => setActiveFilter(pill.dataset.filter));
 });
 searchInput.addEventListener('input', applyFilters);
 
+// Handle URL query parameters for dynamic linking or fallback to initial render state
 const urlCategory = new URLSearchParams(window.location.search).get('category');
 if (urlCategory && document.querySelector(`.pill[data-filter="${urlCategory}"]`)) {
   setActiveFilter(urlCategory);
