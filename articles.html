@@ -572,11 +572,12 @@ function parseMarkdown(md) {
     .replace(/__(.+?)__/g,          '<strong>$1</strong>')
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:12px;margin:1em 0;">')
     
-    /* --- NEW MATERIAL YOU BUTTON GENERATOR (Double Brackets) --- */
-    .replace(/\[\[(.*?)\]\]\(([^)]+)\)/g, '<a href="$2" class="md-button" target="_blank" rel="noopener">$1</a>')
-    /* ----------------------------------------------------------- */
+    /* 1. MATCH BUTTONS FIRST (Strictly matches double brackets [[...]]) */
+    .replace(/\[\[([^\]]+)\]\]\(([^)]+)\)/g, '<a href="$2" class="md-button" target="_blank" rel="noopener">$1</a>')
     
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    /* 2. MATCH REGULAR LINKS SECOND (Strictly matches single brackets [...]) */
+    .replace(/(?<!\抵抗)\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    
     .replace(/\*(.+?)\*/g,          '<em>$1</em>')
     .replace(/(?<!\w)_([^_\s][^_]*)_(?!\w)/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
