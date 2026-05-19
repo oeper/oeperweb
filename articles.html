@@ -16,444 +16,444 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* Material You Dark Palette (Pixel Style Neutral & Accent Tones) */
-  :root {
-    --md-sys-color-background: #111318;
-    --md-sys-color-surface: #1a1c22;
-    --md-sys-color-surface-variant: #2f353d;
-    --md-sys-color-primary: #a8c7fa;
-    --md-sys-color-on-primary: #062e6f;
-    --md-sys-color-secondary-container: #33485d;
-    --md-sys-color-on-secondary-container: #d2e4ff;
-    --md-sys-color-on-surface: #e2e2e6;
-    --md-sys-color-on-surface-variant: #c4c7c5;
-    --md-sys-color-outline: #43474e;
-    --md-sys-color-outline-variant: #8c9199;
-  }
+  /* Material You Dark Palette (Pixel Style Neutral & Accent Tones) */
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+  }
 
-  /* Global structural and layout selection guard */
-  html, body, .page, .header-container, .toolbar, .search-wrap, .filter-pills, .pill, 
-  .stats, .article-list, .article-card, .card-image-wrap, .card-meta, .cat-tag, 
-  .reader-overlay, .reader-close, .reader-close-btn, .reader-cat-row, .empty {
-    -webkit-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-  }
+  /* Global structural and layout selection guard */
+  html, body, .page, .header-container, .toolbar, .search-wrap, .filter-pills, .pill, 
+  .stats, .article-list, .article-card, .card-image-wrap, .card-meta, .cat-tag, 
+  .reader-overlay, .reader-close, .reader-close-btn, .reader-cat-row, .empty {
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
 
-  /* Universal mobile touch highlight elimination */
-  a, button, input, .pill, .article-card, .reader-close-btn, .md-button {
-    -webkit-tap-highlight-color: transparent;
-  }
+  /* Universal mobile touch highlight elimination */
+  a, button, input, .pill, .article-card, .reader-close-btn, .md-button {
+    -webkit-tap-highlight-color: transparent;
+  }
 
-  body { 
-    min-height: 100vh;
-    background-color: var(--md-sys-color-background);
-    font-family: 'Roboto Flex', sans-serif;
-    color: var(--md-sys-color-on-surface);
-    overflow-x: hidden;
-    position: relative; 
-    -webkit-font-smoothing: antialiased;
-  }
+  body { 
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    position: relative; 
+    -webkit-font-smoothing: antialiased;
+  }
 
-  .page { position: relative; max-width: 840px; margin: 0 auto; padding: 56px 24px 100px; }
+  .page { position: relative; max-width: 840px; margin: 0 auto; padding: 56px 24px 100px; }
 
-  /* Header Section */
-  .header { margin-bottom: 36px; }
-  .header-container { margin-bottom: 24px; }
-  .header-link { 
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--md-sys-color-primary);
-    text-decoration: none;
-    font-family: 'Product Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    transition: opacity 0.2s;
-  }
-  .header-link:hover { opacity: 0.8; }
-  
-  /* Explicitly re-allow selection on structural narrative text headers */
-  .header h1, .header p, .stats span, .article-title, .article-excerpt, .read-more, 
-  .reader-title, .reader-date, .reader-body, .empty p {
-    -webkit-user-select: text;
-    -ms-user-select: text;
-    user-select: text;
-  }
+  /* Header Section */
+  .header { margin-bottom: 36px; }
+  .header-container { margin-bottom: 24px; }
+  .header-link { 
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--md-sys-color-primary);
+    text-decoration: none;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  
+  /* Explicitly re-allow selection on structural narrative text headers */
+  .header h1, .header p, .stats span, .article-title, .article-excerpt, .read-more, 
+  .reader-title, .reader-date, .reader-body, .empty p {
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
 
-  .header h1 { 
-    font-family: 'Product Sans', sans-serif;
-    font-size: clamp(2.5rem, 6vw, 3.5rem);
-    font-weight: 400; 
-    color: var(--md-sys-color-on-surface);
-    margin-bottom: 12px; 
-    letter-spacing: -0.5px;
-  }
-  .header p { 
-    color: var(--md-sys-color-on-surface-variant);
-    font-size: 16px;
-    max-width: 500px;
-    line-height: 1.5; 
-  }
+  .header h1 { 
+    font-family: 'Product Sans', sans-serif;
+    font-size: clamp(2.5rem, 6vw, 3.5rem);
+    font-weight: 400; 
+    color: var(--md-sys-color-on-surface);
+    margin-bottom: 12px; 
+    letter-spacing: -0.5px;
+  }
+  .header p { 
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 16px;
+    max-width: 500px;
+    line-height: 1.5; 
+  }
 
-  /* Toolbar & Search Bar (Material Design Pill Layout) */
-  .toolbar { 
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-bottom: 32px;
-  }
-  .search-wrap { position: relative; width: 100%; }
-  .search-wrap .material-symbols-rounded { 
-    position: absolute;
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--md-sys-color-on-surface-variant);
-    font-size: 22px;
-    pointer-events: none; 
-  }
-  .search-input { 
-    width: 100%;
-    background-color: var(--md-sys-color-surface);
-    border: 1px solid var(--md-sys-color-outline);
-    border-radius: 28px;
-    padding: 16px 20px 16px 56px;
-    color: var(--md-sys-color-on-surface);
-    font-family: 'Roboto Flex', sans-serif;
-    font-size: 16px;
-    outline: none;
-    -webkit-user-select: text; /* Allow manual input selection and caret handling */
-    -ms-user-select: text;
-    user-select: text;
-    transition: border-color 0.2s, background-color 0.2s;
-  }
-  .search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
-  .search-input:focus { 
-    border-color: var(--md-sys-color-primary);
-    background-color: #1f2329;
-  }
+  /* Toolbar & Search Bar (Material Design Pill Layout) */
+  .toolbar { 
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .search-wrap { position: relative; width: 100%; }
+  .search-wrap .material-symbols-rounded { 
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 22px;
+    pointer-events: none; 
+  }
+  .search-input { 
+    width: 100%;
+    background-color: var(--md-sys-color-surface);
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 28px;
+    padding: 16px 20px 16px 56px;
+    color: var(--md-sys-color-on-surface);
+    font-family: 'Roboto Flex', sans-serif;
+    font-size: 16px;
+    outline: none;
+    -webkit-user-select: text; /* Allow manual input selection and caret handling */
+    -ms-user-select: text;
+    user-select: text;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+  .search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
+  .search-input:focus { 
+    border-color: var(--md-sys-color-primary);
+    background-color: #1f2329;
+  }
 
-  /* Filter Pills */
-  .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .pill { 
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: transparent;
-    border: 1px solid var(--md-sys-color-outline);
-    border-radius: 8px;
-    padding: 8px 16px;
-    font-family: 'Product Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--md-sys-color-on-surface-variant);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap; 
-  }
-  .pill .material-symbols-rounded {
-    font-size: 18px;
-  }
-  .pill:hover { 
-    background-color: rgba(255, 255, 255, 0.04);
-    color: var(--md-sys-color-on-surface);
-  }
-  .pill.active { 
-    background-color: var(--md-sys-color-secondary-container);
-    border-color: transparent;
-    color: var(--md-sys-color-on-secondary-container);
-  }
+  /* Filter Pills */
+  .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .pill { 
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap; 
+  }
+  .pill .material-symbols-rounded {
+    font-size: 18px;
+  }
+  .pill:hover { 
+    background-color: rgba(255, 255, 255, 0.04);
+    color: var(--md-sys-color-on-surface);
+  }
+  .pill.active { 
+    background-color: var(--md-sys-color-secondary-container);
+    border-color: transparent;
+    color: var(--md-sys-color-on-secondary-container);
+  }
 
-  .stats { 
-    font-family: 'Product Sans', sans-serif;
-    font-size: 14px;
-    color: var(--md-sys-color-on-surface-variant);
-    margin-bottom: 24px; 
-    padding-left: 4px;
-  }
-  .stats strong { color: var(--md-sys-color-primary); font-weight: 500; }
+  .stats { 
+    font-family: 'Product Sans', sans-serif;
+    font-size: 14px;
+    color: var(--md-sys-color-on-surface-variant);
+    margin-bottom: 24px; 
+    padding-left: 4px;
+  }
+  .stats strong { color: var(--md-sys-color-primary); font-weight: 500; }
 
-  /* Article Cards Layout */
-  .article-list { display: flex; flex-direction: column; gap: 16px; }
+  /* Article Cards Layout */
+  .article-list { display: flex; flex-direction: column; gap: 16px; }
 
-  .article-card {
-    position: relative;
-    background-color: var(--md-sys-color-surface);
-    border: 1px solid transparent;
-    border-radius: 28px; 
-    overflow: hidden;
-    cursor: pointer;
-    transition: transform 0.2s, background-color 0.2s, border-color 0.2s;
-  }
-  .article-card:hover { 
-    background-color: #21242c;
-    border-color: var(--md-sys-color-outline-variant);
-  }
+  .article-card {
+    position: relative;
+    background-color: var(--md-sys-color-surface);
+    border: 1px solid transparent;
+    border-radius: 28px; 
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s, border-color 0.2s;
+  }
+  .article-card:hover { 
+    background-color: #21242c;
+    border-color: var(--md-sys-color-outline-variant);
+  }
 
-  .article-card.has-image .card-image-wrap { position: relative; overflow: hidden; }
-  .article-card.has-image .card-image-wrap img { 
-    width: 100%;
-    aspect-ratio: 16/7;
-    object-fit: cover;
-    display: block;
-    border-radius: 28px 28px 0 0;
-  }
+  .article-card.has-image .card-image-wrap { position: relative; overflow: hidden; }
+  .article-card.has-image .card-image-wrap img { 
+    width: 100%;
+    aspect-ratio: 16/7;
+    object-fit: cover;
+    display: block;
+    border-radius: 28px 28px 0 0;
+  }
 
-  .card-body { padding: 24px; }
-  .article-card.has-image .card-body { padding: 20px 24px 24px; }
+  .card-body { padding: 24px; }
+  .article-card.has-image .card-body { padding: 20px 24px 24px; }
 
-  .card-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
-  
-  /* Tag Badges with Icon Support */
-  .cat-tag { 
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-family: 'Product Sans', sans-serif;
-    font-size: 12px;
-    font-weight: 500;
-    padding: 4px 12px;
-    border-radius: 8px;
-    background-color: var(--md-sys-color-surface-variant);
-    color: var(--md-sys-color-on-surface-variant);
-  }
-  .cat-tag .material-symbols-rounded {
-    font-size: 16px;
-  }
-  .article-date { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .card-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  
+  /* Tag Badges with Icon Support */
+  .cat-tag { 
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 8px;
+    background-color: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant);
+  }
+  .cat-tag .material-symbols-rounded {
+    font-size: 16px;
+  }
+  .article-date { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
 
-  .article-title {
-    font-family: 'Product Sans', sans-serif;
-    font-size: 22px;
-    font-weight: 400;
-    line-height: 1.3;
-    color: var(--md-sys-color-on-surface);
-    margin-bottom: 8px;
-  }
+  .article-title {
+    font-family: 'Product Sans', sans-serif;
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1.3;
+    color: var(--md-sys-color-on-surface);
+    margin-bottom: 8px;
+  }
 
-  .article-excerpt {
-    font-size: 14px;
-    line-height: 1.6;
-    color: var(--md-sys-color-on-surface-variant);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    margin-bottom: 16px;
-  }
+  .article-excerpt {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--md-sys-color-on-surface-variant);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
 
-  .read-more {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-family: 'Product Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--md-sys-color-primary);
-  }
+  .read-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--md-sys-color-primary);
+  }
 
-  /* Full Screen Overlay Panel */
-  .reader-overlay {
-    position: fixed; inset: 0; z-index: 50;
-    background: rgba(0,0,0,0.6);
-    opacity: 0; pointer-events: none; transition: opacity 0.25s;
-  }
-  .reader-overlay.open { opacity: 1; pointer-events: all; }
+  /* Full Screen Overlay Panel */
+  .reader-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(0,0,0,0.6);
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .reader-overlay.open { opacity: 1; pointer-events: all; }
 
-  .reader-panel {
-    position: fixed; inset: 0;
-    background-color: var(--md-sys-color-background);
-    overflow-y: auto; z-index: 51;
-    transform: translateY(100%);
-    transition: transform 0.35s cubic-bezier(0.05, 0.7, 0.1, 1);
-    display: flex; flex-direction: column;
-  }
-  .reader-panel.open { transform: translateY(0); }
+  .reader-panel {
+    position: fixed; inset: 0;
+    background-color: var(--md-sys-color-background);
+    overflow-y: auto; z-index: 51;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.05, 0.7, 0.1, 1);
+    display: flex; flex-direction: column;
+  }
+  .reader-panel.open { transform: translateY(0); }
 
-  .reader-close {
-    position: sticky; top: 0; z-index: 2;
-    display: flex; justify-content: flex-end;
-    padding: 16px 24px;
-    background: linear-gradient(to bottom, var(--md-sys-color-background) 70%, transparent);
-  }
-  .reader-close-btn {
-    width: 48px; height: 48px; border-radius: 50%;
-    background: var(--md-sys-color-surface);
-    border: 1px solid var(--md-sys-color-outline);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--md-sys-color-on-surface); cursor: pointer; transition: background-color 0.2s;
-  }
-  .reader-close-btn:hover { background-color: var(--md-sys-color-surface-variant); }
+  .reader-close {
+    position: sticky; top: 0; z-index: 2;
+    display: flex; justify-content: flex-end;
+    padding: 16px 24px;
+    background: linear-gradient(to bottom, var(--md-sys-color-background) 70%, transparent);
+  }
+  .reader-close-btn {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--md-sys-color-surface);
+    border: 1px solid var(--md-sys-color-outline);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--md-sys-color-on-surface); cursor: pointer; transition: background-color 0.2s;
+  }
+  .reader-close-btn:hover { background-color: var(--md-sys-color-surface-variant); }
 
-  .reader-content { flex: 1; width: 100%; max-width: 720px; margin: 0 auto; padding: 0 24px 100px; }
-  .reader-image {
-    width: calc(100% + 48px); margin-left: -24px;
-    max-height: 380px; object-fit: cover; display: block;
-    border-radius: 0 0 28px 28px; margin-bottom: 32px;
-  }
-  .reader-cat-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-  .reader-date { font-size: 14px; color: var(--md-sys-color-on-surface-variant); }
-  .reader-title {
-    font-family: 'Product Sans', sans-serif;
-    font-size: clamp(2rem, 5vw, 2.75rem);
-    font-weight: 400; line-height: 1.2;
-    color: var(--md-sys-color-on-surface); margin-bottom: 24px;
-  }
-  .reader-divider { height: 1px; background: var(--md-sys-color-outline); margin-bottom: 32px; }
+  .reader-content { flex: 1; width: 100%; max-width: 720px; margin: 0 auto; padding: 0 24px 100px; }
+  .reader-image {
+    width: calc(100% + 48px); margin-left: -24px;
+    max-height: 380px; object-fit: cover; display: block;
+    border-radius: 0 0 28px 28px; margin-bottom: 32px;
+  }
+  .reader-cat-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .reader-date { font-size: 14px; color: var(--md-sys-color-on-surface-variant); }
+  .reader-title {
+    font-family: 'Product Sans', sans-serif;
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    font-weight: 400; line-height: 1.2;
+    color: var(--md-sys-color-on-surface); margin-bottom: 24px;
+  }
+  .reader-divider { height: 1px; background: var(--md-sys-color-outline); margin-bottom: 32px; }
 
-  /* Typography inside Reader Panel - Deep selection rules for nested markdown components */
-  .reader-body { font-size: 16px; line-height: 1.75; color: var(--md-sys-color-on-surface); }
-  .reader-body p, .reader-body h1, .reader-body h2, .reader-body h3, .reader-body h4, 
-  .reader-body h5, .reader-body h6, .reader-body li, .reader-body blockquote, 
-  .reader-body code, .reader-body pre {
-    -webkit-user-select: text;
-    -ms-user-select: text;
-    user-select: text;
-  }
-  .reader-body p { margin-bottom: 1.5em; }
-  .reader-body h1, .reader-body h2, .reader-body h3 { 
-    font-family: 'Product Sans', sans-serif; font-weight: 400; color: #fff; margin: 1.8em 0 0.6em; 
-  }
-  .reader-body h1 { font-size: 26px; border-bottom: 1px solid var(--md-sys-color-outline); padding-bottom: 8px; }
-  .reader-body h2 { font-size: 22px; }
-  .reader-body h3 { font-size: 18px; }
-  .reader-body blockquote { 
-    background-color: var(--md-sys-color-surface);
-    border-left: 4px solid var(--md-sys-color-primary); 
-    padding: 16px 20px; border-radius: 0 16px 16px 0; margin: 1.5em 0; 
-  }
-  .reader-body ul, .reader-body ol { padding-left: 1.5em; margin-bottom: 1.5em; }
-  .reader-body li { margin-bottom: 0.5em; }
-  .reader-body code { 
-    font-family: monospace; font-size: 14px; 
-    background: var(--md-sys-color-surface-variant); border-radius: 6px; padding: 3px 6px; 
-    color: #fff;
-  }
-  .reader-body pre { 
-    background: #1e2025; border: 1px solid var(--md-sys-color-outline); 
-    border-radius: 16px; padding: 20px; overflow-x: auto; margin-bottom: 1.5em; 
-  }
-  .reader-body pre code { background: none; padding: 0; }
-  
-  /* Inline Standard Markdown Links */
-  .reader-body a { color: var(--md-sys-color-primary); text-decoration: none; font-weight: 500; }
-  .reader-body a:hover { text-decoration: underline; }
+  /* Typography inside Reader Panel - Deep selection rules for nested markdown components */
+  .reader-body { font-size: 16px; line-height: 1.75; color: var(--md-sys-color-on-surface); }
+  .reader-body p, .reader-body h1, .reader-body h2, .reader-body h3, .reader-body h4, 
+  .reader-body h5, .reader-body h6, .reader-body li, .reader-body blockquote, 
+  .reader-body code, .reader-body pre {
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+  .reader-body p { margin-bottom: 1.5em; }
+  .reader-body h1, .reader-body h2, .reader-body h3 { 
+    font-family: 'Product Sans', sans-serif; font-weight: 400; color: #fff; margin: 1.8em 0 0.6em; 
+  }
+  .reader-body h1 { font-size: 26px; border-bottom: 1px solid var(--md-sys-color-outline); padding-bottom: 8px; }
+  .reader-body h2 { font-size: 22px; }
+  .reader-body h3 { font-size: 18px; }
+  .reader-body blockquote { 
+    background-color: var(--md-sys-color-surface);
+    border-left: 4px solid var(--md-sys-color-primary); 
+    padding: 16px 20px; border-radius: 0 16px 16px 0; margin: 1.5em 0; 
+  }
+  .reader-body ul, .reader-body ol { padding-left: 1.5em; margin-bottom: 1.5em; }
+  .reader-body li { margin-bottom: 0.5em; }
+  .reader-body code { 
+    font-family: monospace; font-size: 14px; 
+    background: var(--md-sys-color-surface-variant); border-radius: 6px; padding: 3px 6px; 
+    color: #fff;
+  }
+  .reader-body pre { 
+    background: #1e2025; border: 1px solid var(--md-sys-color-outline); 
+    border-radius: 16px; padding: 20px; overflow-x: auto; margin-bottom: 1.5em; 
+  }
+  .reader-body pre code { background: none; padding: 0; }
+  
+  /* Inline Standard Markdown Links */
+  .reader-body a { color: var(--md-sys-color-primary); text-decoration: none; font-weight: 500; }
+  .reader-body a:hover { text-decoration: underline; }
 
-  /* Material You Interactive Button System */
-  .reader-body a.md-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--md-sys-color-primary);
-    color: var(--md-sys-color-on-primary);
-    padding: 12px 24px;
-    border-radius: 100px;
-    font-family: 'Product Sans', sans-serif;
-    font-size: 15px;
-    font-weight: 500;
-    text-decoration: none;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    margin: 8px 0;
-  }
-  .reader-body a.md-button:hover {
-    text-decoration: none;
-    opacity: 0.9;
-    transform: translateY(-2px);
-  }
-  .reader-body a.md-button img {
-    margin: 0;
-    border-radius: 0;
-    height: 24px;
-    width: auto;
-  }
+  /* Material You Interactive Button System */
+  .reader-body a.md-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    padding: 12px 24px;
+    border-radius: 100px;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    margin: 8px 0;
+  }
+  .reader-body a.md-button:hover {
+    text-decoration: none;
+    opacity: 0.9;
+    transform: translateY(-2px);
+  }
+  .reader-body a.md-button img {
+    margin: 0;
+    border-radius: 0;
+    height: 24px;
+    width: auto;
+  }
 
-  .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
-  .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
+  .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
+  .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
 </style>
 </head>
 <body>
 
 <div class="page">
-  <header class="header">
-    <div class="header-container">
-      <a href="https://oeper.dev" class="header-link">
-        <span class="material-symbols-rounded">arrow_back</span>
-        <span>back to oeper.dev</span>
-      </a>
-    </div>
-    <h1>Articles</h1>
-    <p>Writings, guides, and notes — all in one place.</p>
-  </header>
+  <header class="header">
+    <div class="header-container">
+      <a href="https://oeper.dev" class="header-link">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>back to oeper.dev</span>
+      </a>
+    </div>
+    <h1>Articles</h1>
+    <p>Writings, guides, and notes — all in one place.</p>
+  </header>
 
-  <div class="toolbar">
-    <div class="search-wrap">
-      <span class="material-symbols-rounded">search</span>
-      <input class="search-input" type="text" placeholder="Search articles…" id="searchInput">
-    </div>
-    <div class="filter-pills" id="filterPills">
-      <button class="pill active" data-filter="__all__">
-        <span class="material-symbols-rounded">clear_all</span>
-        All
-      </button>
-    </div>
-  </div>
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="material-symbols-rounded">search</span>
+      <input class="search-input" type="text" placeholder="Search articles…" id="searchInput">
+    </div>
+    <div class="filter-pills" id="filterPills">
+      <button class="pill active" data-filter="__all__">
+        <span class="material-symbols-rounded">clear_all</span>
+        All
+      </button>
+    </div>
+  </div>
 
-  <div class="stats">
-    <span>Total: <strong id="visibleCount">0</strong> items displayed</span>
-  </div>
+  <div class="stats">
+    <span>Total: <strong id="visibleCount">0</strong> items displayed</span>
+  </div>
 
-  <div class="article-list" id="articleList"></div>
-  
-  <div class="empty" id="emptyState">
-    <span class="material-symbols-rounded">search_off</span>
-    <p>No results match your search parameters.</p>
-  </div>
+  <div class="article-list" id="articleList"></div>
+  
+  <div class="empty" id="emptyState">
+    <span class="material-symbols-rounded">search_off</span>
+    <p>No results match your search parameters.</p>
+  </div>
 </div>
 
 <div class="reader-overlay" id="readerOverlay"></div>
 <div class="reader-panel" id="readerPanel">
-  <div class="reader-close">
-    <button class="reader-close-btn" id="readerCloseBtn" title="Close">
-      <span class="material-symbols-rounded">close</span>
-    </button>
-  </div>
-  <div class="reader-content" id="readerContent"></div>
+  <div class="reader-close">
+    <button class="reader-close-btn" id="readerCloseBtn" title="Close">
+      <span class="material-symbols-rounded">close</span>
+    </button>
+  </div>
+  <div class="reader-content" id="readerContent"></div>
 </div>
 
 <script>
 // Added a customizable 'icon' property to your category mapping objects
 const CATEGORIES = [
-  { id: 'tools',     label: 'Tools',     icon: 'build' },
-  { id: 'guide',     label: 'Guide',     icon: 'explore' },
-  { id: 'news',      label: 'News',      icon: 'newspaper' },
-  { id: 'opinion',   label: 'Opinion',   icon: 'forum' },
-  { id: 'textbooks', label: 'Textbooks', icon: 'menu_book' }
+  { id: 'tools',     label: 'Tools',     icon: 'build' },
+  { id: 'guide',     label: 'Guide',     icon: 'explore' },
+  { id: 'news',      label: 'News',      icon: 'newspaper' },
+  { id: 'opinion',   label: 'Opinion',   icon: 'forum' },
+  { id: 'textbooks', label: 'Textbooks', icon: 'menu_book' }
 ];
 
 const ARTICLES = [
-  {
-    title:    'QR code generator',
-    category: 'tools',                    
-    date:      'March 29, 2026',
-    excerpt:  'Generate QR codes without being begged to sign up or pay.',
-    image:    'https://upload.wikimedia.org/wikipedia/commons/2/2f/Rickrolling_QR_code.png',
-    content:  `
+  {
+    title:    'QR code generator',
+    category: 'tools',                    
+    date:      'March 29, 2026',
+    excerpt:  'Generate QR codes without being begged to sign up or pay.',
+    image:    'https://upload.wikimedia.org/wikipedia/commons/2/2f/Rickrolling_QR_code.png',
+    content:  `
 # This tool is a free QR code generator that obviously generates QR codes for you. It's instant, doesn't beg you to pay a fortune and easy to use.
 
 ## [[Use it here]](https://oeper.dev/qrmaker)
 
 ### Made by anthropic`,
-  },
-  {
-    title:    'Sejarah Tingkatan 3 textbook (TRANSLATED)',
-    category: 'textbooks',
-    date:      'April 2, 2026',
-    excerpt:  'Form 3 History textbook translated into English and Chinese',
-    image:    'https://online.fliphtml5.com/faksy/sypg/files/large/1.webp?1606645644',
-    content:  `History may be a very hard and unnecessary subject that our schools have forced us to shove into our brains and ruin our day.
+  },
+  {
+    title:    'Sejarah Tingkatan 3 textbook (TRANSLATED)',
+    category: 'textbooks',
+    date:      'April 2, 2026',
+    excerpt:  'Form 3 History textbook translated into English and Chinese',
+    image:    'https://online.fliphtml5.com/faksy/sypg/files/large/1.webp?1606645644',
+    content:  `History may be a very hard and unnecessary subject that our schools have forced us to shove into our brains and ruin our day.
 
 However, with the power of technology, I have translated the miserable Form 3 History textbook and made it actually comprehensible! (if your Malay sucks)
 
@@ -467,14 +467,14 @@ If you just want to browse references, visit the [Ministry of Education Portal](
 Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
 
 All the best for whatever you need these for!`,
-  },
-  {
-    title:    'RBT Tingkatan 3 textbook (TRANSLATED)',
-    category: 'textbooks',
-    date:      'April 2, 2026',
-    excerpt:  'Form 3 RBT textbook translated into English and Chinese',
-    image:    'https://online.anyflip.com/xygpt/fvdt/files/mobile/1.webp',
-    content:  `I find RBT (Reka Bentuk dan Teknologi for more content) a really useful subject for my future. It COULD HAVE HELPED ME A LOT MORE IF IT WERE IN ENGLISH.
+  },
+  {
+    title:    'RBT Tingkatan 3 textbook (TRANSLATED)',
+    category: 'textbooks',
+    date:      'April 2, 2026',
+    excerpt:  'Form 3 RBT textbook translated into English and Chinese',
+    image:    'https://online.anyflip.com/xygpt/fvdt/files/mobile/1.webp',
+    content:  `I find RBT (Reka Bentuk dan Teknologi for more content) a really useful subject for my future. It COULD HAVE HELPED ME A LOT MORE IF IT WERE IN ENGLISH.
 
 Hence, I translated the textbook into English and Chinese so you and I could understand what it's saying. not to be disrespectful but to be honest malay is a very difficult language to learn and understand
 
@@ -486,15 +486,15 @@ Hence, I translated the textbook into English and Chinese so you and I could und
 Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
 
 All the best for whatever you need these for!`,
-  },
-  {
-    title:    'Pendidikan Seni Visual (PSV) Tingkatan 3 textbook (TRANSLATED)',
-    category: 'textbooks',
-    date:      'April 12, 2026',
-    excerpt:  'Form 3 Pendidikan Seni Visual (PSV) textbook translated into English and Chinese',
-    image:    'https://online.anyflip.com/icbcu/xfxz/files/mobile/2.webp',
-    content:  `Seni uhh
-    
+  },
+  {
+    title:    'Pendidikan Seni Visual (PSV) Tingkatan 3 textbook (TRANSLATED)',
+    category: 'textbooks',
+    date:      'April 12, 2026',
+    excerpt:  'Form 3 Pendidikan Seni Visual (PSV) textbook translated into English and Chinese',
+    image:    'https://online.anyflip.com/icbcu/xfxz/files/mobile/2.webp',
+    content:  `Seni uhh
+    
 # Here are the translated versions of the textbook below:
 
 - English: [[click here]](https://drive.google.com/file/d/1CC2RFVQVNM3tOp7-TQuVWqGIUTVuWkYz/view?usp=sharing)
@@ -505,15 +505,15 @@ Please do note that the translations may not be accurate. I advise referring to 
 Also, Google translate might have mixed up the page order for the PDFs and rearranging them would take me a very long time so I apologize for that
 
 All the best for whatever you need these for!`,
-  },
-  {
-    title:    'Geografi Tingkatan 3 textbook (TRANSLATED)',
-    category: 'textbooks',
-    date:      'April 12, 2026',
-    excerpt:  'Form 3 Geografi/Geography textbook translated into English and Chinese',
-    image:    'https://cdn1.npcdn.net/images/1592625400e88792792d295890e43144c99239231a.jpg',
-    content:  `This took me soooooo long to translate
-    
+  },
+  {
+    title:    'Geografi Tingkatan 3 textbook (TRANSLATED)',
+    category: 'textbooks',
+    date:      'April 12, 2026',
+    excerpt:  'Form 3 Geografi/Geography textbook translated into English and Chinese',
+    image:    'https://cdn1.npcdn.net/images/1592625400e88792792d295890e43144c99239231a.jpg',
+    content:  `This took me soooooo long to translate
+    
 # Here are the translated versions of the textbook below:
 
 - English: [[click here]](https://drive.google.com/file/d/1OrWL0_Q0m7IIRJSZOyrWTQkiiqJ8LtYX/view?usp=sharing)
@@ -524,190 +524,190 @@ Please do note that the translations may not be accurate. I advise referring to 
 Also, Google translate might have mixed up the page order for the PDFs and rearranging them would take me a very long time so I apologize for that
 
 All the best for whatever you need these for!`,
-  }
+  }
 ];
 
 const CAT_MAP = {};
 CATEGORIES.forEach(c => { CAT_MAP[c.id] = c; });
 
 function getCategory(id) {
-  // Added a default fallback icon ('label') if a non-mapped category somehow drops in
-  return CAT_MAP[id] || { id, label: id, icon: 'label' };
+  // Added a default fallback icon ('label') if a non-mapped category somehow drops in
+  return CAT_MAP[id] || { id, label: id, icon: 'label' };
 }
 
 function getCategoryIds(raw) {
-  const arr = Array.isArray(raw) ? raw : [raw];
-  return arr.slice(0, 5).filter(Boolean);
+  const arr = Array.isArray(raw) ? raw : [raw];
+  return arr.slice(0, 5).filter(Boolean);
 }
 
 // Updated tag renderer to print the icon dynamic payload string inside a typography span
 function buildTags(ids) {
-  return ids.map(id => {
-    const cat = getCategory(id);
-    return `
-      <span class="cat-tag">
-        <span class="material-symbols-rounded">${cat.icon}</span>
-        <span>${cat.label}</span>
-      </span>
-    `;
-  }).join('');
+  return ids.map(id => {
+    const cat = getCategory(id);
+    return `
+      <span class="cat-tag">
+        <span class="material-symbols-rounded">${cat.icon}</span>
+        <span>${cat.label}</span>
+      </span>
+    `;
+  }).join('');
 }
 
 const usedCatIds = [...new Set(ARTICLES.flatMap(a => getCategoryIds(a.category)))];
 const pillsContainer = document.getElementById('filterPills');
 usedCatIds.forEach(id => {
-  const cat = getCategory(id);
-  const b = document.createElement('button');
-  b.className = 'pill';
-  b.dataset.filter = id;
-  b.innerHTML = `
-    <span class="material-symbols-rounded">${cat.icon}</span>
-    <span>${cat.label}</span>
-  `;
-  pillsContainer.appendChild(b);
+  const cat = getCategory(id);
+  const b = document.createElement('button');
+  b.className = 'pill';
+  b.dataset.filter = id;
+  b.innerHTML = `
+    <span class="material-symbols-rounded">${cat.icon}</span>
+    <span>${cat.label}</span>
+  `;
+  pillsContainer.appendChild(b);
 });
 
 const articleList = document.getElementById('articleList');
 
 ARTICLES.forEach((article, i) => {
-  const catIds = getCategoryIds(article.category);
-  const hasImage = !!article.image;
+  const catIds = getCategoryIds(article.category);
+  const hasImage = !!article.image;
 
-  const card = document.createElement('div');
-  card.className = 'article-card' + (hasImage ? ' has-image' : '');
-  card.dataset.categories = catIds.join(' ');
-  card.dataset.title = article.title.toLowerCase();
-  card.dataset.excerpt = (article.excerpt || '').toLowerCase();
-  card.dataset.index = i;
+  const card = document.createElement('div');
+  card.className = 'article-card' + (hasImage ? ' has-image' : '');
+  card.dataset.categories = catIds.join(' ');
+  card.dataset.title = article.title.toLowerCase();
+  card.dataset.excerpt = (article.excerpt || '').toLowerCase();
+  card.dataset.index = i;
 
-  const imageHtml = hasImage
-    ? `<div class="card-image-wrap"><img src="${article.image}" alt="${article.title}" loading="lazy"></div>`
-    : '';
+  const imageHtml = hasImage
+    ? `<div class="card-image-wrap"><img src="${article.image}" alt="${article.title}" loading="lazy"></div>`
+    : '';
 
-  card.innerHTML = `
-    ${imageHtml}
-    <div class="card-body">
-      <div class="card-meta">
-        ${buildTags(catIds)}
-        <span class="article-date">${article.date}</span>
-      </div>
-      <div class="article-title">${article.title}</div>
-      ${article.excerpt ? `<div class="article-excerpt">${article.excerpt}</div>` : ''}
-      <span class="read-more">
-        Read article
-      </span>
-    </div>
-  `;
+  card.innerHTML = `
+    ${imageHtml}
+    <div class="card-body">
+      <div class="card-meta">
+        ${buildTags(catIds)}
+        <span class="article-date">${article.date}</span>
+      </div>
+      <div class="article-title">${article.title}</div>
+      ${article.excerpt ? `<div class="article-excerpt">${article.excerpt}</div>` : ''}
+      <span class="read-more">
+        Read article
+      </span>
+    </div>
+  `;
 
-  card.addEventListener('click', () => openReader(i));
-  articleList.appendChild(card);
+  card.addEventListener('click', () => openReader(i));
+  articleList.appendChild(card);
 });
 
 /* ============================================================
-   ROBUST MARKDOWN COMPILER (Separates Links and Buttons)
+   ROBUST MARKDOWN COMPILER (Separates Links and Buttons)
 ============================================================ */
 function parseMarkdown(md) {
-  let html = md
-    .replace(/\r\n/g, '\n')
-    .replace(/```[\w]*\n([\s\S]*?)```/g, (_, code) =>
-      `<pre><code>${escHtml(code.trimEnd())}</code></pre>`)
-    .replace(/^######\s+(.+)$/gm, '<h6>$1</h6>')
-    .replace(/^#####\s+(.+)$/gm,  '<h5>$1</h5>')
-    .replace(/^####\s+(.+)$/gm,   '<h4>$1</h4>')
-    .replace(/^###\s+(.+)$/gm,    '<h3>$1</h3>')
-    .replace(/^##\s+(.+)$/gm,     '<h2>$1</h2>')
-    .replace(/^#\s+(.+)$/gm,      '<h1>$1</h1>')
-    .replace(/((?:^>\s?.+\n?)+)/gm, match => {
-      const inner = match.replace(/^>\s?/gm, '').trim();
-      return `<blockquote>${inner}</blockquote>\n`;
-    })
-    .replace(/^(-{3,}|\*{3,}|_{3,})$/gm, '<hr>')
-    .replace(/((?:^[ \t]*[-*+]\s+.+\n?)+)/gm, match => {
-      const items = match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*[-*+]\s+/, '')}</li>`).join('');
-      return `<ul>${items}</ul>\n`;
-    })
-    .replace(/((?:^[ \t]*\d+\.\s+.+\n?)+)/gm, match => {
-      const items = match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*\d+\.\s+/, '')}</li>`).join('');
-      return `<ol>${items}</ol>\n`;
-    })
-    .replace(/\*\*\***(.+?)\*\*\txt/, '<strong><em>$1</em></strong>')
-    .replace(/\*\textbf{(.+?)}\*\*/g,     '<strong>$1</strong>')
-    .replace(/__(.+?)__/g,          '<strong>$1</strong>')
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:12px;margin:1em 0;">')
-    
-    /* 1. Compile Material Buttons (Double Brackets) */
-    .replace(/\[\[([^\]]+)\]\]\(([^)]+)\)/g, '<a href="$2" class="md-button" target="_blank" rel="noopener">$1</a>')
-    
-    /* 2. Compile Standard Links (Single Brackets) */
-    .replace(/(?<!\抵抗)\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    
-    .replace(/\*(.+?)\*/g,          '<em>$1</em>')
-    .replace(/(?<!\w)_([^_\s][^_]*)_(?!\w)/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/^(?!<[hbuop]|<li|<bl|<pr|<hr|<img|<a)(.+)$/gm, '<p>$1</p>')
-    .replace(/\n{3,}/g, '\n\n');
-  return html;
+  let html = md
+    .replace(/\r\n/g, '\n')
+    .replace(/```[\w]*\n([\s\S]*?)```/g, (_, code) =>
+      `<pre><code>${escHtml(code.trimEnd())}</code></pre>`)
+    .replace(/^######\s+(.+)$/gm, '<h6>$1</h6>')
+    .replace(/^#####\s+(.+)$/gm,  '<h5>$1</h5>')
+    .replace(/^####\s+(.+)$/gm,   '<h4>$1</h4>')
+    .replace(/^###\s+(.+)$/gm,    '<h3>$1</h3>')
+    .replace(/^##\s+(.+)$/gm,     '<h2>$1</h2>')
+    .replace(/^#\s+(.+)$/gm,      '<h1>$1</h1>')
+    .replace(/((?:^>\s?.+\n?)+)/gm, match => {
+      const inner = match.replace(/^>\s?/gm, '').trim();
+      return `<blockquote>${inner}</blockquote>\n`;
+    })
+    .replace(/^(-{3,}|\*{3,}|_{3,})$/gm, '<hr>')
+    .replace(/((?:^[ \t]*[-*+]\s+.+\n?)+)/gm, match => {
+      const items = match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*[-*+]\s+/, '')}</li>`).join('');
+      return `<ul>${items}</ul>\n`;
+    })
+    .replace(/((?:^[ \t]*\d+\.\s+.+\n?)+)/gm, match => {
+      const items = match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*\d+\.\s+/, '')}</li>`).join('');
+      return `<ol>${items}</ol>\n`;
+    })
+    .replace(/\*\*\***(.+?)\*\*\txt/, '<strong><em>$1</em></strong>')
+    .replace(/\*\textbf{(.+?)}\*\*/g,     '<strong>$1</strong>')
+    .replace(/__(.+?)__/g,          '<strong>$1</strong>')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:12px;margin:1em 0;">')
+    
+    /* 1. Compile Material Buttons (Double Brackets) */
+    .replace(/\[\[([^\]]+)\]\]\(([^)]+)\)/g, '<a href="$2" class="md-button" target="_blank" rel="noopener">$1</a>')
+    
+    /* 2. Compile Standard Links (Single Brackets) */
+    .replace(/(?<!\抵抗)\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    
+    .replace(/\*(.+?)\*/g,          '<em>$1</em>')
+    .replace(/(?<!\w)_([^_\s][^_]*)_(?!\w)/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/^(?!<[hbuop]|<li|<bl|<pr|<hr|<img|<a)(.+)$/gm, '<p>$1</p>')
+    .replace(/\n{3,}/g, '\n\n');
+  return html;
 }
 
 function escHtml(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-const overlay       = document.getElementById('readerOverlay');
-const panel         = document.getElementById('readerPanel');
-const closeBtn      = document.getElementById('readerCloseBtn');
+const overlay       = document.getElementById('readerOverlay');
+const panel         = document.getElementById('readerPanel');
+const closeBtn      = document.getElementById('readerCloseBtn');
 const readerContent = document.getElementById('readerContent');
 
 function renderReader(article, bodyHtml) {
-  const catIds = getCategoryIds(article.category);
-  readerContent.innerHTML = `
-    ${article.image ? `<img class="reader-image" src="${article.image}" alt="${article.title}">` : ''}
-    <div class="reader-cat-row">
-      ${buildTags(catIds)}
-      <span class="reader-date">${article.date}</span>
-    </div>
-    <div class="reader-title">${article.title}</div>
-    <div class="reader-divider"></div>
-    <div class="reader-body">${bodyHtml}</div>
-  `;
+  const catIds = getCategoryIds(article.category);
+  readerContent.innerHTML = `
+    ${article.image ? `<img class="reader-image" src="${article.image}" alt="${article.title}">` : ''}
+    <div class="reader-cat-row">
+      ${buildTags(catIds)}
+      <span class="reader-date">${article.date}</span>
+    </div>
+    <div class="reader-title">${article.title}</div>
+    <div class="reader-divider"></div>
+    <div class="reader-body">${bodyHtml}</div>
+  `;
 }
 
 async function openReader(index) {
-  const article = ARTICLES[index];
-  renderReader(article, `<p style="opacity:0.5;">Loading…</p>`);
-  overlay.classList.add('open');
-  panel.classList.add('open');
-  panel.scrollTop = 0;
-  document.body.style.overflow = 'hidden';
+  const article = ARTICLES[index];
+  renderReader(article, `<p style="opacity:0.5;">Loading…</p>`);
+  overlay.classList.add('open');
+  panel.classList.add('open');
+  panel.scrollTop = 0;
+  document.body.style.overflow = 'hidden';
 
-  const url = new URL(window.location);
-  url.searchParams.set('article', index);
-  history.pushState({ article: index }, '', url);
+  const url = new URL(window.location);
+  url.searchParams.set('article', index);
+  history.pushState({ article: index }, '', url);
 
-  let bodyHtml;
-  if (typeof article.content === 'string' && /^https?:\/\//.test(article.content.trim())) {
-    try {
-      const res = await fetch(article.content.trim());
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      bodyHtml = parseMarkdown(text);
-    } catch (err) {
-      bodyHtml = `<p style="opacity:0.5;">Could not load content: ${err.message}</p>`;
-    }
-  } else {
-    const looksLikeHtml = /<[a-z][\s\S]*>/i.test(article.content);
-    bodyHtml = looksLikeHtml ? article.content : parseMarkdown(article.content);
-  }
-  renderReader(article, bodyHtml);
+  let bodyHtml;
+  if (typeof article.content === 'string' && /^https?:\/\//.test(article.content.trim())) {
+    try {
+      const res = await fetch(article.content.trim());
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      bodyHtml = parseMarkdown(text);
+    } catch (err) {
+      bodyHtml = `<p style="opacity:0.5;">Could not load content: ${err.message}</p>`;
+    }
+  } else {
+    const looksLikeHtml = /<[a-z][\s\S]*>/i.test(article.content);
+    bodyHtml = looksLikeHtml ? article.content : parseMarkdown(article.content);
+  }
+  renderReader(article, bodyHtml);
 }
 
 function closeReader() {
-  overlay.classList.remove('open');
-  panel.classList.remove('open');
-  document.body.style.overflow = '';
-  const url = new URL(window.location);
-  url.searchParams.delete('article');
-  history.pushState({}, '', url);
+  overlay.classList.remove('open');
+  panel.classList.remove('open');
+  document.body.style.overflow = '';
+  const url = new URL(window.location);
+  url.searchParams.delete('article');
+  history.pushState({}, '', url);
 }
 
 closeBtn.addEventListener('click', closeReader);
@@ -716,53 +716,53 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReader(
 
 let activeFilter = '__all__';
 const visibleCount = document.getElementById('visibleCount');
-const emptyState   = document.getElementById('emptyState');
-const searchInput  = document.getElementById('searchInput');
+const emptyState   = document.getElementById('emptyState');
+const searchInput  = document.getElementById('searchInput');
 
 function setActiveFilter(id) {
-  activeFilter = id;
-  document.querySelectorAll('.pill').forEach(p => {
-    p.classList.toggle('active', p.dataset.filter === id);
-  });
-  const url = new URL(window.location);
-  if (id === '__all__') { url.searchParams.delete('category'); }
-  else { url.searchParams.set('category', id); }
-  history.replaceState(null, '', url);
-  applyFilters();
+  activeFilter = id;
+  document.querySelectorAll('.pill').forEach(p => {
+    p.classList.toggle('active', p.dataset.filter === id);
+  });
+  const url = new URL(window.location);
+  if (id === '__all__') { url.searchParams.delete('category'); }
+  else { url.searchParams.set('category', id); }
+  history.replaceState(null, '', url);
+  applyFilters();
 }
 
 function applyFilters() {
-  const q = searchInput.value.toLowerCase().trim();
-  let count = 0;
-  articleList.querySelectorAll('.article-card').forEach(card => {
-    const cats = card.dataset.categories.split(' ');
-    const catMatch = activeFilter === '__all__' || cats.includes(activeFilter);
-    const searchMatch = !q || card.dataset.title.includes(q) || card.dataset.excerpt.includes(q);
-    const show = catMatch && searchMatch;
-    card.style.display = show ? '' : 'none';
-    if (show) count++;
-  });
-  visibleCount.textContent = count;
-  emptyState.style.display = count === 0 ? 'block' : 'none';
+  const q = searchInput.value.toLowerCase().trim();
+  let count = 0;
+  articleList.querySelectorAll('.article-card').forEach(card => {
+    const cats = card.dataset.categories.split(' ');
+    const catMatch = activeFilter === '__all__' || cats.includes(activeFilter);
+    const searchMatch = !q || card.dataset.title.includes(q) || card.dataset.excerpt.includes(q);
+    const show = catMatch && searchMatch;
+    card.style.display = show ? '' : 'none';
+    if (show) count++;
+  });
+  visibleCount.textContent = count;
+  emptyState.style.display = count === 0 ? 'block' : 'none';
 }
 
 document.querySelectorAll('.pill').forEach(pill => {
-  pill.addEventListener('click', () => setActiveFilter(pill.dataset.filter));
+  pill.addEventListener('click', () => setActiveFilter(pill.dataset.filter));
 });
 searchInput.addEventListener('input', applyFilters);
 
 const params = new URLSearchParams(window.location.search);
 const urlCategory = params.get('category');
-const urlArticle  = params.get('article');
+const urlArticle  = params.get('article');
 
 if (urlCategory && document.querySelector(`.pill[data-filter="${urlCategory}"]`)) {
-  setActiveFilter(urlCategory);
+  setActiveFilter(urlCategory);
 } else {
-  applyFilters();
+  applyFilters();
 }
 
 if (urlArticle !== null && ARTICLES[+urlArticle]) {
-  openReader(+urlArticle);
+  openReader(+urlArticle);
 }
 </script>
 </body>
