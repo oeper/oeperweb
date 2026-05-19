@@ -33,6 +33,20 @@
     --md-sys-color-outline-variant: #8c9199;
   }
 
+  /* Global structural and layout selection guard */
+  html, body, .page, .header-container, .toolbar, .search-wrap, .filter-pills, .pill, 
+  .stats, .article-list, .article-card, .card-image-wrap, .card-meta, .cat-tag, 
+  .reader-overlay, .reader-close, .reader-close-btn, .reader-cat-row, .empty {
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  /* Universal mobile touch highlight elimination */
+  a, button, input, .pill, .article-card, .reader-close-btn, .md-button {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body { 
     min-height: 100vh;
     background-color: var(--md-sys-color-background);
@@ -60,6 +74,15 @@
     transition: opacity 0.2s;
   }
   .header-link:hover { opacity: 0.8; }
+  
+  /* Explicitly re-allow selection on structural narrative text headers */
+  .header h1, .header p, .stats span, .article-title, .article-excerpt, .read-more, 
+  .reader-title, .reader-date, .reader-body, .empty p {
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
   .header h1 { 
     font-family: 'Product Sans', sans-serif;
     font-size: clamp(2.5rem, 6vw, 3.5rem);
@@ -102,6 +125,9 @@
     font-family: 'Roboto Flex', sans-serif;
     font-size: 16px;
     outline: none;
+    -webkit-user-select: text; /* Allow manual input selection and caret handling */
+    -ms-user-select: text;
+    user-select: text;
     transition: border-color 0.2s, background-color 0.2s;
   }
   .search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
@@ -278,8 +304,15 @@
   }
   .reader-divider { height: 1px; background: var(--md-sys-color-outline); margin-bottom: 32px; }
 
-  /* Typography inside Reader Panel */
+  /* Typography inside Reader Panel - Deep selection rules for nested markdown components */
   .reader-body { font-size: 16px; line-height: 1.75; color: var(--md-sys-color-on-surface); }
+  .reader-body p, .reader-body h1, .reader-body h2, .reader-body h3, .reader-body h4, 
+  .reader-body h5, .reader-body h6, .reader-body li, .reader-body blockquote, 
+  .reader-body code, .reader-body pre {
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
   .reader-body p { margin-bottom: 1.5em; }
   .reader-body h1, .reader-body h2, .reader-body h3 { 
     font-family: 'Product Sans', sans-serif; font-weight: 400; color: #fff; margin: 1.8em 0 0.6em; 
@@ -597,7 +630,7 @@ function parseMarkdown(md) {
       const items = match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*\d+\.\s+/, '')}</li>`).join('');
       return `<ol>${items}</ol>\n`;
     })
-    .replace(/\*\*\*(.+?)\*\*\txt/, '<strong><em>$1</em></strong>')
+    .replace(/\*\*\***(.+?)\*\*\txt/, '<strong><em>$1</em></strong>')
     .replace(/\*\textbf{(.+?)}\*\*/g,     '<strong>$1</strong>')
     .replace(/__(.+?)__/g,          '<strong>$1</strong>')
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:12px;margin:1em 0;">')
