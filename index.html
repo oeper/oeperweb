@@ -28,6 +28,13 @@
     --md-easing-emphasized: cubic-bezier(0.3, 0, 0, 1);
   }
 
+  /* Structural document selection guard limits block drag-highlighting layout items */
+  html, body, .navbar, .nav-links, .interactive-card, .card-icon-box {
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
   body { 
     min-height: 100vh;
     background-color: var(--md-sys-color-background);
@@ -61,6 +68,7 @@
     text-decoration: none;
     font-family: 'Product Sans', sans-serif;
     font-size: 22px;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .nav-logo .material-symbols-rounded {
@@ -88,6 +96,7 @@
     font-weight: 500;
     border-radius: 20px;
     transition: color var(--md-transition-duration) var(--md-easing-standard);
+    -webkit-tap-highlight-color: transparent; /* Kills flashing selection background on phone tap */
   }
 
   .nav-item .material-symbols-rounded { font-size: 20px; }
@@ -167,6 +176,13 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  /* Explicitly re-enable text selection rules on user narrative copy blocks */
+  .hero-section h1, .hero-section p, .interactive-card h3, .interactive-card p, .nav-logo span {
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
+
   .animate-text-hero {
     opacity: 0;
     clip-path: inset(0 0 100% 0);
@@ -222,6 +238,7 @@
     flex-direction: column;
     justify-content: space-between;
     min-height: 180px;
+    -webkit-tap-highlight-color: transparent; /* Suppresses blue system feedback box over link geometry */
     transition: background-color 200ms var(--md-easing-standard),
                 border-color 200ms var(--md-easing-standard),
                 transform 250ms var(--md-easing-emphasized);
