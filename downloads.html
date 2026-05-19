@@ -110,9 +110,12 @@
     background-color: #1f2329;
   }
 
-  /* Filter Pills */
+  /* Filter Pills with Icon Support */
   .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .pill { 
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     background: transparent;
     border: 1px solid var(--md-sys-color-outline);
     border-radius: 8px;
@@ -124,6 +127,9 @@
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap; 
+  }
+  .pill .material-symbols-rounded {
+    font-size: 18px;
   }
   .pill:hover { 
     background-color: rgba(255, 255, 255, 0.04);
@@ -199,12 +205,20 @@
   /* Control Alignments & Badges */
   .card-controls { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
   .cat-tags { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  
+  /* Tag Badges with Icon Support */
   .cat-tag { 
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-family: 'Product Sans', sans-serif;
     font-size: 12px; font-weight: 500;
     padding: 4px 12px; border-radius: 8px;
     background-color: var(--md-sys-color-surface-variant);
     color: var(--md-sys-color-on-surface-variant);
+  }
+  .cat-tag .material-symbols-rounded {
+    font-size: 16px;
   }
 
   /* Material Circular Action FAB */
@@ -267,7 +281,10 @@
       <input class="search-input" type="text" placeholder="Search files…" id="searchInput">
     </div>
     <div class="filter-pills" id="filterPills">
-      <button class="pill active" data-filter="__all__">All</button>
+      <button class="pill active" data-filter="__all__">
+        <span class="material-symbols-rounded">clear_all</span>
+        All
+      </button>
     </div>
   </div>
 
@@ -328,22 +345,32 @@ function filenameFromUrl(url) {
   catch { return url; }
 }
 
+// Updated rendering logic for category tags to support Material rounded icons
 function buildTags(ids) {
   return ids.map(id => {
     const cat = getCategory(id);
-    return `<span class="cat-tag">${cat.label}</span>`;
+    return `
+      <span class="cat-tag">
+        <span class="material-symbols-rounded">${cat.icon}</span>
+        <span>${cat.label}</span>
+      </span>
+    `;
   }).join('');
 }
 
 const usedCatIds = [...new Set(FILES.flatMap(f => getCategoryIds(f.category)))];
 const pillsContainer = document.getElementById('filterPills');
 
+// Updated active state configuration injection for the interactive layout components
 usedCatIds.forEach(id => {
   const cat = getCategory(id);
   const b = document.createElement('button');
   b.className = 'pill';
   b.dataset.filter = id;
-  b.textContent = cat.label;
+  b.innerHTML = `
+    <span class="material-symbols-rounded">${cat.icon}</span>
+    <span>${cat.label}</span>
+  `;
   pillsContainer.appendChild(b);
 });
 
