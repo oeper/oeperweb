@@ -18,7 +18,6 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* Material You Dark Palette (Pixel Style Neutral & Accent Tones) */
   :root {
     --md-sys-color-background: #111318;
     --md-sys-color-surface: #1a1c22;
@@ -45,7 +44,6 @@
 
   .page { position: relative; max-width: 840px; margin: 0 auto; padding: 56px 24px 100px; }
 
-  /* Header Section */
   .header { margin-bottom: 36px; }
   .header-container { margin-bottom: 24px; }
   .header-link { 
@@ -75,7 +73,6 @@
     line-height: 1.5; 
   }
 
-  /* Toolbar & Search Bar (Material Design Pill Layout) */
   .toolbar { 
     display: flex;
     flex-direction: column;
@@ -110,7 +107,6 @@
     background-color: #1f2329;
   }
 
-  /* Filter Pills */
   .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .pill { 
     display: inline-flex;
@@ -126,11 +122,10 @@
     color: var(--md-sys-color-on-surface-variant);
     cursor: pointer;
     transition: all 0.2s ease;
-    white-space: nowrap; 
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
   }
-  .pill .material-symbols-rounded {
-    font-size: 18px;
-  }
+  .pill .material-symbols-rounded { font-size: 18px; }
   .pill:hover { 
     background-color: rgba(255, 255, 255, 0.04);
     color: var(--md-sys-color-on-surface);
@@ -150,7 +145,6 @@
   }
   .stats strong { color: var(--md-sys-color-primary); font-weight: 500; }
 
-  /* Article Cards Layout */
   .article-list { display: flex; flex-direction: column; gap: 16px; }
 
   .article-card {
@@ -161,6 +155,7 @@
     overflow: hidden;
     cursor: pointer;
     transition: transform 0.2s, background-color 0.2s, border-color 0.2s;
+    -webkit-tap-highlight-color: transparent;
   }
   .article-card:hover { 
     background-color: #21242c;
@@ -181,7 +176,6 @@
 
   .card-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
   
-  /* Tag Badges with Icon Support */
   .cat-tag { 
     display: inline-flex;
     align-items: center;
@@ -194,9 +188,7 @@
     background-color: var(--md-sys-color-surface-variant);
     color: var(--md-sys-color-on-surface-variant);
   }
-  .cat-tag .material-symbols-rounded {
-    font-size: 16px;
-  }
+  .cat-tag .material-symbols-rounded { font-size: 16px; }
   .article-date { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
 
   .article-title {
@@ -229,7 +221,6 @@
     color: var(--md-sys-color-primary);
   }
 
-  /* Full Screen Overlay Panel */
   .reader-overlay {
     position: fixed; inset: 0; z-index: 50;
     background: rgba(0,0,0,0.6);
@@ -259,6 +250,7 @@
     border: 1px solid var(--md-sys-color-outline);
     display: flex; align-items: center; justify-content: center;
     color: var(--md-sys-color-on-surface); cursor: pointer; transition: background-color 0.2s;
+    -webkit-tap-highlight-color: transparent;
   }
   .reader-close-btn:hover { background-color: var(--md-sys-color-surface-variant); }
 
@@ -278,7 +270,6 @@
   }
   .reader-divider { height: 1px; background: var(--md-sys-color-outline); margin-bottom: 32px; }
 
-  /* Typography inside Reader Panel */
   .reader-body { font-size: 16px; line-height: 1.75; color: var(--md-sys-color-on-surface); }
   .reader-body p { margin-bottom: 1.5em; }
   .reader-body h1, .reader-body h2, .reader-body h3 { 
@@ -304,12 +295,9 @@
     border-radius: 16px; padding: 20px; overflow-x: auto; margin-bottom: 1.5em; 
   }
   .reader-body pre code { background: none; padding: 0; }
-  
-  /* Inline Standard Markdown Links */
   .reader-body a { color: var(--md-sys-color-primary); text-decoration: none; font-weight: 500; }
   .reader-body a:hover { text-decoration: underline; }
 
-  /* Material You Interactive Button System */
   .reader-body a.md-button {
     display: inline-flex;
     align-items: center;
@@ -391,7 +379,6 @@
 </div>
 
 <script>
-// Added a customizable 'icon' property to your category mapping objects
 const CATEGORIES = [
   { id: 'tools',     label: 'Tools',     icon: 'build' },
   { id: 'guide',     label: 'Guide',     icon: 'explore' },
@@ -498,7 +485,6 @@ const CAT_MAP = {};
 CATEGORIES.forEach(c => { CAT_MAP[c.id] = c; });
 
 function getCategory(id) {
-  // Added a default fallback icon ('label') if a non-mapped category somehow drops in
   return CAT_MAP[id] || { id, label: id, icon: 'label' };
 }
 
@@ -507,7 +493,6 @@ function getCategoryIds(raw) {
   return arr.slice(0, 5).filter(Boolean);
 }
 
-// Updated tag renderer to print the icon dynamic payload string inside a typography span
 function buildTags(ids) {
   return ids.map(id => {
     const cat = getCategory(id);
@@ -560,9 +545,7 @@ ARTICLES.forEach((article, i) => {
       </div>
       <div class="article-title">${article.title}</div>
       ${article.excerpt ? `<div class="article-excerpt">${article.excerpt}</div>` : ''}
-      <span class="read-more">
-        Read article
-      </span>
+      <span class="read-more">Read article</span>
     </div>
   `;
 
@@ -570,9 +553,6 @@ ARTICLES.forEach((article, i) => {
   articleList.appendChild(card);
 });
 
-/* ============================================================
-   ROBUST MARKDOWN COMPILER (Separates Links and Buttons)
-============================================================ */
 function parseMarkdown(md) {
   let html = md
     .replace(/\r\n/g, '\n')
@@ -601,13 +581,8 @@ function parseMarkdown(md) {
     .replace(/\*\textbf{(.+?)}\*\*/g,     '<strong>$1</strong>')
     .replace(/__(.+?)__/g,          '<strong>$1</strong>')
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:12px;margin:1em 0;">')
-    
-    /* 1. Compile Material Buttons (Double Brackets) */
     .replace(/\[\[([^\]]+)\]\]\(([^)]+)\)/g, '<a href="$2" class="md-button" target="_blank" rel="noopener">$1</a>')
-    
-    /* 2. Compile Standard Links (Single Brackets) */
     .replace(/(?<!\抵抗)\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    
     .replace(/\*(.+?)\*/g,          '<em>$1</em>')
     .replace(/(?<!\w)_([^_\s][^_]*)_(?!\w)/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
