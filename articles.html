@@ -107,7 +107,15 @@
     background-color: #1f2329;
   }
 
-  .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  /* Filter + Sort row */
+  .controls-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex: 1; }
   .pill { 
     display: inline-flex;
     align-items: center;
@@ -134,6 +142,125 @@
     background-color: var(--md-sys-color-secondary-container);
     border-color: transparent;
     color: var(--md-sys-color-on-secondary-container);
+  }
+
+  /* Sort dropdown */
+  .sort-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .sort-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sort-btn .material-symbols-rounded { font-size: 18px; }
+  .sort-btn:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+    color: var(--md-sys-color-on-surface);
+  }
+  .sort-btn.active {
+    background-color: var(--md-sys-color-secondary-container);
+    border-color: transparent;
+    color: var(--md-sys-color-on-secondary-container);
+  }
+  .sort-btn .sort-chevron {
+    font-size: 18px;
+    transition: transform 0.2s ease;
+  }
+  .sort-btn.open .sort-chevron {
+    transform: rotate(180deg);
+  }
+
+  .sort-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background-color: var(--md-sys-color-surface);
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 16px;
+    padding: 8px;
+    min-width: 200px;
+    z-index: 10;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    transform-origin: top right;
+  }
+  .sort-dropdown.open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
+  }
+
+  .sort-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+    text-align: left;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sort-option .material-symbols-rounded { font-size: 18px; flex-shrink: 0; }
+  .sort-option:hover {
+    background-color: rgba(255,255,255,0.05);
+    color: var(--md-sys-color-on-surface);
+  }
+  .sort-option.selected {
+    color: var(--md-sys-color-on-secondary-container);
+    background-color: rgba(168, 199, 250, 0.1);
+  }
+  .sort-option .check-icon {
+    margin-left: auto;
+    font-size: 18px;
+    opacity: 0;
+    color: var(--md-sys-color-primary);
+    transition: opacity 0.15s;
+  }
+  .sort-option.selected .check-icon {
+    opacity: 1;
+  }
+
+  /* Divider inside dropdown */
+  .sort-divider {
+    height: 1px;
+    background: var(--md-sys-color-outline);
+    margin: 6px 0;
+    opacity: 0.5;
+  }
+  .sort-label {
+    padding: 4px 14px 6px;
+    font-family: 'Product Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--md-sys-color-outline-variant);
   }
 
   .stats { 
@@ -348,11 +475,52 @@
       <span class="material-symbols-rounded">search</span>
       <input class="search-input" type="text" placeholder="Search articles…" id="searchInput">
     </div>
-    <div class="filter-pills" id="filterPills">
-      <button class="pill active" data-filter="__all__">
-        <span class="material-symbols-rounded">clear_all</span>
-        All
-      </button>
+    <div class="controls-row">
+      <div class="filter-pills" id="filterPills">
+        <button class="pill active" data-filter="__all__">
+          <span class="material-symbols-rounded">clear_all</span>
+          All
+        </button>
+      </div>
+
+      <!-- Sort By -->
+      <div class="sort-wrap" id="sortWrap">
+        <button class="sort-btn" id="sortBtn" aria-haspopup="listbox" aria-expanded="false">
+          <span class="material-symbols-rounded">sort</span>
+          <span id="sortLabel">Relevance</span>
+          <span class="material-symbols-rounded sort-chevron">expand_more</span>
+        </button>
+        <div class="sort-dropdown" id="sortDropdown" role="listbox">
+          <div class="sort-label">Sort by</div>
+          <button class="sort-option selected" data-sort="relevance" role="option">
+            <span class="material-symbols-rounded">auto_awesome</span>
+            Relevance
+            <span class="material-symbols-rounded check-icon">check</span>
+          </button>
+          <div class="sort-divider"></div>
+          <button class="sort-option" data-sort="newest" role="option">
+            <span class="material-symbols-rounded">schedule</span>
+            Newest first
+            <span class="material-symbols-rounded check-icon">check</span>
+          </button>
+          <button class="sort-option" data-sort="oldest" role="option">
+            <span class="material-symbols-rounded">history</span>
+            Oldest first
+            <span class="material-symbols-rounded check-icon">check</span>
+          </button>
+          <div class="sort-divider"></div>
+          <button class="sort-option" data-sort="az" role="option">
+            <span class="material-symbols-rounded">sort_by_alpha</span>
+            A → Z
+            <span class="material-symbols-rounded check-icon">check</span>
+          </button>
+          <button class="sort-option" data-sort="za" role="option">
+            <span class="material-symbols-rounded">sort_by_alpha</span>
+            Z → A
+            <span class="material-symbols-rounded check-icon">check</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -410,8 +578,6 @@ const ARTICLES = [
     content:  `History may be a very hard and unnecessary subject that our schools have forced us to shove into our brains and ruin our day.
 
 However, with the power of technology, I have translated the miserable Form 3 History textbook and made it actually comprehensible! (if your Malay sucks)
-
-If you just want to browse references, visit the [Ministry of Education Portal](https://www.moe.gov.my) directly.
 
 # Here are the translated versions of the textbook below:
 
@@ -481,6 +647,14 @@ All the best for whatever you need these for!`,
   }
 ];
 
+// Parse dates for sorting
+function parseDate(str) {
+  return new Date(str).getTime() || 0;
+}
+
+// Add timestamps to articles for sorting
+ARTICLES.forEach((a, i) => { a._originalIndex = i; a._ts = parseDate(a.date); });
+
 const CAT_MAP = {};
 CATEGORIES.forEach(c => { CAT_MAP[c.id] = c; });
 
@@ -521,6 +695,8 @@ usedCatIds.forEach(id => {
 
 const articleList = document.getElementById('articleList');
 
+// Build card elements keyed by original index
+const cardEls = {};
 ARTICLES.forEach((article, i) => {
   const catIds = getCategoryIds(article.category);
   const hasImage = !!article.image;
@@ -550,9 +726,55 @@ ARTICLES.forEach((article, i) => {
   `;
 
   card.addEventListener('click', () => openReader(i));
+  cardEls[i] = card;
   articleList.appendChild(card);
 });
 
+// ── Sort state ──────────────────────────────────────────────
+let activeSort = 'relevance';
+const SORT_LABELS = { relevance: 'Relevance', newest: 'Newest', oldest: 'Oldest', az: 'A → Z', za: 'Z → A' };
+
+const sortBtn      = document.getElementById('sortBtn');
+const sortDropdown = document.getElementById('sortDropdown');
+const sortLabelEl  = document.getElementById('sortLabel');
+const sortWrap     = document.getElementById('sortWrap');
+
+sortBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const isOpen = sortDropdown.classList.contains('open');
+  sortDropdown.classList.toggle('open', !isOpen);
+  sortBtn.classList.toggle('open', !isOpen);
+  sortBtn.setAttribute('aria-expanded', String(!isOpen));
+});
+
+document.addEventListener('click', (e) => {
+  if (!sortWrap.contains(e.target)) {
+    sortDropdown.classList.remove('open');
+    sortBtn.classList.remove('open');
+    sortBtn.setAttribute('aria-expanded', 'false');
+  }
+});
+
+sortDropdown.querySelectorAll('.sort-option').forEach(opt => {
+  opt.addEventListener('click', () => {
+    activeSort = opt.dataset.sort;
+    sortLabelEl.textContent = SORT_LABELS[activeSort];
+
+    // Update selected state & active tint on button
+    sortDropdown.querySelectorAll('.sort-option').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    sortBtn.classList.toggle('active', activeSort !== 'relevance');
+
+    // Close dropdown
+    sortDropdown.classList.remove('open');
+    sortBtn.classList.remove('open');
+    sortBtn.setAttribute('aria-expanded', 'false');
+
+    applyFilters();
+  });
+});
+
+// ── Markdown parser (unchanged) ─────────────────────────────
 function parseMarkdown(md) {
   let html = md
     .replace(/\r\n/g, '\n')
@@ -595,6 +817,7 @@ function escHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// ── Reader ──────────────────────────────────────────────────
 const overlay       = document.getElementById('readerOverlay');
 const panel         = document.getElementById('readerPanel');
 const closeBtn      = document.getElementById('readerCloseBtn');
@@ -656,10 +879,82 @@ closeBtn.addEventListener('click', closeReader);
 overlay.addEventListener('click', closeReader);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeReader(); });
 
+// ── Filter + Sort ────────────────────────────────────────────
 let activeFilter = '__all__';
 const visibleCount = document.getElementById('visibleCount');
 const emptyState   = document.getElementById('emptyState');
 const searchInput  = document.getElementById('searchInput');
+
+function getRelevanceScore(article, q) {
+  if (!q) return -article._originalIndex; // no query → original order
+  const title   = article.title.toLowerCase();
+  const excerpt = (article.excerpt || '').toLowerCase();
+  let score = 0;
+  // Exact full-string match in title is best
+  if (title === q) score += 100;
+  // Title starts with query
+  if (title.startsWith(q)) score += 50;
+  // Title contains query as a whole word
+  const wordBoundary = new RegExp(`\\b${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`);
+  if (wordBoundary.test(title)) score += 30;
+  // Title contains query anywhere
+  if (title.includes(q)) score += 20;
+  // Excerpt contains query as whole word
+  if (wordBoundary.test(excerpt)) score += 10;
+  // Excerpt contains query anywhere
+  if (excerpt.includes(q)) score += 5;
+  // Each query word found in title
+  q.split(/\s+/).forEach(word => {
+    if (word && title.includes(word)) score += 8;
+    if (word && excerpt.includes(word)) score += 3;
+  });
+  return score;
+}
+
+function getSortedIndices() {
+  const q = searchInput.value.toLowerCase().trim();
+  const indices = ARTICLES.map((_, i) => i);
+  switch (activeSort) {
+    case 'relevance':
+      return indices.sort((a, b) => {
+        const diff = getRelevanceScore(ARTICLES[b], q) - getRelevanceScore(ARTICLES[a], q);
+        // Tie-break: newer first
+        return diff !== 0 ? diff : ARTICLES[b]._ts - ARTICLES[a]._ts;
+      });
+    case 'newest':
+      return indices.sort((a, b) => ARTICLES[b]._ts - ARTICLES[a]._ts);
+    case 'oldest':
+      return indices.sort((a, b) => ARTICLES[a]._ts - ARTICLES[b]._ts);
+    case 'az':
+      return indices.sort((a, b) => ARTICLES[a].title.localeCompare(ARTICLES[b].title));
+    case 'za':
+      return indices.sort((a, b) => ARTICLES[b].title.localeCompare(ARTICLES[a].title));
+    default:
+      return indices;
+  }
+}
+
+function applyFilters() {
+  const q = searchInput.value.toLowerCase().trim();
+  const sorted = getSortedIndices();
+
+  // Re-order DOM
+  sorted.forEach(i => articleList.appendChild(cardEls[i]));
+
+  let count = 0;
+  sorted.forEach(i => {
+    const card = cardEls[i];
+    const cats = card.dataset.categories.split(' ');
+    const catMatch = activeFilter === '__all__' || cats.includes(activeFilter);
+    const searchMatch = !q || card.dataset.title.includes(q) || card.dataset.excerpt.includes(q);
+    const show = catMatch && searchMatch;
+    card.style.display = show ? '' : 'none';
+    if (show) count++;
+  });
+
+  visibleCount.textContent = count;
+  emptyState.style.display = count === 0 ? 'block' : 'none';
+}
 
 function setActiveFilter(id) {
   activeFilter = id;
@@ -671,21 +966,6 @@ function setActiveFilter(id) {
   else { url.searchParams.set('category', id); }
   history.replaceState(null, '', url);
   applyFilters();
-}
-
-function applyFilters() {
-  const q = searchInput.value.toLowerCase().trim();
-  let count = 0;
-  articleList.querySelectorAll('.article-card').forEach(card => {
-    const cats = card.dataset.categories.split(' ');
-    const catMatch = activeFilter === '__all__' || cats.includes(activeFilter);
-    const searchMatch = !q || card.dataset.title.includes(q) || card.dataset.excerpt.includes(q);
-    const show = catMatch && searchMatch;
-    card.style.display = show ? '' : 'none';
-    if (show) count++;
-  });
-  visibleCount.textContent = count;
-  emptyState.style.display = count === 0 ? 'block' : 'none';
 }
 
 document.querySelectorAll('.pill').forEach(pill => {
