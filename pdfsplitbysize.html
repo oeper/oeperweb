@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PDF Splitter — split by file size</title>
-<meta name="description" content="Split a large PDF into smaller files under a target size, entirely in your browser. Made using Claude!">
+<meta name="description" content="Split a large PDF into smaller files under a target size, entirely in your browser.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300..800&display=swap" rel="stylesheet">
@@ -55,6 +55,21 @@
   }
 
   .app { width: 100%; max-width: 640px; }
+
+  .back-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--on-surface-variant);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 20px;
+    padding: 8px 14px 8px 10px;
+    border-radius: var(--radius-full);
+    background: var(--surface-container);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .back-link:hover { background: var(--surface-container-high); color: var(--on-surface); }
+  .back-link svg { width: 16px; height: 16px; flex-shrink: 0; }
 
   .app-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
 
@@ -358,6 +373,9 @@
     line-height: 1.5;
   }
 
+  footer a { color: var(--on-surface-variant); text-decoration: underline; text-underline-offset: 2px; }
+  footer a:hover { color: var(--on-surface); }
+
   [hidden] { display: none !important; }
 
   a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible {
@@ -379,6 +397,11 @@
 <body>
 
 <div class="app">
+
+  <a class="back-link" href="/">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    oeper.dev
+  </a>
 
   <header class="app-header">
     <div class="logo-mark">
@@ -482,7 +505,8 @@
   </main>
 
   <footer>
-    Everything runs locally in your browser using pdf-lib — your file is never uploaded anywhere.
+    Everything runs locally in your browser using pdf-lib — your file is never uploaded anywhere.<br>
+    Built with <a href="https://claude.com" target="_blank" rel="noopener">Claude</a>.
   </footer>
 
 </div>
@@ -535,6 +559,18 @@
 
   function baseName(name) {
     return name.replace(/\.pdf$/i, '');
+  }
+
+  // Shared naming format with the PDF Combiner tool: {name}_part{NN}-of-{NN}.pdf
+  // Zero-padded to at least 2 digits so filenames sort correctly as plain text,
+  // and the total is baked in so a combiner can detect a complete split set.
+  function padIndex(n, total) {
+    const width = Math.max(2, String(total).length);
+    return String(n).padStart(width, '0');
+  }
+
+  function partFileName(name, index, total) {
+    return `${baseName(name)}_part${padIndex(index, total)}-of-${padIndex(total, total)}.pdf`;
   }
 
   function showError(container, message) {
@@ -788,7 +824,7 @@
       info.className = 'part-info';
       const name = document.createElement('div');
       name.className = 'part-name';
-      name.textContent = `${baseName(currentFile.name)}_part${String(i + 1).padStart(parts.length > 9 ? 2 : 1, '0')}.pdf`;
+      name.textContent = partFileName(currentFile.name, i + 1, parts.length);
       const sub = document.createElement('div');
       sub.className = 'part-sub';
       sub.textContent = `${rangeLabel} · ${formatBytes(part.bytes.length)}`;
@@ -843,7 +879,7 @@
     try {
       const zip = new JSZip();
       currentParts.forEach((part, i) => {
-        const fname = `${baseName(currentFile.name)}_part${String(i + 1).padStart(currentParts.length > 9 ? 2 : 1, '0')}.pdf`;
+        const fname = partFileName(currentFile.name, i + 1, currentParts.length);
         zip.file(fname, part.bytes);
       });
       const zipBlob = await zip.generateAsync({ type: 'blob' });
