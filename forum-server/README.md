@@ -1,13 +1,17 @@
-# Forum image upload server
+# Forum upload + report server
 
-A tiny Node server that accepts image uploads from the forum (`forum.html`)
-and serves them back. It's meant to run **on your Android phone** via Termux,
-exposed to the internet with a Cloudflare Tunnel — no cloud storage bill,
-no server to maintain elsewhere.
+A tiny Node server for the forum (`forum.html`): accepts image uploads and
+serves them back, and relays the Report button to a Discord webhook (kept
+server-side so the webhook URL is never exposed in the site's public source —
+anyone who got hold of it could post arbitrary spam to your Discord channel).
+It's meant to run **on your Android phone** via Termux, exposed to the
+internet with a Cloudflare Tunnel — no cloud bill, no server to maintain
+elsewhere.
 
-**Trade-off to know going in:** images only load for site visitors while
-your phone is on, connected, and running this server. If the phone dies or
-the app gets killed, every forum image breaks until it's back up.
+**Trade-off to know going in:** images only load, and reports only send,
+while your phone is on, connected, and running this server. If the phone
+dies or the app gets killed, forum images break and reports silently fail
+(with a clear error shown to whoever tried) until it's back up.
 
 ## 1. Install Termux
 
@@ -58,8 +62,18 @@ Replace the URL with whatever `cloudflared` printed in step 4.
 
 ## 6. Wire it into the site
 
-Copy that same tunnel URL and send it — it goes into `UPLOAD_ENDPOINT` near
+Copy that same tunnel URL and send it — it goes into `SERVER_ENDPOINT` near
 the top of `forum.html`'s script.
+
+## Changing the Discord report webhook
+
+`DISCORD_REPORT_WEBHOOK` in `upload-server.js` is hardcoded as a fallback,
+but you can override it without editing the file by setting an environment
+variable instead:
+
+```sh
+DISCORD_REPORT_WEBHOOK=https://discord.com/api/webhooks/... PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
+```
 
 ## Keeping it running
 

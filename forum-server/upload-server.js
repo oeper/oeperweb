@@ -22,9 +22,19 @@ const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765'];
 
 // The public URL this server is reachable at (your Cloudflare Tunnel address).
 // Quick tunnels print a fresh https://xxxx.trycloudflare.com URL every time
-// you start cloudflared — update this line (and forum.html's UPLOAD_ENDPOINT)
+// you start cloudflared — update this line (and forum.html's SERVER_ENDPOINT)
 // whenever that changes. A named tunnel with a fixed hostname avoids that.
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || 'http://localhost:8787';
+
+// Discord webhook for the forum's Report button. Kept server-side on purpose —
+// this URL grants posting rights to your Discord channel to anyone who has it,
+// so it must never be embedded in forum.html's public source.
+const DISCORD_REPORT_WEBHOOK = process.env.DISCORD_REPORT_WEBHOOK
+  || 'https://discord.com/api/webhooks/1534200247218339930/OQcrikaqx3xXssspH5ytq0M0AetTsHZrL_8qGwXTgI2vb71yem4GHPNYM0v48FUpZzM3';
+
+// Minimum seconds between reports from the same signed-in user, to keep one
+// person from flooding your Discord channel.
+const REPORT_COOLDOWN_SECONDS = 10;
 // ──────────────────────────────────────────────────────────────
 
 const UPLOAD_DIR = path.join(__dirname, 'uploads');
@@ -32,6 +42,7 @@ if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const app = express();
 app.use(cors({ origin: ALLOWED_ORIGINS }));
+app.use(express.json({ limit: '10kb' }));
 
 // Verifies Firebase Auth ID tokens without needing the Admin SDK or any
 // service-account secret on the device — just checks the signature against
@@ -83,6 +94,47 @@ app.post('/upload', verifyFirebaseToken, (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file received' });
     res.json({ url: `${PUBLIC_BASE_URL}/files/${req.file.filename}` });
   });
+});
+
+const lastReportAt = new Map(); // email -> timestamp, simple per-user cooldown
+
+app.post('/report', verifyFirebaseToken, async (req, res) => {
+  const email = req.user.email || req.user.user_id || req.user.sub;
+  const now = Date.now();
+  const last = lastReportAt.get(email) || 0;
+  if (now - last < REPORT_COOLDOWN_SECONDS * 1000) {
+    return res.status(429).json({ error: `Please wait a few seconds before reporting again` });
+  }
+
+  const { type, reason, postId, commentId, url } = req.body || {};
+  if (!reason || typeof reason !== 'string' || !reason.trim()) {
+    return res.status(400).json({ error: 'A reason is required' });
+  }
+  if (!['post', 'comment'].includes(type)) {
+    return res.status(400).json({ error: 'Invalid report type' });
+  }
+
+  try {
+    const discordRes = await fetch(DISCORD_REPORT_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: [
+          `**New forum report** (${type})`,
+          `Reported by: ${email}`,
+          `Reason: ${reason.trim().slice(0, 1000)}`,
+          url ? `Link: ${url}` : null,
+          postId ? `Post ID: ${postId}` : null,
+          commentId ? `Comment ID: ${commentId}` : null,
+        ].filter(Boolean).join('\n'),
+      }),
+    });
+    if (!discordRes.ok) throw new Error(`Discord webhook responded ${discordRes.status}`);
+    lastReportAt.set(email, now);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(502).json({ error: 'Could not deliver report: ' + err.message });
+  }
 });
 
 app.use('/files', express.static(UPLOAD_DIR, { maxAge: '30d' }));

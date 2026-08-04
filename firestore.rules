@@ -14,11 +14,14 @@ service cloud.firestore {
     function onlyChanged(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
+    function isBanned() {
+      return isSignedIn() && exists(/databases/$(database)/documents/bans/$(request.auth.token.email));
+    }
 
     match /posts/{postId} {
       allow read: if true;
 
-      allow create: if isSignedIn()
+      allow create: if isSignedIn() && !isBanned()
         && request.resource.data.authorEmail == request.auth.token.email
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
@@ -28,11 +31,10 @@ service cloud.firestore {
         && request.resource.data.tags is list;
 
       // Author/owner can edit or delete their own post outright.
-      // Anyone signed in may toggle their own upvote (upvoters array only).
-      // Any signed-in commenter may bump commentCount by exactly 1 when adding a comment,
-      // and the author/owner may adjust it down when deleting a comment.
+      // Anyone signed in (and not banned) may toggle their own up/downvote.
+      // Any signed-in commenter may adjust commentCount when adding/removing a comment.
       allow update: if isAuthor(resource.data) || isOwner()
-        || (isSignedIn() && onlyChanged(['upvoters']))
+        || (isSignedIn() && !isBanned() && onlyChanged(['upvoters', 'downvoters']))
         || (isSignedIn() && onlyChanged(['commentCount']));
 
       allow delete: if isAuthor(resource.data) || isOwner();
@@ -40,14 +42,33 @@ service cloud.firestore {
       match /comments/{commentId} {
         allow read: if true;
 
-        allow create: if isSignedIn()
+        allow create: if isSignedIn() && !isBanned()
           && request.resource.data.authorEmail == request.auth.token.email
           && request.resource.data.body is string
           && request.resource.data.body.size() > 0
           && request.resource.data.body.size() <= 2000;
 
+        allow update: if isSignedIn() && !isBanned() && onlyChanged(['upvoters', 'downvoters']);
+
         allow delete: if isAuthor(resource.data) || isOwner();
       }
+    }
+
+    // Per-user display name, keyed by email. Anyone can read (needed to show
+    // names on posts/comments); only the account itself can set its own name.
+    match /users/{email} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.token.email == email
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 40;
+    }
+
+    // Ban list, keyed by email. Public read so the client can show "you're
+    // banned" messaging; only the owner can ban/unban.
+    match /bans/{email} {
+      allow read: if true;
+      allow write: if isOwner();
     }
   }
 }

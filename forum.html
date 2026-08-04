@@ -84,6 +84,8 @@
     border-radius: 100px; padding: 6px 14px; font-size: 12px; cursor: pointer;
   }
   .user-chip button:hover { color: var(--md-sys-color-on-surface); }
+  .user-chip .icon-only { padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .user-chip .icon-only .material-symbols-rounded { font-size: 14px; }
 
   /* Toolbar */
   .toolbar { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
@@ -131,8 +133,8 @@
   /* Post cards */
   .post-list { display: flex; flex-direction: column; gap: 12px; }
   .post-card {
-    display: flex; gap: 4px; background-color: var(--md-sys-color-surface); border: 1px solid transparent;
-    border-radius: 20px; overflow: hidden; cursor: pointer; transition: background-color 0.2s, border-color 0.2s;
+    position: relative; display: flex; gap: 4px; background-color: var(--md-sys-color-surface); border: 1px solid transparent;
+    border-radius: 20px; cursor: pointer; transition: background-color 0.2s, border-color 0.2s;
   }
   .post-card:hover { background-color: #21242c; border-color: var(--md-sys-color-outline-variant); }
 
@@ -150,7 +152,7 @@
   .vote-count.positive { color: #6ea8fe; }
   .vote-count.negative { color: var(--md-sys-color-error); }
 
-  .post-body { padding: 16px 20px 16px 4px; flex: 1; min-width: 0; }
+  .post-body { padding: 16px 44px 16px 4px; flex: 1; min-width: 0; }
   .post-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
   .post-tag {
     font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 8px;
@@ -167,15 +169,34 @@
   .post-footer { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
   .post-footer span { display: inline-flex; align-items: center; gap: 4px; }
   .post-footer .material-symbols-rounded { font-size: 16px; }
-  .icon-link-btn {
-    display: inline-flex; align-items: center; gap: 4px; background: none; border: none;
-    color: var(--md-sys-color-on-surface-variant); font-size: 12px; cursor: pointer; font-family: inherit; padding: 0;
-  }
-  .icon-link-btn:hover { color: var(--md-sys-color-on-surface); }
-  .icon-link-btn .material-symbols-rounded { font-size: 16px; }
 
   .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
   .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
+
+  /* Kebab / overflow menu — used on post cards, thread header, and comments */
+  .kebab-slot { position: relative; }
+  .post-card .kebab-slot { position: absolute; top: 10px; right: 10px; }
+  .kebab-wrap { position: relative; }
+  .kebab-btn {
+    width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(0,0,0,0.25);
+    color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  }
+  .kebab-btn:hover { background: rgba(255,255,255,0.14); color: var(--md-sys-color-on-surface); }
+  .kebab-btn .material-symbols-rounded { font-size: 19px; }
+  .kebab-menu {
+    position: absolute; top: calc(100% + 6px); right: 0; background: var(--md-sys-color-surface);
+    border: 1px solid var(--md-sys-color-outline); border-radius: 14px; padding: 6px; min-width: 170px; z-index: 30;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); opacity: 0; transform: translateY(-6px) scale(0.97); pointer-events: none;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .kebab-menu.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+  .kebab-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border-radius: 9px; border: none;
+    background: transparent; color: var(--md-sys-color-on-surface); font-size: 13px; cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .kebab-item:hover { background: rgba(255,255,255,0.07); }
+  .kebab-item.dangerous { color: var(--md-sys-color-error); }
+  .kebab-item .material-symbols-rounded { font-size: 17px; }
 
   /* Thread panel (post detail + comments) */
   .thread-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.6); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
@@ -203,7 +224,6 @@
   .thread-actions { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--md-sys-color-outline); flex-wrap: wrap; }
   .thread-actions .vote-col { flex-direction: row; padding: 4px; background: var(--md-sys-color-surface); border-radius: 100px; gap: 2px; }
   .thread-actions .vote-count { padding: 0 4px; }
-  .delete-link { color: var(--md-sys-color-error); background: none; border: none; font-size: 13px; cursor: pointer; margin-left: auto; }
 
   .comments-heading { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 16px; font-weight: 500; margin-bottom: 16px; }
   .comment-list { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
@@ -223,8 +243,6 @@
   .comment-meta .time { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
   .comment-body { font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
   .comment-image { max-width: 100%; max-height: 300px; border-radius: 12px; display: block; margin-top: 8px; }
-  .comment-footer { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
-  .comment-delete { font-size: 11px; color: var(--md-sys-color-error); background: none; border: none; cursor: pointer; }
 
   .comment-form { display: flex; flex-direction: column; gap: 10px; }
   .comment-form textarea {
@@ -398,9 +416,10 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  getFirestore, collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot,
+  getFirestore, collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
   query, orderBy, serverTimestamp, arrayUnion, arrayRemove
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
 // Paste the firebaseConfig object from Firebase console (Project settings → Your apps) here.
 // This is a public client identifier, not a secret — safe to commit.
 const FIREBASE_CONFIG = {
@@ -423,8 +442,8 @@ const DEFAULT_TAGS = [
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 // Your Cloudflare Tunnel URL from forum-server/README.md (e.g. 'https://xxxx.trycloudflare.com').
-// Leave blank to disable image attachments until the upload server is running.
-const UPLOAD_ENDPOINT = '';
+// Handles both image uploads and report delivery. Leave blank to disable both until the server is running.
+const SERVER_ENDPOINT = 'https://principles-millions-injection-concept.trycloudflare.com';
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function parseMarkdown(md) {
@@ -475,6 +494,38 @@ function commentUrl(postId, commentId) {
   return url.toString();
 }
 
+function closeAllKebabMenus() {
+  document.querySelectorAll('.kebab-menu.open').forEach(m => m.classList.remove('open'));
+}
+document.addEventListener('click', closeAllKebabMenus);
+
+function buildKebabMenu(items) {
+  const wrap = document.createElement('div');
+  wrap.className = 'kebab-wrap';
+  wrap.innerHTML = `
+    <button type="button" class="kebab-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button>
+    <div class="kebab-menu">
+      ${items.map((it, i) => `<button type="button" class="kebab-item ${it.dangerous ? 'dangerous' : ''}" data-idx="${i}"><span class="material-symbols-rounded">${it.icon}</span>${escHtml(it.label)}</button>`).join('')}
+    </div>
+  `;
+  const btn = wrap.querySelector('.kebab-btn');
+  const menu = wrap.querySelector('.kebab-menu');
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const willOpen = !menu.classList.contains('open');
+    closeAllKebabMenus();
+    if (willOpen) menu.classList.add('open');
+  });
+  wrap.querySelectorAll('.kebab-item').forEach((el, i) => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      menu.classList.remove('open');
+      items[i].onClick();
+    });
+  });
+  return wrap;
+}
+
 if (!FIREBASE_CONFIG) {
   document.getElementById('configWarning').classList.add('show');
   document.getElementById('newPostBtn').disabled = true;
@@ -490,20 +541,51 @@ function runForum(config) {
 
   let currentUser = null;
   let posts = [];
+  let myBanStatus = null;
+  const nameCache = {}; // email -> { displayName } | null
   const unsubComments = { current: null };
+
+  function isOwner(email) { return email === OWNER_EMAIL; }
+  function canModerate(authorEmail) { return currentUser && (currentUser.email === authorEmail || isOwner(currentUser.email)); }
+  function isBanned() { return !!myBanStatus; }
+
+  async function ensureNamesLoaded(emails) {
+    const missing = [...new Set(emails)].filter(e => e && !(e in nameCache));
+    await Promise.all(missing.map(async email => {
+      try {
+        const snap = await getDoc(doc(db, 'users', email));
+        nameCache[email] = snap.exists() ? snap.data() : null;
+      } catch { nameCache[email] = null; }
+    }));
+  }
+  function displayNameFor(item) {
+    const override = item.authorEmail && nameCache[item.authorEmail];
+    return (override && override.displayName) || item.authorName || item.authorEmail || 'anon';
+  }
+
+  async function refreshBanStatus() {
+    if (!currentUser) { myBanStatus = null; return; }
+    try {
+      const snap = await getDoc(doc(db, 'bans', currentUser.email));
+      myBanStatus = snap.exists() ? snap.data() : null;
+    } catch { myBanStatus = null; }
+  }
 
   // ── Auth ──────────────────────────────────────────────────
   const authBar = document.getElementById('authBar');
   function renderAuthBar() {
     if (currentUser) {
+      const shownName = displayNameFor({ authorEmail: currentUser.email, authorName: currentUser.displayName });
       authBar.innerHTML = `
         <div class="user-chip">
           <img src="${currentUser.photoURL || ''}" alt="">
-          <span class="name">${escHtml(currentUser.displayName || currentUser.email)}</span>
+          <span class="name">${escHtml(shownName)}</span>
+          <button id="editNameBtn" class="icon-only" title="Change display name"><span class="material-symbols-rounded">edit</span></button>
           <button id="signOutBtn">Sign out</button>
         </div>
       `;
       document.getElementById('signOutBtn').addEventListener('click', () => signOut(auth));
+      document.getElementById('editNameBtn').addEventListener('click', editDisplayName);
     } else {
       authBar.innerHTML = `<button class="auth-btn" id="signInBtn"><span class="material-symbols-rounded" style="font-size:18px;">login</span> Sign in with Google</button>`;
       document.getElementById('signInBtn').addEventListener('click', () => {
@@ -511,15 +593,115 @@ function runForum(config) {
       });
     }
   }
-  onAuthStateChanged(auth, user => {
+
+  async function editDisplayName() {
+    if (!currentUser) return;
+    const current = (nameCache[currentUser.email] && nameCache[currentUser.email].displayName) || currentUser.displayName || '';
+    const name = window.prompt('Choose a display name for the forum (shown on your posts and comments):', current);
+    if (name === null) return;
+    const trimmed = name.trim().slice(0, 40);
+    if (!trimmed) { showToast('Display name cannot be empty'); return; }
+    try {
+      await setDoc(doc(db, 'users', currentUser.email), { displayName: trimmed, updatedAt: serverTimestamp() }, { merge: true });
+      nameCache[currentUser.email] = { ...(nameCache[currentUser.email]||{}), displayName: trimmed };
+      renderAuthBar();
+      renderList();
+      if (openPostId) openThread(openPostId, { keepScroll: true });
+      showToast('Display name updated');
+    } catch (err) { showToast('Could not update name: ' + err.message); }
+  }
+
+  async function banUser(email) {
+    if (!currentUser || !isOwner(currentUser.email)) return;
+    if (!confirm(`Ban ${email}? They won't be able to post, comment, or vote anymore.`)) return;
+    try {
+      await setDoc(doc(db, 'bans', email), { bannedAt: serverTimestamp(), bannedBy: currentUser.email });
+      showToast('User banned');
+    } catch (err) { showToast('Could not ban: ' + err.message); }
+  }
+
+  async function reportItem(type, postId, commentId) {
+    if (!currentUser) { showToast('Sign in to report'); return; }
+    if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
+    const reason = window.prompt('Why are you reporting this?');
+    if (!reason || !reason.trim()) return;
+    try {
+      const idToken = await currentUser.getIdToken();
+      const res = await fetch(SERVER_ENDPOINT + '/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
+        body: JSON.stringify({
+          type, reason: reason.trim(), postId, commentId: commentId || null,
+          url: commentId ? commentUrl(postId, commentId) : postUrl(postId),
+        }),
+      });
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try { msg = (await res.json()).error || msg; } catch {}
+        throw new Error(msg);
+      }
+      showToast('Report sent — thank you');
+    } catch (err) { showToast('Could not send report: ' + err.message); }
+  }
+
+  async function deletePost(postId) {
+    if (!confirm('Delete this post? This cannot be undone.')) return;
+    try {
+      await deleteDoc(postRef(postId));
+      if (openPostId === postId) closeThread();
+      showToast('Post deleted');
+    } catch (err) { showToast('Could not delete: ' + err.message); }
+  }
+
+  async function deleteCommentItem(postId, commentId) {
+    if (!confirm('Delete this comment?')) return;
+    try {
+      await deleteDoc(doc(db, 'posts', postId, 'comments', commentId));
+      await updateDoc(postRef(postId), { commentCount: Math.max(0, (posts.find(p=>p.id===postId)?.commentCount||1) - 1) });
+    } catch (err) { showToast('Could not delete: ' + err.message); }
+  }
+
+  function menuItemsForPost(p) {
+    const items = [
+      { label: 'Share', icon: 'link', onClick: () => copyLink(postUrl(p.id), 'Post link') },
+      { label: 'Report', icon: 'flag', onClick: () => reportItem('post', p.id, null) },
+    ];
+    if (currentUser && isOwner(currentUser.email) && p.authorEmail !== currentUser.email) {
+      items.push({ label: 'Ban user', icon: 'block', dangerous: true, onClick: () => banUser(p.authorEmail) });
+    }
+    if (canModerate(p.authorEmail)) {
+      items.push({ label: 'Delete post', icon: 'delete', dangerous: true, onClick: () => deletePost(p.id) });
+    }
+    return items;
+  }
+
+  function menuItemsForComment(c, postId) {
+    const items = [
+      { label: 'Share', icon: 'link', onClick: () => copyLink(commentUrl(postId, c.id), 'Comment link') },
+      { label: 'Report', icon: 'flag', onClick: () => reportItem('comment', postId, c.id) },
+    ];
+    if (currentUser && isOwner(currentUser.email) && c.authorEmail !== currentUser.email) {
+      items.push({ label: 'Ban user', icon: 'block', dangerous: true, onClick: () => banUser(c.authorEmail) });
+    }
+    if (canModerate(c.authorEmail)) {
+      items.push({ label: 'Delete comment', icon: 'delete', dangerous: true, onClick: () => deleteCommentItem(postId, c.id) });
+    }
+    return items;
+  }
+
+  onAuthStateChanged(auth, async user => {
     currentUser = user;
     renderAuthBar();
     renderList();
+    if (user) {
+      await Promise.all([ensureNamesLoaded([user.email]), refreshBanStatus()]);
+      renderAuthBar();
+      renderList();
+    } else {
+      myBanStatus = null;
+    }
     if (openPostId) openThread(openPostId, { keepScroll: true });
   });
-
-  function isOwner(email) { return email === OWNER_EMAIL; }
-  function canModerate(authorEmail) { return currentUser && (currentUser.email === authorEmail || isOwner(currentUser.email)); }
 
   // ── Image attach widget (shared factory for post form + comment forms) ──
   function createImageAttach(container) {
@@ -560,11 +742,11 @@ function runForum(config) {
 
   async function uploadImageIfAny(file) {
     if (!file || !currentUser) return null;
-    if (!UPLOAD_ENDPOINT) throw new Error('Image uploads are not set up yet');
+    if (!SERVER_ENDPOINT) throw new Error('Image uploads are not set up yet');
     const idToken = await currentUser.getIdToken();
     const fd = new FormData();
     fd.append('file', file);
-    const res = await fetch(UPLOAD_ENDPOINT + '/upload', {
+    const res = await fetch(SERVER_ENDPOINT + '/upload', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + idToken },
       body: fd,
@@ -677,7 +859,7 @@ function runForum(config) {
           ${(p.tags||[]).map(id => `<span class="post-tag">${escHtml(tagInfo(id).label)}</span>`).join('')}
           <span class="post-author">
             ${p.authorPhoto ? `<img src="${p.authorPhoto}" alt="">` : ''}
-            ${escHtml(p.authorName || p.authorEmail || 'anon')} · ${timeAgo(p._date)}
+            ${escHtml(displayNameFor(p))} · ${timeAgo(p._date)}
           </span>
         </div>
         <div class="post-title">${escHtml(p.title)}</div>
@@ -685,13 +867,15 @@ function runForum(config) {
         ${p.imageUrl ? `<img class="post-thumb" src="${p.imageUrl}" alt="" loading="lazy">` : ''}
         <div class="post-footer">
           <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount||0} comments</span>
-          <button class="icon-link-btn" data-share-post><span class="material-symbols-rounded">link</span> Share</button>
         </div>
       </div>
+      <div class="kebab-slot" data-kebab></div>
     `;
     card.querySelector('[data-post-up]').addEventListener('click', e => { e.stopPropagation(); toggleVote(postRef(p.id), p, 'up'); });
     card.querySelector('[data-post-down]').addEventListener('click', e => { e.stopPropagation(); toggleVote(postRef(p.id), p, 'down'); });
-    card.querySelector('[data-share-post]').addEventListener('click', e => { e.stopPropagation(); copyLink(postUrl(p.id), 'Post link'); });
+    const kebabSlot = card.querySelector('[data-kebab]');
+    kebabSlot.addEventListener('click', e => e.stopPropagation());
+    kebabSlot.appendChild(buildKebabMenu(menuItemsForPost(p)));
     card.addEventListener('click', () => openThread(p.id));
     return card;
   }
@@ -700,6 +884,7 @@ function runForum(config) {
 
   async function toggleVote(ref, item, direction) {
     if (!currentUser) { showToast('Sign in to vote'); return; }
+    if (isBanned()) { showToast("You've been banned"); return; }
     const uid = currentUser.uid;
     const up = (item.upvoters || []).includes(uid);
     const down = (item.downvoters || []).includes(uid);
@@ -716,12 +901,13 @@ function runForum(config) {
 
   // ── Live posts feed ──────────────────────────────────────────
   let firstSnapshot = true;
-  onSnapshot(query(collection(db, 'posts'), orderBy('createdAt', 'desc')), snap => {
+  onSnapshot(query(collection(db, 'posts'), orderBy('createdAt', 'desc')), async snap => {
     posts = snap.docs.map(d => {
       const data = d.data();
       const date = data.createdAt ? data.createdAt.toDate() : new Date();
       return { id: d.id, ...data, _date: date, _ts: date.getTime() };
     });
+    await ensureNamesLoaded(posts.map(p => p.authorEmail));
     refreshTagPills();
     renderList();
     if (openPostId) refreshOpenThreadChrome();
@@ -762,6 +948,7 @@ function runForum(config) {
 
   document.getElementById('newPostBtn').addEventListener('click', () => {
     if (!currentUser) { showToast('Sign in to post'); return; }
+    if (isBanned()) { showToast("You've been banned from posting"); return; }
     postForm.reset();
     selectedTags = [];
     postImageAttach.reset();
@@ -785,6 +972,7 @@ function runForum(config) {
   postForm.addEventListener('submit', async e => {
     e.preventDefault();
     if (!currentUser) { showToast('Sign in to post'); return; }
+    if (isBanned()) { showToast("You've been banned from posting"); return; }
     const fd = new FormData(postForm);
     const title = fd.get('title').trim();
     if (!title) return;
@@ -829,8 +1017,6 @@ function runForum(config) {
       voteCol.outerHTML = voteColHtml(p, 'thread');
       wireThreadVoteButtons(p);
     }
-    const del = threadContent.querySelector('[data-delete-post]');
-    if (del) del.style.display = canModerate(p.authorEmail) ? '' : 'none';
   }
 
   function wireThreadVoteButtons(p) {
@@ -851,16 +1037,15 @@ function runForum(config) {
         ${(p.tags||[]).map(id => `<span class="post-tag">${escHtml(tagInfo(id).label)}</span>`).join('')}
         <span class="post-author">
           ${p.authorPhoto ? `<img src="${p.authorPhoto}" alt="">` : ''}
-          ${escHtml(p.authorName || p.authorEmail || 'anon')} · ${timeAgo(p._date)}
+          ${escHtml(displayNameFor(p))} · ${timeAgo(p._date)}
         </span>
+        <span class="kebab-slot" data-kebab style="margin-left:auto;"></span>
       </div>
       <div class="thread-title">${escHtml(p.title)}</div>
       ${p.imageUrl ? `<img class="thread-image" src="${p.imageUrl}" alt="">` : ''}
       <div class="thread-body">${parseMarkdown(p.body)}</div>
       <div class="thread-actions">
         ${voteColHtml(p, 'thread')}
-        <button class="icon-link-btn" data-share-thread><span class="material-symbols-rounded">link</span> Share</button>
-        <button class="delete-link" data-delete-post style="display:none;">Delete post</button>
       </div>
       <div class="comments-heading" id="commentsHeading">Comments</div>
       <div class="comment-list" id="commentList"></div>
@@ -868,17 +1053,7 @@ function runForum(config) {
     `;
 
     wireThreadVoteButtons(p);
-    threadContent.querySelector('[data-share-thread]').addEventListener('click', () => copyLink(postUrl(p.id), 'Post link'));
-    const delBtn = threadContent.querySelector('[data-delete-post]');
-    delBtn.style.display = canModerate(p.authorEmail) ? '' : 'none';
-    delBtn.addEventListener('click', async () => {
-      if (!confirm('Delete this post? This cannot be undone.')) return;
-      try {
-        await deleteDoc(postRef(postId));
-        closeThread();
-        showToast('Post deleted');
-      } catch (err) { showToast('Could not delete: ' + err.message); }
-    });
+    threadContent.querySelector('[data-kebab]').appendChild(buildKebabMenu(menuItemsForPost(p)));
 
     renderCommentForm();
 
@@ -895,12 +1070,13 @@ function runForum(config) {
     if (unsubComments.current) unsubComments.current();
     unsubComments.current = onSnapshot(
       query(collection(db, 'posts', postId, 'comments'), orderBy('createdAt', 'asc')),
-      snap => {
+      async snap => {
         latestComments = snap.docs.map(d => {
           const data = d.data();
           const date = data.createdAt ? data.createdAt.toDate() : new Date();
           return { id: d.id, ...data, _date: date };
         });
+        await ensureNamesLoaded(latestComments.map(c => c.authorEmail));
         renderComments(latestComments, postId, opts.highlightComment);
         opts.highlightComment = null;
       }
@@ -917,15 +1093,12 @@ function runForum(config) {
         <div class="comment-main">
           <div class="comment-meta">
             ${c.authorPhoto ? `<img src="${c.authorPhoto}" alt="">` : ''}
-            <span class="name">${escHtml(c.authorName || c.authorEmail || 'anon')}</span>
+            <span class="name">${escHtml(displayNameFor(c))}</span>
             <span class="time">${timeAgo(c._date)}</span>
+            <span class="kebab-slot" data-kebab style="margin-left:auto;"></span>
           </div>
           <div class="comment-body">${escHtml(c.body)}</div>
           ${c.imageUrl ? `<img class="comment-image" src="${c.imageUrl}" alt="">` : ''}
-          <div class="comment-footer">
-            <button class="icon-link-btn" data-share-comment="${c.id}"><span class="material-symbols-rounded">link</span> Share</button>
-            <button class="comment-delete" data-comment-delete="${c.id}" data-author-email="${escHtml(c.authorEmail||'')}" style="display:none;">Delete</button>
-          </div>
         </div>
       </div>
     `).join('');
@@ -935,17 +1108,7 @@ function runForum(config) {
       const c = comments.find(x => x.id === id);
       el.querySelector(`[data-c-${id}-up]`).addEventListener('click', () => toggleVote(doc(db, 'posts', postId, 'comments', id), c, 'up'));
       el.querySelector(`[data-c-${id}-down]`).addEventListener('click', () => toggleVote(doc(db, 'posts', postId, 'comments', id), c, 'down'));
-      el.querySelector(`[data-share-comment="${id}"]`).addEventListener('click', () => copyLink(commentUrl(postId, id), 'Comment link'));
-    });
-    list.querySelectorAll('[data-comment-delete]').forEach(btn => {
-      btn.style.display = canModerate(btn.dataset.authorEmail) ? '' : 'none';
-      btn.addEventListener('click', async () => {
-        if (!confirm('Delete this comment?')) return;
-        try {
-          await deleteDoc(doc(db, 'posts', postId, 'comments', btn.dataset.commentDelete));
-          await updateDoc(postRef(postId), { commentCount: Math.max(0, (posts.find(p=>p.id===postId)?.commentCount||1) - 1) });
-        } catch (err) { showToast('Could not delete: ' + err.message); }
-      });
+      el.querySelector('[data-kebab]').appendChild(buildKebabMenu(menuItemsForComment(c, postId)));
     });
 
     if (highlightId) {
@@ -959,6 +1122,10 @@ function runForum(config) {
     if (!wrap) return;
     if (!currentUser) {
       wrap.innerHTML = `<div class="comment-form-locked">Sign in to join the discussion.</div>`;
+      return;
+    }
+    if (isBanned()) {
+      wrap.innerHTML = `<div class="comment-form-locked">You've been banned from posting.</div>`;
       return;
     }
     wrap.innerHTML = `
