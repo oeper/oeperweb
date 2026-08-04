@@ -1,5 +1,6 @@
 @charset "utf-8";
 @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap');
 /*
 
 TemplateMo 592 glossy touch
@@ -18,7 +19,7 @@ https://templatemo.com/tm-592-glossy-touch
     }
 }
 body {
-    font-family: "Source Sans 3", Tahoma, Geneva, Verdana, sans-serif;
+    font-family: "Google Sans", "Source Sans 3", Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(
         135deg,
         #0c0c0c 0%,
@@ -249,7 +250,7 @@ nav {
     text-decoration: none;
     border-radius: 50px;
     font-weight: 600;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-family: "Google Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     transition: all 0.3s ease;
     border: 2px solid rgba(255, 255, 255, 0.3);
     cursor: pointer;
@@ -512,7 +513,7 @@ button[type="submit"] {
     border-radius: 10px;
     color: white;
     font-size: 16px;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-family: "Google Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
 }
