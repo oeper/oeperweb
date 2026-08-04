@@ -548,117 +548,12 @@
 </div>
 
 <script>
-const CATEGORIES = [
-  { id: 'tools',     label: 'Tools',     icon: 'build' },
-  { id: 'guide',     label: 'Guide',     icon: 'explore' },
-  { id: 'news',      label: 'News',      icon: 'newspaper' },
-  { id: 'opinion',   label: 'Opinion',   icon: 'forum' },
-  { id: 'textbooks', label: 'Textbooks', icon: 'menu_book' }
-];
+(async function() {
 
-const ARTICLES = [
-  {
-    title:    'QR code generator',
-    category: 'tools',                    
-    date:      'March 29, 2026',
-    excerpt:  'Generate QR codes without being begged to sign up or pay.',
-    image:    'https://upload.wikimedia.org/wikipedia/commons/2/2f/Rickrolling_QR_code.png',
-    content:  `
-# This tool is a free QR code generator that obviously generates QR codes for you. It's instant, doesn't beg you to pay a fortune and easy to use.
-
-## [[Use it here]](https://oeper.dev/qrmaker)
-
-### Made by anthropic`,
-  },
-  {
-    title:    'Sejarah Tingkatan 3 textbook (TRANSLATED)',
-    category: 'textbooks',
-    date:      'April 2, 2026',
-    excerpt:  'Form 3 History textbook translated into English and Chinese',
-    image:    'https://online.fliphtml5.com/faksy/sypg/files/large/1.webp?1606645644',
-    content:  `History may be a very hard and unnecessary subject that our schools have forced us to shove into our brains and ruin our day.
-
-However, with the power of technology, I have translated the miserable Form 3 History textbook and made it actually comprehensible! (if your Malay sucks)
-
-# Here are the translated versions of the textbook below:
-
-- English: [[click here]](https://drive.google.com/file/d/1jaEXCe8_ZKrrMawAayFmp_eL1W8BYFLX/view?usp=sharing)
-- Chinese: [[click here]](https://drive.google.com/file/d/1v4WAxxnwi8rOs6U8aDVUwPZ6mh-LT5HD/view?usp=sharing)
-
-Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
-
-All the best for whatever you need these for!`,
-  },
-  {
-    title:    'RBT Tingkatan 3 textbook (TRANSLATED)',
-    category: 'textbooks',
-    date:      'April 2, 2026',
-    excerpt:  'Form 3 RBT textbook translated into English and Chinese',
-    image:    'https://online.anyflip.com/xygpt/fvdt/files/mobile/1.webp',
-    content:  `I find RBT (Reka Bentuk dan Teknologi for more content) a really useful subject for my future. It COULD HAVE HELPED ME A LOT MORE IF IT WERE IN ENGLISH.
-
-Hence, I translated the textbook into English and Chinese so you and I could understand what it's saying. not to be disrespectful but to be honest malay is a very difficult language to learn and understand
-
-# Here are the translated versions of the textbook below:
-
-- English: [[click here]](https://drive.google.com/file/d/1BCSS1P_Xy7LsOYfRC1_D1EPcjFPf1nRp/view?usp=sharing)
-- Chinese: [[click here]](https://drive.google.com/file/d/1okWnovbnew13S8ynoU9uTE6aA2tRlS4u/view?usp=sharing)
-
-Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
-
-All the best for whatever you need these for!`,
-  },
-  {
-    title:    'Pendidikan Seni Visual (PSV) Tingkatan 3 textbook (TRANSLATED)',
-    category: 'textbooks',
-    date:      'April 12, 2026',
-    excerpt:  'Form 3 Pendidikan Seni Visual (PSV) textbook translated into English and Chinese',
-    image:    'https://online.anyflip.com/icbcu/xfxz/files/mobile/2.webp',
-    content:  `Seni uhh
-    
-# Here are the translated versions of the textbook below:
-
-- English: [[click here]](https://drive.google.com/file/d/1CC2RFVQVNM3tOp7-TQuVWqGIUTVuWkYz/view?usp=sharing)
-- Chinese: [[click here]](https://drive.google.com/file/d/1OMU6UrNOK7R1U-494klLUZM198wxOEv-/view?usp=sharing)
-
-Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
-
-Also, Google translate might have mixed up the page order for the PDFs and rearranging them would take me a very long time so I apologize for that
-
-All the best for whatever you need these for!`,
-  },
-  {
-    title:    'Geografi Tingkatan 3 textbook (TRANSLATED)',
-    category: 'textbooks',
-    date:      'April 12, 2026',
-    excerpt:  'Form 3 Geografi/Geography textbook translated into English and Chinese',
-    image:    'https://cdn1.npcdn.net/images/1592625400e88792792d295890e43144c99239231a.jpg',
-    content:  `This took me soooooo long to translate
-    
-# Here are the translated versions of the textbook below:
-
-- English: [[click here]](https://drive.google.com/file/d/1x45QBXP98OwXKkHgGi-0KVflLhvhKt9O/view?usp=sharing)
-- Chinese: [[click here]](https://drive.google.com/file/d/1NvXz5sgTjeLUtyctSOky5gJZDUvZqAyl/view?usp=sharing)
-
-Please do note that the translations may not be accurate. I advise referring to the original textbook side-by-side with the translated version(s).
-
-Also, Google translate might have mixed up the page order for the PDFs and rearranging them would take me a very long time so I apologize for that
-
-All the best for whatever you need these for!`,
-  },
- {
-    title:    'PDF Splitter by size',
-    category: 'tools',
-    date:      'July 22, 2026',
-    excerpt:  'Why the hell must other websites charge money just to split a pdf?',
-    image:    'https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/PDF_file_icon.svg/250px-PDF_file_icon.svg.png',
-    content:  `# Some websites want you to pay for some splitter but I just dont get why. So I asked Claude to help me make one.
-    
-[[here's the link]](https://oeper.dev/pdfsplitbysize.html)
-
-Feel free to use it!`,
-  }
-];
+const res = await fetch('data/articles.json');
+const data = await res.json();
+const CATEGORIES = data.categories;
+const ARTICLES = data.articles;
 
 // Parse dates for sorting
 function parseDate(str) {
@@ -818,6 +713,7 @@ function parseMarkdown(md) {
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:12px;margin:1em 0;">')
     .replace(/\[\[([^\]]+)\]\]\(([^)]+)\)/g, '<a href="$2" class="md-button" target="_blank" rel="noopener">$1</a>')
     .replace(/(?<!\抵抗)\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\*\*(.+?)\*\*/g,      '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g,          '<em>$1</em>')
     .replace(/(?<!\w)_([^_\s][^_]*)_(?!\w)/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -999,6 +895,8 @@ if (urlCategory && document.querySelector(`.pill[data-filter="${urlCategory}"]`)
 if (urlArticle !== null && ARTICLES[+urlArticle]) {
   openReader(+urlArticle);
 }
+
+})();
 </script>
 </body>
 </html>

@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Manager — oeper.dev</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-success: #a6d9a8;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { max-width: 900px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 28px; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-size: 14px; font-weight: 500; margin-bottom: 16px;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header h1 {
+    font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400;
+    margin-bottom: 8px; letter-spacing: -0.5px;
+  }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 15px; line-height: 1.5; max-width: 560px; }
+
+  .notice {
+    display: none;
+    background-color: var(--md-sys-color-surface-variant);
+    border-radius: 16px; padding: 14px 18px; margin-top: 16px;
+    font-size: 13px; line-height: 1.6; color: var(--md-sys-color-on-surface-variant);
+  }
+  .notice.show { display: block; }
+  .notice strong { color: var(--md-sys-color-on-surface); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 8px; margin: 28px 0 20px; border-bottom: 1px solid var(--md-sys-color-outline); }
+  .tab {
+    background: none; border: none; padding: 12px 18px;
+    font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-size: 15px; font-weight: 500; color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .tab .material-symbols-rounded { font-size: 20px; }
+  .tab.active { color: var(--md-sys-color-primary); border-bottom-color: var(--md-sys-color-primary); }
+
+  /* File bar */
+  .filebar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background-color: var(--md-sys-color-surface); border-radius: 20px;
+    padding: 16px 20px; margin-bottom: 24px;
+  }
+  .filebar .status { flex: 1; min-width: 200px; font-size: 14px; color: var(--md-sys-color-on-surface-variant); }
+  .filebar .status strong { color: var(--md-sys-color-on-surface); font-weight: 500; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--md-sys-color-outline); margin-right: 8px; }
+  .dot.dirty { background: #f2b950; }
+  .dot.saved { background: var(--md-sys-color-success); }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-size: 14px; font-weight: 500;
+    padding: 10px 18px; border-radius: 100px; border: 1px solid var(--md-sys-color-outline);
+    background: transparent; color: var(--md-sys-color-on-surface); cursor: pointer;
+    transition: background-color 0.15s;
+  }
+  .btn .material-symbols-rounded { font-size: 18px; }
+  .btn:hover { background-color: rgba(255,255,255,0.06); }
+  .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
+  .btn.primary:hover { opacity: 0.9; }
+  .btn.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.danger { color: var(--md-sys-color-error); border-color: var(--md-sys-color-error); }
+  .btn.danger:hover { background-color: rgba(255,180,171,0.08); }
+  .btn.small { padding: 6px 12px; font-size: 13px; }
+
+  /* Add button row */
+  .toolrow { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
+  .toolrow h2 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 18px; font-weight: 400; }
+
+  /* Item list */
+  .item-list { display: flex; flex-direction: column; gap: 10px; }
+  .item-card {
+    display: flex; align-items: center; gap: 16px;
+    background-color: var(--md-sys-color-surface); border-radius: 20px; padding: 14px 18px;
+  }
+  .item-thumb { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: var(--md-sys-color-surface-variant); }
+  .item-thumb.placeholder { display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface-variant); }
+  .item-main { flex: 1; min-width: 0; }
+  .item-title { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-sub { font-size: 13px; color: var(--md-sys-color-on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-tags { display: flex; gap: 6px; flex-shrink: 0; }
+  .item-tag { font-size: 11px; padding: 3px 10px; border-radius: 8px; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant); }
+  .item-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: none; background: transparent;
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .icon-btn:hover { background-color: rgba(255,255,255,0.08); color: var(--md-sys-color-on-surface); }
+  .icon-btn.danger:hover { color: var(--md-sys-color-error); }
+  .icon-btn .material-symbols-rounded { font-size: 20px; }
+
+  .empty-hint { text-align: center; padding: 60px 20px; color: var(--md-sys-color-on-surface-variant); }
+  .empty-hint .material-symbols-rounded { font-size: 40px; opacity: 0.5; margin-bottom: 12px; }
+
+  /* Modal */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -48%);
+    width: min(640px, 92vw); max-height: 86vh; overflow-y: auto;
+    background-color: var(--md-sys-color-surface); border-radius: 28px; padding: 28px;
+    z-index: 51; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+  }
+  .modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
+  .modal h3 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 20px; font-weight: 400; margin-bottom: 20px; }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 6px; }
+  .field input[type="text"], .field textarea {
+    width: 100%; background-color: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px;
+    font-family: inherit; outline: none; resize: vertical;
+  }
+  .field input[type="text"]:focus, .field textarea:focus { border-color: var(--md-sys-color-primary); }
+  .field textarea { min-height: 90px; }
+  .field textarea.tall { min-height: 220px; font-family: monospace; font-size: 13px; }
+  .field-row { display: flex; gap: 12px; }
+  .field-row .field { flex: 1; }
+
+  .chip-select { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip-select label {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    padding: 7px 14px; border-radius: 10px; border: 1px solid var(--md-sys-color-outline);
+    font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin: 0;
+  }
+  .chip-select input { accent-color: var(--md-sys-color-primary); }
+  .chip-select label:has(input:checked) { background-color: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent; }
+
+  .add-cat-row { display: flex; gap: 8px; margin-top: 10px; }
+  .add-cat-row input { flex: 1; min-width: 0; }
+
+  .preview-toggle { display: flex; gap: 8px; margin-bottom: 8px; }
+  .preview-toggle button {
+    background: none; border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface-variant);
+    font-size: 12px; padding: 5px 12px; border-radius: 8px; cursor: pointer;
+  }
+  .preview-toggle button.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent; }
+  .md-preview {
+    display: none; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 12px; padding: 16px; min-height: 220px; font-size: 14px; line-height: 1.6; overflow-y: auto; max-height: 400px;
+  }
+  .md-preview.show { display: block; }
+  .md-preview h1, .md-preview h2, .md-preview h3 { font-family: 'Google Sans', 'Product Sans', sans-serif; margin: 0.8em 0 0.4em; }
+  .md-preview p { margin-bottom: 1em; }
+  .md-preview a { color: var(--md-sys-color-primary); }
+
+  .modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; gap: 12px; }
+  .modal-actions .right { display: flex; gap: 8px; }
+
+  .hint { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 4px; }
+
+  .toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background-color: #303034; box-shadow: 0 4px 12px rgba(0,0,0,0.4); border-radius: 16px;
+    padding: 14px 24px; font-size: 14px; color: #e3e2e6; opacity: 0;
+    transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 100; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  #jsonFileInput { display: none; }
+
+  /* Lock screen */
+  .lock-screen {
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 24px;
+  }
+  .lock-screen .material-symbols-rounded.lock-icon {
+    font-size: 40px; color: var(--md-sys-color-primary);
+    width: 72px; height: 72px; border-radius: 50%; background: var(--md-sys-color-surface-variant);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
+  }
+  .lock-screen h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 26px; font-weight: 400; margin-bottom: 8px; }
+  .lock-screen p { color: var(--md-sys-color-on-surface-variant); font-size: 14px; max-width: 360px; margin-bottom: 28px; line-height: 1.5; }
+  #googleSignInBtn { min-height: 40px; }
+  .lock-denied {
+    display: none; margin-top: 20px; background: rgba(255,180,171,0.1); color: var(--md-sys-color-error);
+    border-radius: 12px; padding: 12px 18px; font-size: 13px; max-width: 360px;
+  }
+  .lock-denied.show { display: block; }
+  .lock-config-warning {
+    display: none; margin-top: 20px; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant);
+    border-radius: 12px; padding: 14px 18px; font-size: 13px; max-width: 400px; line-height: 1.6; text-align: left;
+  }
+  .lock-config-warning.show { display: block; }
+
+  .signed-in-bar { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+  .signed-in-bar img { width: 28px; height: 28px; border-radius: 50%; }
+  .signed-in-bar span { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .signed-in-bar button { background: none; border: none; color: var(--md-sys-color-primary); font-size: 13px; cursor: pointer; text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="lock-screen" id="lockScreen">
+  <span class="material-symbols-rounded lock-icon">lock</span>
+  <h1>Sign in required</h1>
+  <p>This content manager is restricted to the site owner. Sign in with the authorized Google account to continue.</p>
+  <div id="googleSignInBtn"></div>
+  <div class="lock-denied" id="lockDenied">Signed in, but this Google account isn't authorized to edit this site.</div>
+  <div class="lock-config-warning" id="lockConfigWarning">
+    <strong>Google Sign-In isn't configured yet.</strong> A <code>GOOGLE_CLIENT_ID</code> needs to be added to this page before sign-in will work.
+  </div>
+</div>
+
+<div class="page" id="appRoot" style="display:none;">
+  <header class="header">
+    <a href="https://oeper.dev" class="header-link">
+      <span class="material-symbols-rounded">arrow_back</span>
+      <span>back to oeper.dev</span>
+    </a>
+    <h1>Content Manager</h1>
+    <p>Add, edit and publish articles &amp; downloads without touching code.</p>
+    <div class="signed-in-bar" id="signedInBar"></div>
+    <div class="notice" id="fsaNotice">
+      <strong>Heads up:</strong> your browser doesn't support saving files in place, so "Save" will download an updated JSON file instead — drop it into <code>data/</code>, replacing the old one.
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="articles">
+      <span class="material-symbols-rounded">book</span> Articles
+    </button>
+    <button class="tab" data-tab="downloads">
+      <span class="material-symbols-rounded">download</span> Downloads
+    </button>
+  </div>
+
+  <div class="filebar">
+    <span class="status" id="fileStatus"><span class="dot"></span>No file open</span>
+    <button class="btn" id="openBtn"><span class="material-symbols-rounded">folder_open</span> Open data file</button>
+    <button class="btn primary" id="saveBtn" disabled><span class="material-symbols-rounded">save</span> Save</button>
+  </div>
+
+  <div class="toolrow">
+    <h2 id="listTitle">Articles</h2>
+    <button class="btn primary" id="addBtn" disabled><span class="material-symbols-rounded">add</span> Add new</button>
+  </div>
+
+  <div class="item-list" id="itemList"></div>
+  <div class="empty-hint" id="emptyHint">
+    <span class="material-symbols-rounded">description</span>
+    <p>Open <code id="expectedFileName">data/articles.json</code> to start editing.</p>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="modal" id="modal">
+  <h3 id="modalTitle">Add article</h3>
+  <form id="itemForm"></form>
+</div>
+
+<input type="file" id="jsonFileInput" accept="application/json">
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Auth (Google Sign-In) ──────────────────────────────────────
+// Paste the OAuth Client ID from Google Cloud Console here (Credentials → OAuth client ID → Web application).
+// This value is public/non-secret and safe to commit.
+const GOOGLE_CLIENT_ID = '300606899534-16s7jlu7mpt0h7ll6m9a73250lnkg0hm.apps.googleusercontent.com';
+const ALLOWED_EMAILS = ['sanhackerman@gmail.com'];
+
+function decodeJwt(token) {
+  const payload = token.split('.')[1];
+  const json = decodeURIComponent(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+    .split('').map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join(''));
+  return JSON.parse(json);
+}
+
+function handleCredentialResponse(response) {
+  let profile;
+  try {
+    profile = decodeJwt(response.credential);
+  } catch (err) {
+    document.getElementById('lockDenied').textContent = 'Could not read sign-in response: ' + err.message;
+    document.getElementById('lockDenied').classList.add('show');
+    return;
+  }
+
+  if (!profile.email_verified || !ALLOWED_EMAILS.includes(profile.email)) {
+    document.getElementById('lockDenied').classList.add('show');
+    return;
+  }
+
+  sessionStorage.setItem('admin_google_profile', JSON.stringify({
+    email: profile.email, name: profile.name, picture: profile.picture,
+  }));
+  unlockApp(profile);
+}
+
+function unlockApp(profile) {
+  document.getElementById('lockScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = '';
+  document.getElementById('signedInBar').innerHTML = `
+    <img src="${profile.picture || ''}" alt="">
+    <span>Signed in as ${profile.email}</span>
+    <button id="signOutBtn" type="button">Sign out</button>
+  `;
+  document.getElementById('signOutBtn').addEventListener('click', () => {
+    sessionStorage.removeItem('admin_google_profile');
+    location.reload();
+  });
+}
+
+function initAuth() {
+  if (!GOOGLE_CLIENT_ID) {
+    document.getElementById('lockConfigWarning').classList.add('show');
+    return;
+  }
+
+  const cached = sessionStorage.getItem('admin_google_profile');
+  if (cached) {
+    try {
+      const profile = JSON.parse(cached);
+      if (ALLOWED_EMAILS.includes(profile.email)) { unlockApp(profile); return; }
+    } catch {}
+  }
+
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredentialResponse,
+  });
+  google.accounts.id.renderButton(document.getElementById('googleSignInBtn'), {
+    theme: 'filled_blue', size: 'large', shape: 'pill',
+  });
+}
+
+window.addEventListener('load', () => {
+  if (window.google && google.accounts && google.accounts.id) {
+    initAuth();
+  } else {
+    // GIS script may still be loading (async defer) — poll briefly.
+    let tries = 0;
+    const t = setInterval(() => {
+      tries++;
+      if (window.google && google.accounts && google.accounts.id) {
+        clearInterval(t);
+        initAuth();
+      } else if (tries > 40) {
+        clearInterval(t);
+        document.getElementById('lockConfigWarning').textContent = 'Could not load Google Sign-In. Check your connection and reload.';
+        document.getElementById('lockConfigWarning').classList.add('show');
+      }
+    }, 100);
+  }
+});
+
+const TABS = {
+  articles: {
+    file: 'articles.json',
+    dataKey: 'articles',
+    label: 'article',
+    fields: ['title','category','date','excerpt','image','content'],
+  },
+  downloads: {
+    file: 'downloads.json',
+    dataKey: 'files',
+    label: 'download',
+    fields: ['label','category','url','desc','image'],
+  }
+};
+
+const state = {
+  articles:  { handle: null, categories: [], items: [], dirty: false, usingFallback: false },
+  downloads: { handle: null, categories: [], items: [], dirty: false, usingFallback: false },
+};
+
+let activeTab = 'articles';
+const supportsFSA = 'showOpenFilePicker' in window;
+
+if (!supportsFSA) document.getElementById('fsaNotice').classList.add('show');
+
+// ── Markdown preview (mirrors articles.html) ──────────────────
+function escHtml(str) { return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function parseMarkdown(md) {
+  let html = md
+    .replace(/\r\n/g, '\n')
+    .replace(/```[\w]*\n([\s\S]*?)```/g, (_, code) => `<pre><code>${escHtml(code.trimEnd())}</code></pre>`)
+    .replace(/^######\s+(.+)$/gm, '<h6>$1</h6>')
+    .replace(/^#####\s+(.+)$/gm,  '<h5>$1</h5>')
+    .replace(/^####\s+(.+)$/gm,   '<h4>$1</h4>')
+    .replace(/^###\s+(.+)$/gm,    '<h3>$1</h3>')
+    .replace(/^##\s+(.+)$/gm,     '<h2>$1</h2>')
+    .replace(/^#\s+(.+)$/gm,      '<h1>$1</h1>')
+    .replace(/((?:^>\s?.+\n?)+)/gm, match => `<blockquote>${match.replace(/^>\s?/gm,'').trim()}</blockquote>\n`)
+    .replace(/^(-{3,}|\*{3,}|_{3,})$/gm, '<hr>')
+    .replace(/((?:^[ \t]*[-*+]\s+.+\n?)+)/gm, match => `<ul>${match.trim().split('\n').map(l=>`<li>${l.replace(/^[ \t]*[-*+]\s+/,'')}</li>`).join('')}</ul>\n`)
+    .replace(/((?:^[ \t]*\d+\.\s+.+\n?)+)/gm, match => `<ol>${match.trim().split('\n').map(l=>`<li>${l.replace(/^[ \t]*\d+\.\s+/,'')}</li>`).join('')}</ol>\n`)
+    .replace(/__(.+?)__/g, '<strong>$1</strong>')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:12px;margin:1em 0;">')
+    .replace(/\[\[([^\]]+)\]\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/^(?!<[hbuop]|<li|<bl|<pr|<hr|<img|<a)(.+)$/gm, '<p>$1</p>')
+    .replace(/\n{3,}/g, '\n\n');
+  return html;
+}
+
+// ── File handling ──────────────────────────────────────────────
+function setStatus(text, kind) {
+  const el = document.getElementById('fileStatus');
+  el.innerHTML = `<span class="dot ${kind||''}"></span>${text}`;
+}
+
+function refreshFileBar() {
+  const s = state[activeTab];
+  const cfg = TABS[activeTab];
+  document.getElementById('expectedFileName').textContent = `data/${cfg.file}`;
+  document.getElementById('addBtn').disabled = !s.handle && !s.usingFallback;
+  document.getElementById('saveBtn').disabled = !(s.handle || s.usingFallback) || !s.dirty;
+  if (!s.handle && !s.usingFallback) {
+    setStatus('No file open', '');
+  } else if (s.dirty) {
+    setStatus(`<strong>data/${cfg.file}</strong> — unsaved changes`, 'dirty');
+  } else {
+    setStatus(`<strong>data/${cfg.file}</strong> — up to date`, 'saved');
+  }
+}
+
+async function openFile() {
+  const cfg = TABS[activeTab];
+  const s = state[activeTab];
+  if (supportsFSA) {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+      });
+      const file = await handle.getFile();
+      const parsed = JSON.parse(await file.text());
+      s.handle = handle;
+      s.usingFallback = false;
+      s.categories = parsed.categories || [];
+      s.items = parsed[cfg.dataKey] || [];
+      s.dirty = false;
+      renderList();
+      refreshFileBar();
+      showToast(`Loaded ${file.name}`);
+    } catch (err) {
+      if (err.name !== 'AbortError') showToast('Could not open file: ' + err.message);
+    }
+  } else {
+    document.getElementById('jsonFileInput').click();
+  }
+}
+
+document.getElementById('jsonFileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const cfg = TABS[activeTab];
+  const s = state[activeTab];
+  try {
+    const parsed = JSON.parse(await file.text());
+    s.handle = null;
+    s.usingFallback = true;
+    s.categories = parsed.categories || [];
+    s.items = parsed[cfg.dataKey] || [];
+    s.dirty = false;
+    renderList();
+    refreshFileBar();
+    showToast(`Loaded ${file.name}`);
+  } catch (err) {
+    showToast('Invalid JSON file: ' + err.message);
+  }
+  e.target.value = '';
+});
+
+async function saveFile() {
+  const cfg = TABS[activeTab];
+  const s = state[activeTab];
+  const payload = { categories: s.categories, [cfg.dataKey]: s.items };
+  const text = JSON.stringify(payload, null, 2) + '\n';
+
+  if (s.handle) {
+    try {
+      const writable = await s.handle.createWritable();
+      await writable.write(text);
+      await writable.close();
+      s.dirty = false;
+      refreshFileBar();
+      showToast('Saved to data/' + cfg.file);
+    } catch (err) {
+      showToast('Could not save: ' + err.message);
+    }
+  } else {
+    const blob = new Blob([text], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = cfg.file;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    s.dirty = false;
+    refreshFileBar();
+    showToast(`Downloaded ${cfg.file} — replace it in data/`);
+  }
+}
+
+// ── List rendering ──────────────────────────────────────────────
+function renderList() {
+  const s = state[activeTab];
+  const cfg = TABS[activeTab];
+  const list = document.getElementById('itemList');
+  const empty = document.getElementById('emptyHint');
+  list.innerHTML = '';
+
+  if (!s.handle && !s.usingFallback) {
+    empty.style.display = 'block';
+    empty.querySelector('p').innerHTML = `Open <code>data/${cfg.file}</code> to start editing.`;
+    return;
+  }
+  if (s.items.length === 0) {
+    empty.style.display = 'block';
+    empty.querySelector('p').textContent = `No ${cfg.label}s yet — click "Add new" to create one.`;
+    return;
+  }
+  empty.style.display = 'none';
+
+  s.items.forEach((item, i) => {
+    const catIds = Array.isArray(item.category) ? item.category : [item.category].filter(Boolean);
+    const title = activeTab === 'articles' ? item.title : (item.label || item.url || 'Untitled');
+    const sub = activeTab === 'articles' ? (item.excerpt || item.date || '') : (item.desc || item.url || '');
+
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    card.innerHTML = `
+      ${item.image
+        ? `<img class="item-thumb" src="${item.image}" alt="">`
+        : `<div class="item-thumb placeholder"><span class="material-symbols-rounded">${activeTab === 'articles' ? 'article' : 'draft'}</span></div>`}
+      <div class="item-main">
+        <div class="item-title">${escHtml(title || '(untitled)')}</div>
+        <div class="item-sub">${escHtml(sub)}</div>
+      </div>
+      <div class="item-tags">${catIds.map(id => `<span class="item-tag">${escHtml(id)}</span>`).join('')}</div>
+      <div class="item-actions">
+        <button class="icon-btn" data-edit="${i}" title="Edit"><span class="material-symbols-rounded">edit</span></button>
+        <button class="icon-btn danger" data-delete="${i}" title="Delete"><span class="material-symbols-rounded">delete</span></button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  list.querySelectorAll('[data-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openForm(+btn.dataset.edit));
+  });
+  list.querySelectorAll('[data-delete]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const i = +btn.dataset.delete;
+      const s = state[activeTab];
+      const title = activeTab === 'articles' ? s.items[i].title : (s.items[i].label || s.items[i].url);
+      if (confirm(`Delete "${title}"? This can't be undone (until you re-open the file without saving).`)) {
+        s.items.splice(i, 1);
+        s.dirty = true;
+        renderList();
+        refreshFileBar();
+      }
+    });
+  });
+}
+
+// ── Add / Edit form ──────────────────────────────────────────────
+const overlay = document.getElementById('overlay');
+const modal = document.getElementById('modal');
+let editingIndex = null;
+
+function chipSelectHtml(name, categories, selectedIds) {
+  return categories.map(c => `
+    <label>
+      <input type="checkbox" name="${name}" value="${c.id}" ${selectedIds.includes(c.id) ? 'checked' : ''}>
+      ${escHtml(c.label)}
+    </label>
+  `).join('');
+}
+
+function openForm(index) {
+  editingIndex = index;
+  const s = state[activeTab];
+  const item = index === null ? {} : s.items[index];
+  const selectedCats = index === null ? [] : (Array.isArray(item.category) ? item.category : [item.category].filter(Boolean));
+
+  document.getElementById('modalTitle').textContent = index === null
+    ? `Add ${TABS[activeTab].label}`
+    : `Edit ${TABS[activeTab].label}`;
+
+  const form = document.getElementById('itemForm');
+
+  if (activeTab === 'articles') {
+    form.innerHTML = `
+      <div class="field">
+        <label>Title *</label>
+        <input type="text" name="title" value="${escAttr(item.title||'')}" required>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Date</label>
+          <input type="text" name="date" placeholder="e.g. April 2, 2026" value="${escAttr(item.date||'')}">
+        </div>
+        <div class="field">
+          <label>Image URL</label>
+          <input type="text" name="image" placeholder="https://…" value="${escAttr(item.image||'')}">
+        </div>
+      </div>
+      <div class="field">
+        <label>Categories</label>
+        <div class="chip-select" id="catSelect">${chipSelectHtml('category', s.categories, selectedCats)}</div>
+        <div class="add-cat-row">
+          <input type="text" id="newCatId" placeholder="new category id (e.g. reviews)">
+          <button type="button" class="btn small" id="addCatBtn">Add</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Excerpt</label>
+        <textarea name="excerpt">${escHtml(item.excerpt||'')}</textarea>
+      </div>
+      <div class="field">
+        <label>Content (Markdown, or a URL to fetch markdown from)</label>
+        <div class="preview-toggle">
+          <button type="button" class="active" data-mode="write">Write</button>
+          <button type="button" data-mode="preview">Preview</button>
+        </div>
+        <textarea name="content" class="tall" id="contentField">${escHtml(item.content||'')}</textarea>
+        <div class="md-preview" id="mdPreview"></div>
+        <div class="hint">Use # for headings, [[Label]](url) for a button link, [Label](url) for a normal link.</div>
+      </div>
+    `;
+    wireCategoryAdd();
+    wirePreviewToggle();
+  } else {
+    form.innerHTML = `
+      <div class="field">
+        <label>Download URL *</label>
+        <input type="text" name="url" placeholder="https://…" value="${escAttr(item.url||'')}" required>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Label</label>
+          <input type="text" name="label" placeholder="Display name" value="${escAttr(item.label||'')}">
+        </div>
+        <div class="field">
+          <label>Image / preview URL</label>
+          <input type="text" name="image" placeholder="https://…" value="${escAttr(item.image||'')}">
+        </div>
+      </div>
+      <div class="field">
+        <label>Categories</label>
+        <div class="chip-select" id="catSelect">${chipSelectHtml('category', s.categories, selectedCats)}</div>
+        <div class="add-cat-row">
+          <input type="text" id="newCatId" placeholder="new category id (e.g. plugins)">
+          <button type="button" class="btn small" id="addCatBtn">Add</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <textarea name="desc">${escHtml(item.desc||'')}</textarea>
+      </div>
+    `;
+    wireCategoryAdd();
+  }
+
+  document.getElementById('itemForm').onsubmit = null;
+
+  overlay.classList.add('open');
+  modal.classList.add('open');
+}
+
+function wireCategoryAdd() {
+  document.getElementById('addCatBtn').addEventListener('click', () => {
+    const input = document.getElementById('newCatId');
+    const id = input.value.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!id) return;
+    const s = state[activeTab];
+    if (!s.categories.find(c => c.id === id)) {
+      s.categories.push({ id, label: id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), icon: 'label' });
+    }
+    const catSelect = document.getElementById('catSelect');
+    const checked = id;
+    catSelect.innerHTML = chipSelectHtml('category', s.categories, [checked]);
+    input.value = '';
+  });
+}
+
+function wirePreviewToggle() {
+  const buttons = document.querySelectorAll('.preview-toggle button');
+  const contentField = document.getElementById('contentField');
+  const preview = document.getElementById('mdPreview');
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (btn.dataset.mode === 'preview') {
+        preview.innerHTML = parseMarkdown(contentField.value);
+        preview.classList.add('show');
+        contentField.style.display = 'none';
+      } else {
+        preview.classList.remove('show');
+        contentField.style.display = '';
+      }
+    });
+  });
+}
+
+function escAttr(str) { return String(str).replace(/"/g, '&quot;'); }
+
+function closeForm() {
+  overlay.classList.remove('open');
+  modal.classList.remove('open');
+  editingIndex = null;
+}
+
+function submitForm() {
+  const form = document.getElementById('itemForm');
+  const fd = new FormData(form);
+  const cats = fd.getAll('category');
+  const s = state[activeTab];
+
+  let item;
+  if (activeTab === 'articles') {
+    if (!fd.get('title').trim()) { showToast('Title is required'); return; }
+    item = {
+      title: fd.get('title').trim(),
+      category: cats,
+      date: fd.get('date').trim(),
+      excerpt: fd.get('excerpt').trim(),
+      image: fd.get('image').trim(),
+      content: fd.get('content'),
+    };
+  } else {
+    if (!fd.get('url').trim()) { showToast('Download URL is required'); return; }
+    item = {
+      url: fd.get('url').trim(),
+      category: cats,
+      label: fd.get('label').trim(),
+      desc: fd.get('desc').trim(),
+      image: fd.get('image').trim(),
+    };
+  }
+
+  if (editingIndex === null) {
+    s.items.push(item);
+  } else {
+    s.items[editingIndex] = item;
+  }
+  s.dirty = true;
+  closeForm();
+  renderList();
+  refreshFileBar();
+}
+
+// ── Modal chrome buttons ──────────────────────────────────────
+document.getElementById('modal').insertAdjacentHTML('beforeend', `
+  <div class="modal-actions">
+    <button type="button" class="btn danger" id="cancelFormBtn">Cancel</button>
+    <div class="right">
+      <button type="button" class="btn primary" id="submitFormBtn"><span class="material-symbols-rounded">check</span> Save item</button>
+    </div>
+  </div>
+`);
+document.getElementById('cancelFormBtn').addEventListener('click', closeForm);
+document.getElementById('submitFormBtn').addEventListener('click', submitForm);
+overlay.addEventListener('click', closeForm);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open')) closeForm(); });
+
+// ── Tabs ──────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    activeTab = tab.dataset.tab;
+    document.getElementById('listTitle').textContent = activeTab === 'articles' ? 'Articles' : 'Downloads';
+    renderList();
+    refreshFileBar();
+  });
+});
+
+document.getElementById('openBtn').addEventListener('click', openFile);
+document.getElementById('saveBtn').addEventListener('click', saveFile);
+document.getElementById('addBtn').addEventListener('click', () => openForm(null));
+
+window.addEventListener('beforeunload', (e) => {
+  if (state.articles.dirty || state.downloads.dirty) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+refreshFileBar();
+</script>
+</body>
+</html>
