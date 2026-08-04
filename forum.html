@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forum — oeper.dev</title>
+<meta name="description" content="Talk to other visitors of oeper.dev">
+<meta property="og:title" content="Forum — oeper.dev">
+<meta property="og:description" content="Talk to other visitors of oeper.dev">
+<meta property="og:url" content="https://oeper.dev/forum">
+<meta property="og:type" content="website">
+<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-success: #a6d9a8;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 840px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 28px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header h1 {
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400;
+    margin-bottom: 12px; letter-spacing: -0.5px;
+  }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 16px; max-width: 500px; line-height: 1.5; }
+
+  .config-warning {
+    display: none; background-color: var(--md-sys-color-surface-variant); border-radius: 16px; padding: 14px 18px;
+    margin-top: 16px; font-size: 13px; line-height: 1.6; color: var(--md-sys-color-on-surface-variant);
+  }
+  .config-warning.show { display: block; }
+  .config-warning code { color: var(--md-sys-color-on-surface); }
+
+  /* Auth bar */
+  .auth-bar { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .auth-btn {
+    display: inline-flex; align-items: center; gap: 8px; background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary); border: none; border-radius: 100px; padding: 10px 20px;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer;
+  }
+  .auth-btn:hover { opacity: 0.9; }
+  .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .user-chip { display: flex; align-items: center; gap: 8px; }
+  .user-chip img { width: 32px; height: 32px; border-radius: 50%; }
+  .user-chip .name { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .user-chip button {
+    background: none; border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface-variant);
+    border-radius: 100px; padding: 6px 14px; font-size: 12px; cursor: pointer;
+  }
+  .user-chip button:hover { color: var(--md-sys-color-on-surface); }
+
+  /* Toolbar */
+  .toolbar { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+  .search-wrap { position: relative; width: 100%; }
+  .search-wrap .material-symbols-rounded {
+    position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
+    color: var(--md-sys-color-on-surface-variant); font-size: 22px; pointer-events: none;
+  }
+  .search-input {
+    width: 100%; background-color: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 28px; padding: 16px 20px 16px 56px; color: var(--md-sys-color-on-surface);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif; font-size: 16px; outline: none;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+  .search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
+  .search-input:focus { border-color: var(--md-sys-color-primary); background-color: #1f2329; }
+
+  .controls-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex: 1; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--md-sys-color-outline);
+    border-radius: 8px; padding: 8px 16px; font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; transition: all 0.2s ease; white-space: nowrap;
+  }
+  .pill .material-symbols-rounded { font-size: 18px; }
+  .pill:hover { background-color: rgba(255,255,255,0.04); color: var(--md-sys-color-on-surface); }
+  .pill.active { background-color: var(--md-sys-color-secondary-container); border-color: transparent; color: var(--md-sys-color-on-secondary-container); }
+
+  .sort-select {
+    background: transparent; border: 1px solid var(--md-sys-color-outline); border-radius: 8px; padding: 8px 14px;
+    color: var(--md-sys-color-on-surface-variant); font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500;
+    cursor: pointer; flex-shrink: 0;
+  }
+
+  .new-post-btn {
+    display: inline-flex; align-items: center; gap: 8px; background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary); border: none; border-radius: 100px; padding: 10px 20px;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; flex-shrink: 0;
+  }
+  .new-post-btn:hover { opacity: 0.9; }
+
+  .stats { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 24px; padding-left: 4px; }
+  .stats strong { color: var(--md-sys-color-primary); font-weight: 500; }
+
+  /* Post cards */
+  .post-list { display: flex; flex-direction: column; gap: 12px; }
+  .post-card {
+    display: flex; gap: 4px; background-color: var(--md-sys-color-surface); border: 1px solid transparent;
+    border-radius: 20px; overflow: hidden; cursor: pointer; transition: background-color 0.2s, border-color 0.2s;
+  }
+  .post-card:hover { background-color: #21242c; border-color: var(--md-sys-color-outline-variant); }
+
+  .vote-col { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 16px 8px; flex-shrink: 0; }
+  .vote-btn {
+    width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent;
+    color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .vote-btn:hover { background-color: rgba(255,255,255,0.08); color: var(--md-sys-color-on-surface); }
+  .vote-btn.voted { color: var(--md-sys-color-primary); }
+  .vote-count { font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); }
+
+  .post-body { padding: 16px 20px 16px 4px; flex: 1; min-width: 0; }
+  .post-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .post-tag {
+    font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 8px;
+    background-color: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant);
+  }
+  .post-author { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
+  .post-author img { width: 18px; height: 18px; border-radius: 50%; }
+  .post-title { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 18px; font-weight: 400; margin-bottom: 4px; line-height: 1.3; }
+  .post-excerpt {
+    font-size: 14px; color: var(--md-sys-color-on-surface-variant); line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px;
+  }
+  .post-footer { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
+  .post-footer span { display: inline-flex; align-items: center; gap: 4px; }
+  .post-footer .material-symbols-rounded { font-size: 16px; }
+
+  .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
+  .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
+
+  /* Thread panel (post detail + comments) */
+  .thread-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.6); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .thread-overlay.open { opacity: 1; pointer-events: all; }
+  .thread-panel {
+    position: fixed; inset: 0; background-color: var(--md-sys-color-background); overflow-y: auto; z-index: 51;
+    transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.05, 0.7, 0.1, 1); display: flex; flex-direction: column;
+  }
+  .thread-panel.open { transform: translateY(0); }
+  .thread-close { position: sticky; top: 0; z-index: 2; display: flex; justify-content: flex-end; padding: 16px 24px; background: linear-gradient(to bottom, var(--md-sys-color-background) 70%, transparent); }
+  .thread-close-btn {
+    width: 48px; height: 48px; border-radius: 50%; background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface); cursor: pointer; transition: background-color 0.2s;
+  }
+  .thread-close-btn:hover { background-color: var(--md-sys-color-surface-variant); }
+  .thread-content { flex: 1; width: 100%; max-width: 720px; margin: 0 auto; padding: 0 24px 100px; }
+
+  .thread-post-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .thread-title { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 400; line-height: 1.25; margin-bottom: 16px; }
+  .thread-body { font-size: 16px; line-height: 1.7; margin-bottom: 12px; }
+  .thread-body p { margin-bottom: 1.2em; }
+  .thread-body a { color: var(--md-sys-color-primary); }
+  .thread-body strong { font-weight: 600; }
+  .thread-actions { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--md-sys-color-outline); }
+  .thread-actions .vote-col { flex-direction: row; padding: 0; background: var(--md-sys-color-surface); border-radius: 100px; }
+  .delete-link { color: var(--md-sys-color-error); background: none; border: none; font-size: 13px; cursor: pointer; margin-left: auto; }
+
+  .comments-heading { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 16px; font-weight: 500; margin-bottom: 16px; }
+  .comment-list { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+  .comment {
+    background-color: var(--md-sys-color-surface); border-radius: 16px; padding: 14px 18px;
+  }
+  .comment-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .comment-meta img { width: 20px; height: 20px; border-radius: 50%; }
+  .comment-meta .name { font-size: 13px; font-weight: 500; }
+  .comment-meta .time { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
+  .comment-body { font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
+  .comment-delete { font-size: 11px; color: var(--md-sys-color-error); background: none; border: none; cursor: pointer; margin-left: auto; }
+
+  .comment-form { display: flex; flex-direction: column; gap: 10px; }
+  .comment-form textarea {
+    width: 100%; min-height: 80px; background-color: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 14px; padding: 12px 16px; color: var(--md-sys-color-on-surface); font-family: inherit; font-size: 14px; outline: none; resize: vertical;
+  }
+  .comment-form textarea:focus { border-color: var(--md-sys-color-primary); }
+  .comment-form-actions { display: flex; justify-content: flex-end; }
+  .comment-form-locked {
+    text-align: center; padding: 20px; background: var(--md-sys-color-surface); border-radius: 16px;
+    font-size: 14px; color: var(--md-sys-color-on-surface-variant);
+  }
+
+  /* New post modal */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 60; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -48%); width: min(600px, 92vw); max-height: 86vh; overflow-y: auto;
+    background-color: var(--md-sys-color-surface); border-radius: 28px; padding: 28px; z-index: 61; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+  }
+  .modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
+  .modal h3 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 20px; font-weight: 400; margin-bottom: 20px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 6px; }
+  .field input[type="text"], .field textarea {
+    width: 100%; background-color: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none; resize: vertical;
+  }
+  .field input[type="text"]:focus, .field textarea:focus { border-color: var(--md-sys-color-primary); }
+  .field textarea { min-height: 160px; }
+  .chip-select { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip-select label {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer; padding: 7px 14px; border-radius: 10px;
+    border: 1px solid var(--md-sys-color-outline); font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin: 0;
+  }
+  .chip-select input { accent-color: var(--md-sys-color-primary); }
+  .chip-select label:has(input:checked) { background-color: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent; }
+  .add-tag-row { display: flex; gap: 8px; margin-top: 10px; }
+  .add-tag-row input { flex: 1; min-width: 0; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500;
+    padding: 10px 18px; border-radius: 100px; border: 1px solid var(--md-sys-color-outline); background: transparent; color: var(--md-sys-color-on-surface); cursor: pointer;
+  }
+  .btn:hover { background-color: rgba(255,255,255,0.06); }
+  .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
+  .btn.primary:hover { opacity: 0.9; }
+  .btn.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.small { padding: 6px 12px; font-size: 13px; }
+  .btn.danger { color: var(--md-sys-color-error); border-color: var(--md-sys-color-error); }
+  .modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; gap: 12px; }
+
+  .toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: #303034;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4); border-radius: 16px; padding: 14px 24px; font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-size: 14px; color: #e3e2e6; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 100; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <div class="header-container">
+      <a href="https://oeper.dev" class="header-link">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>back to oeper.dev</span>
+      </a>
+      <div class="auth-bar" id="authBar"></div>
+    </div>
+    <h1>Forum</h1>
+    <p>Post, tag, discuss. Anyone signed in with Google can join.</p>
+    <div class="config-warning" id="configWarning">
+      <strong>Forum isn't configured yet.</strong> A <code>FIREBASE_CONFIG</code> needs to be added to this page before posts can load.
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="material-symbols-rounded">search</span>
+      <input class="search-input" type="text" placeholder="Search posts…" id="searchInput">
+    </div>
+    <div class="controls-row">
+      <div class="filter-pills" id="filterPills">
+        <button class="pill active" data-filter="__all__">
+          <span class="material-symbols-rounded">clear_all</span> All
+        </button>
+      </div>
+      <select class="sort-select" id="sortSelect">
+        <option value="newest">Newest</option>
+        <option value="top">Top voted</option>
+        <option value="comments">Most discussed</option>
+      </select>
+      <button class="new-post-btn" id="newPostBtn"><span class="material-symbols-rounded">add</span> New post</button>
+    </div>
+  </div>
+
+  <div class="stats"><span>Total: <strong id="visibleCount">0</strong> posts</span></div>
+
+  <div class="post-list" id="postList"></div>
+
+  <div class="empty" id="emptyState">
+    <span class="material-symbols-rounded">forum</span>
+    <p>No posts yet — be the first to say something.</p>
+  </div>
+</div>
+
+<!-- Thread (post detail + comments) -->
+<div class="thread-overlay" id="threadOverlay"></div>
+<div class="thread-panel" id="threadPanel">
+  <div class="thread-close">
+    <button class="thread-close-btn" id="threadCloseBtn" title="Close"><span class="material-symbols-rounded">close</span></button>
+  </div>
+  <div class="thread-content" id="threadContent"></div>
+</div>
+
+<!-- New post modal -->
+<div class="overlay" id="overlay"></div>
+<div class="modal" id="modal">
+  <h3>New post</h3>
+  <form id="postForm">
+    <div class="field">
+      <label>Title *</label>
+      <input type="text" name="title" required maxlength="150">
+    </div>
+    <div class="field">
+      <label>Body</label>
+      <textarea name="body" maxlength="8000" placeholder="Write in markdown — # headings, **bold**, *italic*, [link](url)"></textarea>
+    </div>
+    <div class="field">
+      <label>Tags</label>
+      <div class="chip-select" id="tagSelect"></div>
+      <div class="add-tag-row">
+        <input type="text" id="newTagInput" placeholder="new tag (e.g. showcase)">
+        <button type="button" class="btn small" id="addTagBtn">Add</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn danger" id="cancelPostBtn">Cancel</button>
+      <button type="submit" class="btn primary" id="submitPostBtn"><span class="material-symbols-rounded">send</span> Post</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import {
+  getFirestore, collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot,
+  query, orderBy, serverTimestamp, arrayUnion, arrayRemove
+} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+// Paste the firebaseConfig object from Firebase console (Project settings → Your apps) here.
+// This is a public client identifier, not a secret — safe to commit.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAs7SP8FaWUDuz7GVp9rG5uZw4oEIWmBUk",
+  authDomain: "oepernet-1683535959256.firebaseapp.com",
+  projectId: "oepernet-1683535959256",
+  storageBucket: "oepernet-1683535959256.firebasestorage.app",
+  messagingSenderId: "882911814752",
+  appId: "1:882911814752:web:af7c10447ea6ee56c8cf05",
+};
+
+const OWNER_EMAIL = 'sanhackerman@gmail.com';
+const DEFAULT_TAGS = [
+  { id: 'general',  label: 'General',  icon: 'forum' },
+  { id: 'showcase', label: 'Showcase', icon: 'auto_awesome' },
+  { id: 'help',     label: 'Help',     icon: 'help' },
+  { id: 'feedback', label: 'Feedback', icon: 'rate_review' },
+];
+
+function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function parseMarkdown(md) {
+  let html = escHtml(md || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
+    .replace(/^##\s+(.+)$/gm,  '<h2>$1</h2>')
+    .replace(/^#\s+(.+)$/gm,   '<h1>$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\n{2,}/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+  return `<p>${html}</p>`;
+}
+function timeAgo(date) {
+  if (!date) return '';
+  const s = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  if (s < 2592000) return Math.floor(s/86400) + 'd ago';
+  return date.toLocaleDateString();
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+if (!FIREBASE_CONFIG) {
+  document.getElementById('configWarning').classList.add('show');
+  document.getElementById('newPostBtn').disabled = true;
+} else {
+  runForum(FIREBASE_CONFIG);
+}
+
+function runForum(config) {
+  const app = initializeApp(config);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
+  let currentUser = null;
+  let posts = [];
+  const unsubComments = { current: null };
+
+  // ── Auth ──────────────────────────────────────────────────
+  const authBar = document.getElementById('authBar');
+  function renderAuthBar() {
+    if (currentUser) {
+      authBar.innerHTML = `
+        <div class="user-chip">
+          <img src="${currentUser.photoURL || ''}" alt="">
+          <span class="name">${escHtml(currentUser.displayName || currentUser.email)}</span>
+          <button id="signOutBtn">Sign out</button>
+        </div>
+      `;
+      document.getElementById('signOutBtn').addEventListener('click', () => signOut(auth));
+    } else {
+      authBar.innerHTML = `<button class="auth-btn" id="signInBtn"><span class="material-symbols-rounded" style="font-size:18px;">login</span> Sign in with Google</button>`;
+      document.getElementById('signInBtn').addEventListener('click', () => {
+        signInWithPopup(auth, provider).catch(err => showToast('Sign-in failed: ' + err.message));
+      });
+    }
+  }
+  onAuthStateChanged(auth, user => { currentUser = user; renderAuthBar(); renderThreadActions(); });
+
+  function isOwner(email) { return email === OWNER_EMAIL; }
+  function canModerate(authorEmail) { return currentUser && (currentUser.email === authorEmail || isOwner(currentUser.email)); }
+
+  // ── Tag pills ──────────────────────────────────────────────
+  let knownTags = [...DEFAULT_TAGS];
+  function tagInfo(id) { return knownTags.find(t => t.id === id) || { id, label: id, icon: 'label' }; }
+  function refreshTagPills() {
+    const usedIds = [...new Set(posts.flatMap(p => p.tags || []))];
+    usedIds.forEach(id => { if (!knownTags.find(t => t.id === id)) knownTags.push({ id, label: id, icon: 'label' }); });
+    const pillsContainer = document.getElementById('filterPills');
+    const activeFilter = pillsContainer.querySelector('.pill.active')?.dataset.filter || '__all__';
+    pillsContainer.querySelectorAll('.pill:not([data-filter="__all__"])').forEach(p => p.remove());
+    usedIds.forEach(id => {
+      const t = tagInfo(id);
+      const b = document.createElement('button');
+      b.className = 'pill' + (id === activeFilter ? ' active' : '');
+      b.dataset.filter = id;
+      b.innerHTML = `<span class="material-symbols-rounded">${t.icon}</span><span>${escHtml(t.label)}</span>`;
+      b.addEventListener('click', () => setActiveFilter(id));
+      pillsContainer.appendChild(b);
+    });
+  }
+
+  let activeFilter = '__all__';
+  function setActiveFilter(id) {
+    activeFilter = id;
+    document.querySelectorAll('#filterPills .pill').forEach(p => p.classList.toggle('active', p.dataset.filter === id));
+    renderList();
+  }
+  document.querySelector('#filterPills .pill[data-filter="__all__"]').addEventListener('click', () => setActiveFilter('__all__'));
+
+  // ── Feed ──────────────────────────────────────────────────
+  const postList = document.getElementById('postList');
+  const emptyState = document.getElementById('emptyState');
+  const visibleCount = document.getElementById('visibleCount');
+  const searchInput = document.getElementById('searchInput');
+  const sortSelect = document.getElementById('sortSelect');
+
+  function score(p) { return (p.upvoters || []).length; }
+
+  function renderList() {
+    const q = searchInput.value.toLowerCase().trim();
+    let filtered = posts.filter(p => {
+      const tagMatch = activeFilter === '__all__' || (p.tags || []).includes(activeFilter);
+      const searchMatch = !q || (p.title||'').toLowerCase().includes(q) || (p.body||'').toLowerCase().includes(q);
+      return tagMatch && searchMatch;
+    });
+
+    const sort = sortSelect.value;
+    if (sort === 'top') filtered.sort((a,b) => score(b) - score(a));
+    else if (sort === 'comments') filtered.sort((a,b) => (b.commentCount||0) - (a.commentCount||0));
+    else filtered.sort((a,b) => (b._ts||0) - (a._ts||0));
+
+    postList.innerHTML = '';
+    filtered.forEach(p => postList.appendChild(buildPostCard(p)));
+    visibleCount.textContent = filtered.length;
+    emptyState.style.display = filtered.length === 0 ? 'block' : 'none';
+  }
+
+  function buildPostCard(p) {
+    const card = document.createElement('div');
+    card.className = 'post-card';
+    const voted = currentUser && (p.upvoters || []).includes(currentUser.uid);
+    card.innerHTML = `
+      <div class="vote-col">
+        <button class="vote-btn ${voted ? 'voted' : ''}" data-vote="${p.id}" title="Upvote">
+          <span class="material-symbols-rounded">arrow_upward</span>
+        </button>
+        <span class="vote-count">${score(p)}</span>
+      </div>
+      <div class="post-body">
+        <div class="post-meta">
+          ${(p.tags||[]).map(id => `<span class="post-tag">${escHtml(tagInfo(id).label)}</span>`).join('')}
+          <span class="post-author">
+            ${p.authorPhoto ? `<img src="${p.authorPhoto}" alt="">` : ''}
+            ${escHtml(p.authorName || p.authorEmail || 'anon')} · ${timeAgo(p._date)}
+          </span>
+        </div>
+        <div class="post-title">${escHtml(p.title)}</div>
+        ${p.body ? `<div class="post-excerpt">${escHtml(p.body)}</div>` : ''}
+        <div class="post-footer">
+          <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount||0} comments</span>
+        </div>
+      </div>
+    `;
+    card.querySelector('[data-vote]').addEventListener('click', e => { e.stopPropagation(); toggleVote(p); });
+    card.addEventListener('click', () => openThread(p.id));
+    return card;
+  }
+
+  async function toggleVote(p) {
+    if (!currentUser) { showToast('Sign in to vote'); return; }
+    const ref = doc(db, 'posts', p.id);
+    const voted = (p.upvoters || []).includes(currentUser.uid);
+    try {
+      await updateDoc(ref, { upvoters: voted ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) });
+    } catch (err) { showToast('Could not vote: ' + err.message); }
+  }
+
+  // ── Live posts feed ──────────────────────────────────────────
+  onSnapshot(query(collection(db, 'posts'), orderBy('createdAt', 'desc')), snap => {
+    posts = snap.docs.map(d => {
+      const data = d.data();
+      const date = data.createdAt ? data.createdAt.toDate() : new Date();
+      return { id: d.id, ...data, _date: date, _ts: date.getTime() };
+    });
+    refreshTagPills();
+    renderList();
+  }, err => showToast('Could not load posts: ' + err.message));
+
+  searchInput.addEventListener('input', renderList);
+  sortSelect.addEventListener('change', renderList);
+
+  // ── New post modal ────────────────────────────────────────
+  const overlay = document.getElementById('overlay');
+  const modal = document.getElementById('modal');
+  const postForm = document.getElementById('postForm');
+  let selectedTags = [];
+
+  function renderTagSelect() {
+    const wrap = document.getElementById('tagSelect');
+    wrap.innerHTML = knownTags.map(t => `
+      <label>
+        <input type="checkbox" value="${t.id}" ${selectedTags.includes(t.id) ? 'checked' : ''}>
+        ${escHtml(t.label)}
+      </label>
+    `).join('');
+    wrap.querySelectorAll('input').forEach(cb => {
+      cb.addEventListener('change', () => {
+        selectedTags = [...wrap.querySelectorAll('input:checked')].map(i => i.value);
+      });
+    });
+  }
+
+  document.getElementById('newPostBtn').addEventListener('click', () => {
+    if (!currentUser) { showToast('Sign in to post'); return; }
+    postForm.reset();
+    selectedTags = [];
+    renderTagSelect();
+    overlay.classList.add('open');
+    modal.classList.add('open');
+  });
+  function closeModal() { overlay.classList.remove('open'); modal.classList.remove('open'); }
+  document.getElementById('cancelPostBtn').addEventListener('click', closeModal);
+  overlay.addEventListener('click', closeModal);
+  document.getElementById('addTagBtn').addEventListener('click', () => {
+    const input = document.getElementById('newTagInput');
+    const id = input.value.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!id) return;
+    if (!knownTags.find(t => t.id === id)) knownTags.push({ id, label: id, icon: 'label' });
+    if (!selectedTags.includes(id)) selectedTags.push(id);
+    renderTagSelect();
+    input.value = '';
+  });
+
+  postForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!currentUser) { showToast('Sign in to post'); return; }
+    const fd = new FormData(postForm);
+    const title = fd.get('title').trim();
+    if (!title) return;
+    const submitBtn = document.getElementById('submitPostBtn');
+    submitBtn.disabled = true;
+    try {
+      await addDoc(collection(db, 'posts'), {
+        title,
+        body: fd.get('body').trim(),
+        tags: selectedTags,
+        authorEmail: currentUser.email,
+        authorName: currentUser.displayName,
+        authorPhoto: currentUser.photoURL,
+        upvoters: [],
+        commentCount: 0,
+        createdAt: serverTimestamp(),
+      });
+      closeModal();
+      showToast('Posted!');
+    } catch (err) {
+      showToast('Could not post: ' + err.message);
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+
+  // ── Thread panel (post + comments) ────────────────────────
+  const threadOverlay = document.getElementById('threadOverlay');
+  const threadPanel = document.getElementById('threadPanel');
+  const threadContent = document.getElementById('threadContent');
+  let openPostId = null;
+
+  function renderThreadActions() {
+    const btn = threadContent.querySelector('[data-delete-post]');
+    if (btn) btn.style.display = canModerate(btn.dataset.authorEmail) ? '' : 'none';
+  }
+
+  async function openThread(postId) {
+    openPostId = postId;
+    const p = posts.find(x => x.id === postId);
+    if (!p) return;
+    const voted = currentUser && (p.upvoters || []).includes(currentUser.uid);
+
+    threadContent.innerHTML = `
+      <div class="thread-post-meta">
+        ${(p.tags||[]).map(id => `<span class="post-tag">${escHtml(tagInfo(id).label)}</span>`).join('')}
+        <span class="post-author">
+          ${p.authorPhoto ? `<img src="${p.authorPhoto}" alt="">` : ''}
+          ${escHtml(p.authorName || p.authorEmail || 'anon')} · ${timeAgo(p._date)}
+        </span>
+      </div>
+      <div class="thread-title">${escHtml(p.title)}</div>
+      <div class="thread-body">${parseMarkdown(p.body)}</div>
+      <div class="thread-actions">
+        <div class="vote-col">
+          <button class="vote-btn ${voted ? 'voted' : ''}" id="threadVoteBtn"><span class="material-symbols-rounded">arrow_upward</span></button>
+          <span class="vote-count" id="threadVoteCount">${score(p)}</span>
+        </div>
+        <button class="delete-link" data-delete-post data-author-email="${escHtml(p.authorEmail||'')}" style="display:none;">Delete post</button>
+      </div>
+      <div class="comments-heading" id="commentsHeading">Comments</div>
+      <div class="comment-list" id="commentList"></div>
+      <div id="commentFormWrap"></div>
+    `;
+
+    document.getElementById('threadVoteBtn').addEventListener('click', () => toggleVote(p));
+    threadContent.querySelector('[data-delete-post]').addEventListener('click', async () => {
+      if (!confirm('Delete this post? This cannot be undone.')) return;
+      try {
+        await deleteDoc(doc(db, 'posts', postId));
+        closeThread();
+        showToast('Post deleted');
+      } catch (err) { showToast('Could not delete: ' + err.message); }
+    });
+    renderThreadActions();
+
+    renderCommentForm();
+
+    threadOverlay.classList.add('open');
+    threadPanel.classList.add('open');
+    threadPanel.scrollTop = 0;
+    document.body.style.overflow = 'hidden';
+
+    if (unsubComments.current) unsubComments.current();
+    unsubComments.current = onSnapshot(
+      query(collection(db, 'posts', postId, 'comments'), orderBy('createdAt', 'asc')),
+      snap => {
+        const comments = snap.docs.map(d => {
+          const data = d.data();
+          const date = data.createdAt ? data.createdAt.toDate() : new Date();
+          return { id: d.id, ...data, _date: date };
+        });
+        renderComments(comments, postId);
+      }
+    );
+  }
+
+  function renderComments(comments, postId) {
+    const list = document.getElementById('commentList');
+    if (!list) return;
+    document.getElementById('commentsHeading').textContent = `Comments (${comments.length})`;
+    list.innerHTML = comments.map(c => `
+      <div class="comment">
+        <div class="comment-meta">
+          ${c.authorPhoto ? `<img src="${c.authorPhoto}" alt="">` : ''}
+          <span class="name">${escHtml(c.authorName || c.authorEmail || 'anon')}</span>
+          <span class="time">${timeAgo(c._date)}</span>
+          <button class="comment-delete" data-comment-delete="${c.id}" data-author-email="${escHtml(c.authorEmail||'')}" style="display:none;">Delete</button>
+        </div>
+        <div class="comment-body">${escHtml(c.body)}</div>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-comment-delete]').forEach(btn => {
+      btn.style.display = canModerate(btn.dataset.authorEmail) ? '' : 'none';
+      btn.addEventListener('click', async () => {
+        if (!confirm('Delete this comment?')) return;
+        try {
+          await deleteDoc(doc(db, 'posts', postId, 'comments', btn.dataset.commentDelete));
+          await updateDoc(doc(db, 'posts', postId), { commentCount: Math.max(0, (posts.find(p=>p.id===postId)?.commentCount||1) - 1) });
+        } catch (err) { showToast('Could not delete: ' + err.message); }
+      });
+    });
+  }
+
+  function renderCommentForm() {
+    const wrap = document.getElementById('commentFormWrap');
+    if (!wrap) return;
+    if (!currentUser) {
+      wrap.innerHTML = `<div class="comment-form-locked">Sign in to join the discussion.</div>`;
+      return;
+    }
+    wrap.innerHTML = `
+      <form class="comment-form" id="commentForm">
+        <textarea name="body" placeholder="Add a comment…" maxlength="2000" required></textarea>
+        <div class="comment-form-actions">
+          <button type="submit" class="btn primary small">Comment</button>
+        </div>
+      </form>
+    `;
+    document.getElementById('commentForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const body = fd.get('body').trim();
+      if (!body || !openPostId) return;
+      try {
+        await addDoc(collection(db, 'posts', openPostId, 'comments'), {
+          body,
+          authorEmail: currentUser.email,
+          authorName: currentUser.displayName,
+          authorPhoto: currentUser.photoURL,
+          createdAt: serverTimestamp(),
+        });
+        const postRef = doc(db, 'posts', openPostId);
+        const p = posts.find(x => x.id === openPostId);
+        await updateDoc(postRef, { commentCount: (p?.commentCount || 0) + 1 });
+        e.target.reset();
+      } catch (err) { showToast('Could not comment: ' + err.message); }
+    });
+  }
+
+  function closeThread() {
+    threadOverlay.classList.remove('open');
+    threadPanel.classList.remove('open');
+    document.body.style.overflow = '';
+    if (unsubComments.current) { unsubComments.current(); unsubComments.current = null; }
+    openPostId = null;
+  }
+  document.getElementById('threadCloseBtn').addEventListener('click', closeThread);
+  threadOverlay.addEventListener('click', closeThread);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeThread(); closeModal(); } });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner() {
+      return isSignedIn() && request.auth.token.email == 'sanhackerman@gmail.com';
+    }
+    function isAuthor(data) {
+      return isSignedIn() && request.auth.token.email == data.authorEmail;
+    }
+    function onlyChanged(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    match /posts/{postId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+        && request.resource.data.authorEmail == request.auth.token.email
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 150
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 8000
+        && request.resource.data.tags is list;
+
+      // Author/owner can edit or delete their own post outright.
+      // Anyone signed in may toggle their own upvote (upvoters array only).
+      // Any signed-in commenter may bump commentCount by exactly 1 when adding a comment,
+      // and the author/owner may adjust it down when deleting a comment.
+      allow update: if isAuthor(resource.data) || isOwner()
+        || (isSignedIn() && onlyChanged(['upvoters']))
+        || (isSignedIn() && onlyChanged(['commentCount']));
+
+      allow delete: if isAuthor(resource.data) || isOwner();
+
+      match /comments/{commentId} {
+        allow read: if true;
+
+        allow create: if isSignedIn()
+          && request.resource.data.authorEmail == request.auth.token.email
+          && request.resource.data.body is string
+          && request.resource.data.body.size() > 0
+          && request.resource.data.body.size() <= 2000;
+
+        allow delete: if isAuthor(resource.data) || isOwner();
+      }
+    }
+  }
+}
