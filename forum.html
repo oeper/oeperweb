@@ -136,14 +136,19 @@
   }
   .post-card:hover { background-color: #21242c; border-color: var(--md-sys-color-outline-variant); }
 
-  .vote-col { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 16px 8px; flex-shrink: 0; }
+  /* Vote column: up arrow / count / down arrow, reused (rotated to row) in thread view */
+  .vote-col { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 12px 8px; flex-shrink: 0; }
   .vote-btn {
-    width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent;
+    width: 30px; height: 30px; border-radius: 50%; border: none; background: transparent;
     color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; justify-content: center; cursor: pointer;
   }
+  .vote-btn .material-symbols-rounded { font-size: 20px; }
   .vote-btn:hover { background-color: rgba(255,255,255,0.08); color: var(--md-sys-color-on-surface); }
-  .vote-btn.voted { color: var(--md-sys-color-primary); }
-  .vote-count { font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); }
+  .vote-btn.upvoted { color: #6ea8fe; }
+  .vote-btn.downvoted { color: var(--md-sys-color-error); }
+  .vote-count { font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant); padding: 2px 0; }
+  .vote-count.positive { color: #6ea8fe; }
+  .vote-count.negative { color: var(--md-sys-color-error); }
 
   .post-body { padding: 16px 20px 16px 4px; flex: 1; min-width: 0; }
   .post-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -158,9 +163,16 @@
     font-size: 14px; color: var(--md-sys-color-on-surface-variant); line-height: 1.5;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px;
   }
+  .post-thumb { max-width: 100%; max-height: 260px; border-radius: 12px; display: block; margin-bottom: 8px; object-fit: cover; }
   .post-footer { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
   .post-footer span { display: inline-flex; align-items: center; gap: 4px; }
   .post-footer .material-symbols-rounded { font-size: 16px; }
+  .icon-link-btn {
+    display: inline-flex; align-items: center; gap: 4px; background: none; border: none;
+    color: var(--md-sys-color-on-surface-variant); font-size: 12px; cursor: pointer; font-family: inherit; padding: 0;
+  }
+  .icon-link-btn:hover { color: var(--md-sys-color-on-surface); }
+  .icon-link-btn .material-symbols-rounded { font-size: 16px; }
 
   .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
   .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
@@ -187,21 +199,32 @@
   .thread-body p { margin-bottom: 1.2em; }
   .thread-body a { color: var(--md-sys-color-primary); }
   .thread-body strong { font-weight: 600; }
-  .thread-actions { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--md-sys-color-outline); }
-  .thread-actions .vote-col { flex-direction: row; padding: 0; background: var(--md-sys-color-surface); border-radius: 100px; }
+  .thread-image { max-width: 100%; max-height: 480px; border-radius: 16px; display: block; margin-bottom: 20px; }
+  .thread-actions { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--md-sys-color-outline); flex-wrap: wrap; }
+  .thread-actions .vote-col { flex-direction: row; padding: 4px; background: var(--md-sys-color-surface); border-radius: 100px; gap: 2px; }
+  .thread-actions .vote-count { padding: 0 4px; }
   .delete-link { color: var(--md-sys-color-error); background: none; border: none; font-size: 13px; cursor: pointer; margin-left: auto; }
 
   .comments-heading { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 16px; font-weight: 500; margin-bottom: 16px; }
   .comment-list { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
   .comment {
-    background-color: var(--md-sys-color-surface); border-radius: 16px; padding: 14px 18px;
+    background-color: var(--md-sys-color-surface); border-radius: 16px; padding: 14px 18px; display: flex; gap: 10px;
+    scroll-margin-top: 90px;
   }
-  .comment-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .comment.highlighted { outline: 2px solid var(--md-sys-color-primary); }
+  .comment .vote-col { flex-direction: row; padding: 0; gap: 4px; align-self: flex-start; }
+  .comment .vote-btn { width: 24px; height: 24px; }
+  .comment .vote-btn .material-symbols-rounded { font-size: 16px; }
+  .comment .vote-count { font-size: 12px; }
+  .comment-main { flex: 1; min-width: 0; }
+  .comment-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
   .comment-meta img { width: 20px; height: 20px; border-radius: 50%; }
   .comment-meta .name { font-size: 13px; font-weight: 500; }
   .comment-meta .time { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
   .comment-body { font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
-  .comment-delete { font-size: 11px; color: var(--md-sys-color-error); background: none; border: none; cursor: pointer; margin-left: auto; }
+  .comment-image { max-width: 100%; max-height: 300px; border-radius: 12px; display: block; margin-top: 8px; }
+  .comment-footer { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+  .comment-delete { font-size: 11px; color: var(--md-sys-color-error); background: none; border: none; cursor: pointer; }
 
   .comment-form { display: flex; flex-direction: column; gap: 10px; }
   .comment-form textarea {
@@ -209,11 +232,27 @@
     border-radius: 14px; padding: 12px 16px; color: var(--md-sys-color-on-surface); font-family: inherit; font-size: 14px; outline: none; resize: vertical;
   }
   .comment-form textarea:focus { border-color: var(--md-sys-color-primary); }
-  .comment-form-actions { display: flex; justify-content: flex-end; }
+  .comment-form-actions { display: flex; justify-content: space-between; align-items: center; }
   .comment-form-locked {
     text-align: center; padding: 20px; background: var(--md-sys-color-surface); border-radius: 16px;
     font-size: 14px; color: var(--md-sys-color-on-surface-variant);
   }
+
+  /* Image attach control (shared by post + comment forms) */
+  .image-attach { display: flex; align-items: center; gap: 10px; }
+  .image-attach input[type="file"] { display: none; }
+  .image-attach-btn {
+    display: inline-flex; align-items: center; gap: 6px; background: none; border: 1px dashed var(--md-sys-color-outline);
+    color: var(--md-sys-color-on-surface-variant); border-radius: 10px; padding: 8px 14px; font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  .image-attach-btn:hover { color: var(--md-sys-color-on-surface); border-color: var(--md-sys-color-outline-variant); }
+  .image-preview-wrap { position: relative; display: inline-block; }
+  .image-preview-wrap img { max-height: 100px; border-radius: 10px; display: block; }
+  .image-preview-remove {
+    position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--md-sys-color-error); color: #410002; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .image-preview-remove .material-symbols-rounded { font-size: 14px; }
 
   /* New post modal */
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 60; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
@@ -292,6 +331,7 @@
       </div>
       <select class="sort-select" id="sortSelect">
         <option value="newest">Newest</option>
+        <option value="relevance">Relevance</option>
         <option value="top">Top voted</option>
         <option value="comments">Most discussed</option>
       </select>
@@ -332,6 +372,10 @@
       <textarea name="body" maxlength="8000" placeholder="Write in markdown — # headings, **bold**, *italic*, [link](url)"></textarea>
     </div>
     <div class="field">
+      <label>Image (optional)</label>
+      <div class="image-attach" id="postImageAttach"></div>
+    </div>
+    <div class="field">
       <label>Tags</label>
       <div class="chip-select" id="tagSelect"></div>
       <div class="add-tag-row">
@@ -357,7 +401,6 @@ import {
   getFirestore, collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot,
   query, orderBy, serverTimestamp, arrayUnion, arrayRemove
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-
 // Paste the firebaseConfig object from Firebase console (Project settings → Your apps) here.
 // This is a public client identifier, not a secret — safe to commit.
 const FIREBASE_CONFIG = {
@@ -376,6 +419,12 @@ const DEFAULT_TAGS = [
   { id: 'help',     label: 'Help',     icon: 'help' },
   { id: 'feedback', label: 'Feedback', icon: 'rate_review' },
 ];
+// Change this any time — also update MAX_FILE_BYTES in forum-server/upload-server.js to match.
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+// Your Cloudflare Tunnel URL from forum-server/README.md (e.g. 'https://xxxx.trycloudflare.com').
+// Leave blank to disable image attachments until the upload server is running.
+const UPLOAD_ENDPOINT = '';
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function parseMarkdown(md) {
@@ -406,6 +455,24 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
+}
+async function copyLink(url, label) {
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast((label || 'Link') + ' copied to clipboard');
+  } catch {
+    window.prompt('Copy this link:', url);
+  }
+}
+function postUrl(postId) {
+  const url = new URL(window.location.href.split('?')[0]);
+  url.searchParams.set('post', postId);
+  return url.toString();
+}
+function commentUrl(postId, commentId) {
+  const url = new URL(postUrl(postId));
+  url.searchParams.set('comment', commentId);
+  return url.toString();
 }
 
 if (!FIREBASE_CONFIG) {
@@ -444,10 +511,72 @@ function runForum(config) {
       });
     }
   }
-  onAuthStateChanged(auth, user => { currentUser = user; renderAuthBar(); renderThreadActions(); });
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    renderAuthBar();
+    renderList();
+    if (openPostId) openThread(openPostId, { keepScroll: true });
+  });
 
   function isOwner(email) { return email === OWNER_EMAIL; }
   function canModerate(authorEmail) { return currentUser && (currentUser.email === authorEmail || isOwner(currentUser.email)); }
+
+  // ── Image attach widget (shared factory for post form + comment forms) ──
+  function createImageAttach(container) {
+    let file = null;
+    let objectUrl = null;
+    function render() {
+      if (file) {
+        objectUrl = URL.createObjectURL(file);
+        container.innerHTML = `
+          <div class="image-preview-wrap">
+            <img src="${objectUrl}" alt="">
+            <button type="button" class="image-preview-remove" title="Remove"><span class="material-symbols-rounded">close</span></button>
+          </div>
+        `;
+        container.querySelector('.image-preview-remove').addEventListener('click', () => { file = null; render(); });
+      } else {
+        container.innerHTML = `
+          <label class="image-attach-btn">
+            <span class="material-symbols-rounded" style="font-size:16px;">image</span> Attach image
+            <input type="file" accept="image/*">
+          </label>
+        `;
+        container.querySelector('input[type="file"]').addEventListener('change', e => {
+          const f = e.target.files[0];
+          if (!f) return;
+          if (f.size > MAX_IMAGE_BYTES) { showToast(`Image must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); return; }
+          file = f;
+          render();
+        });
+      }
+    }
+    render();
+    return {
+      getFile: () => file,
+      reset: () => { file = null; render(); },
+    };
+  }
+
+  async function uploadImageIfAny(file) {
+    if (!file || !currentUser) return null;
+    if (!UPLOAD_ENDPOINT) throw new Error('Image uploads are not set up yet');
+    const idToken = await currentUser.getIdToken();
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(UPLOAD_ENDPOINT + '/upload', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + idToken },
+      body: fd,
+    });
+    if (!res.ok) {
+      let message = `Upload failed (${res.status})`;
+      try { message = (await res.json()).error || message; } catch {}
+      throw new Error(message);
+    }
+    const data = await res.json();
+    return data.url;
+  }
 
   // ── Tag pills ──────────────────────────────────────────────
   let knownTags = [...DEFAULT_TAGS];
@@ -484,7 +613,23 @@ function runForum(config) {
   const searchInput = document.getElementById('searchInput');
   const sortSelect = document.getElementById('sortSelect');
 
-  function score(p) { return (p.upvoters || []).length; }
+  function score(item) { return (item.upvoters || []).length - (item.downvoters || []).length; }
+
+  function relevanceScore(p, q) {
+    if (!q) return 0;
+    const title = (p.title || '').toLowerCase();
+    const body = (p.body || '').toLowerCase();
+    let s = 0;
+    if (title === q) s += 100;
+    if (title.startsWith(q)) s += 50;
+    if (title.includes(q)) s += 20;
+    if (body.includes(q)) s += 5;
+    q.split(/\s+/).forEach(word => {
+      if (word && title.includes(word)) s += 8;
+      if (word && body.includes(word)) s += 3;
+    });
+    return s;
+  }
 
   function renderList() {
     const q = searchInput.value.toLowerCase().trim();
@@ -497,6 +642,10 @@ function runForum(config) {
     const sort = sortSelect.value;
     if (sort === 'top') filtered.sort((a,b) => score(b) - score(a));
     else if (sort === 'comments') filtered.sort((a,b) => (b.commentCount||0) - (a.commentCount||0));
+    else if (sort === 'relevance') filtered.sort((a,b) => {
+      const diff = relevanceScore(b, q) - relevanceScore(a, q);
+      return diff !== 0 ? diff : (b._ts||0) - (a._ts||0);
+    });
     else filtered.sort((a,b) => (b._ts||0) - (a._ts||0));
 
     postList.innerHTML = '';
@@ -505,17 +654,24 @@ function runForum(config) {
     emptyState.style.display = filtered.length === 0 ? 'block' : 'none';
   }
 
+  function voteColHtml(item, idPrefix) {
+    const netScore = score(item);
+    const up = currentUser && (item.upvoters || []).includes(currentUser.uid);
+    const down = currentUser && (item.downvoters || []).includes(currentUser.uid);
+    return `
+      <div class="vote-col">
+        <button class="vote-btn ${up ? 'upvoted' : ''}" data-${idPrefix}-up title="Upvote"><span class="material-symbols-rounded">arrow_upward</span></button>
+        <span class="vote-count ${netScore > 0 ? 'positive' : netScore < 0 ? 'negative' : ''}">${netScore}</span>
+        <button class="vote-btn ${down ? 'downvoted' : ''}" data-${idPrefix}-down title="Downvote"><span class="material-symbols-rounded">arrow_downward</span></button>
+      </div>
+    `;
+  }
+
   function buildPostCard(p) {
     const card = document.createElement('div');
     card.className = 'post-card';
-    const voted = currentUser && (p.upvoters || []).includes(currentUser.uid);
     card.innerHTML = `
-      <div class="vote-col">
-        <button class="vote-btn ${voted ? 'voted' : ''}" data-vote="${p.id}" title="Upvote">
-          <span class="material-symbols-rounded">arrow_upward</span>
-        </button>
-        <span class="vote-count">${score(p)}</span>
-      </div>
+      ${voteColHtml(p, 'post')}
       <div class="post-body">
         <div class="post-meta">
           ${(p.tags||[]).map(id => `<span class="post-tag">${escHtml(tagInfo(id).label)}</span>`).join('')}
@@ -526,26 +682,40 @@ function runForum(config) {
         </div>
         <div class="post-title">${escHtml(p.title)}</div>
         ${p.body ? `<div class="post-excerpt">${escHtml(p.body)}</div>` : ''}
+        ${p.imageUrl ? `<img class="post-thumb" src="${p.imageUrl}" alt="" loading="lazy">` : ''}
         <div class="post-footer">
           <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount||0} comments</span>
+          <button class="icon-link-btn" data-share-post><span class="material-symbols-rounded">link</span> Share</button>
         </div>
       </div>
     `;
-    card.querySelector('[data-vote]').addEventListener('click', e => { e.stopPropagation(); toggleVote(p); });
+    card.querySelector('[data-post-up]').addEventListener('click', e => { e.stopPropagation(); toggleVote(postRef(p.id), p, 'up'); });
+    card.querySelector('[data-post-down]').addEventListener('click', e => { e.stopPropagation(); toggleVote(postRef(p.id), p, 'down'); });
+    card.querySelector('[data-share-post]').addEventListener('click', e => { e.stopPropagation(); copyLink(postUrl(p.id), 'Post link'); });
     card.addEventListener('click', () => openThread(p.id));
     return card;
   }
 
-  async function toggleVote(p) {
+  function postRef(id) { return doc(db, 'posts', id); }
+
+  async function toggleVote(ref, item, direction) {
     if (!currentUser) { showToast('Sign in to vote'); return; }
-    const ref = doc(db, 'posts', p.id);
-    const voted = (p.upvoters || []).includes(currentUser.uid);
-    try {
-      await updateDoc(ref, { upvoters: voted ? arrayRemove(currentUser.uid) : arrayUnion(currentUser.uid) });
-    } catch (err) { showToast('Could not vote: ' + err.message); }
+    const uid = currentUser.uid;
+    const up = (item.upvoters || []).includes(uid);
+    const down = (item.downvoters || []).includes(uid);
+    const patch = {};
+    if (direction === 'up') {
+      patch.upvoters = up ? arrayRemove(uid) : arrayUnion(uid);
+      if (down) patch.downvoters = arrayRemove(uid);
+    } else {
+      patch.downvoters = down ? arrayRemove(uid) : arrayUnion(uid);
+      if (up) patch.upvoters = arrayRemove(uid);
+    }
+    try { await updateDoc(ref, patch); } catch (err) { showToast('Could not vote: ' + err.message); }
   }
 
   // ── Live posts feed ──────────────────────────────────────────
+  let firstSnapshot = true;
   onSnapshot(query(collection(db, 'posts'), orderBy('createdAt', 'desc')), snap => {
     posts = snap.docs.map(d => {
       const data = d.data();
@@ -554,6 +724,15 @@ function runForum(config) {
     });
     refreshTagPills();
     renderList();
+    if (openPostId) refreshOpenThreadChrome();
+    if (firstSnapshot) {
+      firstSnapshot = false;
+      const params = new URLSearchParams(window.location.search);
+      const wantedPost = params.get('post');
+      if (wantedPost && posts.find(p => p.id === wantedPost)) {
+        openThread(wantedPost, { highlightComment: params.get('comment') });
+      }
+    }
   }, err => showToast('Could not load posts: ' + err.message));
 
   searchInput.addEventListener('input', renderList);
@@ -564,6 +743,7 @@ function runForum(config) {
   const modal = document.getElementById('modal');
   const postForm = document.getElementById('postForm');
   let selectedTags = [];
+  let postImageAttach = createImageAttach(document.getElementById('postImageAttach'));
 
   function renderTagSelect() {
     const wrap = document.getElementById('tagSelect');
@@ -584,6 +764,7 @@ function runForum(config) {
     if (!currentUser) { showToast('Sign in to post'); return; }
     postForm.reset();
     selectedTags = [];
+    postImageAttach.reset();
     renderTagSelect();
     overlay.classList.add('open');
     modal.classList.add('open');
@@ -610,14 +791,17 @@ function runForum(config) {
     const submitBtn = document.getElementById('submitPostBtn');
     submitBtn.disabled = true;
     try {
+      const imageUrl = await uploadImageIfAny(postImageAttach.getFile());
       await addDoc(collection(db, 'posts'), {
         title,
         body: fd.get('body').trim(),
         tags: selectedTags,
+        imageUrl: imageUrl || null,
         authorEmail: currentUser.email,
         authorName: currentUser.displayName,
         authorPhoto: currentUser.photoURL,
         upvoters: [],
+        downvoters: [],
         commentCount: 0,
         createdAt: serverTimestamp(),
       });
@@ -635,17 +819,32 @@ function runForum(config) {
   const threadPanel = document.getElementById('threadPanel');
   const threadContent = document.getElementById('threadContent');
   let openPostId = null;
+  let latestComments = [];
 
-  function renderThreadActions() {
-    const btn = threadContent.querySelector('[data-delete-post]');
-    if (btn) btn.style.display = canModerate(btn.dataset.authorEmail) ? '' : 'none';
+  function refreshOpenThreadChrome() {
+    const p = posts.find(x => x.id === openPostId);
+    if (!p) return;
+    const voteCol = threadContent.querySelector('.thread-actions .vote-col');
+    if (voteCol) {
+      voteCol.outerHTML = voteColHtml(p, 'thread');
+      wireThreadVoteButtons(p);
+    }
+    const del = threadContent.querySelector('[data-delete-post]');
+    if (del) del.style.display = canModerate(p.authorEmail) ? '' : 'none';
   }
 
-  async function openThread(postId) {
+  function wireThreadVoteButtons(p) {
+    const upBtn = threadContent.querySelector('[data-thread-up]');
+    const downBtn = threadContent.querySelector('[data-thread-down]');
+    if (upBtn) upBtn.onclick = () => toggleVote(postRef(p.id), p, 'up');
+    if (downBtn) downBtn.onclick = () => toggleVote(postRef(p.id), p, 'down');
+  }
+
+  async function openThread(postId, opts) {
+    opts = opts || {};
     openPostId = postId;
     const p = posts.find(x => x.id === postId);
     if (!p) return;
-    const voted = currentUser && (p.upvoters || []).includes(currentUser.uid);
 
     threadContent.innerHTML = `
       <div class="thread-post-meta">
@@ -656,76 +855,103 @@ function runForum(config) {
         </span>
       </div>
       <div class="thread-title">${escHtml(p.title)}</div>
+      ${p.imageUrl ? `<img class="thread-image" src="${p.imageUrl}" alt="">` : ''}
       <div class="thread-body">${parseMarkdown(p.body)}</div>
       <div class="thread-actions">
-        <div class="vote-col">
-          <button class="vote-btn ${voted ? 'voted' : ''}" id="threadVoteBtn"><span class="material-symbols-rounded">arrow_upward</span></button>
-          <span class="vote-count" id="threadVoteCount">${score(p)}</span>
-        </div>
-        <button class="delete-link" data-delete-post data-author-email="${escHtml(p.authorEmail||'')}" style="display:none;">Delete post</button>
+        ${voteColHtml(p, 'thread')}
+        <button class="icon-link-btn" data-share-thread><span class="material-symbols-rounded">link</span> Share</button>
+        <button class="delete-link" data-delete-post style="display:none;">Delete post</button>
       </div>
       <div class="comments-heading" id="commentsHeading">Comments</div>
       <div class="comment-list" id="commentList"></div>
       <div id="commentFormWrap"></div>
     `;
 
-    document.getElementById('threadVoteBtn').addEventListener('click', () => toggleVote(p));
-    threadContent.querySelector('[data-delete-post]').addEventListener('click', async () => {
+    wireThreadVoteButtons(p);
+    threadContent.querySelector('[data-share-thread]').addEventListener('click', () => copyLink(postUrl(p.id), 'Post link'));
+    const delBtn = threadContent.querySelector('[data-delete-post]');
+    delBtn.style.display = canModerate(p.authorEmail) ? '' : 'none';
+    delBtn.addEventListener('click', async () => {
       if (!confirm('Delete this post? This cannot be undone.')) return;
       try {
-        await deleteDoc(doc(db, 'posts', postId));
+        await deleteDoc(postRef(postId));
         closeThread();
         showToast('Post deleted');
       } catch (err) { showToast('Could not delete: ' + err.message); }
     });
-    renderThreadActions();
 
     renderCommentForm();
 
-    threadOverlay.classList.add('open');
-    threadPanel.classList.add('open');
-    threadPanel.scrollTop = 0;
-    document.body.style.overflow = 'hidden';
+    if (!opts.keepScroll) {
+      threadOverlay.classList.add('open');
+      threadPanel.classList.add('open');
+      threadPanel.scrollTop = 0;
+      document.body.style.overflow = 'hidden';
+      const url = new URL(window.location);
+      url.searchParams.set('post', postId);
+      history.pushState({ post: postId }, '', url);
+    }
 
     if (unsubComments.current) unsubComments.current();
     unsubComments.current = onSnapshot(
       query(collection(db, 'posts', postId, 'comments'), orderBy('createdAt', 'asc')),
       snap => {
-        const comments = snap.docs.map(d => {
+        latestComments = snap.docs.map(d => {
           const data = d.data();
           const date = data.createdAt ? data.createdAt.toDate() : new Date();
           return { id: d.id, ...data, _date: date };
         });
-        renderComments(comments, postId);
+        renderComments(latestComments, postId, opts.highlightComment);
+        opts.highlightComment = null;
       }
     );
   }
 
-  function renderComments(comments, postId) {
+  function renderComments(comments, postId, highlightId) {
     const list = document.getElementById('commentList');
     if (!list) return;
     document.getElementById('commentsHeading').textContent = `Comments (${comments.length})`;
     list.innerHTML = comments.map(c => `
-      <div class="comment">
-        <div class="comment-meta">
-          ${c.authorPhoto ? `<img src="${c.authorPhoto}" alt="">` : ''}
-          <span class="name">${escHtml(c.authorName || c.authorEmail || 'anon')}</span>
-          <span class="time">${timeAgo(c._date)}</span>
-          <button class="comment-delete" data-comment-delete="${c.id}" data-author-email="${escHtml(c.authorEmail||'')}" style="display:none;">Delete</button>
+      <div class="comment${c.id === highlightId ? ' highlighted' : ''}" id="comment-${c.id}">
+        ${voteColHtml(c, 'c-' + c.id)}
+        <div class="comment-main">
+          <div class="comment-meta">
+            ${c.authorPhoto ? `<img src="${c.authorPhoto}" alt="">` : ''}
+            <span class="name">${escHtml(c.authorName || c.authorEmail || 'anon')}</span>
+            <span class="time">${timeAgo(c._date)}</span>
+          </div>
+          <div class="comment-body">${escHtml(c.body)}</div>
+          ${c.imageUrl ? `<img class="comment-image" src="${c.imageUrl}" alt="">` : ''}
+          <div class="comment-footer">
+            <button class="icon-link-btn" data-share-comment="${c.id}"><span class="material-symbols-rounded">link</span> Share</button>
+            <button class="comment-delete" data-comment-delete="${c.id}" data-author-email="${escHtml(c.authorEmail||'')}" style="display:none;">Delete</button>
+          </div>
         </div>
-        <div class="comment-body">${escHtml(c.body)}</div>
       </div>
     `).join('');
+
+    list.querySelectorAll('.comment').forEach(el => {
+      const id = el.id.replace('comment-', '');
+      const c = comments.find(x => x.id === id);
+      el.querySelector(`[data-c-${id}-up]`).addEventListener('click', () => toggleVote(doc(db, 'posts', postId, 'comments', id), c, 'up'));
+      el.querySelector(`[data-c-${id}-down]`).addEventListener('click', () => toggleVote(doc(db, 'posts', postId, 'comments', id), c, 'down'));
+      el.querySelector(`[data-share-comment="${id}"]`).addEventListener('click', () => copyLink(commentUrl(postId, id), 'Comment link'));
+    });
     list.querySelectorAll('[data-comment-delete]').forEach(btn => {
       btn.style.display = canModerate(btn.dataset.authorEmail) ? '' : 'none';
       btn.addEventListener('click', async () => {
         if (!confirm('Delete this comment?')) return;
         try {
           await deleteDoc(doc(db, 'posts', postId, 'comments', btn.dataset.commentDelete));
-          await updateDoc(doc(db, 'posts', postId), { commentCount: Math.max(0, (posts.find(p=>p.id===postId)?.commentCount||1) - 1) });
+          await updateDoc(postRef(postId), { commentCount: Math.max(0, (posts.find(p=>p.id===postId)?.commentCount||1) - 1) });
         } catch (err) { showToast('Could not delete: ' + err.message); }
       });
     });
+
+    if (highlightId) {
+      const el = document.getElementById('comment-' + highlightId);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 
   function renderCommentForm() {
@@ -738,29 +964,42 @@ function runForum(config) {
     wrap.innerHTML = `
       <form class="comment-form" id="commentForm">
         <textarea name="body" placeholder="Add a comment…" maxlength="2000" required></textarea>
+        <div class="image-attach" id="commentImageAttach"></div>
         <div class="comment-form-actions">
+          <span></span>
           <button type="submit" class="btn primary small">Comment</button>
         </div>
       </form>
     `;
+    const commentImageAttach = createImageAttach(document.getElementById('commentImageAttach'));
     document.getElementById('commentForm').addEventListener('submit', async e => {
       e.preventDefault();
       const fd = new FormData(e.target);
       const body = fd.get('body').trim();
       if (!body || !openPostId) return;
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
       try {
+        const imageUrl = await uploadImageIfAny(commentImageAttach.getFile());
         await addDoc(collection(db, 'posts', openPostId, 'comments'), {
           body,
+          imageUrl: imageUrl || null,
           authorEmail: currentUser.email,
           authorName: currentUser.displayName,
           authorPhoto: currentUser.photoURL,
+          upvoters: [],
+          downvoters: [],
           createdAt: serverTimestamp(),
         });
-        const postRef = doc(db, 'posts', openPostId);
         const p = posts.find(x => x.id === openPostId);
-        await updateDoc(postRef, { commentCount: (p?.commentCount || 0) + 1 });
+        await updateDoc(postRef(openPostId), { commentCount: (p?.commentCount || 0) + 1 });
         e.target.reset();
-      } catch (err) { showToast('Could not comment: ' + err.message); }
+        commentImageAttach.reset();
+      } catch (err) {
+        showToast('Could not comment: ' + err.message);
+      } finally {
+        submitBtn.disabled = false;
+      }
     });
   }
 
@@ -770,6 +1009,10 @@ function runForum(config) {
     document.body.style.overflow = '';
     if (unsubComments.current) { unsubComments.current(); unsubComments.current = null; }
     openPostId = null;
+    const url = new URL(window.location);
+    url.searchParams.delete('post');
+    url.searchParams.delete('comment');
+    history.pushState({}, '', url);
   }
   document.getElementById('threadCloseBtn').addEventListener('click', closeThread);
   threadOverlay.addEventListener('click', closeThread);

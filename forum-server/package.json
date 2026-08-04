@@ -1,0 +1,17 @@
+{
+  "name": "oeperweb-forum-upload-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minimal image upload server for oeper.dev forum attachments. Meant to run on-device via Termux and be exposed with a Cloudflare Tunnel.",
+  "main": "upload-server.js",
+  "scripts": {
+    "start": "node upload-server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0",
+    "multer": "^1.4.5-lts.1"
+  }
+}
