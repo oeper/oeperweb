@@ -37,7 +37,12 @@ const DISCORD_REPORT_WEBHOOK = process.env.DISCORD_REPORT_WEBHOOK
 const REPORT_COOLDOWN_SECONDS = 10;
 // ──────────────────────────────────────────────────────────────
 
-const UPLOAD_DIR = path.join(__dirname, 'uploads');
+// Where uploaded files get saved. Defaults to a folder next to this script
+// (inside Termux's private storage). Override with the UPLOAD_DIR env var to
+// save into shared/internal storage instead — see forum-server/README.md.
+const UPLOAD_DIR = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const app = express();

@@ -65,6 +65,31 @@ Replace the URL with whatever `cloudflared` printed in step 4.
 Copy that same tunnel URL and send it — it goes into `SERVER_ENDPOINT` near
 the top of `forum.html`'s script.
 
+## Storing uploads in shared storage (visible in the Files app)
+
+By default, uploaded files live inside Termux's private app storage —
+invisible to the Files app, gallery, or a computer plugged in over USB. To
+save them in regular "Internal storage / Download" instead:
+
+```sh
+termux-setup-storage
+```
+
+This prompts for a storage permission and creates a `~/storage/` folder full
+of symlinks into shared storage (`~/storage/downloads` → Internal
+storage/Download, `~/storage/dcim` → Camera, etc.). One-time setup.
+
+Then start the server with `UPLOAD_DIR` pointing into it — this creates and
+uses a `forum` subfolder under Download:
+
+```sh
+UPLOAD_DIR=~/storage/downloads/forum PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
+```
+
+Uploaded images will then show up at **Internal storage → Download → forum**
+in the Files app. Only downside: shared storage is slightly slower to write
+to than Termux's own storage, which won't matter at this scale.
+
 ## Changing the Discord report webhook
 
 `DISCORD_REPORT_WEBHOOK` in `upload-server.js` is hardcoded as a fallback,
