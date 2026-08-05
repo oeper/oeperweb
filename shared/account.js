@@ -28,7 +28,7 @@ export const FIREBASE_CONFIG = {
 
 // Your Cloudflare Tunnel URL (forum-server/README.md). Used for profile
 // photo uploads here, and for forum image uploads + reports in forum.html.
-export const SERVER_ENDPOINT = 'https://gardens-annual-tractor-ago.trycloudflare.com';
+export const SERVER_ENDPOINT = 'https://myserverfiles.oeper.dev';
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 // Accounts allowed to manage the site: forum moderation (ban/delete anywhere)
