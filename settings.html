@@ -138,8 +138,10 @@
 <script type="module">
 import { mountAccountBar } from './shared/account.js?v=4';
 import { mountThemePicker } from './shared/theme-picker.js';
+import { mountFooter } from './shared/footer.js';
 
 mountAccountBar(document.getElementById('accountBar'));
+mountFooter();
 
 function updateSubtitle(id) {
   const t = window.OE_THEMES[id];

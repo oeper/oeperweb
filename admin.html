@@ -295,10 +295,12 @@
 import {
   isOwnerEmail, onAccountChange, mountAccountBar,
 } from './shared/account.js?v=4';
+import { mountFooter } from './shared/footer.js';
 
 // ── Auth (shared Google Sign-In, gated to OWNER_EMAILS) ────────────
 mountAccountBar(document.getElementById('lockSignInBtn'));
 mountAccountBar(document.getElementById('headerAccountBar'));
+mountFooter();
 
 onAccountChange(user => {
   const lockScreen = document.getElementById('lockScreen');

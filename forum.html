@@ -428,6 +428,7 @@ import {
   getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded,
   mountAccountBar, uploadFile,
 } from './shared/account.js?v=4';
+import { mountFooter } from './shared/footer.js';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
   query, orderBy, serverTimestamp, arrayUnion, arrayRemove
@@ -597,6 +598,7 @@ function buildKebabMenu(items) {
 
 document.getElementById('maxImagesLabel').textContent = MAX_POST_IMAGES;
 mountAccountBar(document.getElementById('accountBar'));
+mountFooter();
 runForum();
 
 function runForum() {
