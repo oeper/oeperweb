@@ -254,6 +254,23 @@
   }
   .image-preview-remove .material-symbols-rounded { font-size: 14px; }
 
+  /* Non-image attachments render as a file chip instead of an <img> */
+  .file-chip-preview {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--md-sys-color-background);
+    border-radius: 10px; padding: 10px 14px; font-size: 12px; color: var(--md-sys-color-on-surface-variant); max-width: 140px;
+  }
+  .file-chip-preview .material-symbols-rounded { font-size: 18px; flex-shrink: 0; }
+  .file-chip-preview .file-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-chip {
+    display: inline-flex; align-items: center; gap: 8px; background: var(--md-sys-color-surface-variant);
+    border-radius: 12px; padding: 12px 16px; color: var(--md-sys-color-on-surface); text-decoration: none; font-size: 13px; max-width: 100%;
+  }
+  .file-chip:hover { background: #3a4049; }
+  .file-chip .material-symbols-rounded { font-size: 22px; flex-shrink: 0; color: var(--md-sys-color-primary); }
+  .file-chip .file-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .thread-gallery .file-chip { width: 100%; height: 140px; justify-content: center; }
+  .post-thumb-wrap .file-chip { display: flex; }
+
   /* New post modal */
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 60; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
   .overlay.open { opacity: 1; pointer-events: all; }
@@ -328,7 +345,7 @@
       </div>
       <select class="sort-select" id="sortSelect">
         <option value="newest">Newest</option>
-        <option value="relevance">Relevance</option>
+        <option value="relevance" selected>Relevance</option>
         <option value="top">Top voted</option>
         <option value="comments">Most discussed</option>
       </select>
@@ -369,7 +386,7 @@
       <textarea name="body" maxlength="8000" placeholder="Write in markdown — # headings, **bold**, *italic*, [link](url)"></textarea>
     </div>
     <div class="field">
-      <label>Images (up to <span id="maxImagesLabel"></span>, optional)</label>
+      <label>Files (up to <span id="maxImagesLabel"></span>, optional)</label>
       <div class="image-attach" id="postImageAttach"></div>
     </div>
     <div class="field">
@@ -391,16 +408,15 @@
 
 <script type="module">
 import {
-  auth, db, SERVER_ENDPOINT, MAX_IMAGE_BYTES,
+  auth, db, SERVER_ENDPOINT, MAX_IMAGE_BYTES, isOwnerEmail,
   getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded,
-  mountAccountBar, uploadImage,
+  mountAccountBar, uploadFile,
 } from './shared/account.js';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
   query, orderBy, serverTimestamp, arrayUnion, arrayRemove
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-const OWNER_EMAIL = 'sanhackerman@gmail.com';
 const DEFAULT_TAGS = [
   { id: 'general',  label: 'General',  icon: 'forum' },
   { id: 'showcase', label: 'Showcase', icon: 'auto_awesome' },
@@ -458,10 +474,30 @@ function commentUrl(postId, commentId) {
   return url.toString();
 }
 // Legacy posts had a single `imageUrl` string; newer ones have `imageUrls: []`.
-function imagesOf(item) {
+// Despite the field names, attachments can be any file type now, not just images.
+function attachmentsOf(item) {
   if (Array.isArray(item.imageUrls) && item.imageUrls.length) return item.imageUrls;
   if (item.imageUrl) return [item.imageUrl];
   return [];
+}
+const IMAGE_EXT_RE = /\.(jpe?g|png|gif|webp|bmp|svg|avif)$/i;
+function isImageUrl(url) { return IMAGE_EXT_RE.test((url || '').split('?')[0]); }
+function fileNameFromUrl(url) {
+  try { return decodeURIComponent(new URL(url).pathname.split('/').pop()) || 'file'; }
+  catch { return 'file'; }
+}
+function attachmentHtml(url, opts) {
+  opts = opts || {};
+  const cls = opts.className || '';
+  if (isImageUrl(url)) {
+    return `<img class="${cls}" src="${url}" alt="" loading="lazy" ${opts.onclick ? `onclick="${opts.onclick}"` : ''}>`;
+  }
+  return `
+    <a class="file-chip ${cls}" href="${url}" target="_blank" rel="noopener" download>
+      <span class="material-symbols-rounded">draft</span>
+      <span class="file-chip-name">${escHtml(fileNameFromUrl(url))}</span>
+    </a>
+  `;
 }
 
 function closeAllKebabMenus() {
@@ -506,7 +542,7 @@ function runForum() {
   const unsubComments = { current: null };
 
   function currentUser() { return getCurrentUser(); }
-  function isOwner(email) { return email === OWNER_EMAIL; }
+  function isOwner(email) { return isOwnerEmail(email); }
   function canModerate(authorEmail) {
     const u = currentUser();
     return u && (u.email === authorEmail || isOwner(u.email));
@@ -617,7 +653,17 @@ function runForum() {
     return items;
   }
 
-  // ── Image attach widgets ────────────────────────────────────
+  // ── File attach widgets (any file type, not just images) ────
+  function filePreviewHtml(f) {
+    if (f.type.startsWith('image/')) return `<img src="${URL.createObjectURL(f)}" alt="">`;
+    return `
+      <span class="file-chip-preview">
+        <span class="material-symbols-rounded">draft</span>
+        <span class="file-chip-name">${escHtml(f.name)}</span>
+      </span>
+    `;
+  }
+
   // Post form: up to MAX_POST_IMAGES.
   function createMultiImageAttach(container, maxCount) {
     let files = [];
@@ -626,14 +672,14 @@ function runForum() {
       container.innerHTML = `
         ${files.map((f, i) => `
           <div class="image-preview-wrap" data-i="${i}">
-            <img src="${URL.createObjectURL(f)}" alt="">
+            ${filePreviewHtml(f)}
             <button type="button" class="image-preview-remove" data-remove="${i}"><span class="material-symbols-rounded">close</span></button>
           </div>
         `).join('')}
         ${canAddMore ? `
           <label class="image-attach-btn">
-            <span class="material-symbols-rounded" style="font-size:16px;">add_photo_alternate</span> Add image (${files.length}/${maxCount})
-            <input type="file" accept="image/*" multiple>
+            <span class="material-symbols-rounded" style="font-size:16px;">attach_file</span> Add file (${files.length}/${maxCount})
+            <input type="file" multiple>
           </label>
         ` : ''}
       `;
@@ -644,8 +690,8 @@ function runForum() {
       if (input) {
         input.addEventListener('change', e => {
           for (const f of [...e.target.files]) {
-            if (files.length >= maxCount) { showToast(`Up to ${maxCount} images per post`); break; }
-            if (f.size > MAX_IMAGE_BYTES) { showToast(`Each image must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); continue; }
+            if (files.length >= maxCount) { showToast(`Up to ${maxCount} files per post`); break; }
+            if (f.size > MAX_IMAGE_BYTES) { showToast(`Each file must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); continue; }
             files.push(f);
           }
           render();
@@ -656,14 +702,14 @@ function runForum() {
     return { getFiles: () => files, reset: () => { files = []; render(); } };
   }
 
-  // Comment form: single image.
+  // Comment form: single file.
   function createImageAttach(container) {
     let file = null;
     function render() {
       if (file) {
         container.innerHTML = `
           <div class="image-preview-wrap">
-            <img src="${URL.createObjectURL(file)}" alt="">
+            ${filePreviewHtml(file)}
             <button type="button" class="image-preview-remove" title="Remove"><span class="material-symbols-rounded">close</span></button>
           </div>
         `;
@@ -671,14 +717,14 @@ function runForum() {
       } else {
         container.innerHTML = `
           <label class="image-attach-btn">
-            <span class="material-symbols-rounded" style="font-size:16px;">image</span> Attach image
-            <input type="file" accept="image/*">
+            <span class="material-symbols-rounded" style="font-size:16px;">attach_file</span> Attach file
+            <input type="file">
           </label>
         `;
         container.querySelector('input[type="file"]').addEventListener('change', e => {
           const f = e.target.files[0];
           if (!f) return;
-          if (f.size > MAX_IMAGE_BYTES) { showToast(`Image must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); return; }
+          if (f.size > MAX_IMAGE_BYTES) { showToast(`File must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); return; }
           file = f;
           render();
         });
@@ -688,10 +734,10 @@ function runForum() {
     return { getFile: () => file, reset: () => { file = null; render(); } };
   }
 
-  async function uploadImagesIfAny(files) {
+  async function uploadFilesIfAny(files) {
     if (!files || !files.length) return [];
     const urls = [];
-    for (const f of files) urls.push(await uploadImage(f));
+    for (const f of files) urls.push(await uploadFile(f));
     return urls;
   }
 
@@ -788,7 +834,7 @@ function runForum() {
   function buildPostCard(p) {
     const card = document.createElement('div');
     card.className = 'post-card';
-    const imgs = imagesOf(p);
+    const atts = attachmentsOf(p);
     const photo = photoOf(p);
     card.innerHTML = `
       ${voteColHtml(p, 'post')}
@@ -802,10 +848,10 @@ function runForum() {
         </div>
         <div class="post-title">${escHtml(p.title)}</div>
         ${p.body ? `<div class="post-excerpt">${escHtml(p.body)}</div>` : ''}
-        ${imgs.length ? `
-          <div class="post-thumb-wrap">
-            <img class="post-thumb" src="${imgs[0]}" alt="" loading="lazy">
-            ${imgs.length > 1 ? `<span class="post-thumb-count"><span class="material-symbols-rounded">photo_library</span>${imgs.length}</span>` : ''}
+        ${atts.length ? `
+          <div class="post-thumb-wrap" data-thumb>
+            ${attachmentHtml(atts[0], { className: 'post-thumb' })}
+            ${atts.length > 1 ? `<span class="post-thumb-count"><span class="material-symbols-rounded">attach_file</span>${atts.length}</span>` : ''}
           </div>
         ` : ''}
         <div class="post-footer">
@@ -816,6 +862,8 @@ function runForum() {
     `;
     card.querySelector('[data-post-up]').addEventListener('click', e => { e.stopPropagation(); toggleVote(postRef(p.id), p, 'up'); });
     card.querySelector('[data-post-down]').addEventListener('click', e => { e.stopPropagation(); toggleVote(postRef(p.id), p, 'down'); });
+    const thumbWrap = card.querySelector('[data-thumb]');
+    if (thumbWrap) thumbWrap.addEventListener('click', e => { if (e.target.closest('a')) e.stopPropagation(); });
     const kebabSlot = card.querySelector('[data-kebab]');
     kebabSlot.addEventListener('click', e => e.stopPropagation());
     kebabSlot.appendChild(buildKebabMenu(menuItemsForPost(p)));
@@ -924,7 +972,7 @@ function runForum() {
     const submitBtn = document.getElementById('submitPostBtn');
     submitBtn.disabled = true;
     try {
-      const imageUrls = await uploadImagesIfAny(postImageAttach.getFiles());
+      const imageUrls = await uploadFilesIfAny(postImageAttach.getFiles());
       await addDoc(collection(db, 'posts'), {
         title,
         body: fd.get('body').trim(),
@@ -976,7 +1024,7 @@ function runForum() {
     openPostId = postId;
     const p = posts.find(x => x.id === postId);
     if (!p) return;
-    const imgs = imagesOf(p);
+    const atts = attachmentsOf(p);
     const photo = photoOf(p);
 
     threadContent.innerHTML = `
@@ -989,9 +1037,9 @@ function runForum() {
         <span class="kebab-slot" data-kebab style="margin-left:auto;"></span>
       </div>
       <div class="thread-title">${escHtml(p.title)}</div>
-      ${imgs.length ? `
-        <div class="thread-gallery ${imgs.length === 1 ? 'single' : ''}">
-          ${imgs.map(src => `<img src="${src}" alt="" onclick="window.open('${src}', '_blank')">`).join('')}
+      ${atts.length ? `
+        <div class="thread-gallery ${atts.length === 1 ? 'single' : ''}">
+          ${atts.map(src => attachmentHtml(src, { onclick: isImageUrl(src) ? `window.open('${src}', '_blank')` : null })).join('')}
         </div>
       ` : ''}
       <div class="thread-body">${parseMarkdown(p.body)}</div>
@@ -1049,7 +1097,7 @@ function runForum() {
             <span class="kebab-slot" data-kebab style="margin-left:auto;"></span>
           </div>
           <div class="comment-body">${escHtml(c.body)}</div>
-          ${c.imageUrl ? `<img class="comment-image" src="${c.imageUrl}" alt="">` : ''}
+          ${c.imageUrl ? attachmentHtml(c.imageUrl, { className: 'comment-image' }) : ''}
         </div>
       </div>
     `).join('');
@@ -1100,7 +1148,7 @@ function runForum() {
       submitBtn.disabled = true;
       try {
         const file = commentImageAttach.getFile();
-        const imageUrl = file ? await uploadImage(file) : null;
+        const imageUrl = file ? await uploadFile(file) : null;
         await addDoc(collection(db, 'posts', openPostId, 'comments'), {
           body,
           imageUrl: imageUrl || null,

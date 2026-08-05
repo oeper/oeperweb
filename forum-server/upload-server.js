@@ -12,6 +12,13 @@ const PORT = process.env.PORT || 8787;
 // From your firebaseConfig.projectId (Firebase console → Project settings).
 const FIREBASE_PROJECT_ID = 'oepernet-1683535959256';
 
+// Accounts allowed to use the owner-only /upload-file tool (admin.html's
+// Files tab). Keep in sync with OWNER_EMAILS in shared/account.js — this
+// server-side copy is what actually enforces it, the client-side one is
+// only for hiding the UI.
+const OWNER_EMAILS = (process.env.OWNER_EMAILS || 'sanhackerman@gmail.com,taejiding@gmail.com')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
 // Max upload size. Change this number any time and restart the server —
 // also update MAX_IMAGE_BYTES in forum.html to match so the browser
 // rejects oversized files before even trying to upload them.
@@ -35,15 +42,22 @@ const DISCORD_REPORT_WEBHOOK = process.env.DISCORD_REPORT_WEBHOOK
 // Minimum seconds between reports from the same signed-in user, to keep one
 // person from flooding your Discord channel.
 const REPORT_COOLDOWN_SECONDS = 10;
-// ──────────────────────────────────────────────────────────────
 
-// Where uploaded files get saved. Defaults to a folder next to this script
-// (inside Termux's private storage). Override with the UPLOAD_DIR env var to
-// save into shared/internal storage instead — see forum-server/README.md.
+// Where forum post/comment attachments get saved (any signed-in user, via
+// /upload). Override with the UPLOAD_DIR env var to save into shared/
+// internal storage instead — see forum-server/README.md.
 const UPLOAD_DIR = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
   : path.join(__dirname, 'uploads');
+
+// Where files uploaded through admin.html's owner-only Files tool get saved
+// (separate from forum attachments on purpose). Defaults to the phone's
+// regular Documents folder, visible in the Files app.
+const OWNER_FILES_DIR = process.env.OWNER_FILES_DIR || '/storage/emulated/0/Documents';
+// ──────────────────────────────────────────────────────────────
+
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+if (!fs.existsSync(OWNER_FILES_DIR)) fs.mkdirSync(OWNER_FILES_DIR, { recursive: true });
 
 const app = express();
 app.use(cors({ origin: ALLOWED_ORIGINS }));
@@ -77,27 +91,52 @@ function verifyFirebaseToken(req, res, next) {
   });
 }
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).slice(0, 10).replace(/[^a-zA-Z0-9.]/g, '');
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`);
-  },
-});
-const upload = multer({
-  storage,
+function verifyOwnerToken(req, res, next) {
+  verifyFirebaseToken(req, res, () => {
+    if (!OWNER_EMAILS.includes(req.user.email)) {
+      return res.status(403).json({ error: 'This account is not authorized to manage the site' });
+    }
+    next();
+  });
+}
+
+function makeFilename(originalname) {
+  const ext = path.extname(originalname).slice(0, 10).replace(/[^a-zA-Z0-9.]/g, '');
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+}
+
+// Forum post/comment attachments — any signed-in user, any file type.
+const uploadAttachment = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+    filename: (req, file, cb) => cb(null, makeFilename(file.originalname)),
+  }),
   limits: { fileSize: MAX_FILE_BYTES },
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) return cb(new Error('Only image files are allowed'));
-    cb(null, true);
-  },
 });
 
 app.post('/upload', verifyFirebaseToken, (req, res) => {
-  upload.single('file')(req, res, err => {
+  uploadAttachment.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
     res.json({ url: `${PUBLIC_BASE_URL}/files/${req.file.filename}` });
+  });
+});
+
+// Owner-only general file uploads (admin.html's Files tab) — saved
+// separately from forum attachments, into OWNER_FILES_DIR.
+const uploadOwnerFile = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, OWNER_FILES_DIR),
+    filename: (req, file, cb) => cb(null, makeFilename(file.originalname)),
+  }),
+  limits: { fileSize: MAX_FILE_BYTES },
+});
+
+app.post('/upload-file', verifyOwnerToken, (req, res) => {
+  uploadOwnerFile.single('file')(req, res, err => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'No file received' });
+    res.json({ url: `${PUBLIC_BASE_URL}/docs/${req.file.filename}` });
   });
 });
 
@@ -143,7 +182,12 @@ app.post('/report', verifyFirebaseToken, async (req, res) => {
 });
 
 app.use('/files', express.static(UPLOAD_DIR, { maxAge: '30d' }));
+app.use('/docs', express.static(OWNER_FILES_DIR, { maxAge: '30d' }));
 
 app.get('/', (req, res) => res.send('oeperweb forum upload server is running.'));
 
-app.listen(PORT, () => console.log(`Upload server listening on port ${PORT} (public base: ${PUBLIC_BASE_URL})`));
+app.listen(PORT, () => console.log(
+  `Upload server listening on port ${PORT} (public base: ${PUBLIC_BASE_URL})\n` +
+  `  forum attachments -> ${UPLOAD_DIR}\n` +
+  `  owner files       -> ${OWNER_FILES_DIR}`
+));

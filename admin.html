@@ -11,7 +11,6 @@
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -221,16 +220,6 @@
     border-radius: 12px; padding: 12px 18px; font-size: 13px; max-width: 360px;
   }
   .lock-denied.show { display: block; }
-  .lock-config-warning {
-    display: none; margin-top: 20px; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant);
-    border-radius: 12px; padding: 14px 18px; font-size: 13px; max-width: 400px; line-height: 1.6; text-align: left;
-  }
-  .lock-config-warning.show { display: block; }
-
-  .signed-in-bar { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
-  .signed-in-bar img { width: 28px; height: 28px; border-radius: 50%; }
-  .signed-in-bar span { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
-  .signed-in-bar button { background: none; border: none; color: var(--md-sys-color-primary); font-size: 13px; cursor: pointer; text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -238,12 +227,9 @@
 <div class="lock-screen" id="lockScreen">
   <span class="material-symbols-rounded lock-icon">lock</span>
   <h1>Sign in required</h1>
-  <p>This content manager is restricted to the site owner. Sign in with the authorized Google account to continue.</p>
-  <div id="googleSignInBtn"></div>
-  <div class="lock-denied" id="lockDenied">Signed in, but this Google account isn't authorized to edit this site.</div>
-  <div class="lock-config-warning" id="lockConfigWarning">
-    <strong>Google Sign-In isn't configured yet.</strong> A <code>GOOGLE_CLIENT_ID</code> needs to be added to this page before sign-in will work.
-  </div>
+  <p>This content manager is restricted to the site owners. Sign in with an authorized Google account to continue.</p>
+  <div id="lockSignInBtn"></div>
+  <div class="lock-denied" id="lockDenied">Signed in, but this Google account isn't authorized to manage this site.</div>
 </div>
 
 <div class="page" id="appRoot" style="display:none;">
@@ -254,7 +240,7 @@
     </a>
     <h1>Content Manager</h1>
     <p>Add, edit and publish articles &amp; downloads without touching code.</p>
-    <div class="signed-in-bar" id="signedInBar"></div>
+    <div style="margin-top:16px;" id="headerAccountBar"></div>
     <div class="notice" id="fsaNotice">
       <strong>Heads up:</strong> your browser doesn't support saving files in place, so "Save" will download an updated JSON file instead — drop it into <code>data/</code>, replacing the old one.
     </div>
@@ -267,15 +253,18 @@
     <button class="tab" data-tab="downloads">
       <span class="material-symbols-rounded">download</span> Downloads
     </button>
+    <button class="tab" data-tab="files">
+      <span class="material-symbols-rounded">upload_file</span> Files
+    </button>
   </div>
 
-  <div class="filebar">
+  <div class="filebar" id="filebar">
     <span class="status" id="fileStatus"><span class="dot"></span>No file open</span>
     <button class="btn" id="openBtn"><span class="material-symbols-rounded">folder_open</span> Open data file</button>
     <button class="btn primary" id="saveBtn" disabled><span class="material-symbols-rounded">save</span> Save</button>
   </div>
 
-  <div class="toolrow">
+  <div class="toolrow" id="toolrow">
     <h2 id="listTitle">Articles</h2>
     <button class="btn primary" id="addBtn" disabled><span class="material-symbols-rounded">add</span> Add new</button>
   </div>
@@ -284,6 +273,25 @@
   <div class="empty-hint" id="emptyHint">
     <span class="material-symbols-rounded">description</span>
     <p>Open <code id="expectedFileName">data/articles.json</code> to start editing.</p>
+  </div>
+
+  <div id="filesPanel" style="display:none;">
+    <div class="filebar">
+      <span class="status">Upload any file and get a hosted link — paste it into a Download entry's URL field.</span>
+    </div>
+    <div class="field">
+      <label>Choose a file</label>
+      <input type="file" id="fileUploadInput">
+    </div>
+    <button class="btn primary" id="fileUploadBtn"><span class="material-symbols-rounded">upload</span> Upload</button>
+    <div id="fileUploadResult" style="display:none; margin-top:20px;">
+      <div class="field">
+        <label>Hosted URL</label>
+        <input type="text" id="fileUploadUrl" readonly>
+      </div>
+      <button class="btn" id="copyUploadUrlBtn"><span class="material-symbols-rounded">content_copy</span> Copy link</button>
+      <button class="btn primary" id="useInDownloadBtn"><span class="material-symbols-rounded">add</span> Use in new Download entry</button>
+    </div>
   </div>
 </div>
 
@@ -296,95 +304,28 @@
 <input type="file" id="jsonFileInput" accept="application/json">
 <div class="toast" id="toast"></div>
 
-<script>
-// ── Auth (Google Sign-In) ──────────────────────────────────────
-// Paste the OAuth Client ID from Google Cloud Console here (Credentials → OAuth client ID → Web application).
-// This value is public/non-secret and safe to commit.
-const GOOGLE_CLIENT_ID = '300606899534-16s7jlu7mpt0h7ll6m9a73250lnkg0hm.apps.googleusercontent.com';
-const ALLOWED_EMAILS = ['sanhackerman@gmail.com'];
+<script type="module">
+import {
+  SERVER_ENDPOINT, isOwnerEmail, getCurrentUser, onAccountChange, mountAccountBar,
+} from './shared/account.js';
 
-function decodeJwt(token) {
-  const payload = token.split('.')[1];
-  const json = decodeURIComponent(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
-    .split('').map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join(''));
-  return JSON.parse(json);
-}
+// ── Auth (shared Google Sign-In, gated to OWNER_EMAILS) ────────────
+mountAccountBar(document.getElementById('lockSignInBtn'));
+mountAccountBar(document.getElementById('headerAccountBar'));
 
-function handleCredentialResponse(response) {
-  let profile;
-  try {
-    profile = decodeJwt(response.credential);
-  } catch (err) {
-    document.getElementById('lockDenied').textContent = 'Could not read sign-in response: ' + err.message;
-    document.getElementById('lockDenied').classList.add('show');
-    return;
-  }
+onAccountChange(user => {
+  const lockScreen = document.getElementById('lockScreen');
+  const appRoot = document.getElementById('appRoot');
+  const lockDenied = document.getElementById('lockDenied');
 
-  if (!profile.email_verified || !ALLOWED_EMAILS.includes(profile.email)) {
-    document.getElementById('lockDenied').classList.add('show');
-    return;
-  }
-
-  sessionStorage.setItem('admin_google_profile', JSON.stringify({
-    email: profile.email, name: profile.name, picture: profile.picture,
-  }));
-  unlockApp(profile);
-}
-
-function unlockApp(profile) {
-  document.getElementById('lockScreen').style.display = 'none';
-  document.getElementById('appRoot').style.display = '';
-  document.getElementById('signedInBar').innerHTML = `
-    <img src="${profile.picture || ''}" alt="">
-    <span>Signed in as ${profile.email}</span>
-    <button id="signOutBtn" type="button">Sign out</button>
-  `;
-  document.getElementById('signOutBtn').addEventListener('click', () => {
-    sessionStorage.removeItem('admin_google_profile');
-    location.reload();
-  });
-}
-
-function initAuth() {
-  if (!GOOGLE_CLIENT_ID) {
-    document.getElementById('lockConfigWarning').classList.add('show');
-    return;
-  }
-
-  const cached = sessionStorage.getItem('admin_google_profile');
-  if (cached) {
-    try {
-      const profile = JSON.parse(cached);
-      if (ALLOWED_EMAILS.includes(profile.email)) { unlockApp(profile); return; }
-    } catch {}
-  }
-
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: handleCredentialResponse,
-  });
-  google.accounts.id.renderButton(document.getElementById('googleSignInBtn'), {
-    theme: 'filled_blue', size: 'large', shape: 'pill',
-  });
-}
-
-window.addEventListener('load', () => {
-  if (window.google && google.accounts && google.accounts.id) {
-    initAuth();
+  if (user && isOwnerEmail(user.email)) {
+    lockDenied.classList.remove('show');
+    lockScreen.style.display = 'none';
+    appRoot.style.display = '';
   } else {
-    // GIS script may still be loading (async defer) — poll briefly.
-    let tries = 0;
-    const t = setInterval(() => {
-      tries++;
-      if (window.google && google.accounts && google.accounts.id) {
-        clearInterval(t);
-        initAuth();
-      } else if (tries > 40) {
-        clearInterval(t);
-        document.getElementById('lockConfigWarning').textContent = 'Could not load Google Sign-In. Check your connection and reload.';
-        document.getElementById('lockConfigWarning').classList.add('show');
-      }
-    }, 100);
+    lockScreen.style.display = '';
+    appRoot.style.display = 'none';
+    lockDenied.classList.toggle('show', !!user);
   }
 });
 
@@ -804,20 +745,79 @@ overlay.addEventListener('click', closeForm);
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('open')) closeForm(); });
 
 // ── Tabs ──────────────────────────────────────────────────────
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    activeTab = tab.dataset.tab;
-    document.getElementById('listTitle').textContent = activeTab === 'articles' ? 'Articles' : 'Downloads';
+function setTab(tabId) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+  activeTab = tabId;
+  const isFiles = tabId === 'files';
+  document.getElementById('filebar').style.display = isFiles ? 'none' : '';
+  document.getElementById('toolrow').style.display = isFiles ? 'none' : '';
+  document.getElementById('itemList').style.display = isFiles ? 'none' : '';
+  document.getElementById('filesPanel').style.display = isFiles ? '' : 'none';
+  if (isFiles) {
+    document.getElementById('emptyHint').style.display = 'none';
+  } else {
+    document.getElementById('listTitle').textContent = tabId === 'articles' ? 'Articles' : 'Downloads';
     renderList();
     refreshFileBar();
-  });
+  }
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => setTab(tab.dataset.tab));
 });
 
 document.getElementById('openBtn').addEventListener('click', openFile);
 document.getElementById('saveBtn').addEventListener('click', saveFile);
 document.getElementById('addBtn').addEventListener('click', () => openForm(null));
+
+// ── Files tab: owner-only general file upload → hosted URL ─────
+document.getElementById('fileUploadBtn').addEventListener('click', async () => {
+  const input = document.getElementById('fileUploadInput');
+  const file = input.files[0];
+  if (!file) { showToast('Choose a file first'); return; }
+  const user = getCurrentUser();
+  if (!user) { showToast('Sign in first'); return; }
+  if (!SERVER_ENDPOINT) { showToast('File uploads are not set up yet'); return; }
+  const btn = document.getElementById('fileUploadBtn');
+  btn.disabled = true;
+  try {
+    const idToken = await user.getIdToken();
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(SERVER_ENDPOINT + '/upload-file', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + idToken },
+      body: fd,
+    });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { msg = (await res.json()).error || msg; } catch {}
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    document.getElementById('fileUploadUrl').value = data.url;
+    document.getElementById('fileUploadResult').style.display = '';
+    showToast('Uploaded!');
+  } catch (err) {
+    showToast('Could not upload: ' + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('copyUploadUrlBtn').addEventListener('click', async () => {
+  const url = document.getElementById('fileUploadUrl').value;
+  try { await navigator.clipboard.writeText(url); showToast('Copied'); }
+  catch { window.prompt('Copy this link:', url); }
+});
+
+document.getElementById('useInDownloadBtn').addEventListener('click', () => {
+  const url = document.getElementById('fileUploadUrl').value;
+  setTab('downloads');
+  openForm(null);
+  const urlField = document.querySelector('#itemForm [name="url"]');
+  if (urlField) urlField.value = url;
+});
 
 window.addEventListener('beforeunload', (e) => {
   if (state.articles.dirty || state.downloads.dirty) {

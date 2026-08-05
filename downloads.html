@@ -285,6 +285,14 @@
     pointer-events: none; z-index: 100; white-space: nowrap; 
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Narrow screens: icon + controls otherwise crush file-info into a sliver */
+  @media (max-width: 480px) {
+    .file-card:not(.has-image) { flex-wrap: wrap; padding: 20px; }
+    .card-body { flex-wrap: wrap; }
+    .file-card:not(.has-image) .card-controls,
+    .card-body .card-controls { flex-basis: 100%; justify-content: flex-end; margin-top: 4px; }
+  }
 </style>
 </head>
 <body>

@@ -1,17 +1,28 @@
 # Forum upload + report server
 
-A tiny Node server for the forum (`forum.html`): accepts image uploads and
-serves them back, and relays the Report button to a Discord webhook (kept
-server-side so the webhook URL is never exposed in the site's public source —
-anyone who got hold of it could post arbitrary spam to your Discord channel).
+A tiny Node server backing three things:
+
+- **`/upload`** — forum post/comment attachments (any signed-in user, any
+  file type, not just images) for `forum.html`
+- **`/upload-file`** — a general file-hosting tool restricted to
+  `OWNER_EMAILS`, used by `admin.html`'s Files tab to get a link for a new
+  Downloads entry. Saved separately from forum attachments, into
+  `/storage/emulated/0/Documents` by default (regular phone storage, visible
+  in the Files app) — not Termux's private storage.
+- **`/report`** — relays the forum's Report button to a Discord webhook,
+  kept server-side so the webhook URL is never exposed in the site's public
+  source (anyone who got hold of it could post arbitrary spam to your
+  Discord channel)
+
 It's meant to run **on your Android phone** via Termux, exposed to the
 internet with a Cloudflare Tunnel — no cloud bill, no server to maintain
 elsewhere.
 
-**Trade-off to know going in:** images only load, and reports only send,
+**Trade-off to know going in:** uploads, file hosting, and reports only work
 while your phone is on, connected, and running this server. If the phone
-dies or the app gets killed, forum images break and reports silently fail
-(with a clear error shown to whoever tried) until it's back up.
+dies or the app gets killed, forum attachments and hosted file links break,
+and reports silently fail (with a clear error shown to whoever tried) until
+it's back up.
 
 ## 1. Install Termux
 
@@ -90,6 +101,28 @@ Uploaded images will then show up at **Internal storage → Download → forum**
 in the Files app. Only downside: shared storage is slightly slower to write
 to than Termux's own storage, which won't matter at this scale.
 
+## Who can use the Files tool
+
+`OWNER_EMAILS` in `upload-server.js` defaults to `sanhackerman@gmail.com,taejiding@gmail.com`
+— keep it in sync with `OWNER_EMAILS` in `shared/account.js` and `isOwner()`
+in `firestore.rules`, since those are the three places this list is
+enforced. Override without editing the file via an env var:
+
+```sh
+OWNER_EMAILS=you@gmail.com,other@gmail.com PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
+```
+
+## Changing where owner-uploaded files land
+
+`OWNER_FILES_DIR` defaults to `/storage/emulated/0/Documents`. To use it,
+you'll first need `termux-setup-storage` (see above) so Termux can write to
+shared storage at all. Override with an env var if you'd rather use a
+different folder:
+
+```sh
+OWNER_FILES_DIR=~/storage/downloads/files PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
+```
+
 ## Changing the Discord report webhook
 
 `DISCORD_REPORT_WEBHOOK` in `upload-server.js` is hardcoded as a fallback,
@@ -98,6 +131,19 @@ variable instead:
 
 ```sh
 DISCORD_REPORT_WEBHOOK=https://discord.com/api/webhooks/... PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
+```
+
+## Putting it all together
+
+Most of the time you'll want several of these env vars set at once, e.g.
+forum attachments in Download/forum, owner files in Documents, and your
+current tunnel URL:
+
+```sh
+UPLOAD_DIR=~/storage/downloads/forum \
+OWNER_FILES_DIR=/storage/emulated/0/Documents \
+PUBLIC_BASE_URL=https://your-tunnel-url \
+node upload-server.js
 ```
 
 ## Keeping it running

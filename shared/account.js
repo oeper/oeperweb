@@ -26,6 +26,12 @@ export const FIREBASE_CONFIG = {
 export const SERVER_ENDPOINT = 'https://gardens-annual-tractor-ago.trycloudflare.com';
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
+// Accounts allowed to manage the site: forum moderation (ban/delete anywhere)
+// and admin.html's content editor + file upload tool. Add more emails here
+// any time — everywhere that checks ownership imports this same list.
+export const OWNER_EMAILS = ['sanhackerman@gmail.com', 'taejiding@gmail.com'];
+export function isOwnerEmail(email) { return OWNER_EMAILS.includes(email); }
+
 const app = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
@@ -81,7 +87,7 @@ export function signOutUser() {
   return signOut(auth);
 }
 
-export async function uploadImage(file) {
+export async function uploadFile(file) {
   if (!file) return null;
   if (!SERVER_ENDPOINT) throw new Error('Image uploads are not set up yet');
   if (!currentUser) throw new Error('Sign in first');
@@ -107,7 +113,7 @@ export async function updateProfile({ displayName, photoFile }) {
   const trimmedName = (displayName || '').trim().slice(0, 40);
   patch.displayName = trimmedName || currentUser.displayName || currentUser.email;
   if (photoFile) {
-    patch.photoURL = await uploadImage(photoFile);
+    patch.photoURL = await uploadFile(photoFile);
   }
   await setDoc(doc(db, 'users', currentUser.email), patch, { merge: true });
   profileCache[currentUser.email] = { ...(profileCache[currentUser.email] || {}), ...patch };
