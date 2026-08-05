@@ -62,7 +62,7 @@
 
   /* Header Section */
   .header { margin-bottom: 36px; }
-  .header-container { margin-bottom: 24px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
   .header-link { 
     display: inline-flex;
     align-items: center;
@@ -296,6 +296,7 @@
         <span class="material-symbols-rounded">arrow_back</span>
         <span>back to oeper.dev</span>
       </a>
+      <div id="accountBar"></div>
     </div>
     <h1>Downloads</h1>
     <p>All assets, documents, and resources in one place.</p>
@@ -500,6 +501,10 @@ function showToast(msg) {
 }
 
 })();
+</script>
+<script type="module">
+  import { mountAccountBar } from './shared/account.js';
+  mountAccountBar(document.getElementById('accountBar'));
 </script>
 </body>
 </html>

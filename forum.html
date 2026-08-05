@@ -60,33 +60,6 @@
   }
   .header p { color: var(--md-sys-color-on-surface-variant); font-size: 16px; max-width: 500px; line-height: 1.5; }
 
-  .config-warning {
-    display: none; background-color: var(--md-sys-color-surface-variant); border-radius: 16px; padding: 14px 18px;
-    margin-top: 16px; font-size: 13px; line-height: 1.6; color: var(--md-sys-color-on-surface-variant);
-  }
-  .config-warning.show { display: block; }
-  .config-warning code { color: var(--md-sys-color-on-surface); }
-
-  /* Auth bar */
-  .auth-bar { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-  .auth-btn {
-    display: inline-flex; align-items: center; gap: 8px; background-color: var(--md-sys-color-primary);
-    color: var(--md-sys-color-on-primary); border: none; border-radius: 100px; padding: 10px 20px;
-    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer;
-  }
-  .auth-btn:hover { opacity: 0.9; }
-  .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .user-chip { display: flex; align-items: center; gap: 8px; }
-  .user-chip img { width: 32px; height: 32px; border-radius: 50%; }
-  .user-chip .name { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
-  .user-chip button {
-    background: none; border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface-variant);
-    border-radius: 100px; padding: 6px 14px; font-size: 12px; cursor: pointer;
-  }
-  .user-chip button:hover { color: var(--md-sys-color-on-surface); }
-  .user-chip .icon-only { padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-  .user-chip .icon-only .material-symbols-rounded { font-size: 14px; }
-
   /* Toolbar */
   .toolbar { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
   .search-wrap { position: relative; width: 100%; }
@@ -159,13 +132,19 @@
     background-color: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant);
   }
   .post-author { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
-  .post-author img { width: 18px; height: 18px; border-radius: 50%; }
+  .post-author img { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; }
   .post-title { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 18px; font-weight: 400; margin-bottom: 4px; line-height: 1.3; }
   .post-excerpt {
     font-size: 14px; color: var(--md-sys-color-on-surface-variant); line-height: 1.5;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px;
   }
-  .post-thumb { max-width: 100%; max-height: 260px; border-radius: 12px; display: block; margin-bottom: 8px; object-fit: cover; }
+  .post-thumb-wrap { position: relative; margin-bottom: 8px; display: inline-block; max-width: 100%; }
+  .post-thumb { max-width: 100%; max-height: 260px; border-radius: 12px; display: block; object-fit: cover; }
+  .post-thumb-count {
+    position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.6); color: #fff; font-size: 12px; font-weight: 500;
+    padding: 3px 9px; border-radius: 100px; display: flex; align-items: center; gap: 4px;
+  }
+  .post-thumb-count .material-symbols-rounded { font-size: 14px; }
   .post-footer { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
   .post-footer span { display: inline-flex; align-items: center; gap: 4px; }
   .post-footer .material-symbols-rounded { font-size: 16px; }
@@ -220,7 +199,10 @@
   .thread-body p { margin-bottom: 1.2em; }
   .thread-body a { color: var(--md-sys-color-primary); }
   .thread-body strong { font-weight: 600; }
-  .thread-image { max-width: 100%; max-height: 480px; border-radius: 16px; display: block; margin-bottom: 20px; }
+  .thread-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 20px; }
+  .thread-gallery img { width: 100%; height: 140px; object-fit: cover; border-radius: 12px; cursor: zoom-in; }
+  .thread-gallery.single { grid-template-columns: 1fr; }
+  .thread-gallery.single img { width: auto; max-width: 100%; height: auto; max-height: 480px; border-radius: 16px; }
   .thread-actions { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--md-sys-color-outline); flex-wrap: wrap; }
   .thread-actions .vote-col { flex-direction: row; padding: 4px; background: var(--md-sys-color-surface); border-radius: 100px; gap: 2px; }
   .thread-actions .vote-count { padding: 0 4px; }
@@ -238,7 +220,7 @@
   .comment .vote-count { font-size: 12px; }
   .comment-main { flex: 1; min-width: 0; }
   .comment-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
-  .comment-meta img { width: 20px; height: 20px; border-radius: 50%; }
+  .comment-meta img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
   .comment-meta .name { font-size: 13px; font-weight: 500; }
   .comment-meta .time { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
   .comment-body { font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
@@ -256,8 +238,8 @@
     font-size: 14px; color: var(--md-sys-color-on-surface-variant);
   }
 
-  /* Image attach control (shared by post + comment forms) */
-  .image-attach { display: flex; align-items: center; gap: 10px; }
+  /* Image attach controls (post form supports up to MAX_POST_IMAGES; comment form is single-image) */
+  .image-attach { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .image-attach input[type="file"] { display: none; }
   .image-attach-btn {
     display: inline-flex; align-items: center; gap: 6px; background: none; border: 1px dashed var(--md-sys-color-outline);
@@ -265,7 +247,7 @@
   }
   .image-attach-btn:hover { color: var(--md-sys-color-on-surface); border-color: var(--md-sys-color-outline-variant); }
   .image-preview-wrap { position: relative; display: inline-block; }
-  .image-preview-wrap img { max-height: 100px; border-radius: 10px; display: block; }
+  .image-preview-wrap img { max-height: 90px; border-radius: 10px; display: block; }
   .image-preview-remove {
     position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%;
     background: var(--md-sys-color-error); color: #410002; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
@@ -327,13 +309,10 @@
         <span class="material-symbols-rounded">arrow_back</span>
         <span>back to oeper.dev</span>
       </a>
-      <div class="auth-bar" id="authBar"></div>
+      <div id="accountBar"></div>
     </div>
     <h1>Forum</h1>
     <p>Post, tag, discuss. Anyone signed in with Google can join.</p>
-    <div class="config-warning" id="configWarning">
-      <strong>Forum isn't configured yet.</strong> A <code>FIREBASE_CONFIG</code> needs to be added to this page before posts can load.
-    </div>
   </header>
 
   <div class="toolbar">
@@ -390,7 +369,7 @@
       <textarea name="body" maxlength="8000" placeholder="Write in markdown — # headings, **bold**, *italic*, [link](url)"></textarea>
     </div>
     <div class="field">
-      <label>Image (optional)</label>
+      <label>Images (up to <span id="maxImagesLabel"></span>, optional)</label>
       <div class="image-attach" id="postImageAttach"></div>
     </div>
     <div class="field">
@@ -411,25 +390,15 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
-} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+  auth, db, SERVER_ENDPOINT, MAX_IMAGE_BYTES,
+  getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded,
+  mountAccountBar, uploadImage,
+} from './shared/account.js';
 import {
-  getFirestore, collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
+  collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
   query, orderBy, serverTimestamp, arrayUnion, arrayRemove
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-
-// Paste the firebaseConfig object from Firebase console (Project settings → Your apps) here.
-// This is a public client identifier, not a secret — safe to commit.
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAs7SP8FaWUDuz7GVp9rG5uZw4oEIWmBUk",
-  authDomain: "oepernet-1683535959256.firebaseapp.com",
-  projectId: "oepernet-1683535959256",
-  storageBucket: "oepernet-1683535959256.firebasestorage.app",
-  messagingSenderId: "882911814752",
-  appId: "1:882911814752:web:af7c10447ea6ee56c8cf05",
-};
 
 const OWNER_EMAIL = 'sanhackerman@gmail.com';
 const DEFAULT_TAGS = [
@@ -438,12 +407,7 @@ const DEFAULT_TAGS = [
   { id: 'help',     label: 'Help',     icon: 'help' },
   { id: 'feedback', label: 'Feedback', icon: 'rate_review' },
 ];
-// Change this any time — also update MAX_FILE_BYTES in forum-server/upload-server.js to match.
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-
-// Your Cloudflare Tunnel URL from forum-server/README.md (e.g. 'https://xxxx.trycloudflare.com').
-// Handles both image uploads and report delivery. Leave blank to disable both until the server is running.
-const SERVER_ENDPOINT = 'https://gardens-annual-tractor-ago.trycloudflare.com';
+const MAX_POST_IMAGES = 8;
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function parseMarkdown(md) {
@@ -493,6 +457,12 @@ function commentUrl(postId, commentId) {
   url.searchParams.set('comment', commentId);
   return url.toString();
 }
+// Legacy posts had a single `imageUrl` string; newer ones have `imageUrls: []`.
+function imagesOf(item) {
+  if (Array.isArray(item.imageUrls) && item.imageUrls.length) return item.imageUrls;
+  if (item.imageUrl) return [item.imageUrl];
+  return [];
+}
 
 function closeAllKebabMenus() {
   document.querySelectorAll('.kebab-menu.open').forEach(m => m.classList.remove('open'));
@@ -526,107 +496,63 @@ function buildKebabMenu(items) {
   return wrap;
 }
 
-if (!FIREBASE_CONFIG) {
-  document.getElementById('configWarning').classList.add('show');
-  document.getElementById('newPostBtn').disabled = true;
-} else {
-  runForum(FIREBASE_CONFIG);
-}
+document.getElementById('maxImagesLabel').textContent = MAX_POST_IMAGES;
+mountAccountBar(document.getElementById('accountBar'));
+runForum();
 
-function runForum(config) {
-  const app = initializeApp(config);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-  const provider = new GoogleAuthProvider();
-
-  let currentUser = null;
+function runForum() {
   let posts = [];
   let myBanStatus = null;
-  const nameCache = {}; // email -> { displayName } | null
   const unsubComments = { current: null };
 
+  function currentUser() { return getCurrentUser(); }
   function isOwner(email) { return email === OWNER_EMAIL; }
-  function canModerate(authorEmail) { return currentUser && (currentUser.email === authorEmail || isOwner(currentUser.email)); }
+  function canModerate(authorEmail) {
+    const u = currentUser();
+    return u && (u.email === authorEmail || isOwner(u.email));
+  }
   function isBanned() { return !!myBanStatus; }
-
-  async function ensureNamesLoaded(emails) {
-    const missing = [...new Set(emails)].filter(e => e && !(e in nameCache));
-    await Promise.all(missing.map(async email => {
-      try {
-        const snap = await getDoc(doc(db, 'users', email));
-        nameCache[email] = snap.exists() ? snap.data() : null;
-      } catch { nameCache[email] = null; }
-    }));
-  }
-  function displayNameFor(item) {
-    const override = item.authorEmail && nameCache[item.authorEmail];
-    return (override && override.displayName) || item.authorName || item.authorEmail || 'anon';
-  }
+  function nameOf(item) { return getProfile(item.authorEmail, item.authorName, item.authorPhoto).name; }
+  function photoOf(item) { return getProfile(item.authorEmail, item.authorName, item.authorPhoto).photo; }
 
   async function refreshBanStatus() {
-    if (!currentUser) { myBanStatus = null; return; }
+    const u = currentUser();
+    if (!u) { myBanStatus = null; return; }
     try {
-      const snap = await getDoc(doc(db, 'bans', currentUser.email));
+      const snap = await getDoc(doc(db, 'bans', u.email));
       myBanStatus = snap.exists() ? snap.data() : null;
     } catch { myBanStatus = null; }
   }
 
-  // ── Auth ──────────────────────────────────────────────────
-  const authBar = document.getElementById('authBar');
-  function renderAuthBar() {
-    if (currentUser) {
-      const shownName = displayNameFor({ authorEmail: currentUser.email, authorName: currentUser.displayName });
-      authBar.innerHTML = `
-        <div class="user-chip">
-          <img src="${currentUser.photoURL || ''}" alt="">
-          <span class="name">${escHtml(shownName)}</span>
-          <button id="editNameBtn" class="icon-only" title="Change display name"><span class="material-symbols-rounded">edit</span></button>
-          <button id="signOutBtn">Sign out</button>
-        </div>
-      `;
-      document.getElementById('signOutBtn').addEventListener('click', () => signOut(auth));
-      document.getElementById('editNameBtn').addEventListener('click', editDisplayName);
-    } else {
-      authBar.innerHTML = `<button class="auth-btn" id="signInBtn"><span class="material-symbols-rounded" style="font-size:18px;">login</span> Sign in with Google</button>`;
-      document.getElementById('signInBtn').addEventListener('click', () => {
-        signInWithPopup(auth, provider).catch(err => showToast('Sign-in failed: ' + err.message));
-      });
-    }
-  }
-
-  async function editDisplayName() {
-    if (!currentUser) return;
-    const current = (nameCache[currentUser.email] && nameCache[currentUser.email].displayName) || currentUser.displayName || '';
-    const name = window.prompt('Choose a display name for the forum (shown on your posts and comments):', current);
-    if (name === null) return;
-    const trimmed = name.trim().slice(0, 40);
-    if (!trimmed) { showToast('Display name cannot be empty'); return; }
-    try {
-      await setDoc(doc(db, 'users', currentUser.email), { displayName: trimmed, updatedAt: serverTimestamp() }, { merge: true });
-      nameCache[currentUser.email] = { ...(nameCache[currentUser.email]||{}), displayName: trimmed };
-      renderAuthBar();
+  onAccountChange(async user => {
+    renderList();
+    if (user) {
+      await Promise.all([ensureProfileLoaded(user.email), refreshBanStatus()]);
       renderList();
-      if (openPostId) openThread(openPostId, { keepScroll: true });
-      showToast('Display name updated');
-    } catch (err) { showToast('Could not update name: ' + err.message); }
-  }
+    } else {
+      myBanStatus = null;
+    }
+    if (openPostId) openThread(openPostId, { keepScroll: true });
+  });
 
   async function banUser(email) {
-    if (!currentUser || !isOwner(currentUser.email)) return;
+    const u = currentUser();
+    if (!u || !isOwner(u.email)) return;
     if (!confirm(`Ban ${email}? They won't be able to post, comment, or vote anymore.`)) return;
     try {
-      await setDoc(doc(db, 'bans', email), { bannedAt: serverTimestamp(), bannedBy: currentUser.email });
+      await setDoc(doc(db, 'bans', email), { bannedAt: serverTimestamp(), bannedBy: u.email });
       showToast('User banned');
     } catch (err) { showToast('Could not ban: ' + err.message); }
   }
 
   async function reportItem(type, postId, commentId) {
-    if (!currentUser) { showToast('Sign in to report'); return; }
+    const u = currentUser();
+    if (!u) { showToast('Sign in to report'); return; }
     if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
     const reason = window.prompt('Why are you reporting this?');
     if (!reason || !reason.trim()) return;
     try {
-      const idToken = await currentUser.getIdToken();
+      const idToken = await u.getIdToken();
       const res = await fetch(SERVER_ENDPOINT + '/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
@@ -662,11 +588,12 @@ function runForum(config) {
   }
 
   function menuItemsForPost(p) {
+    const u = currentUser();
     const items = [
       { label: 'Share', icon: 'link', onClick: () => copyLink(postUrl(p.id), 'Post link') },
       { label: 'Report', icon: 'flag', onClick: () => reportItem('post', p.id, null) },
     ];
-    if (currentUser && isOwner(currentUser.email) && p.authorEmail !== currentUser.email) {
+    if (u && isOwner(u.email) && p.authorEmail !== u.email) {
       items.push({ label: 'Ban user', icon: 'block', dangerous: true, onClick: () => banUser(p.authorEmail) });
     }
     if (canModerate(p.authorEmail)) {
@@ -676,11 +603,12 @@ function runForum(config) {
   }
 
   function menuItemsForComment(c, postId) {
+    const u = currentUser();
     const items = [
       { label: 'Share', icon: 'link', onClick: () => copyLink(commentUrl(postId, c.id), 'Comment link') },
       { label: 'Report', icon: 'flag', onClick: () => reportItem('comment', postId, c.id) },
     ];
-    if (currentUser && isOwner(currentUser.email) && c.authorEmail !== currentUser.email) {
+    if (u && isOwner(u.email) && c.authorEmail !== u.email) {
       items.push({ label: 'Ban user', icon: 'block', dangerous: true, onClick: () => banUser(c.authorEmail) });
     }
     if (canModerate(c.authorEmail)) {
@@ -689,30 +617,53 @@ function runForum(config) {
     return items;
   }
 
-  onAuthStateChanged(auth, async user => {
-    currentUser = user;
-    renderAuthBar();
-    renderList();
-    if (user) {
-      await Promise.all([ensureNamesLoaded([user.email]), refreshBanStatus()]);
-      renderAuthBar();
-      renderList();
-    } else {
-      myBanStatus = null;
+  // ── Image attach widgets ────────────────────────────────────
+  // Post form: up to MAX_POST_IMAGES.
+  function createMultiImageAttach(container, maxCount) {
+    let files = [];
+    function render() {
+      const canAddMore = files.length < maxCount;
+      container.innerHTML = `
+        ${files.map((f, i) => `
+          <div class="image-preview-wrap" data-i="${i}">
+            <img src="${URL.createObjectURL(f)}" alt="">
+            <button type="button" class="image-preview-remove" data-remove="${i}"><span class="material-symbols-rounded">close</span></button>
+          </div>
+        `).join('')}
+        ${canAddMore ? `
+          <label class="image-attach-btn">
+            <span class="material-symbols-rounded" style="font-size:16px;">add_photo_alternate</span> Add image (${files.length}/${maxCount})
+            <input type="file" accept="image/*" multiple>
+          </label>
+        ` : ''}
+      `;
+      container.querySelectorAll('[data-remove]').forEach(btn => {
+        btn.addEventListener('click', () => { files.splice(+btn.dataset.remove, 1); render(); });
+      });
+      const input = container.querySelector('input[type="file"]');
+      if (input) {
+        input.addEventListener('change', e => {
+          for (const f of [...e.target.files]) {
+            if (files.length >= maxCount) { showToast(`Up to ${maxCount} images per post`); break; }
+            if (f.size > MAX_IMAGE_BYTES) { showToast(`Each image must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); continue; }
+            files.push(f);
+          }
+          render();
+        });
+      }
     }
-    if (openPostId) openThread(openPostId, { keepScroll: true });
-  });
+    render();
+    return { getFiles: () => files, reset: () => { files = []; render(); } };
+  }
 
-  // ── Image attach widget (shared factory for post form + comment forms) ──
+  // Comment form: single image.
   function createImageAttach(container) {
     let file = null;
-    let objectUrl = null;
     function render() {
       if (file) {
-        objectUrl = URL.createObjectURL(file);
         container.innerHTML = `
           <div class="image-preview-wrap">
-            <img src="${objectUrl}" alt="">
+            <img src="${URL.createObjectURL(file)}" alt="">
             <button type="button" class="image-preview-remove" title="Remove"><span class="material-symbols-rounded">close</span></button>
           </div>
         `;
@@ -734,30 +685,14 @@ function runForum(config) {
       }
     }
     render();
-    return {
-      getFile: () => file,
-      reset: () => { file = null; render(); },
-    };
+    return { getFile: () => file, reset: () => { file = null; render(); } };
   }
 
-  async function uploadImageIfAny(file) {
-    if (!file || !currentUser) return null;
-    if (!SERVER_ENDPOINT) throw new Error('Image uploads are not set up yet');
-    const idToken = await currentUser.getIdToken();
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch(SERVER_ENDPOINT + '/upload', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + idToken },
-      body: fd,
-    });
-    if (!res.ok) {
-      let message = `Upload failed (${res.status})`;
-      try { message = (await res.json()).error || message; } catch {}
-      throw new Error(message);
-    }
-    const data = await res.json();
-    return data.url;
+  async function uploadImagesIfAny(files) {
+    if (!files || !files.length) return [];
+    const urls = [];
+    for (const f of files) urls.push(await uploadImage(f));
+    return urls;
   }
 
   // ── Tag pills ──────────────────────────────────────────────
@@ -838,8 +773,9 @@ function runForum(config) {
 
   function voteColHtml(item, idPrefix) {
     const netScore = score(item);
-    const up = currentUser && (item.upvoters || []).includes(currentUser.uid);
-    const down = currentUser && (item.downvoters || []).includes(currentUser.uid);
+    const u = currentUser();
+    const up = u && (item.upvoters || []).includes(u.uid);
+    const down = u && (item.downvoters || []).includes(u.uid);
     return `
       <div class="vote-col">
         <button class="vote-btn ${up ? 'upvoted' : ''}" data-${idPrefix}-up title="Upvote"><span class="material-symbols-rounded">arrow_upward</span></button>
@@ -852,19 +788,26 @@ function runForum(config) {
   function buildPostCard(p) {
     const card = document.createElement('div');
     card.className = 'post-card';
+    const imgs = imagesOf(p);
+    const photo = photoOf(p);
     card.innerHTML = `
       ${voteColHtml(p, 'post')}
       <div class="post-body">
         <div class="post-meta">
           ${(p.tags||[]).map(id => `<span class="post-tag">${escHtml(tagInfo(id).label)}</span>`).join('')}
           <span class="post-author">
-            ${p.authorPhoto ? `<img src="${p.authorPhoto}" alt="">` : ''}
-            ${escHtml(displayNameFor(p))} · ${timeAgo(p._date)}
+            ${photo ? `<img src="${photo}" alt="">` : ''}
+            ${escHtml(nameOf(p))} · ${timeAgo(p._date)}
           </span>
         </div>
         <div class="post-title">${escHtml(p.title)}</div>
         ${p.body ? `<div class="post-excerpt">${escHtml(p.body)}</div>` : ''}
-        ${p.imageUrl ? `<img class="post-thumb" src="${p.imageUrl}" alt="" loading="lazy">` : ''}
+        ${imgs.length ? `
+          <div class="post-thumb-wrap">
+            <img class="post-thumb" src="${imgs[0]}" alt="" loading="lazy">
+            ${imgs.length > 1 ? `<span class="post-thumb-count"><span class="material-symbols-rounded">photo_library</span>${imgs.length}</span>` : ''}
+          </div>
+        ` : ''}
         <div class="post-footer">
           <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount||0} comments</span>
         </div>
@@ -883,9 +826,10 @@ function runForum(config) {
   function postRef(id) { return doc(db, 'posts', id); }
 
   async function toggleVote(ref, item, direction) {
-    if (!currentUser) { showToast('Sign in to vote'); return; }
+    const u = currentUser();
+    if (!u) { showToast('Sign in to vote'); return; }
     if (isBanned()) { showToast("You've been banned"); return; }
-    const uid = currentUser.uid;
+    const uid = u.uid;
     const up = (item.upvoters || []).includes(uid);
     const down = (item.downvoters || []).includes(uid);
     const patch = {};
@@ -907,7 +851,7 @@ function runForum(config) {
       const date = data.createdAt ? data.createdAt.toDate() : new Date();
       return { id: d.id, ...data, _date: date, _ts: date.getTime() };
     });
-    await ensureNamesLoaded(posts.map(p => p.authorEmail));
+    await Promise.all(posts.map(p => ensureProfileLoaded(p.authorEmail)));
     refreshTagPills();
     renderList();
     if (openPostId) refreshOpenThreadChrome();
@@ -929,7 +873,7 @@ function runForum(config) {
   const modal = document.getElementById('modal');
   const postForm = document.getElementById('postForm');
   let selectedTags = [];
-  let postImageAttach = createImageAttach(document.getElementById('postImageAttach'));
+  let postImageAttach = createMultiImageAttach(document.getElementById('postImageAttach'), MAX_POST_IMAGES);
 
   function renderTagSelect() {
     const wrap = document.getElementById('tagSelect');
@@ -947,7 +891,7 @@ function runForum(config) {
   }
 
   document.getElementById('newPostBtn').addEventListener('click', () => {
-    if (!currentUser) { showToast('Sign in to post'); return; }
+    if (!currentUser()) { showToast('Sign in to post'); return; }
     if (isBanned()) { showToast("You've been banned from posting"); return; }
     postForm.reset();
     selectedTags = [];
@@ -971,7 +915,8 @@ function runForum(config) {
 
   postForm.addEventListener('submit', async e => {
     e.preventDefault();
-    if (!currentUser) { showToast('Sign in to post'); return; }
+    const u = currentUser();
+    if (!u) { showToast('Sign in to post'); return; }
     if (isBanned()) { showToast("You've been banned from posting"); return; }
     const fd = new FormData(postForm);
     const title = fd.get('title').trim();
@@ -979,15 +924,15 @@ function runForum(config) {
     const submitBtn = document.getElementById('submitPostBtn');
     submitBtn.disabled = true;
     try {
-      const imageUrl = await uploadImageIfAny(postImageAttach.getFile());
+      const imageUrls = await uploadImagesIfAny(postImageAttach.getFiles());
       await addDoc(collection(db, 'posts'), {
         title,
         body: fd.get('body').trim(),
         tags: selectedTags,
-        imageUrl: imageUrl || null,
-        authorEmail: currentUser.email,
-        authorName: currentUser.displayName,
-        authorPhoto: currentUser.photoURL,
+        imageUrls,
+        authorEmail: u.email,
+        authorName: u.displayName,
+        authorPhoto: u.photoURL,
         upvoters: [],
         downvoters: [],
         commentCount: 0,
@@ -1031,18 +976,24 @@ function runForum(config) {
     openPostId = postId;
     const p = posts.find(x => x.id === postId);
     if (!p) return;
+    const imgs = imagesOf(p);
+    const photo = photoOf(p);
 
     threadContent.innerHTML = `
       <div class="thread-post-meta">
         ${(p.tags||[]).map(id => `<span class="post-tag">${escHtml(tagInfo(id).label)}</span>`).join('')}
         <span class="post-author">
-          ${p.authorPhoto ? `<img src="${p.authorPhoto}" alt="">` : ''}
-          ${escHtml(displayNameFor(p))} · ${timeAgo(p._date)}
+          ${photo ? `<img src="${photo}" alt="">` : ''}
+          ${escHtml(nameOf(p))} · ${timeAgo(p._date)}
         </span>
         <span class="kebab-slot" data-kebab style="margin-left:auto;"></span>
       </div>
       <div class="thread-title">${escHtml(p.title)}</div>
-      ${p.imageUrl ? `<img class="thread-image" src="${p.imageUrl}" alt="">` : ''}
+      ${imgs.length ? `
+        <div class="thread-gallery ${imgs.length === 1 ? 'single' : ''}">
+          ${imgs.map(src => `<img src="${src}" alt="" onclick="window.open('${src}', '_blank')">`).join('')}
+        </div>
+      ` : ''}
       <div class="thread-body">${parseMarkdown(p.body)}</div>
       <div class="thread-actions">
         ${voteColHtml(p, 'thread')}
@@ -1076,7 +1027,7 @@ function runForum(config) {
           const date = data.createdAt ? data.createdAt.toDate() : new Date();
           return { id: d.id, ...data, _date: date };
         });
-        await ensureNamesLoaded(latestComments.map(c => c.authorEmail));
+        await Promise.all(latestComments.map(c => ensureProfileLoaded(c.authorEmail)));
         renderComments(latestComments, postId, opts.highlightComment);
         opts.highlightComment = null;
       }
@@ -1092,8 +1043,8 @@ function runForum(config) {
         ${voteColHtml(c, 'c-' + c.id)}
         <div class="comment-main">
           <div class="comment-meta">
-            ${c.authorPhoto ? `<img src="${c.authorPhoto}" alt="">` : ''}
-            <span class="name">${escHtml(displayNameFor(c))}</span>
+            ${photoOf(c) ? `<img src="${photoOf(c)}" alt="">` : ''}
+            <span class="name">${escHtml(nameOf(c))}</span>
             <span class="time">${timeAgo(c._date)}</span>
             <span class="kebab-slot" data-kebab style="margin-left:auto;"></span>
           </div>
@@ -1120,7 +1071,7 @@ function runForum(config) {
   function renderCommentForm() {
     const wrap = document.getElementById('commentFormWrap');
     if (!wrap) return;
-    if (!currentUser) {
+    if (!currentUser()) {
       wrap.innerHTML = `<div class="comment-form-locked">Sign in to join the discussion.</div>`;
       return;
     }
@@ -1141,19 +1092,21 @@ function runForum(config) {
     const commentImageAttach = createImageAttach(document.getElementById('commentImageAttach'));
     document.getElementById('commentForm').addEventListener('submit', async e => {
       e.preventDefault();
+      const u = currentUser();
       const fd = new FormData(e.target);
       const body = fd.get('body').trim();
-      if (!body || !openPostId) return;
+      if (!body || !openPostId || !u) return;
       const submitBtn = e.target.querySelector('button[type="submit"]');
       submitBtn.disabled = true;
       try {
-        const imageUrl = await uploadImageIfAny(commentImageAttach.getFile());
+        const file = commentImageAttach.getFile();
+        const imageUrl = file ? await uploadImage(file) : null;
         await addDoc(collection(db, 'posts', openPostId, 'comments'), {
           body,
           imageUrl: imageUrl || null,
-          authorEmail: currentUser.email,
-          authorName: currentUser.displayName,
-          authorPhoto: currentUser.photoURL,
+          authorEmail: u.email,
+          authorName: u.displayName,
+          authorPhoto: u.photoURL,
           upvoters: [],
           downvoters: [],
           createdAt: serverTimestamp(),

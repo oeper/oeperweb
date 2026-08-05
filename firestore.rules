@@ -28,7 +28,8 @@ service cloud.firestore {
         && request.resource.data.title.size() <= 150
         && request.resource.data.body is string
         && request.resource.data.body.size() <= 8000
-        && request.resource.data.tags is list;
+        && request.resource.data.tags is list
+        && (!('imageUrls' in request.resource.data) || (request.resource.data.imageUrls is list && request.resource.data.imageUrls.size() <= 8));
 
       // Author/owner can edit or delete their own post outright.
       // Anyone signed in (and not banned) may toggle their own up/downvote.
@@ -54,14 +55,16 @@ service cloud.firestore {
       }
     }
 
-    // Per-user display name, keyed by email. Anyone can read (needed to show
-    // names on posts/comments); only the account itself can set its own name.
+    // Per-user profile (display name + optional photo), keyed by email.
+    // Anyone can read (needed to show names/photos on posts/comments);
+    // only the account itself can write its own profile.
     match /users/{email} {
       allow read: if true;
       allow write: if isSignedIn() && request.auth.token.email == email
         && request.resource.data.displayName is string
         && request.resource.data.displayName.size() > 0
-        && request.resource.data.displayName.size() <= 40;
+        && request.resource.data.displayName.size() <= 40
+        && (!('photoURL' in request.resource.data) || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 500));
     }
 
     // Ban list, keyed by email. Public read so the client can show "you're

@@ -46,7 +46,7 @@
   .page { position: relative; max-width: 840px; margin: 0 auto; padding: 56px 24px 100px; }
 
   .header { margin-bottom: 36px; }
-  .header-container { margin-bottom: 24px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
   .header-link { 
     display: inline-flex;
     align-items: center;
@@ -466,6 +466,7 @@
         <span class="material-symbols-rounded">arrow_back</span>
         <span>back to oeper.dev</span>
       </a>
+      <div id="accountBar"></div>
     </div>
     <h1>Articles</h1>
     <p>Writings, guides, and notes — all in one place.</p>
@@ -897,6 +898,10 @@ if (urlArticle !== null && ARTICLES[+urlArticle]) {
 }
 
 })();
+</script>
+<script type="module">
+  import { mountAccountBar } from './shared/account.js';
+  mountAccountBar(document.getElementById('accountBar'));
 </script>
 </body>
 </html>
