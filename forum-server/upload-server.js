@@ -12,10 +12,9 @@ const PORT = process.env.PORT || 8787;
 // From your firebaseConfig.projectId (Firebase console → Project settings).
 const FIREBASE_PROJECT_ID = 'oepernet-1683535959256';
 
-// Accounts allowed to use the owner-only /upload-file tool (admin.html's
-// Files tab). Keep in sync with OWNER_EMAILS in shared/account.js — this
-// server-side copy is what actually enforces it, the client-side one is
-// only for hiding the UI.
+// Accounts with extra moderation power: can see and delete EVERY user's
+// files (not just their own), and moderate the forum. Keep in sync with
+// OWNER_EMAILS in shared/account.js and isOwner() in firestore.rules.
 const OWNER_EMAILS = (process.env.OWNER_EMAILS || 'sanhackerman@gmail.com,taejiding@gmail.com')
   .split(',').map(s => s.trim()).filter(Boolean);
 
@@ -44,22 +43,33 @@ const DISCORD_REPORT_WEBHOOK = process.env.DISCORD_REPORT_WEBHOOK
 const REPORT_COOLDOWN_SECONDS = 10;
 
 // Where forum post/comment attachments get saved (any signed-in user, via
-// /upload). Override with the UPLOAD_DIR env var to save into shared/
-// internal storage instead — see forum-server/README.md.
+// /upload). These are never publicly listed as a directory — only reachable
+// via the specific URL a post/comment embeds. Override with UPLOAD_DIR to
+// save into shared/internal storage instead — see forum-server/README.md.
 const UPLOAD_DIR = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
   : path.join(__dirname, 'uploads');
 
-// Where owner-uploaded general files get saved (separate from forum
-// attachments on purpose). This folder gets PUBLICLY LISTED by /docs-list —
-// deliberately a dedicated subfolder, not your whole Documents folder,
-// so nothing else that happens to land in Documents from other apps ever
-// becomes publicly visible.
-const OWNER_FILES_DIR = process.env.OWNER_FILES_DIR || '/storage/emulated/0/Documents/oeperweb-files';
+// Where files.html's personal file storage saves uploads — any signed-in
+// user, not just owners. A dedicated subfolder, not your whole Documents
+// folder, since file listings here are per-account.
+const USER_FILES_DIR = process.env.USER_FILES_DIR || '/storage/emulated/0/Documents/oeperweb-files';
+
+// Tiny JSON-file "database" recording who uploaded each file.html file, so
+// /my-files can filter to just the requesting account's own uploads.
+const META_FILE = process.env.META_FILE || path.join(__dirname, 'file-owners.json');
 // ──────────────────────────────────────────────────────────────
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-if (!fs.existsSync(OWNER_FILES_DIR)) fs.mkdirSync(OWNER_FILES_DIR, { recursive: true });
+if (!fs.existsSync(USER_FILES_DIR)) fs.mkdirSync(USER_FILES_DIR, { recursive: true });
+
+function loadMeta() {
+  try { return JSON.parse(fs.readFileSync(META_FILE, 'utf8')); } catch { return {}; }
+}
+function saveMeta(meta) {
+  fs.writeFileSync(META_FILE, JSON.stringify(meta, null, 2));
+}
+function isOwner(email) { return OWNER_EMAILS.includes(email); }
 
 const app = express();
 app.use(cors({ origin: ALLOWED_ORIGINS }));
@@ -93,21 +103,14 @@ function verifyFirebaseToken(req, res, next) {
   });
 }
 
-function verifyOwnerToken(req, res, next) {
-  verifyFirebaseToken(req, res, () => {
-    if (!OWNER_EMAILS.includes(req.user.email)) {
-      return res.status(403).json({ error: 'This account is not authorized to manage the site' });
-    }
-    next();
-  });
-}
-
 function makeFilename(originalname) {
   const ext = path.extname(originalname).slice(0, 10).replace(/[^a-zA-Z0-9.]/g, '');
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
 }
 
-// Forum post/comment attachments — any signed-in user, any file type.
+// ── Forum post/comment attachments — any signed-in user, any file type. ──
+// Not part of the file-owners.json metadata system and never listed
+// publicly — only reachable via the specific URL a post/comment embeds.
 const uploadAttachment = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOAD_DIR),
@@ -124,22 +127,69 @@ app.post('/upload', verifyFirebaseToken, (req, res) => {
   });
 });
 
-// Owner-only general file uploads (admin.html's Files tab) — saved
-// separately from forum attachments, into OWNER_FILES_DIR.
-const uploadOwnerFile = multer({
+// ── Personal file storage (files.html) — any signed-in user ──────────────
+const uploadUserFile = multer({
   storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, OWNER_FILES_DIR),
+    destination: (req, file, cb) => cb(null, USER_FILES_DIR),
     filename: (req, file, cb) => cb(null, makeFilename(file.originalname)),
   }),
   limits: { fileSize: MAX_FILE_BYTES },
 });
 
-app.post('/upload-file', verifyOwnerToken, (req, res) => {
-  uploadOwnerFile.single('file')(req, res, err => {
+app.post('/upload-file', verifyFirebaseToken, (req, res) => {
+  uploadUserFile.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
+    const meta = loadMeta();
+    meta[req.file.filename] = {
+      email: req.user.email,
+      name: req.file.originalname,
+      size: req.file.size,
+      mtime: Date.now(),
+    };
+    saveMeta(meta);
     res.json({ url: `${PUBLIC_BASE_URL}/docs/${req.file.filename}` });
   });
+});
+
+// Lists the requesting account's own uploads. Owners see everyone's, since
+// they're responsible for managing the phone's storage.
+app.get('/my-files', verifyFirebaseToken, (req, res) => {
+  const meta = loadMeta();
+  const mine = isOwner(req.user.email);
+  const entries = Object.entries(meta)
+    .filter(([, m]) => mine || m.email === req.user.email)
+    .map(([filename, m]) => ({
+      filename,
+      name: m.name || filename,
+      size: m.size || 0,
+      mtime: m.mtime || 0,
+      email: m.email,
+      url: `${PUBLIC_BASE_URL}/docs/${encodeURIComponent(filename)}`,
+    }))
+    .sort((a, b) => b.mtime - a.mtime);
+  res.json({ files: entries });
+});
+
+// Delete: the file's own uploader, or an owner.
+app.delete('/docs/:filename', verifyFirebaseToken, (req, res) => {
+  const base = path.basename(req.params.filename);
+  if (!base || base !== req.params.filename) return res.status(400).json({ error: 'Invalid filename' });
+
+  const meta = loadMeta();
+  const entry = meta[base];
+  if (!entry) return res.status(404).json({ error: 'File not found' });
+  if (entry.email !== req.user.email && !isOwner(req.user.email)) {
+    return res.status(403).json({ error: 'You can only delete your own files' });
+  }
+
+  const resolvedDir = path.resolve(USER_FILES_DIR);
+  const target = path.join(resolvedDir, base);
+  if (!target.startsWith(resolvedDir + path.sep)) return res.status(400).json({ error: 'Invalid filename' });
+  try { fs.unlinkSync(target); } catch {}
+  delete meta[base];
+  saveMeta(meta);
+  res.json({ ok: true });
 });
 
 const lastReportAt = new Map(); // email -> timestamp, simple per-user cooldown
@@ -183,56 +233,13 @@ app.post('/report', verifyFirebaseToken, async (req, res) => {
   }
 });
 
-// ── Public listing (read-only, no sign-in needed) ────────────────
-function listDir(dir, urlPrefix) {
-  return fs.readdirSync(dir)
-    .filter(f => !f.startsWith('.'))
-    .map(f => {
-      const stat = fs.statSync(path.join(dir, f));
-      if (!stat.isFile()) return null;
-      return {
-        name: f,
-        size: stat.size,
-        mtime: stat.mtimeMs,
-        url: `${PUBLIC_BASE_URL}/${urlPrefix}/${encodeURIComponent(f)}`,
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => b.mtime - a.mtime);
-}
-
-app.get('/files-list', (req, res) => {
-  try { res.json({ files: listDir(UPLOAD_DIR, 'files') }); }
-  catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.get('/docs-list', (req, res) => {
-  try { res.json({ files: listDir(OWNER_FILES_DIR, 'docs') }); }
-  catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ── Owner-only delete ─────────────────────────────────────────────
-function safeDelete(dir, filename, res) {
-  const base = path.basename(filename);
-  if (!base || base !== filename) return res.status(400).json({ error: 'Invalid filename' });
-  const resolvedDir = path.resolve(dir);
-  const target = path.join(resolvedDir, base);
-  if (!target.startsWith(resolvedDir + path.sep)) return res.status(400).json({ error: 'Invalid filename' });
-  if (!fs.existsSync(target)) return res.status(404).json({ error: 'File not found' });
-  fs.unlinkSync(target);
-  res.json({ ok: true });
-}
-
-app.delete('/files/:filename', verifyOwnerToken, (req, res) => safeDelete(UPLOAD_DIR, req.params.filename, res));
-app.delete('/docs/:filename', verifyOwnerToken, (req, res) => safeDelete(OWNER_FILES_DIR, req.params.filename, res));
-
 app.use('/files', express.static(UPLOAD_DIR, { maxAge: '30d' }));
-app.use('/docs', express.static(OWNER_FILES_DIR, { maxAge: '30d' }));
+app.use('/docs', express.static(USER_FILES_DIR, { maxAge: '30d' }));
 
 app.get('/', (req, res) => res.send('oeperweb forum upload server is running.'));
 
 app.listen(PORT, () => console.log(
   `Upload server listening on port ${PORT} (public base: ${PUBLIC_BASE_URL})\n` +
   `  forum attachments -> ${UPLOAD_DIR}\n` +
-  `  owner files       -> ${OWNER_FILES_DIR}`
+  `  personal files     -> ${USER_FILES_DIR}`
 ));

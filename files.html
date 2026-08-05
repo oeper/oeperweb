@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Files — oeper.dev</title>
-<meta name="description" content="Browse files shared on oeper.dev">
+<meta name="description" content="Personal file storage on oeper.dev">
 <meta property="og:title" content="Files — oeper.dev">
-<meta property="og:description" content="Browse files shared on oeper.dev">
+<meta property="og:description" content="Personal file storage on oeper.dev">
 <meta property="og:url" content="https://oeper.dev/files">
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
@@ -86,19 +86,12 @@
   .pill.active { background-color: var(--md-sys-color-secondary-container); border-color: transparent; color: var(--md-sys-color-on-secondary-container); }
 
   .upload-btn {
-    display: none; align-items: center; gap: 8px; background-color: var(--md-sys-color-primary);
+    display: inline-flex; align-items: center; gap: 8px; background-color: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary); border: none; border-radius: 100px; padding: 10px 20px;
     font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; flex-shrink: 0;
   }
-  .upload-btn.show { display: inline-flex; }
   .upload-btn:hover { opacity: 0.9; }
   .upload-btn input { display: none; }
-
-  .owner-hint {
-    display: none; background-color: var(--md-sys-color-surface-variant); border-radius: 16px; padding: 12px 18px;
-    font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 16px;
-  }
-  .owner-hint.show { display: block; }
 
   .stats { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 24px; padding-left: 4px; }
   .stats strong { color: var(--md-sys-color-primary); font-weight: 500; }
@@ -109,7 +102,6 @@
     border: 1px solid transparent; border-radius: 20px; padding: 14px 18px; transition: background-color 0.2s, border-color 0.2s;
   }
   .file-card:hover { background-color: #21242c; border-color: var(--md-sys-color-outline-variant); }
-  .file-card.wrap { flex-wrap: wrap; }
 
   .file-thumb {
     width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0; object-fit: cover;
@@ -120,7 +112,7 @@
 
   .file-main { flex: 1; min-width: 0; }
   .file-name { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .file-meta { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .file-meta { font-size: 13px; color: var(--md-sys-color-on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   .file-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
   .icon-btn {
@@ -133,6 +125,11 @@
 
   .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
   .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
+  .empty .btn {
+    display: inline-flex; align-items: center; gap: 8px; background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary); border: none; border-radius: 100px; padding: 10px 20px; margin-top: 16px;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer;
+  }
 
   .toast {
     position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: #303034;
@@ -154,41 +151,37 @@
       <div id="accountBar"></div>
     </div>
     <h1>Files</h1>
-    <p>Everything shared here — open to browse and download by anyone.</p>
+    <p>Your own personal file storage. Sign in with Google to upload — only you (and the site owners) can see what you've uploaded.</p>
   </header>
 
-  <div class="toolbar">
+  <div class="toolbar" id="toolbar" style="display:none;">
     <div class="search-wrap">
       <span class="material-symbols-rounded">search</span>
-      <input class="search-input" type="text" placeholder="Search files…" id="searchInput">
+      <input class="search-input" type="text" placeholder="Search your files…" id="searchInput">
     </div>
     <div class="controls-row">
-      <div class="pill-row" id="tabPills">
-        <button class="pill active" data-tab="forum">
-          <span class="material-symbols-rounded">forum</span> Forum attachments
+      <div class="pill-row" id="scopePills">
+        <button class="pill active" data-scope="mine">
+          <span class="material-symbols-rounded">person</span> My files
         </button>
-        <button class="pill" data-tab="docs">
-          <span class="material-symbols-rounded">folder</span> Documents
+        <button class="pill" data-scope="all" id="allScopePill" style="display:none;">
+          <span class="material-symbols-rounded">groups</span> Everyone's
         </button>
       </div>
-      <label class="upload-btn" id="uploadBtn">
+      <label class="upload-btn">
         <span class="material-symbols-rounded">upload</span> Upload
         <input type="file" id="uploadInput">
       </label>
     </div>
   </div>
 
-  <div class="owner-hint" id="ownerHint">
-    Signed in as an owner — you can upload and delete files here. Everyone else can only view and download.
-  </div>
-
-  <div class="stats"><span>Total: <strong id="visibleCount">0</strong> files</span></div>
+  <div class="stats" id="stats" style="display:none;"><span>Total: <strong id="visibleCount">0</strong> files</span></div>
 
   <div class="file-list" id="fileList"></div>
 
   <div class="empty" id="emptyState">
-    <span class="material-symbols-rounded">folder_off</span>
-    <p id="emptyText">No files here yet.</p>
+    <span class="material-symbols-rounded" id="emptyIcon">login</span>
+    <p id="emptyText">Sign in to view and upload your files.</p>
   </div>
 </div>
 
@@ -201,13 +194,8 @@ import {
 
 mountAccountBar(document.getElementById('accountBar'));
 
-const TABS = {
-  forum: { list: '/files-list', del: name => `/files/${encodeURIComponent(name)}`, upload: '/upload' },
-  docs:  { list: '/docs-list',  del: name => `/docs/${encodeURIComponent(name)}`,  upload: '/upload-file' },
-};
-
-let activeTab = 'forum';
 let files = [];
+let scope = 'mine'; // 'mine' | 'all' (owners only)
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function isImage(name) { return /\.(jpe?g|png|gif|webp|bmp|svg|avif)$/i.test(name); }
@@ -237,27 +225,33 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-function isOwner() {
+function currentIsOwner() {
   const u = getCurrentUser();
   return !!(u && isOwnerEmail(u.email));
 }
 
-function updateOwnerUI() {
-  document.getElementById('uploadBtn').classList.toggle('show', isOwner());
-  document.getElementById('ownerHint').classList.toggle('show', isOwner());
-  render();
-}
-onAccountChange(updateOwnerUI);
+onAccountChange(user => {
+  const signedIn = !!user;
+  document.getElementById('toolbar').style.display = signedIn ? '' : 'none';
+  document.getElementById('stats').style.display = signedIn ? '' : 'none';
+  document.getElementById('allScopePill').style.display = currentIsOwner() ? '' : 'none';
+  if (signedIn) loadList();
+  else { files = []; render(); }
+});
 
 async function loadList() {
+  const user = getCurrentUser();
+  if (!user) return;
   if (!SERVER_ENDPOINT) {
-    document.getElementById('emptyText').textContent = "Files aren't set up yet.";
-    files = [];
+    files = null; // sentinel: server not configured
     render();
     return;
   }
   try {
-    const res = await fetch(SERVER_ENDPOINT + TABS[activeTab].list);
+    const idToken = await user.getIdToken();
+    const res = await fetch(SERVER_ENDPOINT + '/my-files', {
+      headers: { Authorization: 'Bearer ' + idToken },
+    });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     files = data.files || [];
@@ -269,21 +263,39 @@ async function loadList() {
 }
 
 function render() {
+  const user = getCurrentUser();
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
-  const filtered = files.filter(f => !q || f.name.toLowerCase().includes(q));
+  const filtered = (files || []).filter(f => {
+    const inScope = scope === 'all' || !user || f.email === user.email;
+    return inScope && (!q || f.name.toLowerCase().includes(q));
+  });
 
   const list = document.getElementById('fileList');
   list.innerHTML = '';
   filtered.forEach(f => list.appendChild(buildCard(f)));
-
   document.getElementById('visibleCount').textContent = filtered.length;
-  document.getElementById('emptyState').style.display = filtered.length === 0 ? 'block' : 'none';
-  if (files.length > 0) document.getElementById('emptyText').textContent = 'No files match your search.';
+
+  const empty = document.getElementById('emptyState');
+  empty.style.display = filtered.length === 0 ? 'block' : 'none';
+  if (filtered.length === 0) {
+    const [icon, text] = !user
+      ? ['login', 'Sign in to view and upload your files.']
+      : files === null
+        ? ['cloud_off', "Files aren't set up yet."]
+        : q
+          ? ['search_off', 'No files match your search.']
+          : ['upload_file', "You haven't uploaded anything yet."];
+    document.getElementById('emptyIcon').textContent = icon;
+    document.getElementById('emptyText').textContent = text;
+  }
 }
 
 function buildCard(f) {
   const card = document.createElement('div');
   card.className = 'file-card';
+  const user = getCurrentUser();
+  const mineOrOwner = user && (f.email === user.email || currentIsOwner());
+  const showUploader = scope === 'all' && user && f.email !== user.email;
 
   let thumbHtml;
   if (isImage(f.name)) thumbHtml = `<img class="file-thumb" src="${f.url}" alt="" loading="lazy">`;
@@ -294,7 +306,7 @@ function buildCard(f) {
     ${thumbHtml}
     <div class="file-main">
       <div class="file-name">${escHtml(f.name)}</div>
-      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}</div>
+      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${showUploader ? ' · ' + escHtml(f.email) : ''}</div>
     </div>
     <div class="file-actions">
       <a class="icon-btn" href="${f.url}" target="_blank" rel="noopener" download title="Download"><span class="material-symbols-rounded">download</span></a>
@@ -302,24 +314,21 @@ function buildCard(f) {
     </div>
   `;
 
-  const delBtn = card.querySelector('[data-delete]');
-  if (isOwner()) {
+  if (mineOrOwner) {
+    const delBtn = card.querySelector('[data-delete]');
     delBtn.style.display = '';
-    delBtn.addEventListener('click', () => deleteFile(f.name));
+    delBtn.addEventListener('click', () => deleteFile(f.filename));
   }
   return card;
 }
 
-async function deleteFile(name) {
+async function deleteFile(filename) {
   const user = getCurrentUser();
-  if (!user || !isOwnerEmail(user.email)) return;
-  const warning = activeTab === 'forum'
-    ? `Delete "${name}"? If a forum post is using this file, its attachment will break.`
-    : `Delete "${name}"? This can't be undone.`;
-  if (!confirm(warning)) return;
+  if (!user) return;
+  if (!confirm('Delete this file? This cannot be undone.')) return;
   try {
     const idToken = await user.getIdToken();
-    const res = await fetch(SERVER_ENDPOINT + TABS[activeTab].del(name), {
+    const res = await fetch(SERVER_ENDPOINT + '/docs/' + encodeURIComponent(filename), {
       method: 'DELETE',
       headers: { Authorization: 'Bearer ' + idToken },
     });
@@ -335,14 +344,11 @@ async function deleteFile(name) {
   }
 }
 
-document.querySelectorAll('#tabPills .pill').forEach(pill => {
+document.querySelectorAll('#scopePills .pill').forEach(pill => {
   pill.addEventListener('click', () => {
-    document.querySelectorAll('#tabPills .pill').forEach(p => p.classList.toggle('active', p === pill));
-    activeTab = pill.dataset.tab;
-    const url = new URL(window.location);
-    url.searchParams.set('tab', activeTab);
-    history.replaceState(null, '', url);
-    loadList();
+    document.querySelectorAll('#scopePills .pill').forEach(p => p.classList.toggle('active', p === pill));
+    scope = pill.dataset.scope;
+    render();
   });
 });
 
@@ -350,10 +356,11 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
   const file = e.target.files[0];
   e.target.value = '';
   if (!file) return;
-  if (!isOwner()) { showToast('Sign in as an owner to upload'); return; }
+  const user = getCurrentUser();
+  if (!user) { showToast('Sign in to upload'); return; }
   if (file.size > MAX_IMAGE_BYTES) { showToast(`File must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); return; }
   try {
-    await uploadFile(file, TABS[activeTab].upload);
+    await uploadFile(file, '/upload-file');
     showToast('Uploaded!');
     loadList();
   } catch (err) {
@@ -363,12 +370,7 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
 
 document.getElementById('searchInput').addEventListener('input', render);
 
-const startTab = new URLSearchParams(window.location.search).get('tab');
-if (startTab && TABS[startTab]) {
-  activeTab = startTab;
-  document.querySelectorAll('#tabPills .pill').forEach(p => p.classList.toggle('active', p.dataset.tab === startTab));
-}
-loadList();
+render();
 </script>
 </body>
 </html>

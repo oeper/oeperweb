@@ -1,27 +1,29 @@
-# Forum + file-share server
+# Forum + personal file storage server
 
-A tiny Node server backing `files.html` (a public file browser — anyone can
-view/download, only `OWNER_EMAILS` can upload/delete) and the forum:
+A tiny Node server backing `files.html` (personal cloud storage — anyone
+signed in can upload; each account only sees its own files; owners see
+everyone's for moderation) and the forum:
 
 - **`/upload`** — forum post/comment attachments (any signed-in user, any
-  file type, not just images) for `forum.html`
-- **`/upload-file`** — general file uploads restricted to `OWNER_EMAILS`,
-  saved separately from forum attachments into `OWNER_FILES_DIR`
-- **`/files-list`** / **`/docs-list`** — public, no sign-in needed. Lists
-  what's in the forum-attachments folder / the owner-files folder, for
-  `files.html` to render
-- **`DELETE /files/:name`** / **`DELETE /docs/:name`** — restricted to
-  `OWNER_EMAILS`, deletes a single file from either folder
+  file type, not just images) for `forum.html`. Not part of the per-account
+  system below and never listed as a directory — only reachable via the
+  exact URL a specific post/comment embeds.
+- **`/upload-file`** — personal file uploads, any signed-in user, saved into
+  `USER_FILES_DIR`. Who uploaded each file is recorded in `file-owners.json`
+  (a small local JSON "database" next to the script — gitignored, never
+  committed, since it holds real users' emails).
+- **`/my-files`** — requires sign-in. Returns the requesting account's own
+  uploads; owners get everyone's.
+- **`DELETE /docs/:name`** — requires sign-in; only the file's own uploader
+  or an owner can delete it.
 - **`/report`** — relays the forum's Report button to a Discord webhook,
   kept server-side so the webhook URL is never exposed in the site's public
   source (anyone who got hold of it could post arbitrary spam to your
   Discord channel)
 
-**Privacy note:** `OWNER_FILES_DIR` defaults to a dedicated subfolder,
-`Documents/oeperweb-files` — deliberately *not* your whole Documents folder,
-since `/docs-list` makes everything in that folder publicly listable and
-downloadable by anyone. Don't repoint it at a folder with anything else in
-it.
+**Privacy note:** `USER_FILES_DIR` defaults to a dedicated subfolder,
+`Documents/oeperweb-files` — deliberately *not* your whole Documents folder.
+Don't repoint it at a folder with anything else in it.
 
 It's meant to run **on your Android phone** via Termux, exposed to the
 internet with a Cloudflare Tunnel — no cloud bill, no server to maintain
@@ -110,27 +112,28 @@ Uploaded images will then show up at **Internal storage → Download → forum**
 in the Files app. Only downside: shared storage is slightly slower to write
 to than Termux's own storage, which won't matter at this scale.
 
-## Who can upload/delete files
+## Who has extra moderation power
 
 `OWNER_EMAILS` in `upload-server.js` defaults to `sanhackerman@gmail.com,taejiding@gmail.com`
 — keep it in sync with `OWNER_EMAILS` in `shared/account.js` and `isOwner()`
 in `firestore.rules`, since those are the three places this list is
-enforced. Everyone else can still browse and download via `files.html` —
-just not upload or delete. Override the list without editing the file:
+enforced. Owners can see and delete every account's files via `files.html`'s
+"Everyone's" toggle; everyone else only sees and manages their own. Override
+the list without editing the file:
 
 ```sh
 OWNER_EMAILS=you@gmail.com,other@gmail.com PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
 ```
 
-## Changing where owner-uploaded files land
+## Changing where personal files land
 
-`OWNER_FILES_DIR` defaults to `/storage/emulated/0/Documents/oeperweb-files`
+`USER_FILES_DIR` defaults to `/storage/emulated/0/Documents/oeperweb-files`
 — see the privacy note above before pointing this anywhere else. You'll
 need `termux-setup-storage` (see above) so Termux can write to shared
 storage at all. Override with an env var:
 
 ```sh
-OWNER_FILES_DIR=~/storage/downloads/files PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
+USER_FILES_DIR=~/storage/downloads/files PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
 ```
 
 ## Changing the Discord report webhook
@@ -151,7 +154,7 @@ current tunnel URL:
 
 ```sh
 UPLOAD_DIR=~/storage/downloads/forum \
-OWNER_FILES_DIR=/storage/emulated/0/Documents \
+USER_FILES_DIR=/storage/emulated/0/Documents/oeperweb-files \
 PUBLIC_BASE_URL=https://your-tunnel-url \
 node upload-server.js
 ```
