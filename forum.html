@@ -203,6 +203,18 @@
   .thread-gallery img { width: 100%; height: 140px; object-fit: cover; border-radius: 12px; cursor: zoom-in; }
   .thread-gallery.single { grid-template-columns: 1fr; }
   .thread-gallery.single img { width: auto; max-width: 100%; height: auto; max-height: 480px; border-radius: 16px; }
+  .thread-gallery .attach-video { width: 100%; height: 140px; object-fit: cover; border-radius: 12px; }
+  .thread-gallery.single .attach-video { width: 100%; height: auto; max-height: 480px; border-radius: 16px; }
+
+  .thread-files { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+  .text-attach { display: flex; flex-direction: column; gap: 8px; }
+  .code-preview {
+    background: #1e2025; border: 1px solid var(--md-sys-color-outline); border-radius: 12px;
+    padding: 14px 16px; font-family: monospace; font-size: 12px; line-height: 1.5;
+    color: var(--md-sys-color-on-surface-variant); white-space: pre-wrap; word-break: break-word;
+    max-height: 240px; overflow-y: auto;
+  }
+
   .thread-actions { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--md-sys-color-outline); flex-wrap: wrap; }
   .thread-actions .vote-col { flex-direction: row; padding: 4px; background: var(--md-sys-color-surface); border-radius: 100px; gap: 2px; }
   .thread-actions .vote-count { padding: 0 4px; }
@@ -481,23 +493,70 @@ function attachmentsOf(item) {
   return [];
 }
 const IMAGE_EXT_RE = /\.(jpe?g|png|gif|webp|bmp|svg|avif)$/i;
+const VIDEO_EXT_RE = /\.(mp4|webm|mov|m4v|ogv)$/i;
+const ARCHIVE_EXT_RE = /\.(zip|rar|7z|tar|gz|bz2|xz)$/i;
+const TEXT_EXT_RE = /\.(txt|md|log|csv|json|ya?ml|xml|js|jsx|ts|tsx|mjs|cjs|py|rb|php|java|c|h|cpp|hpp|cs|go|rs|swift|kt|html?|css|scss|sql|sh|bash|ini|conf|toml)$/i;
+
 function isImageUrl(url) { return IMAGE_EXT_RE.test((url || '').split('?')[0]); }
+function fileKind(url) {
+  const clean = (url || '').split('?')[0];
+  if (IMAGE_EXT_RE.test(clean)) return 'image';
+  if (VIDEO_EXT_RE.test(clean)) return 'video';
+  if (ARCHIVE_EXT_RE.test(clean)) return 'archive';
+  if (TEXT_EXT_RE.test(clean)) return 'text';
+  return 'file';
+}
 function fileNameFromUrl(url) {
   try { return decodeURIComponent(new URL(url).pathname.split('/').pop()) || 'file'; }
   catch { return 'file'; }
 }
+
+// Text/code preview fetches are deferred and batched so the feed (which
+// never opts in) never triggers them — only the open thread does.
+const pendingPreviews = [];
+function queueTextPreview(id, url) { pendingPreviews.push({ id, url }); }
+async function flushTextPreviews() {
+  const batch = pendingPreviews.splice(0, pendingPreviews.length);
+  await Promise.all(batch.map(async ({ id, url }) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      let text = await res.text();
+      const truncated = text.length > 2000;
+      el.textContent = text.slice(0, 2000) + (truncated ? '\n…(truncated — open the file to see the rest)' : '');
+    } catch (err) {
+      el.textContent = 'Could not load preview.';
+    }
+  }));
+}
+
 function attachmentHtml(url, opts) {
   opts = opts || {};
   const cls = opts.className || '';
-  if (isImageUrl(url)) {
+  const kind = fileKind(url);
+
+  if (kind === 'image') {
     return `<img class="${cls}" src="${url}" alt="" loading="lazy" ${opts.onclick ? `onclick="${opts.onclick}"` : ''}>`;
   }
-  return `
+  if (kind === 'video') {
+    return `<video class="${cls} attach-video" src="${url}" controls preload="metadata"></video>`;
+  }
+
+  const icon = kind === 'archive' ? 'folder_zip' : kind === 'text' ? 'description' : 'draft';
+  const chip = `
     <a class="file-chip ${cls}" href="${url}" target="_blank" rel="noopener" download>
-      <span class="material-symbols-rounded">draft</span>
+      <span class="material-symbols-rounded">${icon}</span>
       <span class="file-chip-name">${escHtml(fileNameFromUrl(url))}</span>
     </a>
   `;
+  if (kind === 'text' && opts.withPreview) {
+    const pid = 'textprev-' + Math.random().toString(36).slice(2, 9);
+    queueTextPreview(pid, url);
+    return `<div class="text-attach">${chip}<pre class="code-preview" id="${pid}">Loading preview…</pre></div>`;
+  }
+  return chip;
 }
 
 function closeAllKebabMenus() {
@@ -1025,6 +1084,8 @@ function runForum() {
     const p = posts.find(x => x.id === postId);
     if (!p) return;
     const atts = attachmentsOf(p);
+    const mediaAtts = atts.filter(a => ['image', 'video'].includes(fileKind(a)));
+    const fileAtts = atts.filter(a => !['image', 'video'].includes(fileKind(a)));
     const photo = photoOf(p);
 
     threadContent.innerHTML = `
@@ -1037,9 +1098,14 @@ function runForum() {
         <span class="kebab-slot" data-kebab style="margin-left:auto;"></span>
       </div>
       <div class="thread-title">${escHtml(p.title)}</div>
-      ${atts.length ? `
-        <div class="thread-gallery ${atts.length === 1 ? 'single' : ''}">
-          ${atts.map(src => attachmentHtml(src, { onclick: isImageUrl(src) ? `window.open('${src}', '_blank')` : null })).join('')}
+      ${mediaAtts.length ? `
+        <div class="thread-gallery ${mediaAtts.length === 1 ? 'single' : ''}">
+          ${mediaAtts.map(src => attachmentHtml(src, { onclick: isImageUrl(src) ? `window.open('${src}', '_blank')` : null })).join('')}
+        </div>
+      ` : ''}
+      ${fileAtts.length ? `
+        <div class="thread-files">
+          ${fileAtts.map(src => attachmentHtml(src, { withPreview: true })).join('')}
         </div>
       ` : ''}
       <div class="thread-body">${parseMarkdown(p.body)}</div>
@@ -1053,6 +1119,7 @@ function runForum() {
 
     wireThreadVoteButtons(p);
     threadContent.querySelector('[data-kebab]').appendChild(buildKebabMenu(menuItemsForPost(p)));
+    flushTextPreviews();
 
     renderCommentForm();
 
@@ -1097,7 +1164,7 @@ function runForum() {
             <span class="kebab-slot" data-kebab style="margin-left:auto;"></span>
           </div>
           <div class="comment-body">${escHtml(c.body)}</div>
-          ${c.imageUrl ? attachmentHtml(c.imageUrl, { className: 'comment-image' }) : ''}
+          ${c.imageUrl ? attachmentHtml(c.imageUrl, { className: 'comment-image', withPreview: true }) : ''}
         </div>
       </div>
     `).join('');
@@ -1109,6 +1176,7 @@ function runForum() {
       el.querySelector(`[data-c-${id}-down]`).addEventListener('click', () => toggleVote(doc(db, 'posts', postId, 'comments', id), c, 'down'));
       el.querySelector('[data-kebab]').appendChild(buildKebabMenu(menuItemsForComment(c, postId)));
     });
+    flushTextPreviews();
 
     if (highlightId) {
       const el = document.getElementById('comment-' + highlightId);
