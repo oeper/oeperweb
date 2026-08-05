@@ -245,6 +245,13 @@ function showToast(msg) {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
 }
+function copyToClipboard(text) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showToast('Link copied')).catch(() => showToast('Copy failed — copy manually: ' + text));
+  } else {
+    showToast('Copy manually: ' + text);
+  }
+}
 
 function currentIsOwner() {
   const u = getCurrentUser();
@@ -336,10 +343,13 @@ function buildCard(f) {
       <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${showUploader ? ' · ' + escHtml(f.email) : ''}</div>
     </div>
     <div class="file-actions">
+      <button class="icon-btn" data-copy title="Copy link"><span class="material-symbols-rounded">link</span></button>
       <a class="icon-btn" href="${f.url}" target="_blank" rel="noopener" download title="Download"><span class="material-symbols-rounded">download</span></a>
       <button class="icon-btn danger" data-delete title="Delete" style="display:none;"><span class="material-symbols-rounded">delete</span></button>
     </div>
   `;
+
+  card.querySelector('[data-copy]').addEventListener('click', () => copyToClipboard(f.url));
 
   if (mineOrOwner) {
     const delBtn = card.querySelector('[data-delete]');
@@ -427,11 +437,7 @@ document.getElementById('anonUploadInput').addEventListener('change', async e =>
 document.getElementById('anonCopyBtn').addEventListener('click', () => {
   const input = document.getElementById('anonResultUrl');
   input.select();
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(input.value).then(() => showToast('Link copied')).catch(() => showToast('Copy failed — select and copy manually'));
-  } else {
-    showToast('Select and copy manually');
-  }
+  copyToClipboard(input.value);
 });
 
 document.getElementById('searchInput').addEventListener('input', render);
