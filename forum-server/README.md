@@ -1,18 +1,27 @@
-# Forum upload + report server
+# Forum + file-share server
 
-A tiny Node server backing three things:
+A tiny Node server backing `files.html` (a public file browser — anyone can
+view/download, only `OWNER_EMAILS` can upload/delete) and the forum:
 
 - **`/upload`** — forum post/comment attachments (any signed-in user, any
   file type, not just images) for `forum.html`
-- **`/upload-file`** — a general file-hosting tool restricted to
-  `OWNER_EMAILS`, used by `admin.html`'s Files tab to get a link for a new
-  Downloads entry. Saved separately from forum attachments, into
-  `/storage/emulated/0/Documents` by default (regular phone storage, visible
-  in the Files app) — not Termux's private storage.
+- **`/upload-file`** — general file uploads restricted to `OWNER_EMAILS`,
+  saved separately from forum attachments into `OWNER_FILES_DIR`
+- **`/files-list`** / **`/docs-list`** — public, no sign-in needed. Lists
+  what's in the forum-attachments folder / the owner-files folder, for
+  `files.html` to render
+- **`DELETE /files/:name`** / **`DELETE /docs/:name`** — restricted to
+  `OWNER_EMAILS`, deletes a single file from either folder
 - **`/report`** — relays the forum's Report button to a Discord webhook,
   kept server-side so the webhook URL is never exposed in the site's public
   source (anyone who got hold of it could post arbitrary spam to your
   Discord channel)
+
+**Privacy note:** `OWNER_FILES_DIR` defaults to a dedicated subfolder,
+`Documents/oeperweb-files` — deliberately *not* your whole Documents folder,
+since `/docs-list` makes everything in that folder publicly listable and
+downloadable by anyone. Don't repoint it at a folder with anything else in
+it.
 
 It's meant to run **on your Android phone** via Termux, exposed to the
 internet with a Cloudflare Tunnel — no cloud bill, no server to maintain
@@ -101,12 +110,13 @@ Uploaded images will then show up at **Internal storage → Download → forum**
 in the Files app. Only downside: shared storage is slightly slower to write
 to than Termux's own storage, which won't matter at this scale.
 
-## Who can use the Files tool
+## Who can upload/delete files
 
 `OWNER_EMAILS` in `upload-server.js` defaults to `sanhackerman@gmail.com,taejiding@gmail.com`
 — keep it in sync with `OWNER_EMAILS` in `shared/account.js` and `isOwner()`
 in `firestore.rules`, since those are the three places this list is
-enforced. Override without editing the file via an env var:
+enforced. Everyone else can still browse and download via `files.html` —
+just not upload or delete. Override the list without editing the file:
 
 ```sh
 OWNER_EMAILS=you@gmail.com,other@gmail.com PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
@@ -114,10 +124,10 @@ OWNER_EMAILS=you@gmail.com,other@gmail.com PUBLIC_BASE_URL=https://your-tunnel-u
 
 ## Changing where owner-uploaded files land
 
-`OWNER_FILES_DIR` defaults to `/storage/emulated/0/Documents`. To use it,
-you'll first need `termux-setup-storage` (see above) so Termux can write to
-shared storage at all. Override with an env var if you'd rather use a
-different folder:
+`OWNER_FILES_DIR` defaults to `/storage/emulated/0/Documents/oeperweb-files`
+— see the privacy note above before pointing this anywhere else. You'll
+need `termux-setup-storage` (see above) so Termux can write to shared
+storage at all. Override with an env var:
 
 ```sh
 OWNER_FILES_DIR=~/storage/downloads/files PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js

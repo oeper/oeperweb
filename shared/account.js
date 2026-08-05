@@ -92,14 +92,14 @@ export function signOutUser() {
   return signOut(auth);
 }
 
-export async function uploadFile(file) {
+export async function uploadFile(file, endpointPath) {
   if (!file) return null;
   if (!SERVER_ENDPOINT) throw new Error('Image uploads are not set up yet');
   if (!currentUser) throw new Error('Sign in first');
   const idToken = await currentUser.getIdToken();
   const fd = new FormData();
   fd.append('file', file);
-  const res = await fetch(SERVER_ENDPOINT + '/upload', {
+  const res = await fetch(SERVER_ENDPOINT + (endpointPath || '/upload'), {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + idToken },
     body: fd,

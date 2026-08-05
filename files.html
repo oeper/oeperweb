@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Files — oeper.dev</title>
+<meta name="description" content="Browse files shared on oeper.dev">
+<meta property="og:title" content="Files — oeper.dev">
+<meta property="og:description" content="Browse files shared on oeper.dev">
+<meta property="og:url" content="https://oeper.dev/files">
+<meta property="og:type" content="website">
+<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 840px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 28px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header h1 {
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400;
+    margin-bottom: 12px; letter-spacing: -0.5px;
+  }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 16px; max-width: 500px; line-height: 1.5; }
+
+  .toolbar { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+  .search-wrap { position: relative; width: 100%; }
+  .search-wrap .material-symbols-rounded {
+    position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
+    color: var(--md-sys-color-on-surface-variant); font-size: 22px; pointer-events: none;
+  }
+  .search-input {
+    width: 100%; background-color: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 28px; padding: 16px 20px 16px 56px; color: var(--md-sys-color-on-surface);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif; font-size: 16px; outline: none;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+  .search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
+  .search-input:focus { border-color: var(--md-sys-color-primary); background-color: #1f2329; }
+
+  .controls-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .pill-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex: 1; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--md-sys-color-outline);
+    border-radius: 8px; padding: 8px 16px; font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; transition: all 0.2s ease; white-space: nowrap;
+  }
+  .pill .material-symbols-rounded { font-size: 18px; }
+  .pill:hover { background-color: rgba(255,255,255,0.04); color: var(--md-sys-color-on-surface); }
+  .pill.active { background-color: var(--md-sys-color-secondary-container); border-color: transparent; color: var(--md-sys-color-on-secondary-container); }
+
+  .upload-btn {
+    display: none; align-items: center; gap: 8px; background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary); border: none; border-radius: 100px; padding: 10px 20px;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; flex-shrink: 0;
+  }
+  .upload-btn.show { display: inline-flex; }
+  .upload-btn:hover { opacity: 0.9; }
+  .upload-btn input { display: none; }
+
+  .owner-hint {
+    display: none; background-color: var(--md-sys-color-surface-variant); border-radius: 16px; padding: 12px 18px;
+    font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 16px;
+  }
+  .owner-hint.show { display: block; }
+
+  .stats { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 24px; padding-left: 4px; }
+  .stats strong { color: var(--md-sys-color-primary); font-weight: 500; }
+
+  .file-list { display: flex; flex-direction: column; gap: 12px; }
+  .file-card {
+    display: flex; align-items: center; gap: 16px; background-color: var(--md-sys-color-surface);
+    border: 1px solid transparent; border-radius: 20px; padding: 14px 18px; transition: background-color 0.2s, border-color 0.2s;
+  }
+  .file-card:hover { background-color: #21242c; border-color: var(--md-sys-color-outline-variant); }
+  .file-card.wrap { flex-wrap: wrap; }
+
+  .file-thumb {
+    width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0; object-fit: cover;
+    background: var(--md-sys-color-surface-variant); display: flex; align-items: center; justify-content: center;
+    color: var(--md-sys-color-on-surface-variant); font-size: 24px;
+  }
+  img.file-thumb, video.file-thumb { display: block; }
+
+  .file-main { flex: 1; min-width: 0; }
+  .file-name { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-meta { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+
+  .file-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: none; background: transparent;
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none;
+  }
+  .icon-btn:hover { background-color: rgba(255,255,255,0.08); color: var(--md-sys-color-on-surface); }
+  .icon-btn.danger:hover { color: var(--md-sys-color-error); }
+  .icon-btn .material-symbols-rounded { font-size: 20px; }
+
+  .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
+  .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
+
+  .toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: #303034;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4); border-radius: 16px; padding: 14px 24px; font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-size: 14px; color: #e3e2e6; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 100; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <div class="header-container">
+      <a href="https://oeper.dev" class="header-link">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>back to oeper.dev</span>
+      </a>
+      <div id="accountBar"></div>
+    </div>
+    <h1>Files</h1>
+    <p>Everything shared here — open to browse and download by anyone.</p>
+  </header>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="material-symbols-rounded">search</span>
+      <input class="search-input" type="text" placeholder="Search files…" id="searchInput">
+    </div>
+    <div class="controls-row">
+      <div class="pill-row" id="tabPills">
+        <button class="pill active" data-tab="forum">
+          <span class="material-symbols-rounded">forum</span> Forum attachments
+        </button>
+        <button class="pill" data-tab="docs">
+          <span class="material-symbols-rounded">folder</span> Documents
+        </button>
+      </div>
+      <label class="upload-btn" id="uploadBtn">
+        <span class="material-symbols-rounded">upload</span> Upload
+        <input type="file" id="uploadInput">
+      </label>
+    </div>
+  </div>
+
+  <div class="owner-hint" id="ownerHint">
+    Signed in as an owner — you can upload and delete files here. Everyone else can only view and download.
+  </div>
+
+  <div class="stats"><span>Total: <strong id="visibleCount">0</strong> files</span></div>
+
+  <div class="file-list" id="fileList"></div>
+
+  <div class="empty" id="emptyState">
+    <span class="material-symbols-rounded">folder_off</span>
+    <p id="emptyText">No files here yet.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import {
+  SERVER_ENDPOINT, MAX_IMAGE_BYTES, getCurrentUser, onAccountChange, isOwnerEmail, mountAccountBar, uploadFile,
+} from './shared/account.js?v=4';
+
+mountAccountBar(document.getElementById('accountBar'));
+
+const TABS = {
+  forum: { list: '/files-list', del: name => `/files/${encodeURIComponent(name)}`, upload: '/upload' },
+  docs:  { list: '/docs-list',  del: name => `/docs/${encodeURIComponent(name)}`,  upload: '/upload-file' },
+};
+
+let activeTab = 'forum';
+let files = [];
+
+function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function isImage(name) { return /\.(jpe?g|png|gif|webp|bmp|svg|avif)$/i.test(name); }
+function isVideo(name) { return /\.(mp4|webm|mov|m4v|ogv)$/i.test(name); }
+function iconFor(name) {
+  if (/\.(zip|rar|7z|tar|gz|bz2|xz)$/i.test(name)) return 'folder_zip';
+  if (/\.(txt|md|log|csv|json|ya?ml|xml|js|jsx|ts|tsx|py|rb|php|java|c|h|cpp|cs|go|rs|html?|css|sql|sh)$/i.test(name)) return 'description';
+  return 'draft';
+}
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+function timeAgo(ms) {
+  const s = Math.floor((Date.now() - ms) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  if (s < 2592000) return Math.floor(s / 86400) + 'd ago';
+  return new Date(ms).toLocaleDateString();
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function isOwner() {
+  const u = getCurrentUser();
+  return !!(u && isOwnerEmail(u.email));
+}
+
+function updateOwnerUI() {
+  document.getElementById('uploadBtn').classList.toggle('show', isOwner());
+  document.getElementById('ownerHint').classList.toggle('show', isOwner());
+  render();
+}
+onAccountChange(updateOwnerUI);
+
+async function loadList() {
+  if (!SERVER_ENDPOINT) {
+    document.getElementById('emptyText').textContent = "Files aren't set up yet.";
+    files = [];
+    render();
+    return;
+  }
+  try {
+    const res = await fetch(SERVER_ENDPOINT + TABS[activeTab].list);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    files = data.files || [];
+  } catch (err) {
+    showToast('Could not load files: ' + err.message);
+    files = [];
+  }
+  render();
+}
+
+function render() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const filtered = files.filter(f => !q || f.name.toLowerCase().includes(q));
+
+  const list = document.getElementById('fileList');
+  list.innerHTML = '';
+  filtered.forEach(f => list.appendChild(buildCard(f)));
+
+  document.getElementById('visibleCount').textContent = filtered.length;
+  document.getElementById('emptyState').style.display = filtered.length === 0 ? 'block' : 'none';
+  if (files.length > 0) document.getElementById('emptyText').textContent = 'No files match your search.';
+}
+
+function buildCard(f) {
+  const card = document.createElement('div');
+  card.className = 'file-card';
+
+  let thumbHtml;
+  if (isImage(f.name)) thumbHtml = `<img class="file-thumb" src="${f.url}" alt="" loading="lazy">`;
+  else if (isVideo(f.name)) thumbHtml = `<video class="file-thumb" src="${f.url}" preload="metadata"></video>`;
+  else thumbHtml = `<div class="file-thumb"><span class="material-symbols-rounded">${iconFor(f.name)}</span></div>`;
+
+  card.innerHTML = `
+    ${thumbHtml}
+    <div class="file-main">
+      <div class="file-name">${escHtml(f.name)}</div>
+      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}</div>
+    </div>
+    <div class="file-actions">
+      <a class="icon-btn" href="${f.url}" target="_blank" rel="noopener" download title="Download"><span class="material-symbols-rounded">download</span></a>
+      <button class="icon-btn danger" data-delete title="Delete" style="display:none;"><span class="material-symbols-rounded">delete</span></button>
+    </div>
+  `;
+
+  const delBtn = card.querySelector('[data-delete]');
+  if (isOwner()) {
+    delBtn.style.display = '';
+    delBtn.addEventListener('click', () => deleteFile(f.name));
+  }
+  return card;
+}
+
+async function deleteFile(name) {
+  const user = getCurrentUser();
+  if (!user || !isOwnerEmail(user.email)) return;
+  const warning = activeTab === 'forum'
+    ? `Delete "${name}"? If a forum post is using this file, its attachment will break.`
+    : `Delete "${name}"? This can't be undone.`;
+  if (!confirm(warning)) return;
+  try {
+    const idToken = await user.getIdToken();
+    const res = await fetch(SERVER_ENDPOINT + TABS[activeTab].del(name), {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + idToken },
+    });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { msg = (await res.json()).error || msg; } catch {}
+      throw new Error(msg);
+    }
+    showToast('Deleted');
+    loadList();
+  } catch (err) {
+    showToast('Could not delete: ' + err.message);
+  }
+}
+
+document.querySelectorAll('#tabPills .pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('#tabPills .pill').forEach(p => p.classList.toggle('active', p === pill));
+    activeTab = pill.dataset.tab;
+    const url = new URL(window.location);
+    url.searchParams.set('tab', activeTab);
+    history.replaceState(null, '', url);
+    loadList();
+  });
+});
+
+document.getElementById('uploadInput').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  if (!isOwner()) { showToast('Sign in as an owner to upload'); return; }
+  if (file.size > MAX_IMAGE_BYTES) { showToast(`File must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); return; }
+  try {
+    await uploadFile(file, TABS[activeTab].upload);
+    showToast('Uploaded!');
+    loadList();
+  } catch (err) {
+    showToast('Could not upload: ' + err.message);
+  }
+});
+
+document.getElementById('searchInput').addEventListener('input', render);
+
+const startTab = new URLSearchParams(window.location.search).get('tab');
+if (startTab && TABS[startTab]) {
+  activeTab = startTab;
+  document.querySelectorAll('#tabPills .pill').forEach(p => p.classList.toggle('active', p.dataset.tab === startTab));
+}
+loadList();
+</script>
+</body>
+</html>

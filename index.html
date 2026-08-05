@@ -310,7 +310,7 @@
   <div class="page-container" id="pageContainer"></div>
 
 <script type="module">
-  import { mountAccountBar } from './shared/account.js?v=3';
+  import { mountAccountBar } from './shared/account.js?v=4';
   mountAccountBar(document.getElementById('accountBar'));
 </script>
 <script>
@@ -345,6 +345,12 @@ const PAGES = [
         desc: 'Check out some stuff I wrote! Who knows, maybe you might find something you like!',
         icon: 'book',
         action: "window.location.href='https://oeper.dev/articles'"
+      },
+      {
+        title: 'Files',
+        desc: 'Browse and download everything shared here.',
+        icon: 'folder',
+        action: "window.location.href='https://oeper.dev/files'"
       }
     ]
   },
@@ -382,6 +388,15 @@ const PAGES = [
     url: 'https://oeper.dev/articles',
     heroTitle: 'Project Showcases & Insights',
     heroSub: 'A log of development workflows and experiments.',
+    items: []
+  },
+  {
+    id: 'files',
+    title: 'Files',
+    icon: 'folder',
+    url: 'https://oeper.dev/files',
+    heroTitle: 'Shared Files',
+    heroSub: 'Browse and download everything shared here.',
     items: []
   }
 ];

@@ -50,10 +50,12 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
   : path.join(__dirname, 'uploads');
 
-// Where files uploaded through admin.html's owner-only Files tool get saved
-// (separate from forum attachments on purpose). Defaults to the phone's
-// regular Documents folder, visible in the Files app.
-const OWNER_FILES_DIR = process.env.OWNER_FILES_DIR || '/storage/emulated/0/Documents';
+// Where owner-uploaded general files get saved (separate from forum
+// attachments on purpose). This folder gets PUBLICLY LISTED by /docs-list —
+// deliberately a dedicated subfolder, not your whole Documents folder,
+// so nothing else that happens to land in Documents from other apps ever
+// becomes publicly visible.
+const OWNER_FILES_DIR = process.env.OWNER_FILES_DIR || '/storage/emulated/0/Documents/oeperweb-files';
 // ──────────────────────────────────────────────────────────────
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -180,6 +182,49 @@ app.post('/report', verifyFirebaseToken, async (req, res) => {
     res.status(502).json({ error: 'Could not deliver report: ' + err.message });
   }
 });
+
+// ── Public listing (read-only, no sign-in needed) ────────────────
+function listDir(dir, urlPrefix) {
+  return fs.readdirSync(dir)
+    .filter(f => !f.startsWith('.'))
+    .map(f => {
+      const stat = fs.statSync(path.join(dir, f));
+      if (!stat.isFile()) return null;
+      return {
+        name: f,
+        size: stat.size,
+        mtime: stat.mtimeMs,
+        url: `${PUBLIC_BASE_URL}/${urlPrefix}/${encodeURIComponent(f)}`,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.mtime - a.mtime);
+}
+
+app.get('/files-list', (req, res) => {
+  try { res.json({ files: listDir(UPLOAD_DIR, 'files') }); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/docs-list', (req, res) => {
+  try { res.json({ files: listDir(OWNER_FILES_DIR, 'docs') }); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Owner-only delete ─────────────────────────────────────────────
+function safeDelete(dir, filename, res) {
+  const base = path.basename(filename);
+  if (!base || base !== filename) return res.status(400).json({ error: 'Invalid filename' });
+  const resolvedDir = path.resolve(dir);
+  const target = path.join(resolvedDir, base);
+  if (!target.startsWith(resolvedDir + path.sep)) return res.status(400).json({ error: 'Invalid filename' });
+  if (!fs.existsSync(target)) return res.status(404).json({ error: 'File not found' });
+  fs.unlinkSync(target);
+  res.json({ ok: true });
+}
+
+app.delete('/files/:filename', verifyOwnerToken, (req, res) => safeDelete(UPLOAD_DIR, req.params.filename, res));
+app.delete('/docs/:filename', verifyOwnerToken, (req, res) => safeDelete(OWNER_FILES_DIR, req.params.filename, res));
 
 app.use('/files', express.static(UPLOAD_DIR, { maxAge: '30d' }));
 app.use('/docs', express.static(OWNER_FILES_DIR, { maxAge: '30d' }));

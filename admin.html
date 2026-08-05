@@ -241,6 +241,10 @@
     <h1>Content Manager</h1>
     <p>Add, edit and publish articles &amp; downloads without touching code.</p>
     <div style="margin-top:16px;" id="headerAccountBar"></div>
+    <a href="/files" class="header-link" style="margin-top:12px;">
+      <span class="material-symbols-rounded">folder</span>
+      <span>Manage shared files</span>
+    </a>
     <div class="notice" id="fsaNotice">
       <strong>Heads up:</strong> your browser doesn't support saving files in place, so "Save" will download an updated JSON file instead — drop it into <code>data/</code>, replacing the old one.
     </div>
@@ -252,9 +256,6 @@
     </button>
     <button class="tab" data-tab="downloads">
       <span class="material-symbols-rounded">download</span> Downloads
-    </button>
-    <button class="tab" data-tab="files">
-      <span class="material-symbols-rounded">upload_file</span> Files
     </button>
   </div>
 
@@ -274,25 +275,6 @@
     <span class="material-symbols-rounded">description</span>
     <p>Open <code id="expectedFileName">data/articles.json</code> to start editing.</p>
   </div>
-
-  <div id="filesPanel" style="display:none;">
-    <div class="filebar">
-      <span class="status">Upload any file and get a hosted link — paste it into a Download entry's URL field.</span>
-    </div>
-    <div class="field">
-      <label>Choose a file</label>
-      <input type="file" id="fileUploadInput">
-    </div>
-    <button class="btn primary" id="fileUploadBtn"><span class="material-symbols-rounded">upload</span> Upload</button>
-    <div id="fileUploadResult" style="display:none; margin-top:20px;">
-      <div class="field">
-        <label>Hosted URL</label>
-        <input type="text" id="fileUploadUrl" readonly>
-      </div>
-      <button class="btn" id="copyUploadUrlBtn"><span class="material-symbols-rounded">content_copy</span> Copy link</button>
-      <button class="btn primary" id="useInDownloadBtn"><span class="material-symbols-rounded">add</span> Use in new Download entry</button>
-    </div>
-  </div>
 </div>
 
 <div class="overlay" id="overlay"></div>
@@ -306,8 +288,8 @@
 
 <script type="module">
 import {
-  SERVER_ENDPOINT, isOwnerEmail, getCurrentUser, onAccountChange, mountAccountBar,
-} from './shared/account.js?v=3';
+  isOwnerEmail, onAccountChange, mountAccountBar,
+} from './shared/account.js?v=4';
 
 // ── Auth (shared Google Sign-In, gated to OWNER_EMAILS) ────────────
 mountAccountBar(document.getElementById('lockSignInBtn'));
@@ -748,18 +730,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.clas
 function setTab(tabId) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
   activeTab = tabId;
-  const isFiles = tabId === 'files';
-  document.getElementById('filebar').style.display = isFiles ? 'none' : '';
-  document.getElementById('toolrow').style.display = isFiles ? 'none' : '';
-  document.getElementById('itemList').style.display = isFiles ? 'none' : '';
-  document.getElementById('filesPanel').style.display = isFiles ? '' : 'none';
-  if (isFiles) {
-    document.getElementById('emptyHint').style.display = 'none';
-  } else {
-    document.getElementById('listTitle').textContent = tabId === 'articles' ? 'Articles' : 'Downloads';
-    renderList();
-    refreshFileBar();
-  }
+  document.getElementById('listTitle').textContent = tabId === 'articles' ? 'Articles' : 'Downloads';
+  renderList();
+  refreshFileBar();
 }
 
 document.querySelectorAll('.tab').forEach(tab => {
@@ -769,55 +742,6 @@ document.querySelectorAll('.tab').forEach(tab => {
 document.getElementById('openBtn').addEventListener('click', openFile);
 document.getElementById('saveBtn').addEventListener('click', saveFile);
 document.getElementById('addBtn').addEventListener('click', () => openForm(null));
-
-// ── Files tab: owner-only general file upload → hosted URL ─────
-document.getElementById('fileUploadBtn').addEventListener('click', async () => {
-  const input = document.getElementById('fileUploadInput');
-  const file = input.files[0];
-  if (!file) { showToast('Choose a file first'); return; }
-  const user = getCurrentUser();
-  if (!user) { showToast('Sign in first'); return; }
-  if (!SERVER_ENDPOINT) { showToast('File uploads are not set up yet'); return; }
-  const btn = document.getElementById('fileUploadBtn');
-  btn.disabled = true;
-  try {
-    const idToken = await user.getIdToken();
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch(SERVER_ENDPOINT + '/upload-file', {
-      method: 'POST',
-      headers: { Authorization: 'Bearer ' + idToken },
-      body: fd,
-    });
-    if (!res.ok) {
-      let msg = `HTTP ${res.status}`;
-      try { msg = (await res.json()).error || msg; } catch {}
-      throw new Error(msg);
-    }
-    const data = await res.json();
-    document.getElementById('fileUploadUrl').value = data.url;
-    document.getElementById('fileUploadResult').style.display = '';
-    showToast('Uploaded!');
-  } catch (err) {
-    showToast('Could not upload: ' + err.message);
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-document.getElementById('copyUploadUrlBtn').addEventListener('click', async () => {
-  const url = document.getElementById('fileUploadUrl').value;
-  try { await navigator.clipboard.writeText(url); showToast('Copied'); }
-  catch { window.prompt('Copy this link:', url); }
-});
-
-document.getElementById('useInDownloadBtn').addEventListener('click', () => {
-  const url = document.getElementById('fileUploadUrl').value;
-  setTab('downloads');
-  openForm(null);
-  const urlField = document.querySelector('#itemForm [name="url"]');
-  if (urlField) urlField.value = url;
-});
 
 window.addEventListener('beforeunload', (e) => {
   if (state.articles.dirty || state.downloads.dirty) {
