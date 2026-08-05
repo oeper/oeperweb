@@ -3,6 +3,11 @@
 // forum.html additionally imports auth/db/getProfile/etc. directly for
 // posting, voting, moderation — those are forum-specific, not part of the
 // public API other pages need.
+//
+// Whenever this file's exports change, bump the `?v=N` on every
+// `from './shared/account.js?v=N'` import across the site (grep for it) —
+// otherwise some visitors can get a stale cached copy of this file paired
+// with a fresh page that imports something it doesn't export yet.
 
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {
