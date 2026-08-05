@@ -193,7 +193,7 @@
       </div>
       <label class="upload-btn">
         <span class="material-symbols-rounded">upload</span> Upload
-        <input type="file" id="uploadInput">
+        <input type="file" id="uploadInput" multiple>
       </label>
     </div>
   </div>
@@ -394,18 +394,34 @@ document.querySelectorAll('#scopePills .pill').forEach(pill => {
 });
 
 document.getElementById('uploadInput').addEventListener('change', async e => {
-  const file = e.target.files[0];
+  const files = Array.from(e.target.files);
   e.target.value = '';
-  if (!file) return;
+  if (!files.length) return;
   const user = getCurrentUser();
   if (!user) { showToast('Sign in to upload'); return; }
-  if (file.size > MAX_IMAGE_BYTES) { showToast(`File must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); return; }
-  try {
-    await uploadFile(file, '/upload-file');
-    showToast('Uploaded!');
-    loadList();
-  } catch (err) {
-    showToast('Could not upload: ' + err.message);
+
+  let uploaded = 0;
+  let firstError = null;
+  for (const file of files) {
+    if (file.size > MAX_IMAGE_BYTES) {
+      firstError = firstError || `${file.name}: must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`;
+      continue;
+    }
+    try {
+      await uploadFile(file, '/upload-file');
+      uploaded++;
+    } catch (err) {
+      firstError = firstError || `${file.name}: ${err.message}`;
+    }
+  }
+
+  if (uploaded) loadList();
+  if (uploaded === files.length) {
+    showToast(uploaded === 1 ? 'Uploaded!' : `Uploaded ${uploaded} files!`);
+  } else if (uploaded > 0) {
+    showToast(`Uploaded ${uploaded} of ${files.length} — ${firstError}`);
+  } else {
+    showToast('Could not upload: ' + firstError);
   }
 });
 
