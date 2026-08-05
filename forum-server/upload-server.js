@@ -18,10 +18,15 @@ const FIREBASE_PROJECT_ID = 'oepernet-1683535959256';
 const OWNER_EMAILS = (process.env.OWNER_EMAILS || 'sanhackerman@gmail.com,taejiding@gmail.com')
   .split(',').map(s => s.trim()).filter(Boolean);
 
-// Max upload size. Change this number any time and restart the server —
-// also update MAX_IMAGE_BYTES in forum.html to match so the browser
-// rejects oversized files before even trying to upload them.
+// Max upload size for signed-in accounts. Change this number any time and
+// restart the server — also update MAX_IMAGE_BYTES in forum.html/files.html
+// to match so the browser rejects oversized files before even trying.
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
+
+// Anonymous (not signed in) uploads to files.html are allowed, but capped
+// much harder: one file total per IP address, up to this size.
+const ANON_MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB
+const ANON_UPLOAD_LIMIT = 1;
 
 // Origins allowed to call this server. Add more if you test from elsewhere.
 const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765'];
@@ -51,27 +56,42 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR
   : path.join(__dirname, 'uploads');
 
 // Where files.html's personal file storage saves uploads — any signed-in
-// user, not just owners. A dedicated subfolder, not your whole Documents
-// folder, since file listings here are per-account.
-const USER_FILES_DIR = process.env.USER_FILES_DIR || '/storage/emulated/0/Documents/oeperweb-files';
+// user, not just owners, plus the occasional anonymous upload. /my-files
+// only ever returns entries recorded in file-owners.json below (never a
+// raw directory listing), so pointing this at your actual Documents folder
+// doesn't expose anything that wasn't deliberately uploaded through the
+// tool — except that any file already sitting in this folder becomes
+// fetchable at /docs/<its exact filename> if someone knows or guesses it,
+// since static serving covers the whole folder. Uploaded files get random
+// generated names, so this mainly matters for pre-existing files with
+// predictable names.
+const USER_FILES_DIR = process.env.USER_FILES_DIR || '/storage/emulated/0/Documents';
 
 // Tiny JSON-file "database" recording who uploaded each file.html file, so
 // /my-files can filter to just the requesting account's own uploads.
 const META_FILE = process.env.META_FILE || path.join(__dirname, 'file-owners.json');
+
+// Tracks anonymous uploads per IP address (their one free upload).
+const ANON_FILE = process.env.ANON_FILE || path.join(__dirname, 'anon-uploads.json');
 // ──────────────────────────────────────────────────────────────
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 if (!fs.existsSync(USER_FILES_DIR)) fs.mkdirSync(USER_FILES_DIR, { recursive: true });
 
-function loadMeta() {
-  try { return JSON.parse(fs.readFileSync(META_FILE, 'utf8')); } catch { return {}; }
+function loadJson(file) {
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return {}; }
 }
-function saveMeta(meta) {
-  fs.writeFileSync(META_FILE, JSON.stringify(meta, null, 2));
+function saveJson(file, data) {
+  fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
+const loadMeta = () => loadJson(META_FILE);
+const saveMeta = meta => saveJson(META_FILE, meta);
+const loadAnon = () => loadJson(ANON_FILE);
+const saveAnon = data => saveJson(ANON_FILE, data);
 function isOwner(email) { return OWNER_EMAILS.includes(email); }
 
 const app = express();
+app.set('trust proxy', true); // needed so req.ip reflects the real visitor through the Cloudflare Tunnel, not the local tunnel connection
 app.use(cors({ origin: ALLOWED_ORIGINS }));
 app.use(express.json({ limit: '10kb' }));
 
@@ -103,6 +123,23 @@ function verifyFirebaseToken(req, res, next) {
   });
 }
 
+// Like verifyFirebaseToken, but a missing/invalid token just means
+// req.user stays null instead of rejecting the request — used where
+// anonymous access is allowed but signed-in gets different treatment.
+function optionalAuth(req, res, next) {
+  const auth = req.headers.authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (!token) { req.user = null; return next(); }
+  jwt.verify(token, getKey, {
+    algorithms: ['RS256'],
+    issuer: `https://securetoken.google.com/${FIREBASE_PROJECT_ID}`,
+    audience: FIREBASE_PROJECT_ID,
+  }, (err, decoded) => {
+    req.user = err ? null : decoded;
+    next();
+  });
+}
+
 function makeFilename(originalname) {
   const ext = path.extname(originalname).slice(0, 10).replace(/[^a-zA-Z0-9.]/g, '');
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
@@ -127,22 +164,48 @@ app.post('/upload', verifyFirebaseToken, (req, res) => {
   });
 });
 
-// ── Personal file storage (files.html) — any signed-in user ──────────────
-const uploadUserFile = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, USER_FILES_DIR),
-    filename: (req, file, cb) => cb(null, makeFilename(file.originalname)),
-  }),
-  limits: { fileSize: MAX_FILE_BYTES },
+// ── Personal file storage (files.html) — signed-in users get MAX_FILE_BYTES
+// and unlimited uploads; anonymous visitors get one upload, up to
+// ANON_MAX_FILE_BYTES, tracked per IP in anon-uploads.json. ─────────────
+const userFileStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, USER_FILES_DIR),
+  filename: (req, file, cb) => cb(null, makeFilename(file.originalname)),
 });
+const uploadUserFile = multer({ storage: userFileStorage, limits: { fileSize: MAX_FILE_BYTES } });
+const uploadAnonFile = multer({ storage: userFileStorage, limits: { fileSize: ANON_MAX_FILE_BYTES } });
 
-app.post('/upload-file', verifyFirebaseToken, (req, res) => {
-  uploadUserFile.single('file')(req, res, err => {
+app.post('/upload-file', optionalAuth, (req, res) => {
+  if (req.user) {
+    uploadUserFile.single('file')(req, res, err => {
+      if (err) return res.status(400).json({ error: err.message });
+      if (!req.file) return res.status(400).json({ error: 'No file received' });
+      const meta = loadMeta();
+      meta[req.file.filename] = {
+        email: req.user.email,
+        name: req.file.originalname,
+        size: req.file.size,
+        mtime: Date.now(),
+      };
+      saveMeta(meta);
+      res.json({ url: `${PUBLIC_BASE_URL}/docs/${req.file.filename}` });
+    });
+    return;
+  }
+
+  // Anonymous: one upload per IP, ever.
+  const ip = req.ip;
+  const anon = loadAnon();
+  if ((anon[ip] || 0) >= ANON_UPLOAD_LIMIT) {
+    return res.status(403).json({ error: 'Sign in to upload more — anonymous uploads are limited to one file per person.' });
+  }
+  uploadAnonFile.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
+    anon[ip] = (anon[ip] || 0) + 1;
+    saveAnon(anon);
     const meta = loadMeta();
     meta[req.file.filename] = {
-      email: req.user.email,
+      email: null,
       name: req.file.originalname,
       size: req.file.size,
       mtime: Date.now(),

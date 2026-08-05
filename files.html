@@ -123,6 +123,11 @@
   .icon-btn.danger:hover { color: var(--md-sys-color-error); }
   .icon-btn .material-symbols-rounded { font-size: 20px; }
 
+  .anon-panel { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; background-color: var(--md-sys-color-surface); border-radius: 20px; padding: 24px; }
+  .anon-hint { font-size: 14px; color: var(--md-sys-color-on-surface-variant); line-height: 1.5; }
+  .anon-result { display: flex; align-items: center; gap: 8px; }
+  .anon-result .search-input { border-radius: 100px; }
+
   .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
   .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
   .empty .btn {
@@ -151,8 +156,22 @@
       <div id="accountBar"></div>
     </div>
     <h1>Files</h1>
-    <p>Your own personal file storage. Sign in with Google to upload — only you (and the site owners) can see what you've uploaded.</p>
+    <p>Your own personal file storage. Sign in with Google to upload — only you (and the site owners) can see what you've uploaded. Don't want an account? You can still upload one file up to 50MB without signing in.</p>
   </header>
+
+  <div class="anon-panel" id="anonPanel" style="display:none;">
+    <p class="anon-hint">Upload without signing in — limited to 1 file, up to 50MB. The link below is the only way to get back to it afterward, so save it somewhere.</p>
+    <label class="upload-btn" style="align-self:flex-start;">
+      <span class="material-symbols-rounded">upload</span> Upload a file
+      <input type="file" id="anonUploadInput">
+    </label>
+    <div class="anon-result" id="anonResult" style="display:none;">
+      <div class="search-wrap" style="flex:1;">
+        <input class="search-input" id="anonResultUrl" readonly>
+      </div>
+      <button class="icon-btn" id="anonCopyBtn" title="Copy link"><span class="material-symbols-rounded">content_copy</span></button>
+    </div>
+  </div>
 
   <div class="toolbar" id="toolbar" style="display:none;">
     <div class="search-wrap">
@@ -194,6 +213,8 @@ import {
 
 mountAccountBar(document.getElementById('accountBar'));
 
+const ANON_MAX_BYTES = 50 * 1024 * 1024;
+
 let files = [];
 let scope = 'mine'; // 'mine' | 'all' (owners only)
 
@@ -234,9 +255,15 @@ onAccountChange(user => {
   const signedIn = !!user;
   document.getElementById('toolbar').style.display = signedIn ? '' : 'none';
   document.getElementById('stats').style.display = signedIn ? '' : 'none';
+  document.getElementById('anonPanel').style.display = signedIn ? 'none' : '';
   document.getElementById('allScopePill').style.display = currentIsOwner() ? '' : 'none';
-  if (signedIn) loadList();
-  else { files = []; render(); }
+  if (signedIn) {
+    loadList();
+  } else {
+    files = [];
+    document.getElementById('fileList').innerHTML = '';
+    document.getElementById('emptyState').style.display = 'none';
+  }
 });
 
 async function loadList() {
@@ -365,6 +392,45 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
     loadList();
   } catch (err) {
     showToast('Could not upload: ' + err.message);
+  }
+});
+
+async function uploadAnon(file) {
+  if (!SERVER_ENDPOINT) throw new Error('Server not configured');
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(SERVER_ENDPOINT + '/upload-file', { method: 'POST', body: fd });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { msg = (await res.json()).error || msg; } catch {}
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  return data.url;
+}
+
+document.getElementById('anonUploadInput').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  if (file.size > ANON_MAX_BYTES) { showToast(`File must be under ${Math.round(ANON_MAX_BYTES/1024/1024)}MB`); return; }
+  try {
+    const url = await uploadAnon(file);
+    document.getElementById('anonResultUrl').value = url;
+    document.getElementById('anonResult').style.display = 'flex';
+    showToast('Uploaded!');
+  } catch (err) {
+    showToast('Could not upload: ' + err.message);
+  }
+});
+
+document.getElementById('anonCopyBtn').addEventListener('click', () => {
+  const input = document.getElementById('anonResultUrl');
+  input.select();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(input.value).then(() => showToast('Link copied')).catch(() => showToast('Copy failed — select and copy manually'));
+  } else {
+    showToast('Select and copy manually');
   }
 });
 
