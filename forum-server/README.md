@@ -171,6 +171,59 @@ current tunnel URL:
 PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
 ```
 
+## AI proxy (ai.html / ai2.oeper.dev)
+
+`ai-proxy.js` is a **separate script and process** from `upload-server.js` —
+run it alongside, not instead of, the upload server. It backs `ai.html`, a
+small chat UI that talks to [InferrLM](https://github.com/loomax-labs/InferrLM)
+running on a phone on your home network (`AI_UPSTREAM`, default
+`http://192.168.88.56:8889`), exposed publicly at `ai2.oeper.dev`.
+
+**This endpoint has no sign-in and no API key, by design** — anyone with the
+URL can chat with the model, no account required. That's a deliberate
+trade-off, not an oversight. Since the model is small and phone-hosted, the
+proxy protects it with a few limits instead of authentication:
+
+- Only one generation in flight at a time — a second request while one is
+  running gets a `429` asking it to retry shortly, rather than both crawling
+  along together.
+- Per-IP rate limit: `RATE_LIMIT_MAX` (default 20) requests per
+  `RATE_LIMIT_WINDOW_MS` (default 10 minutes).
+- `MAX_MESSAGES` (40) and `MAX_MESSAGE_CHARS` (4000) cap how much a single
+  request can contain, and `MAX_TOKENS` (1024) caps how much the model is
+  asked to generate back.
+
+These are constants at the top of `ai-proxy.js`, not env vars — edit them
+directly if you want different limits.
+
+The model name shown in `ai.html` and sent to InferrLM is forced
+server-side via `AI_MODEL` (defaults to the Gemma model already loaded on
+the phone) — the client never has to know or guess the exact model id.
+
+### Running it
+
+```sh
+cd oeperweb/forum-server
+AI_UPSTREAM=http://192.168.88.56:8889 node ai-proxy.js
+```
+
+It listens on `PORT` (default `8788`) locally. To reach it from
+`AI_UPSTREAM`, the machine running this script needs to be on the same
+Wi-Fi network as whatever's running InferrLM — in practice this is easiest
+if it's the *same* phone as your upload server, just a different app and
+port.
+
+### Exposing it at ai2.oeper.dev
+
+This needs a second **Public Hostname** on the same Cloudflare Tunnel you
+already set up for `myserverfiles.oeper.dev` (Zero Trust dashboard →
+Networks → Tunnels → your tunnel → Public Hostname → Add a public
+hostname): hostname `ai2`, domain `oeper.dev`, service
+`http://localhost:8788`. One `cloudflared` connector can carry as many
+public hostnames as you add this way, so you don't need a second tunnel or
+a second `cloudflared` process — the same one already running for the
+upload server covers this too.
+
 ## Keeping it running
 
 Android will kill background apps to save battery. To reduce that:

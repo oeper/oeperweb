@@ -10,6 +10,7 @@
 <meta property="og:url" content="https://oeper.dev/downloads">
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<script src="./shared/theme-boot.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
@@ -304,7 +305,10 @@
         <span class="material-symbols-rounded">arrow_back</span>
         <span>back to oeper.dev</span>
       </a>
-      <div id="accountBar"></div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
+        <div id="accountBar"></div>
+      </div>
     </div>
     <h1>Downloads</h1>
     <p>All assets, documents, and resources in one place.</p>

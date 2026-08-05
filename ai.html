@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI — oeper.dev</title>
+<meta name="description" content="Chat with a small AI model, self-hosted on oeper.dev">
+<meta property="og:title" content="AI — oeper.dev">
+<meta property="og:description" content="Chat with a small AI model, self-hosted on oeper.dev">
+<meta property="og:url" content="https://oeper.dev/ai">
+<meta property="og:type" content="website">
+<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Fixed violet identity for this page — intentionally not wired into the
+     site-wide theme picker (shared/theme-boot.js is not loaded here), same
+     way Gemini's own palette doesn't follow whatever theme the rest of a
+     Google product is in. */
+  :root {
+    --md-sys-color-background: #14111c;
+    --md-sys-color-surface: #1e1a2b;
+    --md-sys-color-surface-variant: #342b49;
+    --md-sys-color-primary: #c9a4ff;
+    --md-sys-color-on-primary: #3a1e6b;
+    --md-sys-color-secondary-container: #4a3a6e;
+    --md-sys-color-on-secondary-container: #ecdcff;
+    --md-sys-color-on-surface: #ebe4f7;
+    --md-sys-color-on-surface-variant: #cbbfe0;
+    --md-sys-color-outline: #4d4360;
+    --md-sys-color-outline-variant: #8f7fae;
+    --md-sys-color-error: #ffb4ab;
+  }
+
+  body {
+    min-height: 100vh;
+    background: radial-gradient(ellipse 900px 500px at 50% -10%, #2a1f45 0%, var(--md-sys-color-background) 60%);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 760px; margin: 0 auto; padding: 40px 24px 32px; min-height: 100vh; display: flex; flex-direction: column; }
+
+  .header { margin-bottom: 24px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 16px; flex-wrap: wrap; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header h1 {
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400;
+    margin-bottom: 8px; letter-spacing: -0.5px;
+    background: linear-gradient(90deg, #c9a4ff, #f0c8ff);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 14px; max-width: 520px; line-height: 1.5; }
+
+  .chat-shell { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .chat-messages { flex: 1; display: flex; flex-direction: column; padding-bottom: 16px; }
+
+  .chat-empty {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--md-sys-color-on-surface-variant); text-align: center; gap: 12px; min-height: 240px;
+  }
+  .chat-empty .material-symbols-rounded { font-size: 40px; color: var(--md-sys-color-primary); }
+
+  .msg { display: flex; gap: 12px; margin-bottom: 20px; align-items: flex-start; }
+  .msg.user { flex-direction: row-reverse; }
+  .msg-avatar {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);
+  }
+  .msg-avatar .material-symbols-rounded { font-size: 18px; }
+  .msg-bubble {
+    max-width: 78%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.55;
+    white-space: pre-wrap; word-wrap: break-word; background: var(--md-sys-color-surface);
+  }
+  .msg.user .msg-bubble { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-bottom-right-radius: 4px; }
+  .msg.assistant .msg-bubble { border-bottom-left-radius: 4px; }
+  .msg-bubble.error { color: var(--md-sys-color-error); }
+  .msg-bubble.thinking::after {
+    content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--md-sys-color-primary); animation: pulse 1s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+
+  .chat-inputbar {
+    position: sticky; bottom: 16px; display: flex; align-items: flex-end; gap: 10px;
+    background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 26px; padding: 8px 8px 8px 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  #chatInput {
+    flex: 1; background: transparent; border: none; outline: none; resize: none;
+    color: var(--md-sys-color-on-surface); font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    font-size: 15px; line-height: 1.5; max-height: 160px; padding: 8px 0;
+  }
+  #chatInput::placeholder { color: var(--md-sys-color-on-surface-variant); }
+
+  .send-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: none; flex-shrink: 0;
+    background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; transition: opacity 0.2s;
+  }
+  .send-btn:disabled { opacity: 0.4; cursor: default; }
+  .send-btn.stop { background: var(--md-sys-color-error); color: #410002; }
+
+  .chat-footnote {
+    text-align: center; font-size: 12px; color: var(--md-sys-color-on-surface-variant);
+    margin-top: 12px; line-height: 1.5;
+  }
+  .link-btn {
+    background: none; border: none; color: var(--md-sys-color-primary); font-size: 12px;
+    font-family: inherit; cursor: pointer; text-decoration: underline; padding: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <div class="header-container">
+      <a href="https://oeper.dev" class="header-link">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>back to oeper.dev</span>
+      </a>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
+        <div id="accountBar"></div>
+      </div>
+    </div>
+    <h1>AI</h1>
+    <p>Chat with <strong id="modelName">a small local model</strong>, running on my own hardware over a home connection. No sign-in needed.</p>
+  </header>
+
+  <div class="chat-shell">
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-empty" id="chatEmpty">
+        <span class="material-symbols-rounded">auto_awesome</span>
+        <p>Ask me anything.</p>
+      </div>
+    </div>
+    <div class="chat-inputbar">
+      <textarea id="chatInput" placeholder="Message…" rows="1"></textarea>
+      <button id="sendBtn" class="send-btn" title="Send"><span class="material-symbols-rounded">arrow_upward</span></button>
+    </div>
+    <p class="chat-footnote">
+      Runs on a small on-device model over my home network — replies can be slow, or briefly unavailable if the host is offline.
+      <button id="clearBtn" class="link-btn">Clear chat</button>
+    </p>
+  </div>
+</div>
+
+<script type="module">
+import { mountAccountBar } from './shared/account.js?v=4';
+mountAccountBar(document.getElementById('accountBar'));
+
+const AI_ENDPOINT = 'https://ai2.oeper.dev';
+
+let controller = null;
+let history = [];
+
+async function loadModelName() {
+  try {
+    const res = await fetch(AI_ENDPOINT + '/api/model');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.model) document.getElementById('modelName').textContent = data.model;
+  } catch {}
+}
+loadModelName();
+
+const messagesEl = document.getElementById('chatMessages');
+const inputEl = document.getElementById('chatInput');
+const sendBtn = document.getElementById('sendBtn');
+
+function addMessage(role, content) {
+  document.getElementById('chatEmpty')?.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ' + role;
+  wrap.innerHTML = `
+    <div class="msg-avatar"><span class="material-symbols-rounded">${role === 'user' ? 'person' : 'auto_awesome'}</span></div>
+    <div class="msg-bubble"></div>
+  `;
+  wrap.querySelector('.msg-bubble').textContent = content;
+  messagesEl.appendChild(wrap);
+  wrap.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  return wrap.querySelector('.msg-bubble');
+}
+
+function autoGrow() {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 160) + 'px';
+}
+inputEl.addEventListener('input', autoGrow);
+
+function setSending(sending) {
+  if (sending) {
+    sendBtn.classList.add('stop');
+    sendBtn.title = 'Stop';
+    sendBtn.innerHTML = '<span class="material-symbols-rounded">stop</span>';
+  } else {
+    sendBtn.classList.remove('stop');
+    sendBtn.disabled = false;
+    sendBtn.title = 'Send';
+    sendBtn.innerHTML = '<span class="material-symbols-rounded">arrow_upward</span>';
+  }
+}
+
+async function sendMessage() {
+  const text = inputEl.value.trim();
+  if (!text || controller) return;
+  inputEl.value = '';
+  autoGrow();
+  addMessage('user', text);
+  history.push({ role: 'user', content: text });
+
+  const bubble = addMessage('assistant', '');
+  bubble.classList.add('thinking');
+  setSending(true);
+
+  controller = new AbortController();
+  let full = '';
+  try {
+    const res = await fetch(AI_ENDPOINT + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: history }),
+      signal: controller.signal,
+    });
+    if (!res.ok || !res.body) {
+      let msg = `Server error (${res.status})`;
+      try { msg = (await res.json()).error || msg; } catch {}
+      throw new Error(msg);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    let first = true;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
+        try {
+          const json = JSON.parse(payload);
+          const delta = json.choices?.[0]?.delta?.content || '';
+          if (delta) {
+            if (first) { bubble.classList.remove('thinking'); first = false; }
+            full += delta;
+            bubble.textContent = full;
+            bubble.scrollIntoView({ block: 'end' });
+          }
+        } catch {}
+      }
+    }
+    if (!full) bubble.classList.remove('thinking');
+  } catch (err) {
+    bubble.classList.remove('thinking');
+    if (err.name === 'AbortError') {
+      if (!full) bubble.textContent = '(stopped)';
+    } else {
+      bubble.textContent = full || ('Could not reach the model: ' + err.message);
+      bubble.classList.add('error');
+    }
+  } finally {
+    controller = null;
+    setSending(false);
+    if (full) history.push({ role: 'assistant', content: full });
+  }
+}
+
+sendBtn.addEventListener('click', () => {
+  if (controller) { controller.abort(); return; }
+  sendMessage();
+});
+
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    if (!controller) sendMessage();
+  }
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if (controller) controller.abort();
+  history = [];
+  messagesEl.innerHTML = `
+    <div class="chat-empty" id="chatEmpty">
+      <span class="material-symbols-rounded">auto_awesome</span>
+      <p>Ask me anything.</p>
+    </div>
+  `;
+});
+</script>
+</body>
+</html>

@@ -5,7 +5,8 @@
   "description": "Minimal image upload server for oeper.dev forum attachments. Meant to run on-device via Termux and be exposed with a Cloudflare Tunnel.",
   "main": "upload-server.js",
   "scripts": {
-    "start": "node upload-server.js"
+    "start": "node upload-server.js",
+    "start:ai": "node ai-proxy.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

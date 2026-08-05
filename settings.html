@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — oeper.dev</title>
+<meta name="description" content="Customize how oeper.dev looks">
+<meta property="og:title" content="Settings — oeper.dev">
+<meta property="og:description" content="Customize how oeper.dev looks">
+<meta property="og:url" content="https://oeper.dev/settings">
+<meta property="og:type" content="website">
+<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<script src="./shared/theme-boot.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-success: #a6d9a8;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 640px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 36px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header h1 {
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.25rem, 6vw, 3rem); font-weight: 400;
+    margin-bottom: 10px; letter-spacing: -0.5px;
+  }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 15px; max-width: 500px; line-height: 1.5; }
+
+  .settings-section { margin-bottom: 36px; }
+  .settings-section h2 {
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 20px; font-weight: 500; margin-bottom: 6px;
+  }
+  .settings-section .section-desc { color: var(--md-sys-color-on-surface-variant); font-size: 14px; line-height: 1.5; margin-bottom: 16px; max-width: 480px; }
+
+  .group { background-color: var(--md-sys-color-surface); border-radius: 20px; overflow: hidden; }
+  .row {
+    display: flex; align-items: center; gap: 16px; padding: 18px 22px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .row:last-child { border-bottom: none; }
+  .row-icon {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; background: var(--md-sys-color-surface-variant);
+    display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface-variant);
+  }
+  .row-icon .material-symbols-rounded { font-size: 20px; }
+  .row-text { flex: 1; min-width: 0; }
+  .row-title { font-size: 15px; font-weight: 500; }
+  .row-sub { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; }
+  .row-block { padding: 4px 22px 22px; }
+
+  .oe-theme-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+
+  .footnote { text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <div class="header-container">
+      <a href="https://oeper.dev" class="header-link">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>back to oeper.dev</span>
+      </a>
+      <div id="accountBar"></div>
+    </div>
+    <h1>Settings</h1>
+    <p>Customize how oeper.dev looks for you. These settings live in this browser, so they carry across every page on the site.</p>
+  </header>
+
+  <div class="settings-section">
+    <h2>Appearance</h2>
+    <p class="section-desc">Pick a color theme. It applies immediately, everywhere on the site except the AI page, which keeps its own look.</p>
+    <div class="group">
+      <div class="row">
+        <div class="row-icon"><span class="material-symbols-rounded">palette</span></div>
+        <div class="row-text">
+          <div class="row-title">Theme</div>
+          <div class="row-sub" id="themeSubtitle">Material Dark</div>
+        </div>
+      </div>
+      <div class="row-block" id="themePicker"></div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h2>Account</h2>
+    <p class="section-desc">Manage the display name and profile picture attached to your posts and files.</p>
+    <div class="group">
+      <div class="row">
+        <div class="row-icon"><span class="material-symbols-rounded">person</span></div>
+        <div class="row-text">
+          <div class="row-title">Profile</div>
+          <div class="row-sub">Sign in to edit your display name and photo — use the account menu in the top right.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="footnote">More settings coming later.</p>
+</div>
+
+<script type="module">
+import { mountAccountBar } from './shared/account.js?v=4';
+import { mountThemePicker } from './shared/theme-picker.js';
+
+mountAccountBar(document.getElementById('accountBar'));
+
+function updateSubtitle(id) {
+  const t = window.OE_THEMES[id];
+  document.getElementById('themeSubtitle').textContent = t ? t.name : 'Material Dark';
+}
+
+mountThemePicker(document.getElementById('themePicker'), id => updateSubtitle(id));
+updateSubtitle(localStorage.getItem(window.OE_THEME_KEY) || 'material-dark');
+</script>
+</body>
+</html>
