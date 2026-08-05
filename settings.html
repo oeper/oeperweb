@@ -120,15 +120,15 @@
 
   <div class="settings-section">
     <h2>Account</h2>
-    <p class="section-desc">Manage the display name and profile picture attached to your posts and files.</p>
+    <p class="section-desc">Manage the display name, bio, and photo attached to your posts and files.</p>
     <div class="group">
-      <div class="row">
+      <a class="row" id="profileRow" href="#" style="text-decoration:none; color:inherit;">
         <div class="row-icon"><span class="material-symbols-rounded">person</span></div>
         <div class="row-text">
-          <div class="row-title">Profile</div>
-          <div class="row-sub">Sign in to edit your display name and photo — use the account menu in the top right.</div>
+          <div class="row-title" id="profileRowTitle">Profile</div>
+          <div class="row-sub" id="profileRowSub">Sign in to edit your display name, bio, and photo.</div>
         </div>
-      </div>
+      </a>
     </div>
   </div>
 
@@ -136,12 +136,32 @@
 </div>
 
 <script type="module">
-import { mountAccountBar } from './shared/account.js?v=4';
+import { mountAccountBar, getCurrentUser, onAccountChange, handleOf } from './shared/account.js?v=5';
 import { mountThemePicker } from './shared/theme-picker.js';
 import { mountFooter } from './shared/footer.js';
 
 mountAccountBar(document.getElementById('accountBar'));
 mountFooter();
+
+onAccountChange(user => {
+  const row = document.getElementById('profileRow');
+  const title = document.getElementById('profileRowTitle');
+  const sub = document.getElementById('profileRowSub');
+  const handle = user && handleOf(user.email);
+  if (handle) {
+    row.href = '/profile.html?u=' + encodeURIComponent(handle);
+    title.textContent = 'View my profile';
+    sub.textContent = 'See your posts, stats, and edit your bio and photo.';
+  } else if (user) {
+    row.href = '#';
+    title.textContent = 'Setting up your profile…';
+    sub.textContent = 'Just a moment — refresh if this doesn\'t update in a few seconds.';
+  } else {
+    row.href = '#';
+    title.textContent = 'Profile';
+    sub.textContent = 'Sign in to edit your display name, bio, and photo.';
+  }
+});
 
 function updateSubtitle(id) {
   const t = window.OE_THEMES[id];

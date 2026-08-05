@@ -70,17 +70,63 @@ export async function ensureProfileLoaded(email) {
 
 // Resolves the name/photo to show for any author, given the values that
 // were stored on their post/comment/etc at creation time as a fallback.
+// Never falls back to the raw email — emails are never shown in the UI.
 export function getProfile(email, fallbackName, fallbackPhoto) {
   const override = email && profileCache[email];
   return {
-    name: (override && override.displayName) || fallbackName || email || 'anon',
+    name: (override && override.displayName) || fallbackName || 'User',
     photo: (override && override.photoURL) || fallbackPhoto || '',
   };
 }
 
+// The @handle for a profile, if one's been assigned yet (see ensureHandle).
+// Used to build /profile.html?u=<handle> links without ever putting a real
+// email in a URL. Returns null if this account hasn't been assigned one
+// yet (e.g. they haven't signed in since this feature shipped) — callers
+// should render plain, non-linked text in that case rather than guessing.
+export function handleOf(email) {
+  const p = email && profileCache[email];
+  return (p && p.handle) || null;
+}
+
+// Assigns a permanent, unique @handle the first time we see an account,
+// derived from their display name (falls back to the email's local part
+// only as raw material for the slug — never stored or shown as-is).
+// handles/{handle} docs are create-only in firestore.rules (first claim
+// wins, forever), so collisions just move on to the next candidate.
+async function ensureHandle(email, displayName) {
+  const profile = await ensureProfileLoaded(email);
+  if (profile && profile.handle) return profile.handle;
+
+  const base = (displayName || email.split('@')[0] || 'user')
+    .toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'user';
+  let candidate = base;
+  for (let i = 2; i <= 50; i++) {
+    try {
+      const snap = await getDoc(doc(db, 'handles', candidate));
+      if (!snap.exists()) break;
+    } catch { break; }
+    candidate = base + i;
+  }
+
+  try {
+    await setDoc(doc(db, 'handles', candidate), { email });
+    await setDoc(doc(db, 'users', email), { handle: candidate }, { merge: true });
+    profileCache[email] = { ...(profileCache[email] || {}), handle: candidate };
+    notify();
+    return candidate;
+  } catch {
+    return null; // lost a race to another tab, or a rules hiccup — next sign-in retries
+  }
+}
+
 onAuthStateChanged(auth, async user => {
   currentUser = user;
-  if (user) await ensureProfileLoaded(user.email);
+  if (user) {
+    await ensureProfileLoaded(user.email);
+    ensureJoinDate(user.email); // fire-and-forget, doesn't block sign-in
+    ensureHandle(user.email, user.displayName);
+  }
   authReady = true;
   notify();
 });
@@ -112,17 +158,29 @@ export async function uploadFile(file, endpointPath) {
   return (await res.json()).url;
 }
 
-export async function updateProfile({ displayName, photoFile }) {
+export async function updateProfile({ displayName, photoFile, bio }) {
   if (!currentUser) throw new Error('Sign in first');
   const patch = { updatedAt: serverTimestamp() };
   const trimmedName = (displayName || '').trim().slice(0, 40);
   patch.displayName = trimmedName || currentUser.displayName || currentUser.email;
+  if (bio !== undefined) patch.bio = (bio || '').trim().slice(0, 200);
   if (photoFile) {
     patch.photoURL = await uploadFile(photoFile);
   }
   await setDoc(doc(db, 'users', currentUser.email), patch, { merge: true });
   profileCache[currentUser.email] = { ...(profileCache[currentUser.email] || {}), ...patch };
   notify();
+}
+
+// Ensures a profile doc has a createdAt ("member since") timestamp, set once
+// the first time we ever see this account — safe to call repeatedly.
+async function ensureJoinDate(email) {
+  const profile = await ensureProfileLoaded(email);
+  if (profile && profile.createdAt) return;
+  try {
+    await setDoc(doc(db, 'users', email), { createdAt: serverTimestamp() }, { merge: true });
+    delete profileCache[email]; // force a fresh read next time so createdAt is populated
+  } catch {}
 }
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -141,6 +199,7 @@ function injectStyles() {
     }
     .oe-acct-signin:hover { opacity: 0.9; }
     .oe-acct-chip { display: flex; align-items: center; gap: 8px; }
+    .oe-acct-profile-link { display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; }
     .oe-acct-chip img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant, #2f353d); }
     .oe-acct-chip .oe-acct-name { font-size: 13px; color: var(--md-sys-color-on-surface-variant, #c4c7c5); font-family: 'Google Sans', 'Product Sans', sans-serif; }
     .oe-acct-chip button {
@@ -170,11 +229,12 @@ function injectStyles() {
     .oe-acct-avatar-row input[type="file"] { display: none; }
     .oe-acct-field { margin-bottom: 20px; }
     .oe-acct-field label { display: block; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant, #c4c7c5); margin-bottom: 6px; }
-    .oe-acct-field input[type="text"] {
+    .oe-acct-field input[type="text"], .oe-acct-field textarea {
       width: 100%; background-color: var(--md-sys-color-background, #111318); border: 1px solid var(--md-sys-color-outline, #43474e);
       border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface, #e2e2e6); font-size: 14px; font-family: inherit; outline: none;
     }
-    .oe-acct-field input[type="text"]:focus { border-color: var(--md-sys-color-primary, #a8c7fa); }
+    .oe-acct-field textarea { resize: vertical; min-height: 60px; }
+    .oe-acct-field input[type="text"]:focus, .oe-acct-field textarea:focus { border-color: var(--md-sys-color-primary, #a8c7fa); }
     .oe-acct-actions { display: flex; justify-content: space-between; gap: 12px; }
     .oe-acct-btn {
       display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; padding: 10px 18px;
@@ -244,6 +304,10 @@ function ensureModal() {
       <label>Display name</label>
       <input type="text" id="oeAcctNameInput" maxlength="40">
     </div>
+    <div class="oe-acct-field">
+      <label>Bio</label>
+      <textarea id="oeAcctBioInput" maxlength="200" rows="3" placeholder="Say something about yourself…"></textarea>
+    </div>
     <div class="oe-acct-actions">
       <button type="button" class="oe-acct-btn danger" id="oeAcctCancel">Cancel</button>
       <button type="button" class="oe-acct-btn primary" id="oeAcctSave"><span class="material-symbols-rounded" style="font-size:16px;">check</span> Save</button>
@@ -262,17 +326,21 @@ function closeModal() {
   modalEls.modal.classList.remove('open');
 }
 
-function openEditProfileModal() {
+export function openEditProfileModal() {
+  injectStyles();
+  ensureFontsAndIcons();
   if (!currentUser) return;
   const { overlay, modal } = ensureModal();
   const profile = getProfile(currentUser.email, currentUser.displayName, currentUser.photoURL);
   const avatarPreview = modal.querySelector('#oeAcctAvatarPreview');
   const nameInput = modal.querySelector('#oeAcctNameInput');
+  const bioInput = modal.querySelector('#oeAcctBioInput');
   const photoInput = modal.querySelector('#oeAcctPhotoInput');
   const saveBtn = modal.querySelector('#oeAcctSave');
 
   avatarPreview.src = profile.photo || '';
   nameInput.value = profile.name || '';
+  bioInput.value = (profileCache[currentUser.email] && profileCache[currentUser.email].bio) || '';
   photoInput.value = '';
   let pendingFile = null;
 
@@ -287,7 +355,7 @@ function openEditProfileModal() {
   saveBtn.onclick = async () => {
     saveBtn.disabled = true;
     try {
-      await updateProfile({ displayName: nameInput.value, photoFile: pendingFile });
+      await updateProfile({ displayName: nameInput.value, photoFile: pendingFile, bio: bioInput.value });
       closeModal();
       showToast('Profile updated');
     } catch (err) {
@@ -309,10 +377,13 @@ export function mountAccountBar(container) {
   function render() {
     if (currentUser) {
       const profile = getProfile(currentUser.email, currentUser.displayName, currentUser.photoURL);
+      const handle = handleOf(currentUser.email);
+      const profileInner = `<img src="${profile.photo || ''}" alt=""><span class="oe-acct-name">${escHtml(profile.name)}</span>`;
       container.innerHTML = `
         <div class="oe-acct-chip">
-          <img src="${profile.photo || ''}" alt="">
-          <span class="oe-acct-name">${escHtml(profile.name)}</span>
+          ${handle
+            ? `<a href="/profile.html?u=${encodeURIComponent(handle)}" class="oe-acct-profile-link" title="View profile">${profileInner}</a>`
+            : `<span class="oe-acct-profile-link">${profileInner}</span>`}
           <button class="oe-acct-icon-btn" id="oeAcctEditBtn" title="Edit profile"><span class="material-symbols-rounded">edit</span></button>
           <button id="oeAcctSignOutBtn">Sign out</button>
         </div>

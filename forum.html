@@ -133,6 +133,8 @@
     background-color: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant);
   }
   .post-author { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
+  .author-link { display: inline-flex; align-items: center; gap: 6px; color: inherit; text-decoration: none; }
+  .author-link:hover { color: var(--md-sys-color-primary); text-decoration: underline; }
   .post-author img { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; }
   .post-title { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 18px; font-weight: 400; margin-bottom: 4px; line-height: 1.3; }
   .post-excerpt {
@@ -425,13 +427,13 @@
 <script type="module">
 import {
   auth, db, SERVER_ENDPOINT, MAX_IMAGE_BYTES, isOwnerEmail,
-  getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded,
+  getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded, handleOf,
   mountAccountBar, uploadFile,
-} from './shared/account.js?v=4';
+} from './shared/account.js?v=5';
 import { mountFooter } from './shared/footer.js';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
-  query, orderBy, serverTimestamp, arrayUnion, arrayRemove
+  query, orderBy, serverTimestamp, arrayUnion, arrayRemove, increment
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const DEFAULT_TAGS = [
@@ -615,6 +617,26 @@ function runForum() {
   function isBanned() { return !!myBanStatus; }
   function nameOf(item) { return getProfile(item.authorEmail, item.authorName, item.authorPhoto).name; }
   function photoOf(item) { return getProfile(item.authorEmail, item.authorName, item.authorPhoto).photo; }
+  // Links to a profile by @handle only — never by email. If this author
+  // hasn't been assigned a handle yet (hasn't signed in since that shipped),
+  // falls back to plain non-clickable text rather than exposing their email.
+  function authorLinkHtml(item, innerHtml, extraAttrs) {
+    const handle = handleOf(item.authorEmail);
+    if (!handle) return `<span class="author-link">${innerHtml}</span>`;
+    return `<a href="/profile.html?u=${encodeURIComponent(handle)}" class="author-link" ${extraAttrs || ''}>${innerHtml}</a>`;
+  }
+
+  const VIEWED_KEY = 'oe-viewed-posts';
+  function bumpViews(postId) {
+    if (!currentUser()) return; // views require sign-in, same as every other post write
+    let seen;
+    try { seen = JSON.parse(localStorage.getItem(VIEWED_KEY) || '[]'); } catch { seen = []; }
+    if (seen.includes(postId)) return;
+    seen.push(postId);
+    if (seen.length > 500) seen = seen.slice(-500); // keep the dedup list from growing forever
+    localStorage.setItem(VIEWED_KEY, JSON.stringify(seen));
+    updateDoc(postRef(postId), { views: increment(1) }).catch(() => {});
+  }
 
   async function refreshBanStatus() {
     const u = currentUser();
@@ -907,8 +929,8 @@ function runForum() {
         <div class="post-meta">
           ${(p.tags||[]).map(id => `<span class="post-tag">${escHtml(tagInfo(id).label)}</span>`).join('')}
           <span class="post-author">
-            ${photo ? `<img src="${photo}" alt="">` : ''}
-            ${escHtml(nameOf(p))} · ${timeAgo(p._date)}
+            ${authorLinkHtml(p, `${photo ? `<img src="${photo}" alt="">` : ''}${escHtml(nameOf(p))}`, 'onclick="event.stopPropagation()"')}
+            · ${timeAgo(p._date)}
           </span>
         </div>
         <div class="post-title">${escHtml(p.title)}</div>
@@ -921,6 +943,7 @@ function runForum() {
         ` : ''}
         <div class="post-footer">
           <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount||0} comments</span>
+          <span><span class="material-symbols-rounded">visibility</span>${p.views||0} views</span>
         </div>
       </div>
       <div class="kebab-slot" data-kebab></div>
@@ -1098,8 +1121,8 @@ function runForum() {
       <div class="thread-post-meta">
         ${(p.tags||[]).map(id => `<span class="post-tag">${escHtml(tagInfo(id).label)}</span>`).join('')}
         <span class="post-author">
-          ${photo ? `<img src="${photo}" alt="">` : ''}
-          ${escHtml(nameOf(p))} · ${timeAgo(p._date)}
+          ${authorLinkHtml(p, `${photo ? `<img src="${photo}" alt="">` : ''}${escHtml(nameOf(p))}`)}
+          · ${timeAgo(p._date)} · ${p.views||0} views
         </span>
         <span class="kebab-slot" data-kebab style="margin-left:auto;"></span>
       </div>
@@ -1126,6 +1149,7 @@ function runForum() {
     wireThreadVoteButtons(p);
     threadContent.querySelector('[data-kebab]').appendChild(buildKebabMenu(menuItemsForPost(p)));
     flushTextPreviews();
+    bumpViews(postId);
 
     renderCommentForm();
 
@@ -1164,8 +1188,7 @@ function runForum() {
         ${voteColHtml(c, 'c-' + c.id)}
         <div class="comment-main">
           <div class="comment-meta">
-            ${photoOf(c) ? `<img src="${photoOf(c)}" alt="">` : ''}
-            <span class="name">${escHtml(nameOf(c))}</span>
+            ${authorLinkHtml(c, `${photoOf(c) ? `<img src="${photoOf(c)}" alt="">` : ''}<span class="name">${escHtml(nameOf(c))}</span>`)}
             <span class="time">${timeAgo(c._date)}</span>
             <span class="kebab-slot" data-kebab style="margin-left:auto;"></span>
           </div>

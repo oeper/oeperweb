@@ -19,6 +19,14 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/bans/$(request.auth.token.email));
     }
 
+    // Grants read access for collectionGroup('comments') queries (profile.html's
+    // comment count/karma stats). The nested rule under posts/{postId}/comments
+    // only covers reads scoped to one post; a collection-group query spanning
+    // every post's comments needs this recursive-wildcard match too.
+    match /{path=**}/comments/{commentId} {
+      allow read: if true;
+    }
+
     match /posts/{postId} {
       allow read: if true;
 
@@ -35,9 +43,14 @@ service cloud.firestore {
       // Author/owner can edit or delete their own post outright.
       // Anyone signed in (and not banned) may toggle their own up/downvote.
       // Any signed-in commenter may adjust commentCount when adding/removing a comment.
+      // Any signed-in viewer may bump views by exactly 1 per request (client
+      // dedupes per-browser via localStorage so opening a thread twice in the
+      // same browser doesn't double count — not spoof-proof, just cosmetic).
       allow update: if isAuthor(resource.data) || isOwner()
         || (isSignedIn() && !isBanned() && onlyChanged(['upvoters', 'downvoters']))
-        || (isSignedIn() && onlyChanged(['commentCount']));
+        || (isSignedIn() && onlyChanged(['commentCount']))
+        || (isSignedIn() && onlyChanged(['views'])
+            && request.resource.data.views == (('views' in resource.data) ? resource.data.views : 0) + 1);
 
       allow delete: if isAuthor(resource.data) || isOwner();
 
@@ -65,7 +78,8 @@ service cloud.firestore {
         && request.resource.data.displayName is string
         && request.resource.data.displayName.size() > 0
         && request.resource.data.displayName.size() <= 40
-        && (!('photoURL' in request.resource.data) || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 500));
+        && (!('photoURL' in request.resource.data) || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 500))
+        && (!('bio' in request.resource.data) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 200));
     }
 
     // Ban list, keyed by email. Public read so the client can show "you're
@@ -73,6 +87,15 @@ service cloud.firestore {
     match /bans/{email} {
       allow read: if true;
       allow write: if isOwner();
+    }
+
+    // @handle -> email lookup, so profile URLs never contain a real email
+    // address. Create-only and only for your own account — once a handle
+    // is claimed it's permanent (no update/delete), so links never break.
+    match /handles/{handle} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.email == request.auth.token.email;
+      allow update, delete: if false;
     }
   }
 }

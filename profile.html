@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile — oeper.dev</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<script src="./shared/theme-boot.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 720px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; gap: 16px; flex-wrap: wrap; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+
+  .profile-card { background: var(--md-sys-color-surface); border-radius: 28px; padding: 32px; margin-bottom: 24px; }
+  .profile-top { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+  .profile-avatar {
+    width: 84px; height: 84px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+    background: var(--md-sys-color-surface-variant);
+  }
+  .profile-main { flex: 1; min-width: 200px; }
+  .profile-name { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 26px; font-weight: 500; margin-bottom: 4px; }
+  .profile-joined { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 12px; }
+  .profile-bio { font-size: 14px; line-height: 1.6; color: var(--md-sys-color-on-surface); white-space: pre-wrap; max-width: 480px; }
+  .profile-bio.empty { color: var(--md-sys-color-on-surface-variant); font-style: italic; }
+
+  .profile-actions { display: flex; gap: 10px; flex-shrink: 0; margin-left: auto; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; padding: 10px 18px;
+    border-radius: 100px; border: 1px solid var(--md-sys-color-outline); background: transparent;
+    color: var(--md-sys-color-on-surface); cursor: pointer; font-family: inherit; text-decoration: none;
+  }
+  .btn:hover { background-color: rgba(255,255,255,0.06); }
+  .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
+  .btn.primary:hover { opacity: 0.9; }
+
+  .stats-row { display: flex; gap: 12px; margin-top: 24px; }
+  .stat { flex: 1; background: var(--md-sys-color-surface-variant); border-radius: 16px; padding: 14px 16px; text-align: center; }
+  .stat-value { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 22px; font-weight: 500; color: var(--md-sys-color-primary); }
+  .stat-label { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; }
+
+  .section-heading { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 18px; font-weight: 500; margin-bottom: 14px; }
+
+  .post-list { display: flex; flex-direction: column; gap: 10px; }
+  .post-row {
+    display: block; background: var(--md-sys-color-surface); border-radius: 18px; padding: 16px 20px;
+    text-decoration: none; color: inherit; transition: background-color 0.2s;
+  }
+  .post-row:hover { background-color: #21242c; }
+  .post-row-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .post-row-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: flex; gap: 12px; flex-wrap: wrap; }
+  .post-row-meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .post-row-meta .material-symbols-rounded { font-size: 14px; }
+
+  .empty-note { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 0; text-align: center; }
+  .loading-note { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 60px 0; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="header-container">
+    <a href="https://oeper.dev/forum" class="header-link">
+      <span class="material-symbols-rounded">arrow_back</span>
+      <span>back to forum</span>
+    </a>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
+      <div id="accountBar"></div>
+    </div>
+  </div>
+
+  <div id="content">
+    <div class="loading-note">Loading profile…</div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  mountAccountBar, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf,
+  openEditProfileModal, db,
+} from './shared/account.js?v=5';
+import { mountFooter } from './shared/footer.js';
+import {
+  collection, collectionGroup, query, where, getDocs, doc, getDoc,
+} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+mountAccountBar(document.getElementById('accountBar'));
+mountFooter();
+
+function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function timeAgo(date) {
+  const s = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  if (s < 2592000) return Math.floor(s / 86400) + 'd ago';
+  return date.toLocaleDateString();
+}
+
+const content = document.getElementById('content');
+const params = new URLSearchParams(window.location.search);
+const handle = params.get('u');
+
+if (!handle) {
+  content.innerHTML = '<div class="empty-note">No profile specified. Open a profile from a post author\'s name in the forum, or add ?u=&lt;handle&gt; to the URL.</div>';
+} else {
+  init();
+}
+
+async function init() {
+  let viewedEmail = null;
+  try {
+    const handleSnap = await getDoc(doc(db, 'handles', handle));
+    if (handleSnap.exists()) viewedEmail = handleSnap.data().email;
+  } catch (err) {
+    console.warn('Could not resolve handle:', err.message);
+  }
+  if (!viewedEmail) {
+    content.innerHTML = '<div class="empty-note">No profile found for @' + escHtml(handle) + '.</div>';
+    return;
+  }
+
+  const profileDoc = await ensureProfileLoaded(viewedEmail);
+  const profile = getProfile(viewedEmail, null, null);
+  const joinDate = profileDoc && profileDoc.createdAt && profileDoc.createdAt.toDate ? profileDoc.createdAt.toDate() : null;
+  const bio = (profileDoc && profileDoc.bio) || '';
+
+  let posts = [];
+  try {
+    const snap = await getDocs(query(collection(db, 'posts'), where('authorEmail', '==', viewedEmail)));
+    posts = snap.docs.map(d => {
+      const data = d.data();
+      return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+    }).sort((a, b) => b._date - a._date);
+  } catch (err) {
+    console.warn('Could not load posts for profile:', err.message);
+  }
+
+  let commentCount = null;
+  let commentKarma = 0;
+  try {
+    const snap = await getDocs(query(collectionGroup(db, 'comments'), where('authorEmail', '==', viewedEmail)));
+    commentCount = snap.size;
+    snap.docs.forEach(d => {
+      const c = d.data();
+      commentKarma += (c.upvoters || []).length - (c.downvoters || []).length;
+    });
+  } catch (err) {
+    console.warn('Comment stats unavailable (Firestore may need a collection-group index for this query — check the error above for a direct link to create it):', err.message);
+  }
+
+  const postKarma = posts.reduce((sum, p) => sum + (p.upvoters || []).length - (p.downvoters || []).length, 0);
+  const karma = postKarma + commentKarma;
+
+  function render() {
+    const user = getCurrentUser();
+    const isOwn = user && user.email === viewedEmail;
+
+    content.innerHTML = `
+      <div class="profile-card">
+        <div class="profile-top">
+          <img class="profile-avatar" src="${profile.photo || ''}" alt="">
+          <div class="profile-main">
+            <div class="profile-name">${escHtml(profile.name)}</div>
+            <div class="profile-joined">@${escHtml(handle)}${joinDate ? ' · Member since ' + joinDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long' }) : ''}</div>
+            <div class="profile-bio ${bio ? '' : 'empty'}">${bio ? escHtml(bio) : 'No bio yet.'}</div>
+          </div>
+          <div class="profile-actions">
+            ${isOwn ? `<button class="btn primary" id="editProfileBtn"><span class="material-symbols-rounded" style="font-size:16px;">edit</span> Edit profile</button>` : ''}
+            ${!isOwn && user ? `<a class="btn primary" href="/messages.html?to=${encodeURIComponent(handle)}"><span class="material-symbols-rounded" style="font-size:16px;">chat</span> Message</a>` : ''}
+          </div>
+        </div>
+        <div class="stats-row">
+          <div class="stat"><div class="stat-value">${posts.length}</div><div class="stat-label">Posts</div></div>
+          <div class="stat"><div class="stat-value">${commentCount === null ? '—' : commentCount}</div><div class="stat-label">Comments</div></div>
+          <div class="stat"><div class="stat-value">${karma}</div><div class="stat-label">Karma</div></div>
+        </div>
+      </div>
+
+      <div class="section-heading">Posts</div>
+      <div class="post-list">
+        ${posts.length === 0 ? '<div class="empty-note">No posts yet.</div>' : posts.map(p => `
+          <a class="post-row" href="/forum.html?post=${p.id}">
+            <div class="post-row-title">${escHtml(p.title)}</div>
+            <div class="post-row-meta">
+              <span><span class="material-symbols-rounded">arrow_upward</span>${(p.upvoters||[]).length - (p.downvoters||[]).length}</span>
+              <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount||0}</span>
+              <span><span class="material-symbols-rounded">visibility</span>${p.views||0}</span>
+              <span>${timeAgo(p._date)}</span>
+            </div>
+          </a>
+        `).join('')}
+      </div>
+    `;
+
+    const editBtn = document.getElementById('editProfileBtn');
+    if (editBtn) editBtn.addEventListener('click', openEditProfileModal);
+  }
+
+  render();
+  onAccountChange(render);
+}
+</script>
+</body>
+</html>

@@ -37,7 +37,7 @@
     user-select: none;
   }
 
-  body { 
+  body {
     min-height: 100vh;
     background-color: var(--md-sys-color-background);
     font-family: 'Google Sans', 'Roboto Flex', sans-serif;
@@ -45,6 +45,37 @@
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
   }
+
+  /* Slowly drifting glow behind the hero content — recolors automatically
+     with the active theme since it's built from the theme's own variables. */
+  .bg-aura {
+    position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+  }
+  .bg-aura::before, .bg-aura::after {
+    content: ''; position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%;
+    filter: blur(90px); opacity: 0.16;
+  }
+  .bg-aura::before {
+    top: -20vmax; left: -10vmax; background: var(--md-sys-color-primary);
+    animation: auraDrift1 26s ease-in-out infinite alternate;
+  }
+  .bg-aura::after {
+    bottom: -25vmax; right: -15vmax; background: var(--md-sys-color-secondary-container);
+    animation: auraDrift2 32s ease-in-out infinite alternate;
+  }
+  @keyframes auraDrift1 {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(8vmax, 6vmax) scale(1.15); }
+  }
+  @keyframes auraDrift2 {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(-6vmax, -8vmax) scale(1.1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bg-aura::before, .bg-aura::after { animation: none; }
+  }
+
+  .page-container { position: relative; z-index: 1; }
 
   /* Top Navigation Bar */
   .navbar {
@@ -87,6 +118,14 @@
   }
   .nav-icon-link .material-symbols-rounded { font-size: 24px; }
   .nav-icon-link:hover { color: var(--md-sys-color-on-surface); }
+
+  .nav-hamburger {
+    display: none; align-items: center; justify-content: center; width: 40px; height: 40px;
+    border-radius: 50%; border: none; background: transparent; color: var(--md-sys-color-on-surface);
+    cursor: pointer; -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+  }
+  .nav-hamburger:hover { background-color: rgba(255,255,255,0.06); }
+  .nav-hamburger .material-symbols-rounded { font-size: 24px; }
 
   .nav-links {
     display: flex;
@@ -136,40 +175,30 @@
     transform: scaleX(1);
   }
 
-  /* Mobile nav: icon-only circular buttons */
+  /* Mobile nav: hamburger button opens a full-width dropdown list instead
+     of cramming icons into the bar. */
   @media (max-width: 600px) {
-    .nav-item {
-      padding: 0;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      justify-content: center;
-    }
-
-    .nav-item::before {
-      border-radius: 50%;
-      transform: scale(0.7);
-    }
-
-    .nav-item:hover::before {
-      transform: scale(1);
-    }
-
-    .nav-item.active::before {
-      transform: scale(1);
-    }
-
-    .nav-item-label {
-      display: none;
-    }
-
     .navbar { padding: 0 12px; gap: 8px; }
     .nav-logo span:last-child { display: none; }
+    .nav-hamburger { display: flex; }
 
     .nav-links {
-      flex: 1 1 auto; min-width: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+      display: none;
+      position: fixed; top: 72px; left: 0; right: 0; z-index: 150;
+      flex-direction: column; align-items: stretch; height: auto; gap: 2px;
+      background-color: var(--md-sys-color-surface); border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      padding: 8px; max-height: calc(100vh - 72px); overflow-y: auto;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.35);
     }
-    .nav-links::-webkit-scrollbar { display: none; }
+    .nav-links.mobile-open { display: flex; }
+
+    .nav-item {
+      width: auto; height: auto; border-radius: 14px; justify-content: flex-start;
+      padding: 14px 16px; gap: 14px;
+    }
+    .nav-item::before { border-radius: 14px; }
+
+    .nav-links.mobile-open .nav-item-label { display: inline; font-size: 15px; }
 
     #accountBar { flex-shrink: 0; }
   }
@@ -242,6 +271,29 @@
     line-height: 1.6;
     max-width: 560px;
   }
+
+  .home-search-form { margin-top: 28px; max-width: 560px; }
+  .home-search-wrap { position: relative; }
+  .home-search-wrap .material-symbols-rounded {
+    position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
+    color: var(--md-sys-color-on-surface-variant); font-size: 22px; pointer-events: none;
+  }
+  .home-search-input {
+    width: 100%; background-color: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 28px; padding: 16px 20px 16px 56px; color: var(--md-sys-color-on-surface);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif; font-size: 16px; outline: none;
+    transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+  }
+  .home-search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
+  .home-search-input:focus { border-color: var(--md-sys-color-primary); background-color: #1f2329; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .home-search-engines { display: flex; gap: 6px; margin-top: 10px; }
+  .home-search-engine {
+    background: transparent; border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface-variant);
+    border-radius: 100px; padding: 5px 14px; font-size: 12px; font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-weight: 500; cursor: pointer; transition: all 0.2s;
+  }
+  .home-search-engine:hover { background: rgba(255,255,255,0.06); color: var(--md-sys-color-on-surface); }
+  .home-search-engine.active { background: var(--md-sys-color-secondary-container); border-color: transparent; color: var(--md-sys-color-on-secondary-container); }
 
   .grid-layout {
     display: grid;
@@ -317,11 +369,16 @@
 </head>
 <body>
 
+  <div class="bg-aura" aria-hidden="true"></div>
+
   <nav class="navbar">
-    <a href="#" class="nav-logo" onclick="switchTab(event, 'home')">
-      <span class="material-symbols-rounded">token</span>
-      <span>oeper.dev</span>
-    </a>
+    <div style="display:flex; align-items:center; gap:4px;">
+      <button class="nav-hamburger" id="navHamburger" aria-label="Menu"><span class="material-symbols-rounded">menu</span></button>
+      <a href="#" class="nav-logo" onclick="switchTab(event, 'home')">
+        <span class="material-symbols-rounded">token</span>
+        <span>oeper.dev</span>
+      </a>
+    </div>
     <div class="nav-right">
       <div class="nav-links" id="navLinksContainer"></div>
       <a href="/settings" class="nav-icon-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
@@ -332,7 +389,7 @@
   <div class="page-container" id="pageContainer"></div>
 
 <script type="module">
-  import { mountAccountBar } from './shared/account.js?v=4';
+  import { mountAccountBar } from './shared/account.js?v=5';
   import { mountFooter } from './shared/footer.js';
   mountAccountBar(document.getElementById('accountBar'));
   mountFooter();
@@ -428,6 +485,15 @@ const PAGES = [
 const navContainer = document.getElementById('navLinksContainer');
 const pageContainer = document.getElementById('pageContainer');
 
+const navHamburger = document.getElementById('navHamburger');
+navHamburger.addEventListener('click', () => navContainer.classList.toggle('mobile-open'));
+navContainer.addEventListener('click', e => { if (e.target.closest('.nav-item')) navContainer.classList.remove('mobile-open'); });
+document.addEventListener('click', e => {
+  if (navContainer.classList.contains('mobile-open') && !navContainer.contains(e.target) && !navHamburger.contains(e.target)) {
+    navContainer.classList.remove('mobile-open');
+  }
+});
+
 PAGES.forEach((page, index) => {
   const isFirst = index === 0;
 
@@ -472,12 +538,56 @@ PAGES.forEach((page, index) => {
     <div class="hero-section">
       <h1 class="${isFirst ? 'animate-text-hero' : ''}">${page.heroTitle}</h1>
       <p class="${isFirst ? 'animate-text-sub' : ''}">${page.heroSub}</p>
+      ${isFirst ? `
+        <form class="home-search-form" id="homeSearchForm" action="https://www.google.com/search" method="GET">
+          <div class="home-search-wrap">
+            <span class="material-symbols-rounded">search</span>
+            <input class="home-search-input" type="text" name="q" id="homeSearchInput" placeholder="Search the web…" autocomplete="off">
+          </div>
+          <div class="home-search-engines" id="homeSearchEngines">
+            <button type="button" class="home-search-engine" data-engine="google">Google</button>
+            <button type="button" class="home-search-engine" data-engine="duckduckgo">DuckDuckGo</button>
+            <button type="button" class="home-search-engine" data-engine="bing">Bing</button>
+          </div>
+        </form>
+      ` : ''}
     </div>
     <div class="grid-layout">${cardsHtml}</div>
   `;
 
   pageContainer.appendChild(pageSection);
 });
+
+const SEARCH_ENGINES = {
+  google: { action: 'https://www.google.com/search', param: 'q' },
+  duckduckgo: { action: 'https://duckduckgo.com/', param: 'q' },
+  bing: { action: 'https://www.bing.com/search', param: 'q' },
+};
+const searchForm = document.getElementById('homeSearchForm');
+if (searchForm) {
+  const searchInput = document.getElementById('homeSearchInput');
+  const engineButtons = document.querySelectorAll('#homeSearchEngines .home-search-engine');
+  let engine = localStorage.getItem('oe-search-engine') || 'google';
+  if (!SEARCH_ENGINES[engine]) engine = 'google';
+
+  function applyEngine() {
+    searchForm.action = SEARCH_ENGINES[engine].action;
+    searchInput.name = SEARCH_ENGINES[engine].param;
+    engineButtons.forEach(b => b.classList.toggle('active', b.dataset.engine === engine));
+  }
+  applyEngine();
+
+  engineButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      engine = btn.dataset.engine;
+      localStorage.setItem('oe-search-engine', engine);
+      applyEngine();
+      searchInput.focus();
+    });
+  });
+
+  searchInput.focus();
+}
 
 function switchTab(event, tabId) {
   event.preventDefault();
