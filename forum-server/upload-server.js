@@ -49,11 +49,11 @@ const REPORT_COOLDOWN_SECONDS = 10;
 
 // Where forum post/comment attachments get saved (any signed-in user, via
 // /upload). These are never publicly listed as a directory — only reachable
-// via the specific URL a post/comment embeds. Override with UPLOAD_DIR to
-// save into shared/internal storage instead — see forum-server/README.md.
+// via the specific URL a post/comment embeds. Needs termux-setup-storage
+// (see forum-server/README.md) so Termux can write to shared storage.
 const UPLOAD_DIR = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
-  : path.join(__dirname, 'uploads');
+  : '/storage/emulated/0/Download/forum';
 
 // Where files.html's personal file storage saves uploads — any signed-in
 // user, not just owners, plus the occasional anonymous upload. /my-files

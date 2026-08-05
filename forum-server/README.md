@@ -99,28 +99,24 @@ the top of `forum.html`'s script.
 
 ## Storing uploads in shared storage (visible in the Files app)
 
-By default, uploaded files live inside Termux's private app storage —
-invisible to the Files app, gallery, or a computer plugged in over USB. To
-save them in regular "Internal storage / Download" instead:
+`UPLOAD_DIR` defaults to `/storage/emulated/0/Download/forum` — regular
+shared storage, visible in the Files app, gallery, or a computer plugged in
+over USB — rather than Termux's private app storage. This needs a one-time
+storage permission grant:
 
 ```sh
 termux-setup-storage
 ```
 
-This prompts for a storage permission and creates a `~/storage/` folder full
-of symlinks into shared storage (`~/storage/downloads` → Internal
-storage/Download, `~/storage/dcim` → Camera, etc.). One-time setup.
-
-Then start the server with `UPLOAD_DIR` pointing into it — this creates and
-uses a `forum` subfolder under Download:
-
-```sh
-UPLOAD_DIR=~/storage/downloads/forum PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
-```
-
-Uploaded images will then show up at **Internal storage → Download → forum**
+Uploaded attachments then show up at **Internal storage → Download → forum**
 in the Files app. Only downside: shared storage is slightly slower to write
 to than Termux's own storage, which won't matter at this scale.
+
+Override with an env var if you want it elsewhere:
+
+```sh
+UPLOAD_DIR=/storage/emulated/0/Documents/forum PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
+```
 
 ## Who has extra moderation power
 
@@ -166,15 +162,13 @@ DISCORD_REPORT_WEBHOOK=https://discord.com/api/webhooks/... PUBLIC_BASE_URL=http
 
 ## Putting it all together
 
-Most of the time you'll want several of these env vars set at once, e.g.
-forum attachments in Download/forum, owner files in Documents, and your
+`UPLOAD_DIR` (forum attachments → Download/forum) and `USER_FILES_DIR`
+(personal files → Documents) both already default to sensible shared-storage
+locations, so most of the time the only thing you need to set is your
 current tunnel URL:
 
 ```sh
-UPLOAD_DIR=~/storage/downloads/forum \
-USER_FILES_DIR=/storage/emulated/0/Documents \
-PUBLIC_BASE_URL=https://your-tunnel-url \
-node upload-server.js
+PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
 ```
 
 ## Keeping it running
