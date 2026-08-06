@@ -97,5 +97,31 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.email == request.auth.token.email;
       allow update, delete: if false;
     }
+
+    // Direct messages. conversationId is the two participant emails, sorted
+    // and joined with "__" (computed client-side) — not strictly validated
+    // here, just that the creator is one of the two participants, since a
+    // mismatched id only produces an orphaned doc nobody else can read.
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn() && request.auth.token.email in resource.data.participants;
+      allow create: if isSignedIn()
+        && request.resource.data.participants is list
+        && request.resource.data.participants.size() == 2
+        && request.auth.token.email in request.resource.data.participants;
+      allow update: if isSignedIn() && request.auth.token.email in resource.data.participants
+        && onlyChanged(['lastMessage', 'lastMessageAt', 'updatedAt']);
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn()
+          && request.auth.token.email in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow create: if isSignedIn()
+          && request.auth.token.email == request.resource.data.senderEmail
+          && request.auth.token.email in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000;
+        allow update, delete: if false; // messages are immutable once sent
+      }
+    }
   }
 }

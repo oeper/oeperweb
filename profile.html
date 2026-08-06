@@ -103,7 +103,8 @@
       <span>back to forum</span>
     </a>
     <div style="display:flex; align-items:center; gap:12px;">
-      <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
+      <a href="/messages.html" class="header-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
+        <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
       <div id="accountBar"></div>
     </div>
   </div>
@@ -206,7 +207,7 @@ async function init() {
           </div>
           <div class="profile-actions">
             ${isOwn ? `<button class="btn primary" id="editProfileBtn"><span class="material-symbols-rounded" style="font-size:16px;">edit</span> Edit profile</button>` : ''}
-            ${!isOwn && user ? `<a class="btn primary" href="/messages.html?to=${encodeURIComponent(handle)}"><span class="material-symbols-rounded" style="font-size:16px;">chat</span> Message</a>` : ''}
+            ${!isOwn && user ? `<a class="btn primary" href="/messages.html?to=${encodeURIComponent(handle)}"><span class="material-symbols-rounded" style="font-size:16px;">chat</span> Chat</a>` : ''}
           </div>
         </div>
         <div class="stats-row">
