@@ -194,5 +194,19 @@ service cloud.firestore {
 
       allow delete: if isAuthor(resource.data) || isOwner();
     }
+
+    // Follow graph. followId is "<followerEmail>__<followeeEmail>" (computed
+    // client-side, order matters here unlike conversations). Mutual follow
+    // (both directions exist) is what the client treats as "Friends" — no
+    // separate friends collection needed for that.
+    match /follows/{followId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.followerEmail == request.auth.token.email
+        && request.resource.data.followeeEmail is string
+        && request.resource.data.followeeEmail != request.resource.data.followerEmail;
+      allow update: if false;
+      allow delete: if isSignedIn() && resource.data.followerEmail == request.auth.token.email;
+    }
   }
 }

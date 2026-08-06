@@ -72,10 +72,19 @@
   .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
   .btn.primary:hover { opacity: 0.9; }
 
-  .stats-row { display: flex; gap: 12px; margin-top: 24px; }
-  .stat { flex: 1; background: var(--md-sys-color-surface-variant); border-radius: 16px; padding: 14px 16px; text-align: center; }
+  .stats-row { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+  .stat { flex: 1; min-width: 84px; background: var(--md-sys-color-surface-variant); border-radius: 16px; padding: 14px 16px; text-align: center; cursor: default; }
+  .stat.clickable { cursor: pointer; }
+  .stat.clickable:hover { background: #3c4450; }
   .stat-value { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 22px; font-weight: 500; color: var(--md-sys-color-primary); }
   .stat-label { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; }
+
+  .friends-badge {
+    display: inline-flex; align-items: center; gap: 4px; background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container); font-size: 11px; font-weight: 500; padding: 3px 10px;
+    border-radius: 100px; margin-left: 8px; vertical-align: middle;
+  }
+  .friends-badge .material-symbols-rounded { font-size: 13px; }
 
   .section-heading { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 18px; font-weight: 500; margin-bottom: 14px; }
 
@@ -121,8 +130,10 @@ import {
 } from './shared/account.js?v=6';
 import { mountFooter } from './shared/footer.js';
 import {
-  collection, collectionGroup, query, where, getDocs, doc, getDoc,
+  collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, deleteDoc, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+function followId(followerEmail, followeeEmail) { return followerEmail + '__' + followeeEmail; }
 
 mountAccountBar(document.getElementById('accountBar'));
 mountFooter();
@@ -192,21 +203,67 @@ async function init() {
   const postKarma = posts.reduce((sum, p) => sum + (p.upvoters || []).length - (p.downvoters || []).length, 0);
   const karma = postKarma + commentKarma;
 
-  function render() {
+  let followerCount = 0, followingCount = 0;
+  try {
+    const [followersSnap, followingSnap] = await Promise.all([
+      getCountFromServer(query(collection(db, 'follows'), where('followeeEmail', '==', viewedEmail))),
+      getCountFromServer(query(collection(db, 'follows'), where('followerEmail', '==', viewedEmail))),
+    ]);
+    followerCount = followersSnap.data().count;
+    followingCount = followingSnap.data().count;
+  } catch (err) {
+    console.warn('Could not load follow counts:', err.message);
+  }
+
+  async function loadFollowState(user) {
+    if (!user || user.email === viewedEmail) return { following: false, followedBy: false };
+    try {
+      const [meFollowsThem, theyFollowMe] = await Promise.all([
+        getDoc(doc(db, 'follows', followId(user.email, viewedEmail))),
+        getDoc(doc(db, 'follows', followId(viewedEmail, user.email))),
+      ]);
+      return { following: meFollowsThem.exists(), followedBy: theyFollowMe.exists() };
+    } catch {
+      return { following: false, followedBy: false };
+    }
+  }
+
+  async function toggleFollow(isFollowing) {
+    const user = getCurrentUser();
+    if (!user) return;
+    const ref = doc(db, 'follows', followId(user.email, viewedEmail));
+    try {
+      if (isFollowing) {
+        await deleteDoc(ref);
+        followerCount = Math.max(0, followerCount - 1);
+      } else {
+        await setDoc(ref, { followerEmail: user.email, followeeEmail: viewedEmail, createdAt: serverTimestamp() });
+        followerCount++;
+      }
+      render();
+    } catch (err) {
+      alert('Could not update follow: ' + err.message);
+    }
+  }
+
+  async function render() {
     const user = getCurrentUser();
     const isOwn = user && user.email === viewedEmail;
+    const { following, followedBy } = await loadFollowState(user);
+    const areFriends = following && followedBy;
 
     content.innerHTML = `
       <div class="profile-card">
         <div class="profile-top">
           <img class="profile-avatar" src="${profile.photo || ''}" alt="">
           <div class="profile-main">
-            <div class="profile-name">${escHtml(profile.name)}</div>
-            <div class="profile-joined">@${escHtml(handle)}${joinDate ? ' · Member since ' + joinDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long' }) : ''}</div>
+            <div class="profile-name">${escHtml(profile.name)}${areFriends ? `<span class="friends-badge"><span class="material-symbols-rounded">people</span>Friends</span>` : ''}</div>
+            <div class="profile-joined">@${escHtml(handle)}${joinDate ? ' · Member since ' + joinDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long' }) : ''}${!isOwn && followedBy ? ' · Follows you' : ''}</div>
             <div class="profile-bio ${bio ? '' : 'empty'}">${bio ? escHtml(bio) : 'No bio yet.'}</div>
           </div>
           <div class="profile-actions">
             ${isOwn ? `<button class="btn primary" id="editProfileBtn"><span class="material-symbols-rounded" style="font-size:16px;">edit</span> Edit profile</button>` : ''}
+            ${!isOwn && user ? `<button class="btn ${following ? '' : 'primary'}" id="followBtn"><span class="material-symbols-rounded" style="font-size:16px;">${following ? 'how_to_reg' : 'person_add'}</span> ${following ? 'Following' : 'Follow'}</button>` : ''}
             ${!isOwn && user ? `<a class="btn primary" href="/messages.html?to=${encodeURIComponent(handle)}"><span class="material-symbols-rounded" style="font-size:16px;">chat</span> Chat</a>` : ''}
           </div>
         </div>
@@ -214,6 +271,8 @@ async function init() {
           <div class="stat"><div class="stat-value">${posts.length}</div><div class="stat-label">Posts</div></div>
           <div class="stat"><div class="stat-value">${commentCount === null ? '—' : commentCount}</div><div class="stat-label">Comments</div></div>
           <div class="stat"><div class="stat-value">${karma}</div><div class="stat-label">Karma</div></div>
+          <div class="stat"><div class="stat-value">${followerCount}</div><div class="stat-label">Followers</div></div>
+          <div class="stat"><div class="stat-value">${followingCount}</div><div class="stat-label">Following</div></div>
         </div>
       </div>
 
@@ -235,6 +294,8 @@ async function init() {
 
     const editBtn = document.getElementById('editProfileBtn');
     if (editBtn) editBtn.addEventListener('click', openEditProfileModal);
+    const followBtn = document.getElementById('followBtn');
+    if (followBtn) followBtn.addEventListener('click', () => toggleFollow(following));
   }
 
   render();
