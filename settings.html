@@ -135,11 +135,30 @@
     </div>
   </div>
 
-  <p class="footnote">More settings coming later.</p>
+  <div class="settings-section" id="accountActionsSection" style="display:none;">
+    <div class="group">
+      <button class="row" id="switchAccountRow" style="width:100%; border:none; background:none; text-align:left; cursor:pointer; font:inherit; color:inherit;">
+        <div class="row-icon"><span class="material-symbols-rounded">swap_horiz</span></div>
+        <div class="row-text">
+          <div class="row-title">Switch account</div>
+          <div class="row-sub">Sign in with a different Google account.</div>
+        </div>
+      </button>
+      <button class="row" id="signOutRow" style="width:100%; border:none; background:none; text-align:left; cursor:pointer; font:inherit; color:var(--md-sys-color-error);">
+        <div class="row-icon"><span class="material-symbols-rounded">logout</span></div>
+        <div class="row-text">
+          <div class="row-title">Sign out</div>
+          <div class="row-sub">You'll need to sign in again to post, chat, or vote.</div>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <p class="footnote"><a href="/status.html" class="header-link" style="font-size:12px;">Server status</a></p>
 </div>
 
 <script type="module">
-import { mountAccountBar, getCurrentUser, onAccountChange, handleOf } from './shared/account.js?v=5';
+import { mountAccountBar, getCurrentUser, onAccountChange, handleOf, signIn, signOutUser } from './shared/account.js?v=6';
 import { mountThemePicker } from './shared/theme-picker.js';
 import { mountFooter } from './shared/footer.js';
 
@@ -164,6 +183,14 @@ onAccountChange(user => {
     title.textContent = 'Profile';
     sub.textContent = 'Sign in to edit your display name, bio, and photo.';
   }
+  document.getElementById('accountActionsSection').style.display = user ? '' : 'none';
+});
+
+document.getElementById('switchAccountRow').addEventListener('click', () => {
+  signIn().catch(err => alert('Could not switch account: ' + err.message));
+});
+document.getElementById('signOutRow').addEventListener('click', () => {
+  if (confirm('Sign out?')) signOutUser();
 });
 
 function updateSubtitle(id) {

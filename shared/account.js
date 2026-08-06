@@ -28,7 +28,7 @@ export const FIREBASE_CONFIG = {
 
 // Your Cloudflare Tunnel URL (forum-server/README.md). Used for profile
 // photo uploads here, and for forum image uploads + reports in forum.html.
-export const SERVER_ENDPOINT = 'https://myserverfiles.oeper.dev';
+export const SERVER_ENDPOINT = 'https://fs.oeper.dev';
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 // Accounts allowed to manage the site: forum moderation (ban/delete anywhere)
@@ -41,6 +41,11 @@ const app = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
+// Always show Google's account chooser, even if a session already exists —
+// this is what makes signIn() double as "switch account" from Settings:
+// calling it again while signed in replaces the current user with whichever
+// account gets picked.
+provider.setCustomParameters({ prompt: 'select_account' });
 
 let currentUser = null;
 let authReady = false;
@@ -209,6 +214,9 @@ function injectStyles() {
     .oe-acct-chip button:hover { color: var(--md-sys-color-on-surface, #e2e2e6); }
     .oe-acct-chip .oe-acct-icon-btn { padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
     .oe-acct-chip .oe-acct-icon-btn .material-symbols-rounded { font-size: 14px; }
+    @media (max-width: 600px) {
+      .oe-acct-chip .oe-acct-name { display: none; }
+    }
 
     .oe-acct-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
     .oe-acct-overlay.open { opacity: 1; pointer-events: all; }
@@ -385,11 +393,9 @@ export function mountAccountBar(container) {
             ? `<a href="/profile.html?u=${encodeURIComponent(handle)}" class="oe-acct-profile-link" title="View profile">${profileInner}</a>`
             : `<span class="oe-acct-profile-link">${profileInner}</span>`}
           <button class="oe-acct-icon-btn" id="oeAcctEditBtn" title="Edit profile"><span class="material-symbols-rounded">edit</span></button>
-          <button id="oeAcctSignOutBtn">Sign out</button>
         </div>
       `;
       container.querySelector('#oeAcctEditBtn').addEventListener('click', openEditProfileModal);
-      container.querySelector('#oeAcctSignOutBtn').addEventListener('click', () => signOutUser());
     } else {
       container.innerHTML = `<button class="oe-acct-signin" id="oeAcctSignInBtn"><span class="material-symbols-rounded" style="font-size:18px;">login</span> Sign in</button>`;
       container.querySelector('#oeAcctSignInBtn').addEventListener('click', () => {
