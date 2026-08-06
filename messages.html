@@ -90,6 +90,30 @@
   #msgInput::placeholder { color: var(--md-sys-color-on-surface-variant); }
   .send-btn { width: 38px; height: 38px; border-radius: 50%; border: none; flex-shrink: 0; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .send-btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* Notes */
+  .notes-bar { display: flex; gap: 16px; overflow-x: auto; padding: 4px 2px 20px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .notes-bar::-webkit-scrollbar { display: none; }
+  .note-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; width: 62px; cursor: pointer; }
+  .note-avatar-wrap { position: relative; }
+  .note-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); }
+  .note-bubble {
+    position: absolute; bottom: 38px; left: 50%; transform: translateX(-50%); background: var(--md-sys-color-surface-variant);
+    border: 1px solid var(--md-sys-color-outline); border-radius: 14px; padding: 6px 10px; font-size: 11px;
+    white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; color: var(--md-sys-color-on-surface);
+  }
+  .note-label { font-size: 11px; color: var(--md-sys-color-on-surface-variant); max-width: 62px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .note-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 210; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .note-overlay.open { opacity: 1; pointer-events: all; }
+  .note-modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -48%); width: min(360px, 90vw);
+    background: var(--md-sys-color-surface); border-radius: 24px; padding: 24px; z-index: 211;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+  }
+  .note-modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
+  .note-modal input { width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none; margin-bottom: 16px; }
+  .note-modal-actions { display: flex; justify-content: space-between; gap: 12px; }
 </style>
 </head>
 <body>
@@ -106,7 +130,18 @@
     </div>
   </div>
 
+  <div class="notes-bar" id="notesBar"></div>
+
   <div id="content"><div class="empty-note">Loading…</div></div>
+</div>
+
+<div class="note-overlay" id="noteOverlay"></div>
+<div class="note-modal" id="noteModal">
+  <input type="text" id="noteInput" maxlength="60" placeholder="Share a thought…">
+  <div class="note-modal-actions">
+    <button class="btn danger" id="noteCancelBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;border:1px solid var(--md-sys-color-error);background:transparent;color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">Cancel</button>
+    <button class="send-btn" id="noteShareBtn" style="width:auto;border-radius:100px;padding:10px 20px;">Share</button>
+  </div>
 </div>
 
 <script type="module">
@@ -115,11 +150,12 @@ import {
 } from './shared/account.js?v=5';
 import { mountFooter } from './shared/footer.js';
 import {
-  collection, collectionGroup, doc, getDoc, setDoc, addDoc, query, where, orderBy, onSnapshot, serverTimestamp,
+  collection, collectionGroup, doc, getDoc, setDoc, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 mountAccountBar(document.getElementById('accountBar'));
 mountFooter();
+initNotes();
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function timeAgo(date) {
@@ -132,6 +168,93 @@ function timeAgo(date) {
 }
 function conversationId(emailA, emailB) {
   return [emailA, emailB].sort().join('__');
+}
+
+const NOTE_LIFETIME_MS = 24 * 60 * 60 * 1000;
+
+function initNotes() {
+  const bar = document.getElementById('notesBar');
+  const overlay = document.getElementById('noteOverlay');
+  const modal = document.getElementById('noteModal');
+  const input = document.getElementById('noteInput');
+
+  onSnapshot(collection(db, 'notes'), snap => {
+    const now = Date.now();
+    const notes = snap.docs
+      .map(d => ({ email: d.id, ...d.data() }))
+      .filter(n => n.expiresAt && n.expiresAt.toMillis && n.expiresAt.toMillis() > now);
+    render(notes);
+  }, () => { bar.innerHTML = ''; });
+
+  function render(notes) {
+    const user = getCurrentUser();
+    let html = '';
+    if (user) {
+      const mine = notes.find(n => n.email === user.email);
+      const profile = getProfile(user.email, user.displayName, user.photoURL);
+      html += `
+        <div class="note-item" id="myNoteItem">
+          <div class="note-avatar-wrap">
+            ${mine ? `<div class="note-bubble">${escHtml(mine.text)}</div>` : ''}
+            <img class="note-avatar" src="${profile.photo || ''}" alt="">
+          </div>
+          <div class="note-label">${mine ? 'Your note' : 'Add a note'}</div>
+        </div>
+      `;
+    }
+    notes.filter(n => !user || n.email !== user.email).forEach(n => {
+      const profile = getProfile(n.email, n.authorName, n.authorPhoto);
+      html += `
+        <div class="note-item" data-handle="${escHtml(handleOf(n.email) || '')}">
+          <div class="note-avatar-wrap">
+            <div class="note-bubble">${escHtml(n.text)}</div>
+            <img class="note-avatar" src="${profile.photo || ''}" alt="">
+          </div>
+          <div class="note-label">${escHtml(profile.name)}</div>
+        </div>
+      `;
+    });
+    bar.innerHTML = html;
+
+    const myItem = document.getElementById('myNoteItem');
+    if (myItem) myItem.addEventListener('click', openNoteModal);
+    bar.querySelectorAll('.note-item[data-handle]').forEach(el => {
+      el.addEventListener('click', () => {
+        if (el.dataset.handle) window.location.href = '/profile.html?u=' + encodeURIComponent(el.dataset.handle);
+      });
+    });
+  }
+
+  function openNoteModal() {
+    input.value = '';
+    overlay.classList.add('open');
+    modal.classList.add('open');
+    input.focus();
+  }
+  function closeNoteModal() {
+    overlay.classList.remove('open');
+    modal.classList.remove('open');
+  }
+  overlay.addEventListener('click', closeNoteModal);
+  document.getElementById('noteCancelBtn').addEventListener('click', closeNoteModal);
+  document.getElementById('noteShareBtn').addEventListener('click', async () => {
+    const user = getCurrentUser();
+    const text = input.value.trim();
+    if (!user || !text) return;
+    try {
+      await setDoc(doc(db, 'notes', user.email), {
+        text,
+        authorName: getProfile(user.email, user.displayName, user.photoURL).name,
+        authorPhoto: getProfile(user.email, user.displayName, user.photoURL).photo,
+        createdAt: serverTimestamp(),
+        expiresAt: Timestamp.fromMillis(Date.now() + NOTE_LIFETIME_MS),
+      });
+      closeNoteModal();
+    } catch (err) {
+      alert('Could not share note: ' + err.message);
+    }
+  });
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('noteShareBtn').click(); });
 }
 
 const content = document.getElementById('content');

@@ -146,5 +146,31 @@ service cloud.firestore {
 
       allow delete: if isAuthor(resource.data) || isOwner();
     }
+
+    // 24h-expiring Stories. expiresAt is set client-side at creation
+    // (createdAt + 24h) and only used for client-side filtering — Firestore
+    // doesn't auto-delete expired docs, so they just accumulate as junk you
+    // can clean up later (or set a TTL policy on expiresAt in the console).
+    match /stories/{storyId} {
+      allow read: if true;
+      allow create: if isSignedIn() && !isBanned()
+        && request.resource.data.authorEmail == request.auth.token.email
+        && request.resource.data.mediaUrl is string
+        && request.resource.data.mediaType in ['image', 'video'];
+      allow update: if false;
+      allow delete: if isAuthor(resource.data) || isOwner();
+    }
+
+    // One active "note" per account — a small 60-char status, Instagram
+    // Notes-style. Doc id is the author's email; overwritten in place each
+    // time, so there's never more than one per user. expiresAt filtered
+    // client-side same as Stories.
+    match /notes/{email} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.token.email == email
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 60;
+    }
   }
 }
