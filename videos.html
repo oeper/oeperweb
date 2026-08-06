@@ -95,6 +95,11 @@
   .watch-close { position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .watch-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .vote-col { display: flex; align-items: center; gap: 8px; background: var(--md-sys-color-surface); border-radius: 100px; padding: 6px 14px; }
+  .watch-icon-btn {
+    width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .watch-icon-btn:hover { color: var(--md-sys-color-on-surface); }
   .vote-btn { background: none; border: none; color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; }
   .vote-btn.upvoted { color: var(--md-sys-color-primary); }
   .vote-btn.downvoted { color: var(--md-sys-color-error); }
@@ -199,6 +204,36 @@ function timeAgo(date) {
   return date.toLocaleDateString();
 }
 function score(v) { return (v.upvoters || []).length - (v.downvoters || []).length; }
+function videoUrl(id) {
+  const url = new URL(window.location.href.split('?')[0]);
+  url.searchParams.set('video', id);
+  return url.toString();
+}
+async function copyLink(url, label) {
+  try { await navigator.clipboard.writeText(url); showToast((label || 'Link') + ' copied to clipboard'); }
+  catch { window.prompt('Copy this link:', url); }
+}
+async function reportItem(type, itemId, url) {
+  const user = getCurrentUser();
+  if (!user) { showToast('Sign in to report'); return; }
+  if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
+  const reason = window.prompt('Why are you reporting this?');
+  if (!reason || !reason.trim()) return;
+  try {
+    const idToken = await user.getIdToken();
+    const res = await fetch(SERVER_ENDPOINT + '/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
+      body: JSON.stringify({ type, reason: reason.trim(), itemId, url }),
+    });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { msg = (await res.json()).error || msg; } catch {}
+      throw new Error(msg);
+    }
+    showToast('Report sent — thank you');
+  } catch (err) { showToast('Could not send report: ' + err.message); }
+}
 function showToast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -212,6 +247,7 @@ function authorLinkHtml(v, innerHtml) {
 }
 
 let videos = [];
+let openedFromLink = false;
 const viewedKey = 'oe-viewed-videos';
 
 onSnapshot(collection(db, 'videos'), async snap => {
@@ -221,6 +257,12 @@ onSnapshot(collection(db, 'videos'), async snap => {
   }).sort((a, b) => b._date - a._date);
   await Promise.all(videos.map(v => ensureProfileLoaded(v.authorEmail)));
   render();
+  if (!openedFromLink) {
+    openedFromLink = true;
+    const wanted = new URLSearchParams(window.location.search).get('video');
+    const match = wanted && videos.find(v => v.id === wanted);
+    if (match) openWatch(match);
+  }
 }, err => { document.getElementById('emptyNote').style.display = 'block'; document.getElementById('emptyNote').textContent = 'Could not load videos: ' + err.message; });
 
 function render() {
@@ -282,7 +324,9 @@ function openWatch(v) {
       </div>
       ${authorLinkHtml(v, `${profile.photo ? `<img src="${profile.photo}" alt="">` : ''}${escHtml(profile.name)}`)}
       <span style="color:var(--md-sys-color-on-surface-variant); font-size:13px;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:middle;">visibility</span> ${v.views||0} views</span>
-      ${isMine ? `<button class="btn danger" id="deleteBtn" style="margin-left:auto;">Delete</button>` : ''}
+      <button class="watch-icon-btn" id="shareBtn" title="Share" style="margin-left:auto;"><span class="material-symbols-rounded">link</span></button>
+      <button class="watch-icon-btn" id="reportBtn" title="Report"><span class="material-symbols-rounded">flag</span></button>
+      ${isMine ? `<button class="btn danger" id="deleteBtn">Delete</button>` : ''}
     </div>
     <div class="watch-desc">${escHtml(v.description || '') || 'No description.'}</div>
   `;
@@ -291,12 +335,17 @@ function openWatch(v) {
     overlay.classList.remove('open');
     panel.classList.remove('open');
     panel.querySelector('video')?.pause();
+    const url = new URL(window.location);
+    url.searchParams.delete('video');
+    history.pushState({}, '', url);
   }
   overlay.onclick = close;
   document.getElementById('watchCloseBtn').onclick = close;
 
   document.getElementById('upBtn').addEventListener('click', () => toggleVote(v, 'up'));
   document.getElementById('downBtn').addEventListener('click', () => toggleVote(v, 'down'));
+  document.getElementById('shareBtn').addEventListener('click', () => copyLink(videoUrl(v.id), 'Video link'));
+  document.getElementById('reportBtn').addEventListener('click', () => reportItem('video', v.id, videoUrl(v.id)));
   const delBtn = document.getElementById('deleteBtn');
   if (delBtn) delBtn.addEventListener('click', async () => {
     if (!confirm('Delete this video? This cannot be undone.')) return;
@@ -306,6 +355,9 @@ function openWatch(v) {
 
   overlay.classList.add('open');
   panel.classList.add('open');
+  const url = new URL(window.location);
+  url.searchParams.set('video', v.id);
+  history.pushState({ video: v.id }, '', url);
   bumpViews(v);
 }
 

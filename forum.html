@@ -351,11 +351,17 @@
   .story-progress-row { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; gap: 4px; }
   .story-progress-track { flex: 1; height: 3px; border-radius: 3px; background: rgba(255,255,255,0.3); overflow: hidden; }
   .story-progress-fill { height: 100%; width: 0%; background: #fff; }
-  .story-viewer-header { position: absolute; top: 24px; left: 16px; right: 16px; display: flex; align-items: center; gap: 10px; color: #fff; }
+  .story-viewer-header { position: absolute; top: 24px; left: 16px; right: 16px; display: flex; align-items: center; gap: 10px; color: #fff; z-index: 2; }
   .story-viewer-header img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
-  .story-viewer-close { position: absolute; top: 24px; right: 16px; background: none; border: none; color: #fff; cursor: pointer; }
+  .story-viewer-close { position: absolute; top: 24px; right: 16px; background: none; border: none; color: #fff; cursor: pointer; z-index: 2; }
   .story-tap-zone { position: absolute; top: 0; bottom: 0; width: 33%; z-index: 1; }
   .story-tap-zone.left { left: 0; } .story-tap-zone.right { right: 0; }
+  .story-bottom-actions { position: absolute; bottom: 24px; right: 16px; display: flex; gap: 10px; z-index: 2; }
+  .story-icon-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15);
+    color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+  }
+  .story-icon-btn:hover { background: rgba(255,255,255,0.25); }
 </style>
 </head>
 <body>
@@ -465,6 +471,10 @@
   <button class="story-viewer-close" id="storyViewerClose"><span class="material-symbols-rounded">close</span></button>
   <img class="story-viewer-media" id="storyViewerImg" style="display:none;">
   <video class="story-viewer-media" id="storyViewerVideo" style="display:none;" autoplay muted></video>
+  <div class="story-bottom-actions">
+    <button class="story-icon-btn" id="storyShareBtn" title="Share"><span class="material-symbols-rounded">link</span></button>
+    <button class="story-icon-btn" id="storyReportBtn" title="Report"><span class="material-symbols-rounded">flag</span></button>
+  </div>
 </div>
 
 <script type="module">
@@ -534,6 +544,31 @@ function commentUrl(postId, commentId) {
   const url = new URL(postUrl(postId));
   url.searchParams.set('comment', commentId);
   return url.toString();
+}
+async function reportItem(type, postId, commentId, itemId, url) {
+  const u = getCurrentUser();
+  if (!u) { showToast('Sign in to report'); return; }
+  if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
+  const reason = window.prompt('Why are you reporting this?');
+  if (!reason || !reason.trim()) return;
+  try {
+    const idToken = await u.getIdToken();
+    const res = await fetch(SERVER_ENDPOINT + '/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
+      body: JSON.stringify({
+        type, reason: reason.trim(), postId: postId || null, commentId: commentId || null,
+        itemId: itemId || null,
+        url: url || (commentId ? commentUrl(postId, commentId) : postUrl(postId)),
+      }),
+    });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { msg = (await res.json()).error || msg; } catch {}
+      throw new Error(msg);
+    }
+    showToast('Report sent — thank you');
+  } catch (err) { showToast('Could not send report: ' + err.message); }
 }
 // Legacy posts had a single `imageUrl` string; newer ones have `imageUrls: []`.
 // Despite the field names, attachments can be any file type now, not just images.
@@ -800,6 +835,20 @@ function initStories() {
       fill.style.width = '100%';
     });
   }
+  function storyUrl(id) {
+    const url = new URL(window.location.href.split('?')[0]);
+    url.searchParams.set('story', id);
+    return url.toString();
+  }
+
+  document.getElementById('storyShareBtn').addEventListener('click', () => {
+    const s = currentSet[currentIndex];
+    if (s) copyLink(storyUrl(s.id), 'Story link');
+  });
+  document.getElementById('storyReportBtn').addEventListener('click', () => {
+    const s = currentSet[currentIndex];
+    if (s) reportItem('story', null, null, s.id, storyUrl(s.id));
+  });
 
   document.getElementById('storyViewerClose').addEventListener('click', closeStoryViewer);
   document.getElementById('storyPrevZone').addEventListener('click', () => showStory(currentIndex - 1));
@@ -872,30 +921,6 @@ function runForum() {
     } catch (err) { showToast('Could not ban: ' + err.message); }
   }
 
-  async function reportItem(type, postId, commentId) {
-    const u = currentUser();
-    if (!u) { showToast('Sign in to report'); return; }
-    if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
-    const reason = window.prompt('Why are you reporting this?');
-    if (!reason || !reason.trim()) return;
-    try {
-      const idToken = await u.getIdToken();
-      const res = await fetch(SERVER_ENDPOINT + '/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
-        body: JSON.stringify({
-          type, reason: reason.trim(), postId, commentId: commentId || null,
-          url: commentId ? commentUrl(postId, commentId) : postUrl(postId),
-        }),
-      });
-      if (!res.ok) {
-        let msg = `HTTP ${res.status}`;
-        try { msg = (await res.json()).error || msg; } catch {}
-        throw new Error(msg);
-      }
-      showToast('Report sent — thank you');
-    } catch (err) { showToast('Could not send report: ' + err.message); }
-  }
 
   async function deletePost(postId) {
     if (!confirm('Delete this post? This cannot be undone.')) return;

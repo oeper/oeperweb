@@ -290,11 +290,13 @@ app.post('/report', verifyFirebaseToken, async (req, res) => {
     return res.status(429).json({ error: `Please wait a few seconds before reporting again` });
   }
 
-  const { type, reason, postId, commentId, url } = req.body || {};
+  const { type, reason, postId, commentId, itemId, url } = req.body || {};
   if (!reason || typeof reason !== 'string' || !reason.trim()) {
     return res.status(400).json({ error: 'A reason is required' });
   }
-  if (!['post', 'comment'].includes(type)) {
+  // Every reportable content type on the site: forum posts/comments, long-form
+  // videos, Stories, Notes, and chat messages/conversations.
+  if (!['post', 'comment', 'video', 'story', 'note', 'message', 'conversation'].includes(type)) {
     return res.status(400).json({ error: 'Invalid report type' });
   }
 
@@ -304,12 +306,13 @@ app.post('/report', verifyFirebaseToken, async (req, res) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         content: [
-          `**New forum report** (${type})`,
+          `**New report** (${type})`,
           `Reported by: ${email}`,
           `Reason: ${reason.trim().slice(0, 1000)}`,
           url ? `Link: ${url}` : null,
           postId ? `Post ID: ${postId}` : null,
           commentId ? `Comment ID: ${commentId}` : null,
+          itemId ? `Item ID: ${itemId}` : null,
         ].filter(Boolean).join('\n'),
       }),
     });
