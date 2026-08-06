@@ -479,10 +479,10 @@
 
 <script type="module">
 import {
-  auth, db, SERVER_ENDPOINT, MAX_IMAGE_BYTES, isOwnerEmail,
+  auth, db, SERVER_ENDPOINT, MAX_IMAGE_BYTES, isOwnerEmail, officialBadgeHtml,
   getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded, handleOf,
   mountAccountBar, uploadFile,
-} from './shared/account.js?v=7';
+} from './shared/account.js?v=8';
 import { mountFooter } from './shared/footer.js';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
@@ -874,9 +874,10 @@ function runForum() {
   // hasn't been assigned a handle yet (hasn't signed in since that shipped),
   // falls back to plain non-clickable text rather than exposing their email.
   function authorLinkHtml(item, innerHtml, extraAttrs) {
+    const badge = officialBadgeHtml(item.authorEmail);
     const handle = handleOf(item.authorEmail);
-    if (!handle) return `<span class="author-link">${innerHtml}</span>`;
-    return `<a href="/profile.html?u=${encodeURIComponent(handle)}" class="author-link" ${extraAttrs || ''}>${innerHtml}</a>`;
+    if (!handle) return `<span class="author-link">${innerHtml}${badge}</span>`;
+    return `<a href="/profile.html?u=${encodeURIComponent(handle)}" class="author-link" ${extraAttrs || ''}>${innerHtml}${badge}</a>`;
   }
 
   const VIEWED_KEY = 'oe-viewed-posts';

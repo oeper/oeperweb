@@ -153,8 +153,8 @@
 
 <script type="module">
 import {
-  mountAccountBar, getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT,
-} from './shared/account.js?v=7';
+  mountAccountBar, getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml,
+} from './shared/account.js?v=8';
 import { mountFooter } from './shared/footer.js';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
@@ -365,7 +365,7 @@ function showInbox(user) {
         <button class="convo-row" data-email="${escHtml(otherEmail)}">
           <img class="convo-avatar" src="${profile.photo || ''}" alt="">
           <div class="convo-main">
-            <div class="convo-name">${escHtml(profile.name)}</div>
+            <div class="convo-name">${escHtml(profile.name)}${officialBadgeHtml(otherEmail)}</div>
             <div class="convo-preview">${escHtml(c.lastMessage || '')}</div>
           </div>
           <div class="convo-time">${c.updatedAt?.toDate ? timeAgo(c.updatedAt.toDate()) : ''}</div>
@@ -398,7 +398,7 @@ async function openThread(otherEmail, user) {
         ${otherHandle
           ? `<a href="/profile.html?u=${encodeURIComponent(otherHandle)}"><img src="${otherProfile.photo || ''}" alt=""></a>`
           : `<img src="${otherProfile.photo || ''}" alt="">`}
-        <span class="name">${escHtml(otherProfile.name)}</span>
+        <span class="name">${escHtml(otherProfile.name)}${officialBadgeHtml(otherEmail)}</span>
       </div>
       <div class="msg-list" id="msgList"></div>
       <div class="thread-inputbar">

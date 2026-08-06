@@ -125,9 +125,9 @@
 
 <script type="module">
 import {
-  mountAccountBar, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf,
+  mountAccountBar, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
   openEditProfileModal, db,
-} from './shared/account.js?v=7';
+} from './shared/account.js?v=8';
 import { mountFooter } from './shared/footer.js';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, deleteDoc, serverTimestamp,
@@ -257,7 +257,7 @@ async function init() {
         <div class="profile-top">
           <img class="profile-avatar" src="${profile.photo || ''}" alt="">
           <div class="profile-main">
-            <div class="profile-name">${escHtml(profile.name)}${areFriends ? `<span class="friends-badge"><span class="material-symbols-rounded">people</span>Friends</span>` : ''}</div>
+            <div class="profile-name">${escHtml(profile.name)}${officialBadgeHtml(viewedEmail)}${areFriends ? `<span class="friends-badge"><span class="material-symbols-rounded">people</span>Friends</span>` : ''}</div>
             <div class="profile-joined">@${escHtml(handle)}${joinDate ? ' · Member since ' + joinDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long' }) : ''}${!isOwn && followedBy ? ' · Follows you' : ''}</div>
             <div class="profile-bio ${bio ? '' : 'empty'}">${bio ? escHtml(bio) : 'No bio yet.'}</div>
           </div>

@@ -37,6 +37,29 @@ export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const OWNER_EMAILS = ['sanhackerman@gmail.com', 'taejiding@gmail.com'];
 export function isOwnerEmail(email) { return OWNER_EMAILS.includes(email); }
 
+// A small "Official" badge for owner accounts, Discord-official-message
+// style. Returns '' for everyone else. Self-contained (injects its own
+// tiny stylesheet on first use) so any page can drop this inline next to
+// a name without importing extra CSS.
+let badgeStylesInjected = false;
+export function officialBadgeHtml(email) {
+  if (!isOwnerEmail(email)) return '';
+  if (!badgeStylesInjected) {
+    badgeStylesInjected = true;
+    const style = document.createElement('style');
+    style.textContent = `
+      .oe-badge-official {
+        display: inline-flex; align-items: center; gap: 3px; background: var(--md-sys-color-primary, #a8c7fa);
+        color: var(--md-sys-color-on-primary, #062e6f); font-size: 10px; font-weight: 600; padding: 2px 7px 2px 5px;
+        border-radius: 100px; vertical-align: middle; margin-left: 4px; letter-spacing: 0.2px;
+      }
+      .oe-badge-official .material-symbols-rounded { font-size: 11px; }
+    `;
+    document.head.appendChild(style);
+  }
+  return `<span class="oe-badge-official" title="Official — site owner"><span class="material-symbols-rounded">verified</span>OFFICIAL</span>`;
+}
+
 const app = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
 export const auth = getAuth(app);
 export const db = getFirestore(app);

@@ -182,9 +182,9 @@
 
 <script type="module">
 import {
-  auth, db, SERVER_ENDPOINT, isOwnerEmail, getCurrentUser, onAccountChange,
+  auth, db, SERVER_ENDPOINT, isOwnerEmail, officialBadgeHtml, getCurrentUser, onAccountChange,
   getProfile, handleOf, mountAccountBar, uploadFile, ensureProfileLoaded,
-} from './shared/account.js?v=7';
+} from './shared/account.js?v=8';
 import { mountFooter } from './shared/footer.js';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
@@ -241,9 +241,10 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 function authorLinkHtml(v, innerHtml) {
+  const badge = officialBadgeHtml(v.authorEmail);
   const handle = handleOf(v.authorEmail);
-  if (!handle) return `<span class="author-link">${innerHtml}</span>`;
-  return `<a href="/profile.html?u=${encodeURIComponent(handle)}" class="author-link" onclick="event.stopPropagation()">${innerHtml}</a>`;
+  if (!handle) return `<span class="author-link">${innerHtml}${badge}</span>`;
+  return `<a href="/profile.html?u=${encodeURIComponent(handle)}" class="author-link" onclick="event.stopPropagation()">${innerHtml}${badge}</a>`;
 }
 
 let videos = [];
