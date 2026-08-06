@@ -272,9 +272,9 @@
     max-width: 560px;
   }
 
-  .home-search-form { margin-top: 28px; max-width: 560px; }
+  .home-search-form { margin-top: 28px; max-width: 560px; position: relative; }
   .home-search-wrap { position: relative; }
-  .home-search-wrap .material-symbols-rounded {
+  .home-search-icon {
     position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
     color: var(--md-sys-color-on-surface-variant); font-size: 22px; pointer-events: none;
   }
@@ -294,6 +294,31 @@
   }
   .home-search-engine:hover { background: rgba(255,255,255,0.06); color: var(--md-sys-color-on-surface); }
   .home-search-engine.active { background: var(--md-sys-color-secondary-container); border-color: transparent; color: var(--md-sys-color-on-secondary-container); }
+
+  .home-search-dropdown {
+    position: absolute; top: 100%; margin-top: 8px; left: 0; right: 0;
+    background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 20px; padding: 8px; max-height: 380px; overflow-y: auto; z-index: 20;
+    opacity: 0; pointer-events: none; transform: translateY(-6px);
+    transition: opacity 0.15s, transform 0.15s;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+  }
+  .home-search-dropdown.open { opacity: 1; pointer-events: all; transform: translateY(0); }
+  .hsd-row {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px;
+    cursor: pointer; text-decoration: none; color: inherit;
+  }
+  .hsd-row:hover, .hsd-row.active { background: rgba(255,255,255,0.06); }
+  .hsd-icon {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--md-sys-color-surface-variant);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;
+  }
+  .hsd-icon img { width: 100%; height: 100%; object-fit: cover; }
+  .hsd-icon .material-symbols-rounded { font-size: 18px; color: var(--md-sys-color-on-surface-variant); }
+  .hsd-main { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hsd-name { font-weight: 500; }
+  .hsd-cat { color: var(--md-sys-color-on-surface-variant); font-weight: 400; }
+  .hsd-empty, .hsd-loading { padding: 20px; text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; }
 
   .home-feed-section { margin: 40px 0; }
   .home-feed-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
@@ -421,7 +446,7 @@
 <script type="module">
   import { mountAccountBar, db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml } from './shared/account.js?v=8';
   import { mountFooter } from './shared/footer.js';
-  import { collection, query, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+  import { collection, query, orderBy, limit, onSnapshot, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
   mountAccountBar(document.getElementById('accountBar'));
   mountFooter();
@@ -548,6 +573,145 @@
       () => { gotVideos = true; renderFeed(); } // videos rules may not be deployed yet on some setups — degrade to posts-only rather than blocking the feed forever
     );
   }
+
+  const SEARCH_ENGINES = {
+    google: { action: 'https://www.google.com/search', param: 'q' },
+    duckduckgo: { action: 'https://duckduckgo.com/', param: 'q' },
+    bing: { action: 'https://www.bing.com/search', param: 'q' },
+  };
+  const searchForm = document.getElementById('homeSearchForm');
+  if (searchForm) {
+    const searchInput = document.getElementById('homeSearchInput');
+    const engineButtons = document.querySelectorAll('#homeSearchEngines .home-search-engine');
+    const dropdown = document.getElementById('homeSearchDropdown');
+    let engine = localStorage.getItem('oe-search-engine') || 'google';
+    if (engine !== 'oeper' && !SEARCH_ENGINES[engine]) engine = 'google';
+
+    function closeDropdown() { dropdown.classList.remove('open'); }
+
+    function applyEngine() {
+      engineButtons.forEach(b => b.classList.toggle('active', b.dataset.engine === engine));
+      if (engine === 'oeper') {
+        searchForm.removeAttribute('action');
+        searchInput.placeholder = 'Search oeper.dev…';
+      } else {
+        searchForm.action = SEARCH_ENGINES[engine].action;
+        searchInput.name = SEARCH_ENGINES[engine].param;
+        searchInput.placeholder = 'Search the web…';
+        closeDropdown();
+      }
+    }
+    applyEngine();
+
+    engineButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        engine = btn.dataset.engine;
+        localStorage.setItem('oe-search-engine', engine);
+        applyEngine();
+        searchInput.focus();
+        if (engine === 'oeper' && searchInput.value.trim()) runOeperSearch(searchInput.value.trim());
+      });
+    });
+
+    searchInput.focus();
+
+    // ── oeper.dev search — one-shot fetch of a recent slice of each
+    // collection, cached, then matched client-side (no lowercase index
+    // fields exist yet, and the corpus is small enough this is fine). ──
+    let corpusPromise = null;
+    function loadCorpus() {
+      if (corpusPromise) return corpusPromise;
+      corpusPromise = Promise.allSettled([
+        getDocs(query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(300))),
+        getDocs(query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(300))),
+        getDocs(query(collection(db, 'projects'), orderBy('createdAt', 'desc'), limit(300))),
+        getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(300))),
+      ]).then(([postsR, videosR, projectsR, usersR]) => ({
+        posts: postsR.status === 'fulfilled' ? postsR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
+        videos: videosR.status === 'fulfilled' ? videosR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
+        projects: projectsR.status === 'fulfilled' ? projectsR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
+        users: usersR.status === 'fulfilled' ? usersR.value.docs.map(d => ({ email: d.id, ...d.data() })) : [],
+      }));
+      return corpusPromise;
+    }
+
+    function matchRank(name, q) {
+      const idx = (name || '').toLowerCase().indexOf(q);
+      if (idx === -1) return -1;
+      return idx === 0 ? 0 : 1; // prefix matches rank above mid-string matches
+    }
+
+    async function runOeperSearch(qRaw) {
+      const q = qRaw.trim().toLowerCase();
+      if (!q) { closeDropdown(); return; }
+      dropdown.innerHTML = '<div class="hsd-loading">Searching…</div>';
+      dropdown.classList.add('open');
+
+      let corpus;
+      try { corpus = await loadCorpus(); } catch { corpus = { posts: [], videos: [], projects: [], users: [] }; }
+      if (searchInput.value.trim().toLowerCase() !== q || engine !== 'oeper') return; // stale — input/engine changed while we were fetching
+
+      const results = [];
+      corpus.users.forEach(u => {
+        if (!u.handle) return;
+        const name = u.displayName || u.handle;
+        const rank = Math.min(
+          matchRank(name, q) === -1 ? 99 : matchRank(name, q),
+          matchRank(u.handle, q) === -1 ? 99 : matchRank(u.handle, q)
+        );
+        if (rank < 99) results.push({ rank, name, sub: 'in People', url: `/profile.html?u=${encodeURIComponent(u.handle)}`, photo: getProfile(u.email, u.displayName, u.photoURL).photo, icon: 'person' });
+      });
+      corpus.posts.forEach(p => {
+        const name = p.title || p.body || '';
+        const rank = matchRank(name, q);
+        if (rank !== -1) results.push({ rank, name, sub: 'in Feed', url: `/forum.html?post=${p.id}`, icon: 'forum' });
+      });
+      corpus.videos.forEach(v => {
+        const rank = matchRank(v.title, q);
+        if (rank !== -1) results.push({ rank, name: v.title || '', sub: 'in Videos', url: `/videos.html?video=${v.id}`, icon: 'smart_display' });
+      });
+      corpus.projects.forEach(p => {
+        const rank = matchRank(p.title, q);
+        if (rank !== -1) results.push({ rank, name: p.title || '', sub: 'in Projects', url: `/projects.html?project=${p.id}`, icon: 'apps' });
+      });
+
+      results.sort((a, b) => a.rank - b.rank);
+      const top = results.slice(0, 8);
+
+      if (top.length === 0) {
+        dropdown.innerHTML = `<div class="hsd-empty">No results for "${escHtml(qRaw.trim())}"</div>`;
+        return;
+      }
+      dropdown.innerHTML = top.map(r => `
+        <a class="hsd-row" href="${r.url}">
+          <div class="hsd-icon">${r.photo ? `<img src="${r.photo}" alt="">` : `<span class="material-symbols-rounded">${r.icon}</span>`}</div>
+          <div class="hsd-main"><span class="hsd-name">${escHtml(r.name)}</span> <span class="hsd-cat">${r.sub}</span></div>
+        </a>
+      `).join('');
+    }
+
+    let searchDebounce = null;
+    searchInput.addEventListener('input', () => {
+      if (engine !== 'oeper') return;
+      clearTimeout(searchDebounce);
+      const q = searchInput.value.trim();
+      if (!q) { closeDropdown(); return; }
+      searchDebounce = setTimeout(() => runOeperSearch(q), 220);
+    });
+    searchInput.addEventListener('focus', () => {
+      if (engine === 'oeper' && searchInput.value.trim()) dropdown.classList.add('open');
+    });
+    searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') closeDropdown(); });
+    document.addEventListener('click', e => {
+      if (!dropdown.contains(e.target) && e.target !== searchInput) closeDropdown();
+    });
+    searchForm.addEventListener('submit', e => {
+      if (engine !== 'oeper') return;
+      e.preventDefault();
+      const first = dropdown.querySelector('.hsd-row');
+      if (first) window.location.href = first.getAttribute('href');
+    });
+  }
 </script>
 <script>
 const PAGES = [
@@ -663,16 +827,18 @@ PAGES.forEach((page, index) => {
       <h1 class="${isFirst ? 'animate-text-hero' : ''}">${page.heroTitle}</h1>
       <p class="${isFirst ? 'animate-text-sub' : ''}">${page.heroSub}</p>
       ${isFirst ? `
-        <form class="home-search-form" id="homeSearchForm" action="https://www.google.com/search" method="GET">
+        <form class="home-search-form" id="homeSearchForm" action="https://www.google.com/search" method="GET" autocomplete="off">
           <div class="home-search-wrap">
-            <span class="material-symbols-rounded">search</span>
+            <span class="material-symbols-rounded home-search-icon">search</span>
             <input class="home-search-input" type="text" name="q" id="homeSearchInput" placeholder="Search the web…" autocomplete="off">
           </div>
           <div class="home-search-engines" id="homeSearchEngines">
+            <button type="button" class="home-search-engine" data-engine="oeper">oeper.dev</button>
             <button type="button" class="home-search-engine" data-engine="google">Google</button>
             <button type="button" class="home-search-engine" data-engine="duckduckgo">DuckDuckGo</button>
             <button type="button" class="home-search-engine" data-engine="bing">Bing</button>
           </div>
+          <div class="home-search-dropdown" id="homeSearchDropdown"></div>
         </form>
       ` : ''}
     </div>
@@ -690,37 +856,6 @@ PAGES.forEach((page, index) => {
 
   pageContainer.appendChild(pageSection);
 });
-
-const SEARCH_ENGINES = {
-  google: { action: 'https://www.google.com/search', param: 'q' },
-  duckduckgo: { action: 'https://duckduckgo.com/', param: 'q' },
-  bing: { action: 'https://www.bing.com/search', param: 'q' },
-};
-const searchForm = document.getElementById('homeSearchForm');
-if (searchForm) {
-  const searchInput = document.getElementById('homeSearchInput');
-  const engineButtons = document.querySelectorAll('#homeSearchEngines .home-search-engine');
-  let engine = localStorage.getItem('oe-search-engine') || 'google';
-  if (!SEARCH_ENGINES[engine]) engine = 'google';
-
-  function applyEngine() {
-    searchForm.action = SEARCH_ENGINES[engine].action;
-    searchInput.name = SEARCH_ENGINES[engine].param;
-    engineButtons.forEach(b => b.classList.toggle('active', b.dataset.engine === engine));
-  }
-  applyEngine();
-
-  engineButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      engine = btn.dataset.engine;
-      localStorage.setItem('oe-search-engine', engine);
-      applyEngine();
-      searchInput.focus();
-    });
-  });
-
-  searchInput.focus();
-}
 
 function switchTab(event, tabId) {
   event.preventDefault();
