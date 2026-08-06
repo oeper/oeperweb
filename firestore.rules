@@ -117,9 +117,15 @@ service cloud.firestore {
         allow create: if isSignedIn()
           && request.auth.token.email == request.resource.data.senderEmail
           && request.auth.token.email in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants
-          && request.resource.data.text is string
-          && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 2000;
+          && (
+            (request.resource.data.text is string
+              && request.resource.data.text.size() > 0
+              && request.resource.data.text.size() <= 2000)
+            ||
+            (request.resource.data.audioUrl is string
+              && request.resource.data.audioUrl.size() > 0
+              && request.resource.data.audioDuration is number)
+          );
         allow update, delete: if false; // messages are immutable once sent
       }
     }

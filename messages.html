@@ -88,15 +88,36 @@
   .msg-bubble { max-width: 75%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; background: var(--md-sys-color-surface); }
   .msg.mine .msg-bubble { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
 
+  /* Voice message bubble */
+  .msg-audio { display: flex; align-items: center; gap: 8px; min-width: 176px; }
+  .audio-play-btn { width: 30px; height: 30px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15); color: inherit; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; padding: 0; }
+  .audio-play-btn .material-symbols-rounded { font-size: 18px; }
+  .msg.mine .audio-play-btn { background: rgba(0,0,0,0.15); }
+  .audio-track { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.25); position: relative; overflow: hidden; }
+  .msg.mine .audio-track { background: rgba(0,0,0,0.2); }
+  .audio-progress { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: currentColor; opacity: 0.85; }
+  .audio-time { font-size: 11px; opacity: 0.85; flex-shrink: 0; min-width: 30px; text-align: right; font-variant-numeric: tabular-nums; }
+
   .thread-inputbar {
-    position: sticky; bottom: 16px; display: flex; align-items: flex-end; gap: 10px;
+    position: sticky; bottom: 16px; display: flex; align-items: center; gap: 0;
     background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
     border-radius: 26px; padding: 8px 8px 8px 20px;
   }
+  .input-normal { display: flex; align-items: flex-end; gap: 6px; flex: 1; min-width: 0; }
   #msgInput { flex: 1; background: transparent; border: none; outline: none; resize: none; color: var(--md-sys-color-on-surface); font-family: inherit; font-size: 14px; line-height: 1.5; max-height: 120px; padding: 8px 0; }
   #msgInput::placeholder { color: var(--md-sys-color-on-surface-variant); }
   .send-btn { width: 38px; height: 38px; border-radius: 50%; border: none; flex-shrink: 0; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .send-btn:disabled { opacity: 0.4; cursor: default; }
+  .mic-btn { width: 38px; height: 38px; border-radius: 50%; border: none; flex-shrink: 0; background: transparent; color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .mic-btn:hover { color: var(--md-sys-color-on-surface); }
+
+  .recording-bar { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; padding: 0 2px; }
+  .recording-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--md-sys-color-error); flex-shrink: 0; animation: recPulse 1s ease-in-out infinite; }
+  @keyframes recPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .recording-time { font-size: 14px; flex: 1; font-variant-numeric: tabular-nums; color: var(--md-sys-color-on-surface); }
+  .rec-cancel-btn, .rec-send-btn { width: 38px; height: 38px; border-radius: 50%; border: none; flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .rec-cancel-btn { background: transparent; color: var(--md-sys-color-error); }
+  .rec-send-btn { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
 
   /* Notes */
   .notes-bar { display: flex; gap: 16px; overflow-x: auto; padding: 4px 2px 20px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -153,7 +174,7 @@
 
 <script type="module">
 import {
-  mountAccountBar, getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml,
+  mountAccountBar, getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile,
 } from './shared/account.js?v=8';
 import { mountFooter } from './shared/footer.js';
 import {
@@ -402,8 +423,17 @@ async function openThread(otherEmail, user) {
       </div>
       <div class="msg-list" id="msgList"></div>
       <div class="thread-inputbar">
-        <textarea id="msgInput" placeholder="Message…" rows="1"></textarea>
-        <button class="send-btn" id="sendMsgBtn"><span class="material-symbols-rounded">arrow_upward</span></button>
+        <div class="input-normal" id="inputNormal">
+          <textarea id="msgInput" placeholder="Message…" rows="1"></textarea>
+          <button class="mic-btn" id="micBtn" title="Record voice message"><span class="material-symbols-rounded">mic</span></button>
+          <button class="send-btn" id="sendMsgBtn"><span class="material-symbols-rounded">arrow_upward</span></button>
+        </div>
+        <div class="recording-bar" id="recordingBar" style="display:none;">
+          <div class="recording-dot"></div>
+          <span class="recording-time" id="recordingTime">0:00</span>
+          <button class="rec-cancel-btn" id="recCancelBtn" title="Cancel"><span class="material-symbols-rounded">delete</span></button>
+          <button class="rec-send-btn" id="recSendBtn" title="Send"><span class="material-symbols-rounded">arrow_upward</span></button>
+        </div>
       </div>
     </div>
   `;
@@ -411,6 +441,14 @@ async function openThread(otherEmail, user) {
   const msgList = document.getElementById('msgList');
   const msgInput = document.getElementById('msgInput');
   const sendBtn = document.getElementById('sendMsgBtn');
+  const inputNormal = document.getElementById('inputNormal');
+  const micBtn = document.getElementById('micBtn');
+  const recordingBar = document.getElementById('recordingBar');
+  const recordingTime = document.getElementById('recordingTime');
+  const recCancelBtn = document.getElementById('recCancelBtn');
+  const recSendBtn = document.getElementById('recSendBtn');
+  let activeAudio = null;
+  let activeAudioBtn = null;
 
   unsubMessages = onSnapshot(
     query(collection(db, 'conversations', convoId, 'messages'), orderBy('createdAt', 'asc')),
@@ -419,20 +457,94 @@ async function openThread(otherEmail, user) {
       const mine = m => m.senderEmail === user.email;
       msgList.innerHTML = msgs.map(m => `
         <div class="msg ${mine(m) ? 'mine' : ''}">
-          <div class="msg-bubble">${escHtml(m.text)}</div>
+          <div class="msg-bubble">${m.audioUrl ? audioBubbleHtml(m) : escHtml(m.text)}</div>
           ${!mine(m) ? `<button class="msg-report-btn" data-id="${escHtml(m.id)}" title="Report"><span class="material-symbols-rounded">flag</span></button>` : ''}
         </div>
       `).join('');
       msgList.querySelectorAll('.msg-report-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const m = msgs.find(x => x.id === btn.dataset.id);
-          if (m) reportItem('message', m.id, m.text, otherEmail);
+          if (m) reportItem('message', m.id, m.audioUrl ? '🎤 Voice message' : m.text, otherEmail);
         });
+      });
+      msgList.querySelectorAll('.audio-play-btn').forEach(btn => {
+        btn.addEventListener('click', () => toggleAudioPlayback(btn));
       });
       msgList.scrollIntoView({ block: 'end' });
     },
     () => { /* conversation doc doesn't exist yet — no messages, that's fine */ }
   );
+
+  function formatDuration(totalSeconds) {
+    const s = Math.max(0, Math.round(totalSeconds || 0));
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  function audioBubbleHtml(m) {
+    return `
+      <div class="msg-audio" data-src="${escHtml(m.audioUrl)}" data-duration="${m.audioDuration || 0}">
+        <button class="audio-play-btn"><span class="material-symbols-rounded">play_arrow</span></button>
+        <div class="audio-track"><div class="audio-progress"></div></div>
+        <span class="audio-time">${formatDuration(m.audioDuration)}</span>
+      </div>
+    `;
+  }
+
+  function toggleAudioPlayback(btn) {
+    const wrap = btn.closest('.msg-audio');
+    const icon = btn.querySelector('.material-symbols-rounded');
+    const progress = wrap.querySelector('.audio-progress');
+    const timeEl = wrap.querySelector('.audio-time');
+    const duration = Number(wrap.dataset.duration) || 0;
+
+    if (activeAudio && activeAudioBtn === btn) {
+      if (activeAudio.paused) { activeAudio.play(); } else { activeAudio.pause(); }
+      return;
+    }
+    if (activeAudio) {
+      activeAudio.pause();
+      activeAudio = null;
+      activeAudioBtn = null;
+    }
+
+    const audio = new Audio(wrap.dataset.src);
+    activeAudio = audio;
+    activeAudioBtn = btn;
+    icon.textContent = 'hourglass_top';
+    audio.addEventListener('play', () => { icon.textContent = 'pause'; });
+    audio.addEventListener('pause', () => { icon.textContent = 'play_arrow'; });
+    audio.addEventListener('timeupdate', () => {
+      const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+      progress.style.width = pct + '%';
+      timeEl.textContent = formatDuration(audio.duration ? audio.duration - audio.currentTime : duration);
+    });
+    audio.addEventListener('ended', () => {
+      progress.style.width = '0%';
+      timeEl.textContent = formatDuration(duration);
+      if (activeAudio === audio) { activeAudio = null; activeAudioBtn = null; }
+    });
+    audio.addEventListener('error', () => {
+      icon.textContent = 'play_arrow';
+      if (activeAudio === audio) { activeAudio = null; activeAudioBtn = null; }
+      showToast('Could not play voice message');
+    });
+    audio.play().catch(() => { icon.textContent = 'play_arrow'; activeAudio = null; activeAudioBtn = null; });
+  }
+
+  async function touchConversation(preview) {
+    const convoRef = doc(db, 'conversations', convoId);
+    const convoSnap = await getDoc(convoRef);
+    if (!convoSnap.exists()) {
+      await setDoc(convoRef, {
+        participants: [user.email, otherEmail],
+        lastMessage: preview,
+        lastMessageAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      await setDoc(convoRef, { lastMessage: preview, lastMessageAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+    }
+  }
 
   async function send() {
     const text = msgInput.value.trim();
@@ -440,18 +552,7 @@ async function openThread(otherEmail, user) {
     msgInput.value = '';
     sendBtn.disabled = true;
     try {
-      const convoRef = doc(db, 'conversations', convoId);
-      const convoSnap = await getDoc(convoRef);
-      if (!convoSnap.exists()) {
-        await setDoc(convoRef, {
-          participants: [user.email, otherEmail],
-          lastMessage: text.slice(0, 200),
-          lastMessageAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      } else {
-        await setDoc(convoRef, { lastMessage: text.slice(0, 200), lastMessageAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
-      }
+      await touchConversation(text.slice(0, 200));
       await addDoc(collection(db, 'conversations', convoId, 'messages'), {
         senderEmail: user.email,
         text,
@@ -468,6 +569,98 @@ async function openThread(otherEmail, user) {
   msgInput.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
   });
+
+  // ── Voice messages ──────────────────────────────────────────
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recordingStream = null;
+  let recordingStartMs = 0;
+  let recordingTimerId = null;
+
+  function formatClock(totalSeconds) {
+    const s = Math.max(0, Math.round(totalSeconds || 0));
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+
+  function showRecordingUi(on) {
+    inputNormal.style.display = on ? 'none' : 'flex';
+    recordingBar.style.display = on ? 'flex' : 'none';
+  }
+
+  function stopRecordingResources() {
+    if (recordingTimerId) { clearInterval(recordingTimerId); recordingTimerId = null; }
+    if (recordingStream) { recordingStream.getTracks().forEach(t => t.stop()); recordingStream = null; }
+    showRecordingUi(false);
+  }
+
+  async function startRecording() {
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+      alert('Voice messages are not supported in this browser.');
+      return;
+    }
+    try {
+      recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      alert('Microphone access is required to record a voice message.');
+      return;
+    }
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(recordingStream);
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.start();
+    recordingStartMs = Date.now();
+    recordingTime.textContent = '0:00';
+    showRecordingUi(true);
+    recordingTimerId = setInterval(() => {
+      recordingTime.textContent = formatClock((Date.now() - recordingStartMs) / 1000);
+    }, 250);
+  }
+
+  function cancelRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.onstop = null;
+      mediaRecorder.stop();
+    }
+    mediaRecorder = null;
+    recordedChunks = [];
+    stopRecordingResources();
+  }
+
+  function finishRecording() {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+    const elapsedMs = Date.now() - recordingStartMs;
+    const recorder = mediaRecorder;
+    mediaRecorder = null;
+    recorder.onstop = async () => {
+      stopRecordingResources();
+      if (elapsedMs < 800) return; // too short — likely an accidental tap
+      const mimeType = recorder.mimeType || 'audio/webm';
+      const ext = mimeType.includes('ogg') ? 'ogg' : mimeType.includes('mp4') ? 'm4a' : 'webm';
+      const blob = new Blob(recordedChunks, { type: mimeType });
+      const file = new File([blob], `voice-message.${ext}`, { type: mimeType });
+      await sendVoiceMessage(file, elapsedMs / 1000);
+    };
+    recorder.stop();
+  }
+
+  async function sendVoiceMessage(file, durationSeconds) {
+    try {
+      const audioUrl = await uploadFile(file, '/upload-message');
+      await touchConversation('🎤 Voice message');
+      await addDoc(collection(db, 'conversations', convoId, 'messages'), {
+        senderEmail: user.email,
+        audioUrl,
+        audioDuration: Math.round(durationSeconds),
+        createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      alert('Could not send voice message: ' + err.message);
+    }
+  }
+
+  micBtn.addEventListener('click', startRecording);
+  recCancelBtn.addEventListener('click', cancelRecording);
+  recSendBtn.addEventListener('click', finishRecording);
 }
 </script>
 </body>
