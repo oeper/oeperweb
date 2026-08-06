@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Music Composer — oeper.dev</title>
+<meta name="description" content="A free, no-signup step-sequencer music composer">
+<meta property="og:title" content="Music Composer — oeper.dev">
+<meta property="og:description" content="A free, no-signup step-sequencer music composer">
+<meta property="og:url" content="https://oeper.dev/composer.html">
+<meta property="og:type" content="website">
+<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<script src="./shared/theme-boot.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 1000px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 28px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.2rem, 6vw, 3rem); font-weight: 400; margin-bottom: 12px; letter-spacing: -0.5px; }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 15px; max-width: 560px; line-height: 1.5; }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap; background: var(--md-sys-color-surface);
+    border-radius: 20px; padding: 16px 20px; margin-bottom: 20px;
+  }
+  .transport { display: flex; align-items: center; gap: 8px; }
+  .icon-btn {
+    width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .icon-btn.secondary { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); }
+  .icon-btn:hover { opacity: 0.9; }
+  .toolbar-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .toolbar-field select, .toolbar-field input[type="range"] { accent-color: var(--md-sys-color-primary); }
+  .toolbar-field select {
+    background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface);
+    border-radius: 10px; padding: 8px 10px; font-family: inherit; font-size: 13px;
+  }
+  .bpm-value, .vol-value { color: var(--md-sys-color-on-surface); font-weight: 500; min-width: 34px; }
+
+  .seq-wrap { background: var(--md-sys-color-surface); border-radius: 20px; padding: 16px; overflow-x: auto; }
+  .seq-grid { display: inline-block; }
+  .seq-row { display: flex; align-items: center; }
+  .note-label {
+    width: 52px; flex-shrink: 0; font-size: 12px; color: var(--md-sys-color-on-surface-variant); text-align: right; padding-right: 10px;
+    font-family: monospace;
+  }
+  .note-label.sharp { color: var(--md-sys-color-outline-variant); }
+  .step-cell {
+    width: 28px; height: 22px; margin: 1.5px; border-radius: 5px; background: var(--md-sys-color-surface-variant);
+    cursor: pointer; flex-shrink: 0; transition: background-color 0.1s;
+  }
+  .step-cell:hover { background: #3c4450; }
+  .step-cell.on { background: var(--md-sys-color-primary); }
+  .step-cell.beat { outline: 1px solid rgba(255,255,255,0.08); }
+  .step-cell.playing { box-shadow: 0 0 0 2px #fff inset; }
+
+  .empty-hint { text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <div class="header-container">
+      <a href="https://oeper.dev" class="header-link">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>back to oeper.dev</span>
+      </a>
+      <a href="/tools.html" class="header-link"><span class="material-symbols-rounded">build</span><span>Tools</span></a>
+    </div>
+    <h1>Music Composer</h1>
+    <p>A step sequencer that runs entirely in your browser — click cells to place notes, hit play, and export a WAV when you're happy with it. Nothing is uploaded anywhere.</p>
+  </header>
+
+  <div class="toolbar">
+    <div class="transport">
+      <button class="icon-btn" id="playBtn" title="Play"><span class="material-symbols-rounded">play_arrow</span></button>
+      <button class="icon-btn secondary" id="stopBtn" title="Stop"><span class="material-symbols-rounded">stop</span></button>
+      <button class="icon-btn secondary" id="clearBtn" title="Clear all notes"><span class="material-symbols-rounded">delete_sweep</span></button>
+    </div>
+    <div class="toolbar-field">
+      Tempo <input type="range" id="bpmInput" min="60" max="220" value="120"> <span class="bpm-value" id="bpmValue">120</span> BPM
+    </div>
+    <div class="toolbar-field">
+      Volume <input type="range" id="volInput" min="0" max="100" value="70"> <span class="vol-value" id="volValue">70</span>%
+    </div>
+    <div class="toolbar-field">
+      Waveform
+      <select id="waveSelect">
+        <option value="sine">Sine</option>
+        <option value="square">Square</option>
+        <option value="sawtooth">Sawtooth</option>
+        <option value="triangle" selected>Triangle</option>
+      </select>
+    </div>
+    <div class="toolbar-field">
+      Steps
+      <select id="stepsSelect">
+        <option value="16" selected>16</option>
+        <option value="32">32</option>
+      </select>
+    </div>
+    <button class="icon-btn secondary" id="exportBtn" title="Export as WAV" style="margin-left:auto;"><span class="material-symbols-rounded">download</span></button>
+  </div>
+
+  <div class="seq-wrap">
+    <div class="seq-grid" id="seqGrid"></div>
+  </div>
+  <p class="empty-hint">Tip: each row is a note (top = highest). Click a cell to toggle it, then press play.</p>
+</div>
+
+<script>
+// C3 up to C5, chromatic, highest note first so the grid reads like a piano roll.
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+function noteName(midi) { return NOTE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1); }
+function noteFreq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
+
+const LOW_MIDI = 48;  // C3
+const HIGH_MIDI = 72; // C5
+const MIDI_NOTES = [];
+for (let m = HIGH_MIDI; m >= LOW_MIDI; m--) MIDI_NOTES.push(m);
+
+let steps = 16;
+let grid = {}; // "row_col" -> true
+let bpm = 120;
+let volume = 0.7;
+let waveform = 'triangle';
+
+const seqGrid = document.getElementById('seqGrid');
+
+function buildGrid() {
+  grid = {};
+  seqGrid.innerHTML = '';
+  MIDI_NOTES.forEach((midi, row) => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'seq-row';
+    const label = document.createElement('div');
+    label.className = 'note-label' + (noteName(midi).includes('#') ? ' sharp' : '');
+    label.textContent = noteName(midi);
+    rowEl.appendChild(label);
+    for (let col = 0; col < steps; col++) {
+      const cell = document.createElement('div');
+      cell.className = 'step-cell' + (col % 4 === 0 ? ' beat' : '');
+      cell.dataset.row = row;
+      cell.dataset.col = col;
+      cell.addEventListener('click', () => {
+        const key = row + '_' + col;
+        if (grid[key]) { delete grid[key]; cell.classList.remove('on'); }
+        else { grid[key] = true; cell.classList.add('on'); }
+      });
+      rowEl.appendChild(cell);
+    }
+    seqGrid.appendChild(rowEl);
+  });
+}
+buildGrid();
+
+document.getElementById('stepsSelect').addEventListener('change', e => {
+  playing && stop();
+  steps = Number(e.target.value);
+  buildGrid();
+});
+
+document.getElementById('bpmInput').addEventListener('input', e => {
+  bpm = Number(e.target.value);
+  document.getElementById('bpmValue').textContent = bpm;
+});
+document.getElementById('volInput').addEventListener('input', e => {
+  volume = Number(e.target.value) / 100;
+  document.getElementById('volValue').textContent = e.target.value;
+});
+document.getElementById('waveSelect').addEventListener('change', e => { waveform = e.target.value; });
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  grid = {};
+  document.querySelectorAll('.step-cell.on').forEach(c => c.classList.remove('on'));
+});
+
+// ── Playback (lookahead scheduler) ──────────────────────────
+let audioCtx = null;
+let playing = false;
+let currentStep = 0;
+let nextStepTime = 0;
+let schedulerTimer = null;
+const SCHEDULE_AHEAD = 0.1;
+const LOOKAHEAD_MS = 25;
+
+function stepDuration() { return 60 / bpm / 4; } // 16th notes
+
+function playNote(midi, time) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = waveform;
+  osc.frequency.setValueAtTime(noteFreq(midi), time);
+  gain.gain.setValueAtTime(0, time);
+  gain.gain.linearRampToValueAtTime(volume * 0.5, time + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + stepDuration() * 0.9);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(time);
+  osc.stop(time + stepDuration());
+}
+
+function scheduler() {
+  while (nextStepTime < audioCtx.currentTime + SCHEDULE_AHEAD) {
+    MIDI_NOTES.forEach((midi, row) => {
+      if (grid[row + '_' + currentStep]) playNote(midi, nextStepTime);
+    });
+    const stepToHighlight = currentStep;
+    setTimeout(() => highlightStep(stepToHighlight), Math.max(0, (nextStepTime - audioCtx.currentTime) * 1000));
+    nextStepTime += stepDuration();
+    currentStep = (currentStep + 1) % steps;
+  }
+  schedulerTimer = setTimeout(scheduler, LOOKAHEAD_MS);
+}
+
+function highlightStep(col) {
+  document.querySelectorAll('.step-cell.playing').forEach(c => c.classList.remove('playing'));
+  if (!playing) return;
+  document.querySelectorAll(`.step-cell[data-col="${col}"]`).forEach(c => c.classList.add('playing'));
+}
+
+function play() {
+  if (playing) return;
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioCtx.resume();
+  playing = true;
+  currentStep = 0;
+  nextStepTime = audioCtx.currentTime + 0.05;
+  scheduler();
+}
+function stop() {
+  playing = false;
+  clearTimeout(schedulerTimer);
+  document.querySelectorAll('.step-cell.playing').forEach(c => c.classList.remove('playing'));
+}
+
+document.getElementById('playBtn').addEventListener('click', play);
+document.getElementById('stopBtn').addEventListener('click', stop);
+
+// ── Export as WAV (offline render of one loop) ──────────────
+async function exportWav() {
+  const totalSeconds = steps * stepDuration() + 1;
+  const sampleRate = 44100;
+  const offlineCtx = new OfflineAudioContext(1, Math.ceil(sampleRate * totalSeconds), sampleRate);
+
+  for (let col = 0; col < steps; col++) {
+    const time = col * stepDuration();
+    MIDI_NOTES.forEach((midi, row) => {
+      if (!grid[row + '_' + col]) return;
+      const osc = offlineCtx.createOscillator();
+      const gain = offlineCtx.createGain();
+      osc.type = waveform;
+      osc.frequency.setValueAtTime(noteFreq(midi), time);
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(volume * 0.5, time + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + stepDuration() * 0.9);
+      osc.connect(gain);
+      gain.connect(offlineCtx.destination);
+      osc.start(time);
+      osc.stop(time + stepDuration());
+    });
+  }
+
+  const rendered = await offlineCtx.startRendering();
+  const wavBlob = bufferToWav(rendered);
+  const url = URL.createObjectURL(wavBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'composition.wav';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function bufferToWav(buffer) {
+  const numChannels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const samples = buffer.getChannelData(0);
+  const dataLength = samples.length * 2;
+  const bufferArr = new ArrayBuffer(44 + dataLength);
+  const view = new DataView(bufferArr);
+
+  function writeString(offset, str) { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); }
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataLength, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * numChannels * 2, true);
+  view.setUint16(32, numChannels * 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataLength, true);
+
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    offset += 2;
+  }
+  return new Blob([bufferArr], { type: 'audio/wav' });
+}
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  if (Object.keys(grid).length === 0) { alert('Place a few notes first.'); return; }
+  exportWav();
+});
+</script>
+</body>
+</html>

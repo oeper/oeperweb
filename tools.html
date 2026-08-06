@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tools — oeper.dev</title>
+<meta name="description" content="Free browser tools from oeper.dev">
+<meta property="og:title" content="Tools — oeper.dev">
+<meta property="og:description" content="Free browser tools from oeper.dev">
+<meta property="og:url" content="https://oeper.dev/tools.html">
+<meta property="og:type" content="website">
+<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<script src="./shared/theme-boot.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 900px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 36px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400; margin-bottom: 12px; letter-spacing: -0.5px; }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 16px; max-width: 540px; line-height: 1.5; }
+
+  .grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+
+  .tool-card {
+    background-color: var(--md-sys-color-surface); border-radius: 28px; padding: 28px; text-decoration: none; color: inherit;
+    border: 1px solid transparent; display: flex; flex-direction: column; justify-content: space-between; min-height: 180px;
+    transition: background-color 0.2s, border-color 0.2s, transform 0.25s;
+  }
+  .tool-card:hover { background-color: #21242c; border-color: var(--md-sys-color-outline-variant); transform: translateY(-4px); }
+  .tool-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .tool-icon-box {
+    width: 48px; height: 48px; border-radius: 14px; background-color: var(--md-sys-color-surface-variant);
+    display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-primary);
+  }
+  .tool-arrow { color: var(--md-sys-color-on-surface-variant); font-size: 22px; }
+  .tool-card h3 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 20px; font-weight: 400; margin-bottom: 6px; }
+  .tool-card p { font-size: 14px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant); }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <div class="header-container">
+      <a href="https://oeper.dev" class="header-link">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>back to oeper.dev</span>
+      </a>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <a href="/messages.html" class="header-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
+        <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
+        <div id="accountBar"></div>
+      </div>
+    </div>
+    <h1>Tools</h1>
+    <p>Small free tools, no sign-up, no paywall. Most of them run entirely in your browser.</p>
+  </header>
+
+  <div class="grid-layout">
+    <a href="/composer.html" class="tool-card">
+      <div class="tool-card-header">
+        <div class="tool-icon-box"><span class="material-symbols-rounded">piano</span></div>
+        <span class="material-symbols-rounded tool-arrow">north_east</span>
+      </div>
+      <div>
+        <h3>Music Composer</h3>
+        <p>A step-sequencer for building simple melodies right in your browser, with WAV export.</p>
+      </div>
+    </a>
+
+    <a href="https://myserverfiles.oeper.dev/docs/1785927713597-rjhsab.html" class="tool-card">
+      <div class="tool-card-header">
+        <div class="tool-icon-box"><span class="material-symbols-rounded">picture_as_pdf</span></div>
+        <span class="material-symbols-rounded tool-arrow">north_east</span>
+      </div>
+      <div>
+        <h3>onePDF</h3>
+        <p>Split, combine, convert, edit, and annotate PDFs — entirely on your device, nothing uploaded.</p>
+      </div>
+    </a>
+
+    <a href="/qrmaker.html" class="tool-card">
+      <div class="tool-card-header">
+        <div class="tool-icon-box"><span class="material-symbols-rounded">qr_code_2</span></div>
+        <span class="material-symbols-rounded tool-arrow">north_east</span>
+      </div>
+      <div>
+        <h3>QR Maker</h3>
+        <p>Generate QR codes for URLs, text, WiFi, contacts, email, and phone numbers.</p>
+      </div>
+    </a>
+  </div>
+</div>
+
+<script type="module">
+  import { mountAccountBar } from './shared/account.js?v=5';
+  import { mountFooter } from './shared/footer.js';
+  mountAccountBar(document.getElementById('accountBar'));
+  mountFooter();
+</script>
+</body>
+</html>
