@@ -1,206 +1,358 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Generator - Dark Mode</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        body {
-            font-family: 'Google Sans', 'Product Sans', system-ui, sans-serif;
-        }
-        .tab-active {
-            color: #a855f7; /* Purple 500 */
-            border-bottom: 2px solid #a855f7;
-            background-color: #1e1b4b; /* Indigo 950 */
-        }
-        .hidden { display: none; }
-        
-        /* Smooth transitions for inputs */
-        input, textarea {
-            background-color: #1f2937; /* Gray 800 */
-            color: white;
-            border-color: #374151; /* Gray 700 */
-        }
-        input::placeholder, textarea::placeholder {
-            color: #9ca3af; /* Gray 400 */
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Maker — oeper.dev</title>
+<meta name="description" content="Free QR code generator — URLs, text, WiFi, contacts, email, phone">
+<meta property="og:title" content="QR Maker — oeper.dev">
+<meta property="og:description" content="Free QR code generator — URLs, text, WiFi, contacts, email, phone">
+<meta property="og:url" content="https://oeper.dev/qrmaker">
+<meta property="og:type" content="website">
+<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<script src="./shared/theme-boot.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 960px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 28px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400; margin-bottom: 12px; letter-spacing: -0.5px; }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 16px; max-width: 500px; line-height: 1.5; }
+
+  .type-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--md-sys-color-outline);
+    border-radius: 100px; padding: 9px 18px; font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; transition: all 0.2s ease; white-space: nowrap;
+  }
+  .pill .material-symbols-rounded { font-size: 18px; }
+  .pill:hover { background-color: rgba(255,255,255,0.04); color: var(--md-sys-color-on-surface); }
+  .pill.active { background-color: var(--md-sys-color-secondary-container); border-color: transparent; color: var(--md-sys-color-on-secondary-container); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+
+  .card { background: var(--md-sys-color-surface); border-radius: 24px; padding: 24px; }
+  .card h2 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 18px; font-weight: 500; margin-bottom: 18px; }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 6px; }
+  .field input[type="text"], .field input[type="url"], .field input[type="tel"], .field input[type="email"], .field textarea, .field select {
+    width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--md-sys-color-primary); }
+  .field textarea { resize: vertical; min-height: 80px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field .hint { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 4px; }
+
+  .customize-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .color-field { display: flex; align-items: center; gap: 10px; }
+  .color-field input[type="color"] { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--md-sys-color-outline); background: none; cursor: pointer; padding: 2px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 500; padding: 12px 20px;
+    border-radius: 100px; border: 1px solid var(--md-sys-color-outline); background: transparent;
+    color: var(--md-sys-color-on-surface); cursor: pointer; font-family: inherit; width: 100%;
+  }
+  .btn:hover { background-color: rgba(255,255,255,0.06); }
+  .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
+  .btn.primary:hover { opacity: 0.9; }
+
+  .preview-wrap { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+  .qr-box {
+    width: 100%; aspect-ratio: 1; max-width: 320px; border-radius: 20px; display: flex; align-items: center; justify-content: center;
+    background: #fff; padding: 20px;
+  }
+  .qr-box.empty { background: var(--md-sys-color-surface-variant); }
+  .qr-box canvas { max-width: 100%; max-height: 100%; }
+  .qr-empty-note { color: var(--md-sys-color-on-surface-variant); text-align: center; font-size: 13px; padding: 0 20px; }
+  .qr-empty-note .material-symbols-rounded { font-size: 40px; opacity: 0.5; margin-bottom: 10px; display: block; }
+  .action-row { display: flex; gap: 10px; width: 100%; max-width: 320px; }
+</style>
 </head>
-<body class="min-h-screen bg-[#0f172a] text-gray-100 p-4">
+<body>
 
-    <div class="max-w-4xl mx-auto">
-        <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl mb-4 shadow-lg shadow-purple-500/20">
-                <i data-lucide="qr-code" class="w-8 h-8 text-white"></i>
-            </div>
-            <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-2">
-                QR Code Generator
-            </h1>
-            <p class="text-gray-400 text-lg">Generate QR codes for URLs, text, and contact information</p>
+<div class="page">
+  <header class="header">
+    <div class="header-container">
+      <a href="https://oeper.dev" class="header-link">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>back to oeper.dev</span>
+      </a>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <a href="/tools.html" class="header-link"><span class="material-symbols-rounded">build</span><span>Tools</span></a>
+      </div>
+    </div>
+    <h1>QR Maker</h1>
+    <p>Generate QR codes without being begged to sign up or pay. Instant, free, and it stays in your browser.</p>
+  </header>
+
+  <div class="type-pills" id="typePills">
+    <button class="pill active" data-type="url"><span class="material-symbols-rounded">link</span> URL</button>
+    <button class="pill" data-type="text"><span class="material-symbols-rounded">notes</span> Text</button>
+    <button class="pill" data-type="wifi"><span class="material-symbols-rounded">wifi</span> WiFi</button>
+    <button class="pill" data-type="contact"><span class="material-symbols-rounded">person</span> Contact</button>
+    <button class="pill" data-type="email"><span class="material-symbols-rounded">mail</span> Email</button>
+    <button class="pill" data-type="phone"><span class="material-symbols-rounded">call</span> Phone</button>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2 id="formTitle">Website URL</h2>
+
+      <div class="input-view" id="view-url">
+        <div class="field"><label>URL</label><input type="url" id="urlInput" placeholder="example.com"><div class="hint">https:// added automatically if missing.</div></div>
+      </div>
+
+      <div class="input-view" id="view-text" style="display:none;">
+        <div class="field"><label>Text</label><textarea id="textInput" placeholder="Anything you want encoded…" rows="4"></textarea></div>
+      </div>
+
+      <div class="input-view" id="view-wifi" style="display:none;">
+        <div class="field"><label>Network name (SSID)</label><input type="text" id="wifiSsid"></div>
+        <div class="field"><label>Password</label><input type="text" id="wifiPass"></div>
+        <div class="field">
+          <label>Security</label>
+          <select id="wifiSecurity">
+            <option value="WPA">WPA/WPA2</option>
+            <option value="WEP">WEP</option>
+            <option value="nopass">None (open network)</option>
+          </select>
         </div>
+      </div>
 
-        <div class="bg-[#1e293b] rounded-3xl shadow-2xl overflow-hidden border border-gray-700">
-            <div class="border-b border-gray-700">
-                <nav class="flex">
-                    <button onclick="switchTab('url')" id="tab-url" class="flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-all duration-200 tab-active">
-                        <i data-lucide="link" class="w-4 h-4"></i> URL
-                    </button>
-                    <button onclick="switchTab('text')" id="tab-text" class="flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-all duration-200 text-gray-400 hover:text-white hover:bg-gray-800">
-                        <i data-lucide="message-square" class="w-4 h-4"></i> Text
-                    </button>
-                    <button onclick="switchTab('contact')" id="tab-contact" class="flex-1 flex items-center justify-center gap-2 px-6 py-4 text-sm font-medium transition-all duration-200 text-gray-400 hover:text-white hover:bg-gray-800">
-                        <i data-lucide="user" class="w-4 h-4"></i> Contact
-                    </button>
-                </nav>
-            </div>
-
-            <div class="p-8">
-                <div class="grid lg:grid-cols-2 gap-8">
-                    <div class="space-y-6">
-                        <h2 id="input-title" class="text-2xl font-semibold text-white mb-4">Enter URL</h2>
-
-                        <div id="view-url" class="input-view">
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Website URL</label>
-                            <input type="url" id="urlInput" oninput="updateQR()" placeholder="example.com" class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition-all">
-                            <p class="text-xs text-gray-500 mt-1">We'll add https:// automatically if missing.</p>
-                        </div>
-
-                        <div id="view-text" class="input-view hidden">
-                            <label class="block text-sm font-medium text-gray-300 mb-2">Text Content</label>
-                            <textarea id="textInput" oninput="updateQR()" placeholder="Enter any text..." rows="4" class="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none resize-none transition-all"></textarea>
-                        </div>
-
-                        <div id="view-contact" class="input-view hidden space-y-4">
-                            <div class="grid grid-cols-2 gap-4">
-                                <input type="text" id="c-first" oninput="updateQR()" placeholder="First Name" class="px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-purple-500 transition-all">
-                                <input type="text" id="c-last" oninput="updateQR()" placeholder="Last Name" class="px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-purple-500 transition-all">
-                            </div>
-                            <input type="tel" id="c-phone" oninput="updateQR()" placeholder="Phone Number" class="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-purple-500 transition-all">
-                            <input type="email" id="c-email" oninput="updateQR()" placeholder="Email Address" class="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-purple-500 transition-all">
-                            <input type="text" id="c-org" oninput="updateQR()" placeholder="Organization" class="w-full px-4 py-3 border rounded-xl outline-none focus:ring-2 focus:ring-purple-500 transition-all">
-                        </div>
-
-                        <button onclick="resetAll()" class="w-full px-6 py-3 bg-gray-800 text-gray-300 rounded-xl hover:bg-gray-700 hover:text-white font-medium transition-all">Clear All Fields</button>
-                    </div>
-
-                    <div class="flex flex-col items-center space-y-6">
-                        <h2 class="text-2xl font-semibold text-white">Generated QR Code</h2>
-                        <div class="bg-gray-900/50 rounded-2xl p-8 w-full max-w-sm flex flex-col items-center justify-center min-h-[350px] border border-gray-700">
-                            <div id="qr-placeholder" class="text-center">
-                                <i data-lucide="qr-code" class="w-16 h-16 text-gray-600 mx-auto mb-4"></i>
-                                <p class="text-gray-500">Fill in the form to generate</p>
-                            </div>
-                            <div id="canvas-container" class="hidden p-4 bg-white rounded-xl shadow-2xl">
-                                <canvas id="qr-canvas"></canvas>
-                            </div>
-                        </div>
-
-                        <div id="action-buttons" class="hidden flex gap-4 w-full max-w-sm">
-                            <button onclick="downloadQR()" class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl shadow-lg hover:from-purple-600 hover:to-blue-600 font-medium transition-all">
-                                <i data-lucide="download" class="w-4 h-4"></i> Download
-                            </button>
-                            <button onclick="copyData()" class="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gray-800 text-gray-300 rounded-xl hover:bg-gray-700 font-medium transition-all">
-                                <i data-lucide="copy" class="w-4 h-4" id="copy-icon"></i> <span id="copy-text">Copy</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      <div class="input-view" id="view-contact" style="display:none;">
+        <div class="field-row">
+          <div class="field"><label>First name</label><input type="text" id="cFirst"></div>
+          <div class="field"><label>Last name</label><input type="text" id="cLast"></div>
         </div>
+        <div class="field"><label>Phone</label><input type="tel" id="cPhone"></div>
+        <div class="field"><label>Email</label><input type="email" id="cEmail"></div>
+        <div class="field"><label>Organization</label><input type="text" id="cOrg"></div>
+      </div>
+
+      <div class="input-view" id="view-email" style="display:none;">
+        <div class="field"><label>To</label><input type="email" id="eTo"></div>
+        <div class="field"><label>Subject</label><input type="text" id="eSubject"></div>
+        <div class="field"><label>Body</label><textarea id="eBody" rows="3"></textarea></div>
+      </div>
+
+      <div class="input-view" id="view-phone" style="display:none;">
+        <div class="field"><label>Phone number</label><input type="tel" id="pNumber" placeholder="+60123456789"></div>
+      </div>
+
+      <div class="customize-row">
+        <div class="field color-field">
+          <input type="color" id="fgColor" value="#000000">
+          <div><label style="margin:0;">Dot color</label></div>
+        </div>
+        <div class="field color-field">
+          <input type="color" id="bgColor" value="#ffffff">
+          <div><label style="margin:0;">Background</label></div>
+        </div>
+        <div class="field">
+          <label>Error correction</label>
+          <select id="errorLevel">
+            <option value="L">Low (L)</option>
+            <option value="M" selected>Medium (M)</option>
+            <option value="Q">Quartile (Q)</option>
+            <option value="H">High (H)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Size</label>
+          <select id="qrSize">
+            <option value="200">Small (200px)</option>
+            <option value="300" selected>Medium (300px)</option>
+            <option value="500">Large (500px)</option>
+            <option value="800">Extra large (800px)</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="btn" id="clearBtn" style="margin-top:8px;">Clear all fields</button>
     </div>
 
-    <script>
-        let currentTab = 'url';
-        const qrCanvas = document.getElementById('qr-canvas');
-        const canvasContainer = document.getElementById('canvas-container');
-        const qrPlaceholder = document.getElementById('qr-placeholder');
-        const actionButtons = document.getElementById('action-buttons');
+    <div class="card">
+      <h2>Generated QR code</h2>
+      <div class="preview-wrap">
+        <div class="qr-box empty" id="qrBox">
+          <div class="qr-empty-note" id="qrEmptyNote">
+            <span class="material-symbols-rounded">qr_code_2</span>
+            Fill in the form to generate
+          </div>
+          <canvas id="qrCanvas" style="display:none;"></canvas>
+        </div>
+        <div class="action-row" id="actionRow" style="display:none;">
+          <button class="btn primary" id="downloadBtn"><span class="material-symbols-rounded" style="font-size:18px;">download</span> Download</button>
+          <button class="btn" id="copyBtn"><span class="material-symbols-rounded" style="font-size:18px;">content_copy</span> <span id="copyBtnText">Copy data</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-        lucide.createIcons();
+<script>
+let currentType = 'url';
+const qrCanvas = document.getElementById('qrCanvas');
+const qrBox = document.getElementById('qrBox');
+const qrEmptyNote = document.getElementById('qrEmptyNote');
+const actionRow = document.getElementById('actionRow');
 
-        function switchTab(tab) {
-            currentTab = tab;
-            document.querySelectorAll('nav button').forEach(btn => {
-                btn.classList.remove('tab-active', 'text-white');
-                btn.classList.add('text-gray-400');
-            });
-            document.getElementById(`tab-${tab}`).classList.add('tab-active');
-            document.getElementById(`tab-${tab}`).classList.remove('text-gray-400');
-            
-            document.querySelectorAll('.input-view').forEach(view => view.classList.add('hidden'));
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
+const FORM_TITLES = {
+  url: 'Website URL', text: 'Text', wifi: 'WiFi network', contact: 'Contact card', email: 'Email', phone: 'Phone number',
+};
 
-            const titles = { url: 'Enter URL', text: 'Enter Text', contact: 'Contact Information' };
-            document.getElementById('input-title').innerText = titles[tab];
-            
-            updateQR();
-        }
+document.querySelectorAll('#typePills .pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    currentType = pill.dataset.type;
+    document.querySelectorAll('#typePills .pill').forEach(p => p.classList.toggle('active', p === pill));
+    document.querySelectorAll('.input-view').forEach(v => v.style.display = 'none');
+    document.getElementById('view-' + currentType).style.display = 'block';
+    document.getElementById('formTitle').textContent = FORM_TITLES[currentType];
+    updateQR();
+  });
+});
 
-        function updateQR() {
-            let data = '';
-            if (currentTab === 'url') {
-                let val = document.getElementById('urlInput').value.trim();
-                if (val && !val.startsWith('http')) val = 'https://' + val;
-                data = val;
-            } else if (currentTab === 'text') {
-                data = document.getElementById('textInput').value;
-            } else if (currentTab === 'contact') {
-                const fn = document.getElementById('c-first').value;
-                const ln = document.getElementById('c-last').value;
-                const ph = document.getElementById('c-phone').value;
-                const em = document.getElementById('c-email').value;
-                const og = document.getElementById('c-org').value;
-                if (fn || ln || ph || em) {
-                    data = `BEGIN:VCARD\nVERSION:3.0\nFN:${fn} ${ln}\nN:${ln};${fn};;;\nORG:${og}\nTEL:${ph}\nEMAIL:${em}\nEND:VCARD`;
-                }
-            }
+function buildData() {
+  if (currentType === 'url') {
+    let v = document.getElementById('urlInput').value.trim();
+    if (v && !/^https?:\/\//i.test(v)) v = 'https://' + v;
+    return v;
+  }
+  if (currentType === 'text') {
+    return document.getElementById('textInput').value;
+  }
+  if (currentType === 'wifi') {
+    const ssid = document.getElementById('wifiSsid').value;
+    const pass = document.getElementById('wifiPass').value;
+    const sec = document.getElementById('wifiSecurity').value;
+    if (!ssid) return '';
+    return `WIFI:T:${sec};S:${ssid};P:${sec === 'nopass' ? '' : pass};;`;
+  }
+  if (currentType === 'contact') {
+    const fn = document.getElementById('cFirst').value;
+    const ln = document.getElementById('cLast').value;
+    const ph = document.getElementById('cPhone').value;
+    const em = document.getElementById('cEmail').value;
+    const og = document.getElementById('cOrg').value;
+    if (!fn && !ln && !ph && !em) return '';
+    return `BEGIN:VCARD\nVERSION:3.0\nFN:${fn} ${ln}\nN:${ln};${fn};;;\nORG:${og}\nTEL:${ph}\nEMAIL:${em}\nEND:VCARD`;
+  }
+  if (currentType === 'email') {
+    const to = document.getElementById('eTo').value;
+    if (!to) return '';
+    const subject = encodeURIComponent(document.getElementById('eSubject').value);
+    const body = encodeURIComponent(document.getElementById('eBody').value);
+    return `mailto:${to}?subject=${subject}&body=${body}`;
+  }
+  if (currentType === 'phone') {
+    const num = document.getElementById('pNumber').value.trim();
+    return num ? `tel:${num}` : '';
+  }
+  return '';
+}
 
-            if (data.trim()) {
-                qrPlaceholder.classList.add('hidden');
-                canvasContainer.classList.remove('hidden');
-                actionButtons.classList.remove('hidden');
-                new QRious({
-                    element: qrCanvas,
-                    value: data,
-                    size: 250,
-                    level: 'M'
-                });
-            } else {
-                qrPlaceholder.classList.remove('hidden');
-                canvasContainer.classList.add('hidden');
-                actionButtons.classList.add('hidden');
-            }
-        }
+function updateQR() {
+  const data = buildData();
+  const fg = document.getElementById('fgColor').value;
+  const bg = document.getElementById('bgColor').value;
+  const level = document.getElementById('errorLevel').value;
+  const size = Math.min(Number(document.getElementById('qrSize').value), 300); // canvas capped for on-screen preview
 
-        function downloadQR() {
-            const link = document.createElement('a');
-            link.download = `qrcode-${currentTab}.png`;
-            link.href = qrCanvas.toDataURL();
-            link.click();
-        }
+  if (data.trim()) {
+    qrEmptyNote.style.display = 'none';
+    qrCanvas.style.display = 'block';
+    actionRow.style.display = 'flex';
+    qrBox.classList.remove('empty');
+    qrBox.style.background = bg;
+    new QRious({ element: qrCanvas, value: data, size, level, foreground: fg, background: bg });
+  } else {
+    qrEmptyNote.style.display = 'block';
+    qrCanvas.style.display = 'none';
+    actionRow.style.display = 'none';
+    qrBox.classList.add('empty');
+    qrBox.style.background = '';
+  }
+}
 
-        function copyData() {
-            let data = ""; 
-            if (currentTab === 'url') data = document.getElementById('urlInput').value;
-            else if (currentTab === 'text') data = document.getElementById('textInput').value;
-            else data = "Contact vCard Data";
+document.querySelectorAll('.input-view input, .input-view textarea, .input-view select').forEach(el => {
+  el.addEventListener('input', updateQR);
+  el.addEventListener('change', updateQR);
+});
+['fgColor', 'bgColor', 'errorLevel', 'qrSize'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateQR);
+  document.getElementById(id).addEventListener('change', updateQR);
+});
 
-            navigator.clipboard.writeText(data).then(() => {
-                document.getElementById('copy-text').innerText = "Copied!";
-                setTimeout(() => { document.getElementById('copy-text').innerText = "Copy"; }, 2000);
-            });
-        }
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  const data = buildData();
+  const fg = document.getElementById('fgColor').value;
+  const bg = document.getElementById('bgColor').value;
+  const level = document.getElementById('errorLevel').value;
+  const size = Number(document.getElementById('qrSize').value);
+  const fullSizeCanvas = document.createElement('canvas');
+  new QRious({ element: fullSizeCanvas, value: data, size, level, foreground: fg, background: bg });
+  const link = document.createElement('a');
+  link.download = `qrcode-${currentType}.png`;
+  link.href = fullSizeCanvas.toDataURL();
+  link.click();
+});
 
-        function resetAll() {
-            document.querySelectorAll('input, textarea').forEach(el => el.value = '');
-            updateQR();
-        }
-    </script>
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const data = buildData();
+  navigator.clipboard.writeText(data).then(() => {
+    const label = document.getElementById('copyBtnText');
+    label.textContent = 'Copied!';
+    setTimeout(() => { label.textContent = 'Copy data'; }, 2000);
+  });
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  document.querySelectorAll('.input-view input[type="text"], .input-view input[type="url"], .input-view input[type="tel"], .input-view input[type="email"], .input-view textarea').forEach(el => el.value = '');
+  updateQR();
+});
+</script>
 </body>
 </html>
