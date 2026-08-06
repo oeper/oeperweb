@@ -255,6 +255,16 @@
     </div>
   </header>
 
+  <div class="filebar" id="migrateBar" style="margin-bottom:24px;">
+    <span class="status">
+      <span class="dot"></span>
+      Move every article &amp; download into the Feed, authored by <strong>taejiding@gmail.com</strong>.
+      Must be run while signed in as that exact account — Firestore only allows a post's
+      author field to match whoever's actually signed in.
+    </span>
+    <button class="btn primary" id="migrateBtn"><span class="material-symbols-rounded">move_up</span> Migrate to Feed</button>
+  </div>
+
   <div class="tabs">
     <button class="tab active" data-tab="articles">
       <span class="material-symbols-rounded">book</span> Articles
@@ -293,14 +303,89 @@
 
 <script type="module">
 import {
-  isOwnerEmail, onAccountChange, mountAccountBar,
+  isOwnerEmail, onAccountChange, mountAccountBar, getCurrentUser, db,
 } from './shared/account.js?v=5';
 import { mountFooter } from './shared/footer.js';
+import {
+  collection, addDoc, serverTimestamp, Timestamp,
+} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 // ── Auth (shared Google Sign-In, gated to OWNER_EMAILS) ────────────
 mountAccountBar(document.getElementById('lockSignInBtn'));
 mountAccountBar(document.getElementById('headerAccountBar'));
 mountFooter();
+
+// Converts the old [[label]](url) link syntax used in articles.json into
+// standard markdown [label](url), which forum.html's parseMarkdown expects.
+function toFeedMarkdown(text) {
+  return (text || '').replace(/\[\[(.+?)\]\]\((.+?)\)/g, '[$1]($2)');
+}
+
+document.getElementById('migrateBtn').addEventListener('click', async () => {
+  const user = getCurrentUser();
+  if (!user || user.email !== 'taejiding@gmail.com') {
+    alert("Sign in as taejiding@gmail.com to run this — Firestore only allows a post's authorEmail to match the account that's actually signed in, so running this as any other account would fail on every single post.");
+    return;
+  }
+  if (!confirm('This creates a new Feed post for every article and download. It does not delete the original JSON files. Continue?')) return;
+
+  const btn = document.getElementById('migrateBtn');
+  btn.disabled = true;
+  btn.textContent = 'Migrating…';
+  let done = 0, failed = 0;
+
+  try {
+    const [articlesRes, downloadsRes] = await Promise.all([
+      fetch('./data/articles.json'),
+      fetch('./data/downloads.json'),
+    ]);
+    const articlesData = articlesRes.ok ? await articlesRes.json() : { articles: [] };
+    const downloadsData = downloadsRes.ok ? await downloadsRes.json() : { files: [] };
+
+    for (const a of (articlesData.articles || [])) {
+      const parsedDate = a.date ? new Date(a.date) : null;
+      const createdAt = parsedDate && !isNaN(parsedDate) ? Timestamp.fromDate(parsedDate) : serverTimestamp();
+      try {
+        await addDoc(collection(db, 'posts'), {
+          title: (a.title || 'Untitled').slice(0, 150),
+          body: toFeedMarkdown(a.content || a.excerpt || '').slice(0, 8000),
+          tags: ['general'],
+          imageUrls: a.image ? [a.image] : [],
+          authorEmail: user.email,
+          authorName: 'taejiding',
+          authorPhoto: user.photoURL || '',
+          createdAt,
+          upvoters: [], downvoters: [], commentCount: 0, views: 0,
+        });
+        done++;
+      } catch { failed++; }
+    }
+
+    for (const d of (downloadsData.files || [])) {
+      try {
+        await addDoc(collection(db, 'posts'), {
+          title: (d.label || 'Untitled').slice(0, 150),
+          body: `${d.desc || ''}\n\n[Download](${d.url})`.slice(0, 8000),
+          tags: ['general'],
+          imageUrls: d.image ? [d.image] : [],
+          authorEmail: user.email,
+          authorName: 'taejiding',
+          authorPhoto: user.photoURL || '',
+          createdAt: serverTimestamp(),
+          upvoters: [], downvoters: [], commentCount: 0, views: 0,
+        });
+        done++;
+      } catch { failed++; }
+    }
+
+    alert(`Migrated ${done} item${done === 1 ? '' : 's'} to the Feed.${failed ? ` ${failed} failed — check the console for details.` : ''}`);
+  } catch (err) {
+    alert('Migration failed: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-rounded">move_up</span> Migrate to Feed';
+  }
+});
 
 onAccountChange(user => {
   const lockScreen = document.getElementById('lockScreen');
