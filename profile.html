@@ -49,6 +49,7 @@
     font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
   }
   .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
 
   .profile-card { background: var(--md-sys-color-surface); border-radius: 28px; padding: 32px; margin-bottom: 24px; }
   .profile-top { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
@@ -106,26 +107,15 @@
 <body>
 
 <div class="page">
-  <div class="header-container">
-    <a href="https://oeper.dev/forum" class="header-link">
-      <span class="material-symbols-rounded">arrow_back</span>
-      <span>back to feed</span>
-    </a>
-    <div style="display:flex; align-items:center; gap:12px;">
-      <a href="/messages.html" class="header-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
-        <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
-      <div id="accountBar"></div>
-    </div>
-  </div>
-
   <div id="content">
     <div class="loading-note">Loading profile…</div>
   </div>
 </div>
 
 <script type="module">
+import { mountTopNav } from './shared/topnav.js';
 import {
-  mountAccountBar, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
+  getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
   openEditProfileModal, db,
 } from './shared/account.js?v=8';
 import { mountFooter } from './shared/footer.js';
@@ -135,7 +125,7 @@ import {
 
 function followId(followerEmail, followeeEmail) { return followerEmail + '__' + followeeEmail; }
 
-mountAccountBar(document.getElementById('accountBar'));
+mountTopNav();
 mountFooter();
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

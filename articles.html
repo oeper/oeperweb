@@ -60,6 +60,7 @@
     transition: opacity 0.2s;
   }
   .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
   .header h1 { 
     font-family: 'Google Sans', 'Product Sans', sans-serif;
     font-size: clamp(2.5rem, 6vw, 3.5rem);
@@ -462,17 +463,6 @@
 
 <div class="page">
   <header class="header">
-    <div class="header-container">
-      <a href="https://oeper.dev" class="header-link">
-        <span class="material-symbols-rounded">arrow_back</span>
-        <span>back to oeper.dev</span>
-      </a>
-      <div style="display:flex; align-items:center; gap:12px;">
-        <a href="/messages.html" class="header-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
-        <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
-        <div id="accountBar"></div>
-      </div>
-    </div>
     <h1>Articles</h1>
     <p>Writings, guides, and notes — all in one place.</p>
   </header>
@@ -905,9 +895,9 @@ if (urlArticle !== null && ARTICLES[+urlArticle]) {
 })();
 </script>
 <script type="module">
-  import { mountAccountBar } from './shared/account.js?v=8';
+  import { mountTopNav } from './shared/topnav.js';
   import { mountFooter } from './shared/footer.js';
-  mountAccountBar(document.getElementById('accountBar'));
+  mountTopNav();
   mountFooter();
 </script>
 </body>

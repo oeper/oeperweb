@@ -54,6 +54,7 @@
     font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
   }
   .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
   .header h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.2rem, 6vw, 3rem); font-weight: 400; margin-bottom: 12px; letter-spacing: -0.5px; }
   .header p { color: var(--md-sys-color-on-surface-variant); font-size: 15px; max-width: 560px; line-height: 1.5; }
 
@@ -110,13 +111,6 @@
 
 <div class="page">
   <header class="header">
-    <div class="header-container">
-      <a href="https://oeper.dev" class="header-link">
-        <span class="material-symbols-rounded">arrow_back</span>
-        <span>back to oeper.dev</span>
-      </a>
-      <a href="/tools.html" class="header-link"><span class="material-symbols-rounded">build</span><span>Tools</span></a>
-    </div>
     <h1>Music Composer</h1>
     <p>Inspired by Chrome Music Lab's Song Maker — pick a scale, colour in some notes and a beat, hit play. Runs entirely in your browser, nothing is uploaded anywhere.</p>
   </header>
@@ -185,6 +179,10 @@
   <p class="empty-hint">Tip: each colourful row is a note in the scale (top = highest), the grey rows at the bottom are a beat. Click a cell to toggle it, then press play.</p>
 </div>
 
+<script type="module">
+import { mountTopNav } from './shared/topnav.js';
+mountTopNav();
+</script>
 <script>
 // ── Scales, keys, note math ─────────────────────────────────
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];

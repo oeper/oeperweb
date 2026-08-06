@@ -17,6 +17,15 @@ const SOCIALS = [
   { name: 'YouTube', handle: '@oeperdev', url: 'https://youtube.com/@oeperdev', icon: ICONS.youtube },
 ];
 
+const SITE_ICON = `<svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.42 0-8 2.24-8 5v3h16v-3c0-2.76-3.58-5-8-5z"/></svg>`;
+const STATUS_ICON = `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`;
+
+const SITE_LINKS = [
+  { name: 'oeper.dev profile', handle: '@oeperdev', url: '/profile.html?u=oeperdev', icon: SITE_ICON },
+  { name: 'oeper.dev profile', handle: '@sanhackerman', url: '/profile.html?u=sanhackerman', icon: SITE_ICON },
+  { name: 'Server status', handle: 'Server status', url: '/status.html', icon: STATUS_ICON },
+];
+
 let stylesInjected = false;
 function injectStyles() {
   if (stylesInjected) return;
@@ -30,8 +39,10 @@ function injectStyles() {
       color: var(--md-sys-color-on-surface-variant); font-family: 'Google Sans', 'Product Sans', sans-serif;
       font-size: 14px; font-weight: 500; transition: color 0.2s;
     }
-    .oe-footer-link:hover { color: var(--md-sys-color-primary); }
+    .oe-footer-link:hover, .oe-footer-link:visited:hover { color: var(--md-sys-color-primary); }
+    .oe-footer-link:visited { color: var(--md-sys-color-on-surface-variant); }
     .oe-footer-link svg, .oe-footer-link-static svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
+    .oe-footer-site-links { display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: center; margin-bottom: 20px; font-size: 13px; }
     .oe-footer-divider { height: 1px; background: var(--md-sys-color-outline-variant); opacity: 0.3; margin-bottom: 16px; }
     .oe-footer-bottom { text-align: center; font-size: 12px; color: var(--md-sys-color-on-surface-variant); opacity: 0.8; }
   `;
@@ -48,6 +59,9 @@ export function mountFooter() {
           ? `<a class="oe-footer-link" href="${s.url}" target="_blank" rel="noopener" title="${s.name}">${s.icon}<span>${s.handle}</span></a>`
           : `<span class="oe-footer-link-static" title="${s.name} (not linked)">${s.icon}<span>${s.handle}</span></span>`
         ).join('')}
+      </div>
+      <div class="oe-footer-site-links">
+        ${SITE_LINKS.map(s => `<a class="oe-footer-link" href="${s.url}" title="${s.name}">${s.icon}<span>${s.handle}</span></a>`).join('')}
       </div>
       <div class="oe-footer-divider"></div>
       <div class="oe-footer-bottom">&copy; ${new Date().getFullYear()} oeper.dev</div>

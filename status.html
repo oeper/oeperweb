@@ -49,6 +49,7 @@
     font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
   }
   .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
   .header h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400; margin-bottom: 12px; letter-spacing: -0.5px; }
   .header p { color: var(--md-sys-color-on-surface-variant); font-size: 15px; max-width: 500px; line-height: 1.5; }
 
@@ -83,12 +84,6 @@
 
 <div class="page">
   <header class="header">
-    <div class="header-container">
-      <a href="https://oeper.dev" class="header-link">
-        <span class="material-symbols-rounded">arrow_back</span>
-        <span>back to oeper.dev</span>
-      </a>
-    </div>
     <h1>Server Status</h1>
     <p>Both of these run on a phone at home over a Cloudflare Tunnel — if the phone's off, asleep, or the tunnel dropped, they'll show as down here.</p>
   </header>
@@ -105,6 +100,8 @@
 
 <script type="module">
 import { SERVER_ENDPOINT } from './shared/account.js?v=8';
+import { mountTopNav } from './shared/topnav.js';
+mountTopNav();
 
 const AI_ENDPOINT = 'https://ai2.oeper.dev';
 const SERVICES = [

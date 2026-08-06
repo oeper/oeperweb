@@ -49,6 +49,7 @@
     font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
   }
   .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
   h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 400; margin-bottom: 20px; }
 
   .signin-note { text-align: center; padding: 80px 24px; color: var(--md-sys-color-on-surface-variant); }
@@ -152,10 +153,6 @@
       <span class="material-symbols-rounded">arrow_back</span>
       <span id="backLinkText">back to feed</span>
     </a>
-    <div style="display:flex; align-items:center; gap:12px;">
-      <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
-      <div id="accountBar"></div>
-    </div>
   </div>
 
   <div class="notes-bar" id="notesBar"></div>
@@ -173,15 +170,16 @@
 </div>
 
 <script type="module">
+import { mountTopNav } from './shared/topnav.js';
 import {
-  mountAccountBar, getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile,
+  getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile,
 } from './shared/account.js?v=8';
 import { mountFooter } from './shared/footer.js';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-mountAccountBar(document.getElementById('accountBar'));
+mountTopNav();
 mountFooter();
 initNotes();
 

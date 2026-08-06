@@ -257,6 +257,9 @@
   }
 
   .hero-section { margin-bottom: 48px; }
+  .hero-section.home-hero { text-align: center; }
+  .hero-section.home-hero .home-search-form { margin-left: auto; margin-right: auto; }
+  .hero-section.home-hero .home-search-engines { justify-content: center; }
   .hero-section h1 {
     font-family: 'Google Sans', 'Product Sans', sans-serif;
     font-size: clamp(2.8rem, 7vw, 4rem);
@@ -324,6 +327,7 @@
   .home-feed-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
   .home-feed-heading h2 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 22px; font-weight: 400; }
   .home-feed-heading .header-link { display: inline-flex; align-items: center; gap: 4px; }
+  .home-feed-heading .header-link:visited { color: var(--md-sys-color-primary); }
   .home-feed-heading .header-link .material-symbols-rounded { font-size: 16px; }
   .home-feed { display: flex; flex-direction: column; gap: 24px; max-width: 470px; margin: 0 auto; }
   .home-feed-empty { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 0; text-align: center; }
@@ -331,8 +335,9 @@
   /* Instagram-style post card */
   .ig-card {
     display: block; background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline-variant);
-    border-radius: 12px; text-decoration: none; color: inherit; overflow: hidden;
+    border-radius: 12px; text-decoration: none; color: inherit; overflow: hidden; cursor: pointer;
   }
+  .ig-caption a { color: var(--md-sys-color-primary); text-decoration: underline; }
   .ig-card-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
   .ig-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
   .ig-header-text { flex: 1; min-width: 0; }
@@ -425,33 +430,21 @@
 
   <div class="bg-aura" aria-hidden="true"></div>
 
-  <nav class="navbar">
-    <div style="display:flex; align-items:center; gap:4px;">
-      <button class="nav-hamburger" id="navHamburger" aria-label="Menu"><span class="material-symbols-rounded">menu</span></button>
-      <a href="#" class="nav-logo" onclick="switchTab(event, 'home')">
-        <span class="material-symbols-rounded">token</span>
-        <span>oeper.dev</span>
-      </a>
-    </div>
-    <div class="nav-right">
-      <div class="nav-links" id="navLinksContainer"></div>
-      <a href="/messages.html" class="nav-icon-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
-      <a href="/settings" class="nav-icon-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
-      <div id="accountBar"></div>
-    </div>
-  </nav>
-
   <div class="page-container" id="pageContainer"></div>
 
 <script type="module">
-  import { mountAccountBar, db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml } from './shared/account.js?v=8';
+  import { db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml } from './shared/account.js?v=8';
+  import { mountTopNav } from './shared/topnav.js';
   import { mountFooter } from './shared/footer.js';
-  import { collection, query, orderBy, limit, onSnapshot, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+  import { collection, query, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-  mountAccountBar(document.getElementById('accountBar'));
+  mountTopNav();
   mountFooter();
 
   function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function linkify(str) {
+    return escHtml(str).replace(/(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
+  }
   function timeAgo(date) {
     const s = Math.floor((Date.now() - date.getTime()) / 1000);
     if (s < 60) return 'just now';
@@ -495,7 +488,7 @@
       const img = firstImageUrl(p);
       const vid = !img ? firstVideoUrl(p) : null;
       return `
-        <a class="ig-card" href="https://oeper.dev/forum.html?post=${p.id}">
+        <div class="ig-card" data-href="https://oeper.dev/forum.html?post=${p.id}">
           <div class="ig-card-header">
             <img class="ig-avatar" src="${profile.photo || ''}" alt="">
             <div class="ig-header-text">
@@ -512,10 +505,10 @@
             <span class="ig-action-count">${p.views || 0}</span>
           </div>
           <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
-          <div class="ig-caption"><strong>${escHtml(profile.name)}</strong>${escHtml(p.title)}</div>
+          <div class="ig-caption"><strong>${escHtml(profile.name)}</strong>${linkify(p.title)}</div>
           ${p.commentCount ? `<div class="ig-view-comments">View all ${p.commentCount} comments</div>` : ''}
           <div class="ig-timestamp">${timeAgo(p._date)}</div>
-        </a>
+        </div>
       `;
     }
 
@@ -523,7 +516,7 @@
       const profile = getProfile(v.authorEmail, v.authorName, v.authorPhoto);
       const score = (v.upvoters || []).length - (v.downvoters || []).length;
       return `
-        <a class="ig-card" href="https://oeper.dev/videos.html?video=${v.id}">
+        <div class="ig-card" data-href="https://oeper.dev/videos.html?video=${v.id}">
           <div class="ig-card-header">
             <img class="ig-avatar" src="${profile.photo || ''}" alt="">
             <div class="ig-header-text">
@@ -539,11 +532,17 @@
             <span class="ig-action-count">${v.views || 0}</span>
           </div>
           <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
-          <div class="ig-caption"><strong>${escHtml(profile.name)}</strong>${escHtml(v.title)}</div>
+          <div class="ig-caption"><strong>${escHtml(profile.name)}</strong>${linkify(v.title)}</div>
           <div class="ig-timestamp">${timeAgo(v._date)}</div>
-        </a>
+        </div>
       `;
     }
+
+    feedEl.addEventListener('click', e => {
+      if (e.target.closest('a')) return; // real links (linkified URLs) behave normally
+      const card = e.target.closest('.ig-card');
+      if (card && card.dataset.href) window.location.href = card.dataset.href;
+    });
 
     onSnapshot(
       query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(14)),
@@ -574,144 +573,6 @@
     );
   }
 
-  const SEARCH_ENGINES = {
-    google: { action: 'https://www.google.com/search', param: 'q' },
-    duckduckgo: { action: 'https://duckduckgo.com/', param: 'q' },
-    bing: { action: 'https://www.bing.com/search', param: 'q' },
-  };
-  const searchForm = document.getElementById('homeSearchForm');
-  if (searchForm) {
-    const searchInput = document.getElementById('homeSearchInput');
-    const engineButtons = document.querySelectorAll('#homeSearchEngines .home-search-engine');
-    const dropdown = document.getElementById('homeSearchDropdown');
-    let engine = localStorage.getItem('oe-search-engine') || 'google';
-    if (engine !== 'oeper' && !SEARCH_ENGINES[engine]) engine = 'google';
-
-    function closeDropdown() { dropdown.classList.remove('open'); }
-
-    function applyEngine() {
-      engineButtons.forEach(b => b.classList.toggle('active', b.dataset.engine === engine));
-      if (engine === 'oeper') {
-        searchForm.removeAttribute('action');
-        searchInput.placeholder = 'Search oeper.dev…';
-      } else {
-        searchForm.action = SEARCH_ENGINES[engine].action;
-        searchInput.name = SEARCH_ENGINES[engine].param;
-        searchInput.placeholder = 'Search the web…';
-        closeDropdown();
-      }
-    }
-    applyEngine();
-
-    engineButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        engine = btn.dataset.engine;
-        localStorage.setItem('oe-search-engine', engine);
-        applyEngine();
-        searchInput.focus();
-        if (engine === 'oeper' && searchInput.value.trim()) runOeperSearch(searchInput.value.trim());
-      });
-    });
-
-    searchInput.focus();
-
-    // ── oeper.dev search — one-shot fetch of a recent slice of each
-    // collection, cached, then matched client-side (no lowercase index
-    // fields exist yet, and the corpus is small enough this is fine). ──
-    let corpusPromise = null;
-    function loadCorpus() {
-      if (corpusPromise) return corpusPromise;
-      corpusPromise = Promise.allSettled([
-        getDocs(query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(300))),
-        getDocs(query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(300))),
-        getDocs(query(collection(db, 'projects'), orderBy('createdAt', 'desc'), limit(300))),
-        getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(300))),
-      ]).then(([postsR, videosR, projectsR, usersR]) => ({
-        posts: postsR.status === 'fulfilled' ? postsR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
-        videos: videosR.status === 'fulfilled' ? videosR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
-        projects: projectsR.status === 'fulfilled' ? projectsR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
-        users: usersR.status === 'fulfilled' ? usersR.value.docs.map(d => ({ email: d.id, ...d.data() })) : [],
-      }));
-      return corpusPromise;
-    }
-
-    function matchRank(name, q) {
-      const idx = (name || '').toLowerCase().indexOf(q);
-      if (idx === -1) return -1;
-      return idx === 0 ? 0 : 1; // prefix matches rank above mid-string matches
-    }
-
-    async function runOeperSearch(qRaw) {
-      const q = qRaw.trim().toLowerCase();
-      if (!q) { closeDropdown(); return; }
-      dropdown.innerHTML = '<div class="hsd-loading">Searching…</div>';
-      dropdown.classList.add('open');
-
-      let corpus;
-      try { corpus = await loadCorpus(); } catch { corpus = { posts: [], videos: [], projects: [], users: [] }; }
-      if (searchInput.value.trim().toLowerCase() !== q || engine !== 'oeper') return; // stale — input/engine changed while we were fetching
-
-      const results = [];
-      corpus.users.forEach(u => {
-        if (!u.handle) return;
-        const name = u.displayName || u.handle;
-        const rank = Math.min(
-          matchRank(name, q) === -1 ? 99 : matchRank(name, q),
-          matchRank(u.handle, q) === -1 ? 99 : matchRank(u.handle, q)
-        );
-        if (rank < 99) results.push({ rank, name, sub: 'in People', url: `/profile.html?u=${encodeURIComponent(u.handle)}`, photo: getProfile(u.email, u.displayName, u.photoURL).photo, icon: 'person' });
-      });
-      corpus.posts.forEach(p => {
-        const name = p.title || p.body || '';
-        const rank = matchRank(name, q);
-        if (rank !== -1) results.push({ rank, name, sub: 'in Feed', url: `/forum.html?post=${p.id}`, icon: 'forum' });
-      });
-      corpus.videos.forEach(v => {
-        const rank = matchRank(v.title, q);
-        if (rank !== -1) results.push({ rank, name: v.title || '', sub: 'in Videos', url: `/videos.html?video=${v.id}`, icon: 'smart_display' });
-      });
-      corpus.projects.forEach(p => {
-        const rank = matchRank(p.title, q);
-        if (rank !== -1) results.push({ rank, name: p.title || '', sub: 'in Projects', url: `/projects.html?project=${p.id}`, icon: 'apps' });
-      });
-
-      results.sort((a, b) => a.rank - b.rank);
-      const top = results.slice(0, 8);
-
-      if (top.length === 0) {
-        dropdown.innerHTML = `<div class="hsd-empty">No results for "${escHtml(qRaw.trim())}"</div>`;
-        return;
-      }
-      dropdown.innerHTML = top.map(r => `
-        <a class="hsd-row" href="${r.url}">
-          <div class="hsd-icon">${r.photo ? `<img src="${r.photo}" alt="">` : `<span class="material-symbols-rounded">${r.icon}</span>`}</div>
-          <div class="hsd-main"><span class="hsd-name">${escHtml(r.name)}</span> <span class="hsd-cat">${r.sub}</span></div>
-        </a>
-      `).join('');
-    }
-
-    let searchDebounce = null;
-    searchInput.addEventListener('input', () => {
-      if (engine !== 'oeper') return;
-      clearTimeout(searchDebounce);
-      const q = searchInput.value.trim();
-      if (!q) { closeDropdown(); return; }
-      searchDebounce = setTimeout(() => runOeperSearch(q), 220);
-    });
-    searchInput.addEventListener('focus', () => {
-      if (engine === 'oeper' && searchInput.value.trim()) dropdown.classList.add('open');
-    });
-    searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') closeDropdown(); });
-    document.addEventListener('click', e => {
-      if (!dropdown.contains(e.target) && e.target !== searchInput) closeDropdown();
-    });
-    searchForm.addEventListener('submit', e => {
-      if (engine !== 'oeper') return;
-      e.preventDefault();
-      const first = dropdown.querySelector('.hsd-row');
-      if (first) window.location.href = first.getAttribute('href');
-    });
-  }
 </script>
 <script>
 const PAGES = [
@@ -770,38 +631,10 @@ const PAGES = [
   }
 ];
 
-const navContainer = document.getElementById('navLinksContainer');
 const pageContainer = document.getElementById('pageContainer');
-
-const navHamburger = document.getElementById('navHamburger');
-navHamburger.addEventListener('click', () => navContainer.classList.toggle('mobile-open'));
-navContainer.addEventListener('click', e => { if (e.target.closest('.nav-item')) navContainer.classList.remove('mobile-open'); });
-document.addEventListener('click', e => {
-  if (navContainer.classList.contains('mobile-open') && !navContainer.contains(e.target) && !navHamburger.contains(e.target)) {
-    navContainer.classList.remove('mobile-open');
-  }
-});
 
 PAGES.forEach((page, index) => {
   const isFirst = index === 0;
-
-  const navLink = document.createElement('a');
-  navLink.className = `nav-item ${isFirst ? 'active' : ''}`;
-  navLink.setAttribute('data-tab', page.id);
-
-  if (page.url) {
-    navLink.href = page.url;
-  } else {
-    navLink.href = '#';
-    navLink.setAttribute('onclick', `switchTab(event, '${page.id}')`);
-  }
-
-  // Wrap label in a span so we can hide it on mobile via CSS
-  navLink.innerHTML = `
-    <span class="material-symbols-rounded">${page.icon}</span>
-    <span class="nav-item-label">${page.title}</span>
-  `;
-  navContainer.appendChild(navLink);
 
   if (page.url) return;
 
@@ -823,24 +656,9 @@ PAGES.forEach((page, index) => {
   `).join('');
 
   pageSection.innerHTML = `
-    <div class="hero-section">
+    <div class="hero-section${isFirst ? ' home-hero' : ''}">
       <h1 class="${isFirst ? 'animate-text-hero' : ''}">${page.heroTitle}</h1>
-      <p class="${isFirst ? 'animate-text-sub' : ''}">${page.heroSub}</p>
-      ${isFirst ? `
-        <form class="home-search-form" id="homeSearchForm" action="https://www.google.com/search" method="GET" autocomplete="off">
-          <div class="home-search-wrap">
-            <span class="material-symbols-rounded home-search-icon">search</span>
-            <input class="home-search-input" type="text" name="q" id="homeSearchInput" placeholder="Search the web…" autocomplete="off">
-          </div>
-          <div class="home-search-engines" id="homeSearchEngines">
-            <button type="button" class="home-search-engine" data-engine="oeper">oeper.dev</button>
-            <button type="button" class="home-search-engine" data-engine="google">Google</button>
-            <button type="button" class="home-search-engine" data-engine="duckduckgo">DuckDuckGo</button>
-            <button type="button" class="home-search-engine" data-engine="bing">Bing</button>
-          </div>
-          <div class="home-search-dropdown" id="homeSearchDropdown"></div>
-        </form>
-      ` : ''}
+      ${isFirst ? '' : `<p>${page.heroSub}</p>`}
     </div>
     ${isFirst ? `
       <div class="home-feed-section">
@@ -856,38 +674,6 @@ PAGES.forEach((page, index) => {
 
   pageContainer.appendChild(pageSection);
 });
-
-function switchTab(event, tabId) {
-  event.preventDefault();
-  
-  const currentActiveTab = document.querySelector('.page-content.active');
-  if (currentActiveTab.id === tabId) return;
-  
-  document.querySelectorAll('.nav-item').forEach(item => {
-    item.classList.toggle('active', item.getAttribute('data-tab') === tabId);
-  });
-  
-  currentActiveTab.style.animation = 'none';
-  void currentActiveTab.offsetWidth;
-  
-  currentActiveTab.style.transition = 'opacity 150ms var(--md-easing-standard), transform 150ms var(--md-easing-standard)';
-  currentActiveTab.style.opacity = '0';
-  currentActiveTab.style.transform = 'translateY(-12px)';
-  
-  setTimeout(() => {
-    currentActiveTab.classList.remove('active');
-    currentActiveTab.style.transition = '';
-    currentActiveTab.style.transform = '';
-    
-    const targetTab = document.getElementById(tabId);
-    targetTab.classList.add('active');
-    
-    const h1 = targetTab.querySelector('h1');
-    const p = targetTab.querySelector('p');
-    if (h1) h1.classList.remove('animate-text-hero');
-    if (p) p.classList.remove('animate-text-sub');
-  }, 150);
-}
 </script>
 </body>
 </html>

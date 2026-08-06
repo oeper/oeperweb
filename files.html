@@ -54,6 +54,7 @@
     font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
   }
   .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
   .header h1 {
     font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400;
     margin-bottom: 12px; letter-spacing: -0.5px;
@@ -149,17 +150,7 @@
 
 <div class="page">
   <header class="header">
-    <div class="header-container">
-      <a href="https://oeper.dev" class="header-link">
-        <span class="material-symbols-rounded">arrow_back</span>
-        <span>back to oeper.dev</span>
-      </a>
-      <div style="display:flex; align-items:center; gap:12px;">
-        <a href="/messages.html" class="header-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
-        <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
-        <div id="accountBar"></div>
-      </div>
-    </div>
+
     <h1>Files</h1>
     <p>Your own personal file storage. Sign in with Google to upload — only you (and the site owners) can see what you've uploaded. Don't want an account? You can still upload one file up to 50MB without signing in.</p>
   </header>
@@ -212,12 +203,13 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
+import { mountTopNav } from './shared/topnav.js';
 import {
-  SERVER_ENDPOINT, MAX_IMAGE_BYTES, getCurrentUser, onAccountChange, isOwnerEmail, mountAccountBar, uploadFile,
+  SERVER_ENDPOINT, MAX_IMAGE_BYTES, getCurrentUser, onAccountChange, isOwnerEmail, uploadFile,
 } from './shared/account.js?v=8';
 import { mountFooter } from './shared/footer.js';
 
-mountAccountBar(document.getElementById('accountBar'));
+mountTopNav();
 mountFooter();
 
 const ANON_MAX_BYTES = 50 * 1024 * 1024;
@@ -347,7 +339,7 @@ function buildCard(f) {
     ${thumbHtml}
     <div class="file-main">
       <div class="file-name">${escHtml(f.name)}</div>
-      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${showUploader ? ' · ' + escHtml(f.email) : ''}</div>
+      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${showUploader ? ' · ' + escHtml(f.untracked ? 'Unknown owner' : (f.email || 'Anonymous')) : ''}</div>
     </div>
     <div class="file-actions">
       <button class="icon-btn" data-copy title="Copy link"><span class="material-symbols-rounded">link</span></button>

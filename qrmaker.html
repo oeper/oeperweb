@@ -55,6 +55,7 @@
     font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
   }
   .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
   .header h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400; margin-bottom: 12px; letter-spacing: -0.5px; }
   .header p { color: var(--md-sys-color-on-surface-variant); font-size: 16px; max-width: 500px; line-height: 1.5; }
 
@@ -115,15 +116,6 @@
 
 <div class="page">
   <header class="header">
-    <div class="header-container">
-      <a href="https://oeper.dev" class="header-link">
-        <span class="material-symbols-rounded">arrow_back</span>
-        <span>back to oeper.dev</span>
-      </a>
-      <div style="display:flex; align-items:center; gap:12px;">
-        <a href="/tools.html" class="header-link"><span class="material-symbols-rounded">build</span><span>Tools</span></a>
-      </div>
-    </div>
     <h1>QR Maker</h1>
     <p>Generate QR codes without being begged to sign up or pay. Instant, free, and it stays in your browser.</p>
   </header>
@@ -233,6 +225,10 @@
   </div>
 </div>
 
+<script type="module">
+import { mountTopNav } from './shared/topnav.js';
+mountTopNav();
+</script>
 <script>
 let currentType = 'url';
 const qrCanvas = document.getElementById('qrCanvas');

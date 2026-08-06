@@ -55,6 +55,7 @@
     font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
   }
   .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
   .header h1 {
     font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400;
     margin-bottom: 12px; letter-spacing: -0.5px;
@@ -141,6 +142,7 @@
     font-size: 14px; color: var(--md-sys-color-on-surface-variant); line-height: 1.5;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px;
   }
+  .post-excerpt a, .comment-body a, .post-title a, .thread-title a { color: var(--md-sys-color-primary); }
   .post-thumb-wrap { position: relative; margin-bottom: 8px; display: inline-block; max-width: 100%; }
   .post-thumb { max-width: 100%; max-height: 260px; border-radius: 12px; display: block; object-fit: cover; }
   .post-thumb-count {
@@ -368,17 +370,6 @@
 
 <div class="page">
   <header class="header">
-    <div class="header-container">
-      <a href="https://oeper.dev" class="header-link">
-        <span class="material-symbols-rounded">arrow_back</span>
-        <span>back to oeper.dev</span>
-      </a>
-      <div style="display:flex; align-items:center; gap:12px;">
-        <a href="/messages.html" class="header-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
-        <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
-        <div id="accountBar"></div>
-      </div>
-    </div>
     <h1>Feed</h1>
     <p>Post, tag, discuss. Anyone signed in with Google can join.</p>
   </header>
@@ -481,8 +472,9 @@
 import {
   auth, db, SERVER_ENDPOINT, MAX_IMAGE_BYTES, isOwnerEmail, officialBadgeHtml,
   getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded, handleOf,
-  mountAccountBar, uploadFile,
+  uploadFile,
 } from './shared/account.js?v=8';
+import { mountTopNav } from './shared/topnav.js';
 import { mountFooter } from './shared/footer.js';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
@@ -498,6 +490,9 @@ const DEFAULT_TAGS = [
 const MAX_POST_IMAGES = 8;
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function linkify(str, extraAttrs) {
+  return escHtml(str).replace(/(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener"${extraAttrs || ''}>${url}</a>`);
+}
 function parseMarkdown(md) {
   let html = escHtml(md || '')
     .replace(/\r\n/g, '\n')
@@ -507,6 +502,7 @@ function parseMarkdown(md) {
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\n{2,}/g, '</p><p>')
     .replace(/\n/g, '<br>');
@@ -677,7 +673,7 @@ function buildKebabMenu(items) {
 }
 
 document.getElementById('maxImagesLabel').textContent = MAX_POST_IMAGES;
-mountAccountBar(document.getElementById('accountBar'));
+mountTopNav();
 mountFooter();
 runForum();
 initStories();
@@ -1163,8 +1159,8 @@ function runForum() {
             · ${timeAgo(p._date)}
           </span>
         </div>
-        <div class="post-title">${escHtml(p.title)}</div>
-        ${p.body ? `<div class="post-excerpt">${escHtml(p.body)}</div>` : ''}
+        <div class="post-title">${linkify(p.title, ' onclick="event.stopPropagation()"')}</div>
+        ${p.body ? `<div class="post-excerpt">${linkify(p.body, ' onclick="event.stopPropagation()"')}</div>` : ''}
         ${atts.length ? `
           <div class="post-thumb-wrap" data-thumb>
             ${attachmentHtml(atts[0], { className: 'post-thumb' })}
@@ -1356,7 +1352,7 @@ function runForum() {
         </span>
         <span class="kebab-slot" data-kebab style="margin-left:auto;"></span>
       </div>
-      <div class="thread-title">${escHtml(p.title)}</div>
+      <div class="thread-title">${linkify(p.title)}</div>
       ${mediaAtts.length ? `
         <div class="thread-gallery ${mediaAtts.length === 1 ? 'single' : ''}">
           ${mediaAtts.map(src => attachmentHtml(src, { onclick: isImageUrl(src) ? `window.open('${src}', '_blank')` : null })).join('')}
@@ -1422,7 +1418,7 @@ function runForum() {
             <span class="time">${timeAgo(c._date)}</span>
             <span class="kebab-slot" data-kebab style="margin-left:auto;"></span>
           </div>
-          <div class="comment-body">${escHtml(c.body)}</div>
+          <div class="comment-body">${linkify(c.body)}</div>
           ${c.imageUrl ? attachmentHtml(c.imageUrl, { className: 'comment-image', withPreview: true }) : ''}
         </div>
       </div>

@@ -50,6 +50,7 @@
     font-size: 14px; font-weight: 500; margin-bottom: 16px;
   }
   .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
   .header h1 {
     font-family: 'Google Sans', 'Product Sans', sans-serif;
     font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400;
@@ -235,20 +236,11 @@
 
 <div class="page" id="appRoot" style="display:none;">
   <header class="header">
-    <a href="https://oeper.dev" class="header-link">
-      <span class="material-symbols-rounded">arrow_back</span>
-      <span>back to oeper.dev</span>
-    </a>
     <h1>Content Manager</h1>
     <p>Add, edit and publish articles &amp; downloads without touching code.</p>
-    <div style="margin-top:16px;" id="headerAccountBar"></div>
     <a href="/files" class="header-link" style="margin-top:12px;">
       <span class="material-symbols-rounded">folder</span>
       <span>Manage shared files</span>
-    </a>
-    <a href="/settings" class="header-link" style="margin-top:8px;">
-      <span class="material-symbols-rounded">settings</span>
-      <span>Settings</span>
     </a>
     <div class="notice" id="fsaNotice">
       <strong>Heads up:</strong> your browser doesn't support saving files in place, so "Save" will download an updated JSON file instead — drop it into <code>data/</code>, replacing the old one.
@@ -305,6 +297,7 @@
 import {
   isOwnerEmail, onAccountChange, mountAccountBar, getCurrentUser, db,
 } from './shared/account.js?v=8';
+import { mountTopNav } from './shared/topnav.js';
 import { mountFooter } from './shared/footer.js';
 import {
   collection, addDoc, serverTimestamp, Timestamp,
@@ -312,7 +305,7 @@ import {
 
 // ── Auth (shared Google Sign-In, gated to OWNER_EMAILS) ────────────
 mountAccountBar(document.getElementById('lockSignInBtn'));
-mountAccountBar(document.getElementById('headerAccountBar'));
+mountTopNav();
 mountFooter();
 
 // Converts the old [[label]](url) link syntax used in articles.json into

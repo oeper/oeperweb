@@ -54,6 +54,7 @@
     font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
   }
   .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
   .header h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400; margin-bottom: 12px; letter-spacing: -0.5px; }
   .header p { color: var(--md-sys-color-on-surface-variant); font-size: 16px; max-width: 500px; line-height: 1.5; }
 
@@ -140,17 +141,6 @@
 
 <div class="page">
   <header class="header">
-    <div class="header-container">
-      <a href="https://oeper.dev" class="header-link">
-        <span class="material-symbols-rounded">arrow_back</span>
-        <span>back to oeper.dev</span>
-      </a>
-      <div style="display:flex; align-items:center; gap:12px;">
-        <a href="/messages.html" class="header-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
-        <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
-        <div id="accountBar"></div>
-      </div>
-    </div>
     <h1>Videos</h1>
     <p>Long-form videos from anyone signed in. Upvote, downvote, and watch.</p>
   </header>
@@ -183,15 +173,16 @@
 <script type="module">
 import {
   auth, db, SERVER_ENDPOINT, isOwnerEmail, officialBadgeHtml, getCurrentUser, onAccountChange,
-  getProfile, handleOf, mountAccountBar, uploadFile, ensureProfileLoaded,
+  getProfile, handleOf, uploadFile, ensureProfileLoaded,
 } from './shared/account.js?v=8';
+import { mountTopNav } from './shared/topnav.js';
 import { mountFooter } from './shared/footer.js';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
   arrayUnion, arrayRemove, increment,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
-mountAccountBar(document.getElementById('accountBar'));
+mountTopNav();
 mountFooter();
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

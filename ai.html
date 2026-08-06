@@ -57,6 +57,7 @@
     font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
   }
   .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
   .header h1 {
     font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400;
     margin-bottom: 8px; letter-spacing: -0.5px;
@@ -128,17 +129,6 @@
 
 <div class="page">
   <header class="header">
-    <div class="header-container">
-      <a href="https://oeper.dev" class="header-link">
-        <span class="material-symbols-rounded">arrow_back</span>
-        <span>back to oeper.dev</span>
-      </a>
-      <div style="display:flex; align-items:center; gap:12px;">
-        <a href="/messages.html" class="header-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
-        <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
-        <div id="accountBar"></div>
-      </div>
-    </div>
     <h1>AI</h1>
     <p>Chat with <strong id="modelName">a small local model</strong>, running on my own hardware over a home connection. No sign-in needed.</p>
   </header>
@@ -162,9 +152,9 @@
 </div>
 
 <script type="module">
-import { mountAccountBar } from './shared/account.js?v=8';
+import { mountTopNav } from './shared/topnav.js';
 import { mountFooter } from './shared/footer.js';
-mountAccountBar(document.getElementById('accountBar'));
+mountTopNav();
 mountFooter();
 
 const AI_ENDPOINT = 'https://ai2.oeper.dev';
