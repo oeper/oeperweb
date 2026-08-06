@@ -74,17 +74,26 @@ const META_FILE = process.env.META_FILE || path.join(__dirname, 'file-owners.jso
 // Tracks anonymous uploads per IP address (their one free upload).
 const ANON_FILE = process.env.ANON_FILE || path.join(__dirname, 'anon-uploads.json');
 
-// Long-form video uploads (videos.html) — its own folder and its own much
-// higher size cap, since actual video files blow past MAX_FILE_BYTES fast.
-// Metadata (title/description/votes) lives in Firestore; this only stores
-// the raw file and hands back a URL.
-const VIDEO_DIR = process.env.VIDEO_DIR || '/storage/emulated/0/Download/videos';
+// Long-form video uploads (videos.html) — its own much higher size cap,
+// since actual video files blow past MAX_FILE_BYTES fast. Shares a folder
+// with forum attachments by default. Metadata (title/description/votes)
+// lives in Firestore; this only stores the raw file and hands back a URL.
+const VIDEO_DIR = process.env.VIDEO_DIR || '/storage/emulated/0/Download/forum';
 const MAX_VIDEO_BYTES = Number(process.env.MAX_VIDEO_BYTES) || 300 * 1024 * 1024; // 300MB
+
+// User-uploaded projects (projects.html) — any signed-in user.
+const PROJECT_DIR = process.env.PROJECT_DIR || '/storage/emulated/0/Download/projects';
+const MAX_PROJECT_BYTES = Number(process.env.MAX_PROJECT_BYTES) || 100 * 1024 * 1024; // 100MB
+
+// Chat attachments (messages.html) — currently just voice messages, any
+// signed-in user, kept small since these are short recordings not files.
+const MESSAGE_DIR = process.env.MESSAGE_DIR || '/storage/emulated/0/Download/messages';
+const MAX_MESSAGE_BYTES = Number(process.env.MAX_MESSAGE_BYTES) || 20 * 1024 * 1024; // 20MB
 // ──────────────────────────────────────────────────────────────
 
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-if (!fs.existsSync(USER_FILES_DIR)) fs.mkdirSync(USER_FILES_DIR, { recursive: true });
-if (!fs.existsSync(VIDEO_DIR)) fs.mkdirSync(VIDEO_DIR, { recursive: true });
+[UPLOAD_DIR, USER_FILES_DIR, VIDEO_DIR, PROJECT_DIR, MESSAGE_DIR].forEach(dir => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
 
 function loadJson(file) {
   try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return {}; }
@@ -186,6 +195,41 @@ app.post('/upload-video', verifyFirebaseToken, (req, res) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
     res.json({ url: `${PUBLIC_BASE_URL}/videos/${req.file.filename}` });
+  });
+});
+
+// ── Project uploads (projects.html) — any signed-in user. ────────────────
+const uploadProject = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, PROJECT_DIR),
+    filename: (req, file, cb) => cb(null, makeFilename(file.originalname)),
+  }),
+  limits: { fileSize: MAX_PROJECT_BYTES },
+});
+
+app.post('/upload-project', verifyFirebaseToken, (req, res) => {
+  uploadProject.single('file')(req, res, err => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'No file received' });
+    res.json({ url: `${PUBLIC_BASE_URL}/projects/${req.file.filename}` });
+  });
+});
+
+// ── Chat attachments (messages.html), e.g. voice messages — any signed-in
+// user. ───────────────────────────────────────────────────────────────
+const uploadMessageFile = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, MESSAGE_DIR),
+    filename: (req, file, cb) => cb(null, makeFilename(file.originalname)),
+  }),
+  limits: { fileSize: MAX_MESSAGE_BYTES },
+});
+
+app.post('/upload-message', verifyFirebaseToken, (req, res) => {
+  uploadMessageFile.single('file')(req, res, err => {
+    if (err) return res.status(400).json({ error: err.message });
+    if (!req.file) return res.status(400).json({ error: 'No file received' });
+    res.json({ url: `${PUBLIC_BASE_URL}/messages-media/${req.file.filename}` });
   });
 });
 
@@ -327,6 +371,8 @@ app.post('/report', verifyFirebaseToken, async (req, res) => {
 app.use('/files', express.static(UPLOAD_DIR, { maxAge: '30d' }));
 app.use('/docs', express.static(USER_FILES_DIR, { maxAge: '30d' }));
 app.use('/videos', express.static(VIDEO_DIR, { maxAge: '30d' }));
+app.use('/projects', express.static(PROJECT_DIR, { maxAge: '30d' }));
+app.use('/messages-media', express.static(MESSAGE_DIR, { maxAge: '30d' }));
 
 app.get('/', (req, res) => res.send('oeperweb forum upload server is running.'));
 
@@ -334,5 +380,7 @@ app.listen(PORT, () => console.log(
   `Upload server listening on port ${PORT} (public base: ${PUBLIC_BASE_URL})\n` +
   `  forum attachments -> ${UPLOAD_DIR}\n` +
   `  personal files     -> ${USER_FILES_DIR}\n` +
-  `  videos             -> ${VIDEO_DIR}`
+  `  videos             -> ${VIDEO_DIR}\n` +
+  `  projects           -> ${PROJECT_DIR}\n` +
+  `  chat attachments   -> ${MESSAGE_DIR}`
 ));

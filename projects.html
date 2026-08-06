@@ -430,7 +430,7 @@ document.getElementById('uploadSubmitBtn').addEventListener('click', async () =>
   btn.disabled = true;
   btn.textContent = 'Uploading…';
   try {
-    const fileUrl = file ? await uploadFile(file, '/upload') : '';
+    const fileUrl = file ? await uploadFile(file, '/upload-project') : '';
     const profile = getProfile(user.email, user.displayName, user.photoURL);
     await addDoc(collection(db, 'projects'), {
       title, description, link, fileUrl,

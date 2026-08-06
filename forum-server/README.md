@@ -27,13 +27,21 @@ everyone's for moderation) and the forum:
   Discord channel)
 - **`/upload-video`** — long-form video uploads for `videos.html`, any
   signed-in user. Saved into `VIDEO_DIR` (default
-  `/storage/emulated/0/Download/videos`) and capped by `MAX_VIDEO_BYTES`
-  (default 300MB — much higher than `MAX_FILE_BYTES` since actual video
-  blows past 10MB immediately). Title/description/votes live in Firestore
-  (`videos` collection); this endpoint only stores the raw file and hands
-  back a URL. Uploads run over your home connection's upload speed through
-  the Cloudflare Tunnel, so a 300MB file can take a while — that's a
-  bandwidth reality, not a bug.
+  `/storage/emulated/0/Download/forum` — same folder as forum attachments)
+  and capped by `MAX_VIDEO_BYTES` (default 300MB — much higher than
+  `MAX_FILE_BYTES` since actual video blows past 10MB immediately).
+  Title/description/votes live in Firestore (`videos` collection); this
+  endpoint only stores the raw file and hands back a URL. Uploads run over
+  your home connection's upload speed through the Cloudflare Tunnel, so a
+  300MB file can take a while — that's a bandwidth reality, not a bug.
+- **`/upload-project`** — project uploads for `projects.html`, any
+  signed-in user. Saved into `PROJECT_DIR` (default
+  `/storage/emulated/0/Download/projects`), capped by `MAX_PROJECT_BYTES`
+  (default 100MB).
+- **`/upload-message`** — chat attachments for `messages.html` (currently
+  just voice messages), any signed-in user. Saved into `MESSAGE_DIR`
+  (default `/storage/emulated/0/Download/messages`), capped by
+  `MAX_MESSAGE_BYTES` (default 20MB).
 
 **Privacy note:** `USER_FILES_DIR` defaults to `/storage/emulated/0/Documents`
 directly. This is safe from casually exposing everything in that folder
@@ -104,7 +112,8 @@ Replace the URL with whatever `cloudflared` printed in step 4.
 ## 6. Wire it into the site
 
 Copy that same tunnel URL and send it — it goes into `SERVER_ENDPOINT` near
-the top of `forum.html`'s script.
+the top of `shared/account.js` (currently `https://fs.oeper.dev`, a named
+tunnel hostname — see below).
 
 ## Storing uploads in shared storage (visible in the Files app)
 
@@ -225,7 +234,7 @@ port.
 ### Exposing it at ai2.oeper.dev
 
 This needs a second **Public Hostname** on the same Cloudflare Tunnel you
-already set up for `myserverfiles.oeper.dev` (Zero Trust dashboard →
+already set up for `fs.oeper.dev` (Zero Trust dashboard →
 Networks → Tunnels → your tunnel → Public Hostname → Add a public
 hostname): hostname `ai2`, domain `oeper.dev`, service
 `http://localhost:8788`. One `cloudflared` connector can carry as many
