@@ -58,16 +58,21 @@
   .header p { color: var(--md-sys-color-on-surface-variant); font-size: 15px; max-width: 560px; line-height: 1.5; }
 
   .toolbar {
-    display: flex; align-items: center; gap: 20px; flex-wrap: wrap; background: var(--md-sys-color-surface);
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap; background: var(--md-sys-color-surface);
     border-radius: 20px; padding: 16px 20px; margin-bottom: 20px;
   }
-  .transport { display: flex; align-items: center; gap: 8px; }
-  .icon-btn {
-    width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--md-sys-color-primary);
+  .play-toggle-btn {
+    width: 56px; height: 56px; border-radius: 50%; border: none; background: var(--md-sys-color-primary);
     color: var(--md-sys-color-on-primary); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; box-shadow: 0 4px 14px rgba(168,199,250,0.35); transition: transform 0.1s;
   }
-  .icon-btn.secondary { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); }
-  .icon-btn:hover { opacity: 0.9; }
+  .play-toggle-btn:hover { transform: scale(1.05); }
+  .play-toggle-btn .material-symbols-rounded { font-size: 28px; }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .icon-btn:hover { opacity: 0.85; }
   .toolbar-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
   .toolbar-field select, .toolbar-field input[type="range"] { accent-color: var(--md-sys-color-primary); }
   .toolbar-field select {
@@ -75,23 +80,28 @@
     border-radius: 10px; padding: 8px 10px; font-family: inherit; font-size: 13px;
   }
   .bpm-value, .vol-value { color: var(--md-sys-color-on-surface); font-weight: 500; min-width: 34px; }
+  .toolbar-end { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
   .seq-wrap { background: var(--md-sys-color-surface); border-radius: 20px; padding: 16px; overflow-x: auto; }
   .seq-grid { display: inline-block; }
   .seq-row { display: flex; align-items: center; }
   .note-label {
-    width: 52px; flex-shrink: 0; font-size: 12px; color: var(--md-sys-color-on-surface-variant); text-align: right; padding-right: 10px;
-    font-family: monospace;
+    width: 60px; flex-shrink: 0; font-size: 12px; font-weight: 600; text-align: right; padding-right: 10px;
+    font-family: 'Google Sans', 'Product Sans', sans-serif;
   }
-  .note-label.sharp { color: var(--md-sys-color-outline-variant); }
+  .section-label {
+    margin: 14px 0 6px; padding-left: 70px; font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.6px; color: var(--md-sys-color-on-surface-variant);
+  }
   .step-cell {
-    width: 28px; height: 22px; margin: 1.5px; border-radius: 5px; background: var(--md-sys-color-surface-variant);
-    cursor: pointer; flex-shrink: 0; transition: background-color 0.1s;
+    width: 30px; height: 30px; margin: 2px; border-radius: 9px; background: var(--md-sys-color-surface-variant);
+    cursor: pointer; flex-shrink: 0; transition: filter 0.1s, transform 0.05s;
   }
-  .step-cell:hover { background: #3c4450; }
-  .step-cell.on { background: var(--md-sys-color-primary); }
+  .step-cell:hover { filter: brightness(1.3); }
+  .step-cell:active { transform: scale(0.92); }
+  .step-cell.on { background: var(--row-color); box-shadow: 0 3px 8px rgba(0,0,0,0.35); }
   .step-cell.beat { outline: 1px solid rgba(255,255,255,0.08); }
-  .step-cell.playing { box-shadow: 0 0 0 2px #fff inset; }
+  .step-cell.playing { outline: 3px solid #fff; outline-offset: -3px; filter: brightness(1.35); }
 
   .empty-hint { text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; margin-top: 16px; }
 </style>
@@ -108,15 +118,11 @@
       <a href="/tools.html" class="header-link"><span class="material-symbols-rounded">build</span><span>Tools</span></a>
     </div>
     <h1>Music Composer</h1>
-    <p>A step sequencer that runs entirely in your browser — click cells to place notes, hit play, and export a WAV when you're happy with it. Nothing is uploaded anywhere.</p>
+    <p>Inspired by Chrome Music Lab's Song Maker — pick a scale, colour in some notes and a beat, hit play. Runs entirely in your browser, nothing is uploaded anywhere.</p>
   </header>
 
   <div class="toolbar">
-    <div class="transport">
-      <button class="icon-btn" id="playBtn" title="Play"><span class="material-symbols-rounded">play_arrow</span></button>
-      <button class="icon-btn secondary" id="stopBtn" title="Stop"><span class="material-symbols-rounded">stop</span></button>
-      <button class="icon-btn secondary" id="clearBtn" title="Clear all notes"><span class="material-symbols-rounded">delete_sweep</span></button>
-    </div>
+    <button class="play-toggle-btn" id="playToggleBtn" title="Play"><span class="material-symbols-rounded">play_arrow</span></button>
     <div class="toolbar-field">
       Tempo <input type="range" id="bpmInput" min="60" max="220" value="120"> <span class="bpm-value" id="bpmValue">120</span> BPM
     </div>
@@ -124,12 +130,40 @@
       Volume <input type="range" id="volInput" min="0" max="100" value="70"> <span class="vol-value" id="volValue">70</span>%
     </div>
     <div class="toolbar-field">
-      Waveform
-      <select id="waveSelect">
-        <option value="sine">Sine</option>
-        <option value="square">Square</option>
-        <option value="sawtooth">Sawtooth</option>
-        <option value="triangle" selected>Triangle</option>
+      Scale
+      <select id="scaleSelect">
+        <option value="majorPentatonic" selected>Major Pentatonic</option>
+        <option value="minorPentatonic">Minor Pentatonic</option>
+        <option value="major">Major</option>
+        <option value="minor">Minor</option>
+        <option value="chromatic">Chromatic</option>
+      </select>
+    </div>
+    <div class="toolbar-field">
+      Key
+      <select id="keySelect">
+        <option value="0" selected>C</option>
+        <option value="1">C#</option>
+        <option value="2">D</option>
+        <option value="3">D#</option>
+        <option value="4">E</option>
+        <option value="5">F</option>
+        <option value="6">F#</option>
+        <option value="7">G</option>
+        <option value="8">G#</option>
+        <option value="9">A</option>
+        <option value="10">A#</option>
+        <option value="11">B</option>
+      </select>
+    </div>
+    <div class="toolbar-field">
+      Instrument
+      <select id="instrumentSelect">
+        <option value="piano" selected>Piano</option>
+        <option value="strings">Strings</option>
+        <option value="synth">Synth</option>
+        <option value="marimba">Marimba</option>
+        <option value="woodwind">Woodwind</option>
       </select>
     </div>
     <div class="toolbar-field">
@@ -139,44 +173,87 @@
         <option value="32">32</option>
       </select>
     </div>
-    <button class="icon-btn secondary" id="exportBtn" title="Export as WAV" style="margin-left:auto;"><span class="material-symbols-rounded">download</span></button>
+    <div class="toolbar-end">
+      <button class="icon-btn" id="clearBtn" title="Clear all notes"><span class="material-symbols-rounded">delete_sweep</span></button>
+      <button class="icon-btn" id="exportBtn" title="Export as WAV"><span class="material-symbols-rounded">download</span></button>
+    </div>
   </div>
 
   <div class="seq-wrap">
     <div class="seq-grid" id="seqGrid"></div>
   </div>
-  <p class="empty-hint">Tip: each row is a note (top = highest). Click a cell to toggle it, then press play.</p>
+  <p class="empty-hint">Tip: each colourful row is a note in the scale (top = highest), the grey rows at the bottom are a beat. Click a cell to toggle it, then press play.</p>
 </div>
 
 <script>
-// C3 up to C5, chromatic, highest note first so the grid reads like a piano roll.
+// ── Scales, keys, note math ─────────────────────────────────
 const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 function noteName(midi) { return NOTE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1); }
 function noteFreq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
 
 const LOW_MIDI = 48;  // C3
 const HIGH_MIDI = 72; // C5
-const MIDI_NOTES = [];
-for (let m = HIGH_MIDI; m >= LOW_MIDI; m--) MIDI_NOTES.push(m);
 
+const SCALES = {
+  majorPentatonic: [0, 2, 4, 7, 9],
+  minorPentatonic: [0, 3, 5, 7, 10],
+  major: [0, 2, 4, 5, 7, 9, 11],
+  minor: [0, 2, 3, 5, 7, 8, 10],
+  chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+};
+
+function buildScaleNotes(scaleKey, keyOffset) {
+  const intervals = SCALES[scaleKey] || SCALES.majorPentatonic;
+  const notes = [];
+  for (let m = HIGH_MIDI; m >= LOW_MIDI; m--) {
+    const rel = ((m - keyOffset) % 12 + 12) % 12;
+    if (intervals.includes(rel)) notes.push(m);
+  }
+  return notes;
+}
+
+const PERC_ROWS = [
+  { kind: 'perc', type: 'kick', label: 'Kick' },
+  { kind: 'perc', type: 'snare', label: 'Snare' },
+  { kind: 'perc', type: 'hihat', label: 'Hi-hat' },
+];
+const PERC_COLORS = { kick: '#ff8a65', snare: '#ffd54f', hihat: '#4fc3f7' };
+
+const INSTRUMENTS = {
+  piano:    { wave: 'triangle', attack: 0.005, decayTo: 0.05, sustainFactor: 0.85 },
+  strings:  { wave: 'sawtooth', attack: 0.09,  decayTo: 0.35, sustainFactor: 0.95 },
+  synth:    { wave: 'square',   attack: 0.005, decayTo: 0.02, sustainFactor: 0.6  },
+  marimba:  { wave: 'triangle', attack: 0.002, decayTo: 0.01, sustainFactor: 0.35 },
+  woodwind: { wave: 'sine',     attack: 0.035, decayTo: 0.15, sustainFactor: 0.9  },
+};
+
+// ── State ────────────────────────────────────────────────────
 let steps = 16;
 let grid = {}; // "row_col" -> true
 let bpm = 120;
 let volume = 0.7;
-let waveform = 'triangle';
+let instrumentKey = 'piano';
+let scale = 'majorPentatonic';
+let keyOffset = 0;
+let ROWS = []; // built by buildGrid()
 
 const seqGrid = document.getElementById('seqGrid');
 
 function buildGrid() {
+  const noteMidis = buildScaleNotes(scale, keyOffset);
+  ROWS = noteMidis.map(midi => ({ kind: 'note', midi })).concat(PERC_ROWS);
   grid = {};
   seqGrid.innerHTML = '';
-  MIDI_NOTES.forEach((midi, row) => {
+
+  function appendRow(rowDef, row, color, label) {
     const rowEl = document.createElement('div');
     rowEl.className = 'seq-row';
-    const label = document.createElement('div');
-    label.className = 'note-label' + (noteName(midi).includes('#') ? ' sharp' : '');
-    label.textContent = noteName(midi);
-    rowEl.appendChild(label);
+    rowEl.style.setProperty('--row-color', color);
+    const labelEl = document.createElement('div');
+    labelEl.className = 'note-label';
+    labelEl.style.color = color;
+    labelEl.textContent = label;
+    rowEl.appendChild(labelEl);
     for (let col = 0; col < steps; col++) {
       const cell = document.createElement('div');
       cell.className = 'step-cell' + (col % 4 === 0 ? ' beat' : '');
@@ -190,6 +267,20 @@ function buildGrid() {
       rowEl.appendChild(cell);
     }
     seqGrid.appendChild(rowEl);
+  }
+
+  noteMidis.forEach((midi, row) => {
+    const hue = Math.round((row / Math.max(1, noteMidis.length - 1)) * 300);
+    appendRow({ kind: 'note', midi }, row, `hsl(${hue}, 70%, 58%)`, noteName(midi));
+  });
+
+  const divider = document.createElement('div');
+  divider.className = 'section-label';
+  divider.textContent = 'Rhythm';
+  seqGrid.appendChild(divider);
+
+  PERC_ROWS.forEach((rowDef, i) => {
+    appendRow(rowDef, noteMidis.length + i, PERC_COLORS[rowDef.type], rowDef.label);
   });
 }
 buildGrid();
@@ -197,6 +288,16 @@ buildGrid();
 document.getElementById('stepsSelect').addEventListener('change', e => {
   playing && stop();
   steps = Number(e.target.value);
+  buildGrid();
+});
+document.getElementById('scaleSelect').addEventListener('change', e => {
+  playing && stop();
+  scale = e.target.value;
+  buildGrid();
+});
+document.getElementById('keySelect').addEventListener('change', e => {
+  playing && stop();
+  keyOffset = Number(e.target.value);
   buildGrid();
 });
 
@@ -208,12 +309,101 @@ document.getElementById('volInput').addEventListener('input', e => {
   volume = Number(e.target.value) / 100;
   document.getElementById('volValue').textContent = e.target.value;
 });
-document.getElementById('waveSelect').addEventListener('change', e => { waveform = e.target.value; });
+document.getElementById('instrumentSelect').addEventListener('change', e => { instrumentKey = e.target.value; });
 
 document.getElementById('clearBtn').addEventListener('click', () => {
   grid = {};
   document.querySelectorAll('.step-cell.on').forEach(c => c.classList.remove('on'));
 });
+
+// ── Sound synthesis (context-agnostic — reused for live playback and offline export) ──
+function scheduleNote(ctx, destination, midi, time) {
+  const preset = INSTRUMENTS[instrumentKey] || INSTRUMENTS.piano;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = preset.wave;
+  osc.frequency.setValueAtTime(noteFreq(midi), time);
+  const peak = volume * 0.5;
+  gain.gain.setValueAtTime(0, time);
+  gain.gain.linearRampToValueAtTime(peak, time + preset.attack);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak * preset.decayTo), time + stepDuration() * preset.sustainFactor);
+  osc.connect(gain);
+  gain.connect(destination);
+  osc.start(time);
+  osc.stop(time + stepDuration() + 0.05);
+}
+
+function makeNoiseBuffer(ctx, duration) {
+  const size = Math.max(1, Math.ceil(ctx.sampleRate * duration));
+  const buf = ctx.createBuffer(1, size, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+  return buf;
+}
+
+function scheduleKick(ctx, destination, time) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(150, time);
+  osc.frequency.exponentialRampToValueAtTime(42, time + 0.12);
+  gain.gain.setValueAtTime(volume * 0.9, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.28);
+  osc.connect(gain);
+  gain.connect(destination);
+  osc.start(time);
+  osc.stop(time + 0.3);
+}
+
+function scheduleSnare(ctx, destination, time) {
+  const noise = ctx.createBufferSource();
+  noise.buffer = makeNoiseBuffer(ctx, 0.2);
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'highpass';
+  filter.frequency.value = 1200;
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(volume * 0.7, time);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.16);
+  noise.connect(filter);
+  filter.connect(noiseGain);
+  noiseGain.connect(destination);
+  noise.start(time);
+  noise.stop(time + 0.2);
+
+  const osc = ctx.createOscillator();
+  const oscGain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(190, time);
+  oscGain.gain.setValueAtTime(volume * 0.45, time);
+  oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.09);
+  osc.connect(oscGain);
+  oscGain.connect(destination);
+  osc.start(time);
+  osc.stop(time + 0.1);
+}
+
+function scheduleHihat(ctx, destination, time) {
+  const noise = ctx.createBufferSource();
+  noise.buffer = makeNoiseBuffer(ctx, 0.08);
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'highpass';
+  filter.frequency.value = 7500;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(volume * 0.35, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+  noise.connect(filter);
+  filter.connect(gain);
+  gain.connect(destination);
+  noise.start(time);
+  noise.stop(time + 0.08);
+}
+
+function scheduleRow(ctx, destination, rowDef, time) {
+  if (rowDef.kind === 'note') { scheduleNote(ctx, destination, rowDef.midi, time); return; }
+  if (rowDef.type === 'kick') { scheduleKick(ctx, destination, time); return; }
+  if (rowDef.type === 'snare') { scheduleSnare(ctx, destination, time); return; }
+  if (rowDef.type === 'hihat') { scheduleHihat(ctx, destination, time); return; }
+}
 
 // ── Playback (lookahead scheduler) ──────────────────────────
 let audioCtx = null;
@@ -226,24 +416,10 @@ const LOOKAHEAD_MS = 25;
 
 function stepDuration() { return 60 / bpm / 4; } // 16th notes
 
-function playNote(midi, time) {
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = waveform;
-  osc.frequency.setValueAtTime(noteFreq(midi), time);
-  gain.gain.setValueAtTime(0, time);
-  gain.gain.linearRampToValueAtTime(volume * 0.5, time + 0.01);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + stepDuration() * 0.9);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start(time);
-  osc.stop(time + stepDuration());
-}
-
 function scheduler() {
   while (nextStepTime < audioCtx.currentTime + SCHEDULE_AHEAD) {
-    MIDI_NOTES.forEach((midi, row) => {
-      if (grid[row + '_' + currentStep]) playNote(midi, nextStepTime);
+    ROWS.forEach((rowDef, row) => {
+      if (grid[row + '_' + currentStep]) scheduleRow(audioCtx, audioCtx.destination, rowDef, nextStepTime);
     });
     const stepToHighlight = currentStep;
     setTimeout(() => highlightStep(stepToHighlight), Math.max(0, (nextStepTime - audioCtx.currentTime) * 1000));
@@ -259,6 +435,12 @@ function highlightStep(col) {
   document.querySelectorAll(`.step-cell[data-col="${col}"]`).forEach(c => c.classList.add('playing'));
 }
 
+const playToggleBtn = document.getElementById('playToggleBtn');
+function updatePlayToggle() {
+  playToggleBtn.querySelector('.material-symbols-rounded').textContent = playing ? 'stop' : 'play_arrow';
+  playToggleBtn.title = playing ? 'Stop' : 'Play';
+}
+
 function play() {
   if (playing) return;
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -267,15 +449,16 @@ function play() {
   currentStep = 0;
   nextStepTime = audioCtx.currentTime + 0.05;
   scheduler();
+  updatePlayToggle();
 }
 function stop() {
   playing = false;
   clearTimeout(schedulerTimer);
   document.querySelectorAll('.step-cell.playing').forEach(c => c.classList.remove('playing'));
+  updatePlayToggle();
 }
 
-document.getElementById('playBtn').addEventListener('click', play);
-document.getElementById('stopBtn').addEventListener('click', stop);
+playToggleBtn.addEventListener('click', () => { playing ? stop() : play(); });
 
 // ── Export as WAV (offline render of one loop) ──────────────
 async function exportWav() {
@@ -285,19 +468,8 @@ async function exportWav() {
 
   for (let col = 0; col < steps; col++) {
     const time = col * stepDuration();
-    MIDI_NOTES.forEach((midi, row) => {
-      if (!grid[row + '_' + col]) return;
-      const osc = offlineCtx.createOscillator();
-      const gain = offlineCtx.createGain();
-      osc.type = waveform;
-      osc.frequency.setValueAtTime(noteFreq(midi), time);
-      gain.gain.setValueAtTime(0, time);
-      gain.gain.linearRampToValueAtTime(volume * 0.5, time + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, time + stepDuration() * 0.9);
-      osc.connect(gain);
-      gain.connect(offlineCtx.destination);
-      osc.start(time);
-      osc.stop(time + stepDuration());
+    ROWS.forEach((rowDef, row) => {
+      if (grid[row + '_' + col]) scheduleRow(offlineCtx, offlineCtx.destination, rowDef, time);
     });
   }
 
