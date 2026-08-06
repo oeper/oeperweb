@@ -125,6 +125,41 @@ async function ensureHandle(email, displayName) {
   }
 }
 
+// Instagram-style handle rules: lowercase letters, numbers, periods,
+// underscores, 3-20 characters.
+const HANDLE_PATTERN = /^[a-z0-9_.]{3,20}$/;
+export function isValidHandle(h) { return HANDLE_PATTERN.test(h || ''); }
+
+// True if nobody's claimed this handle yet (or it's already yours).
+export async function isHandleAvailable(newHandle) {
+  if (!isValidHandle(newHandle)) return false;
+  if (currentUser && handleOf(currentUser.email) === newHandle) return true;
+  try {
+    const snap = await getDoc(doc(db, 'handles', newHandle));
+    return !snap.exists();
+  } catch {
+    return false;
+  }
+}
+
+// Claims a new handle for the signed-in account, Instagram-style (you can
+// change it any time, as long as nobody else already has it). The old
+// handle's handles/{oldHandle} doc is left in place pointing at the same
+// account — harmless, and it means old profile links keep working instead
+// of breaking the moment someone renames themselves.
+export async function changeHandle(newHandle) {
+  if (!currentUser) throw new Error('Sign in first');
+  if (!isValidHandle(newHandle)) throw new Error('Usernames must be 3-20 characters: lowercase letters, numbers, periods, and underscores only.');
+  if (handleOf(currentUser.email) === newHandle) return newHandle; // no-op, already yours
+  const available = await isHandleAvailable(newHandle);
+  if (!available) throw new Error('That username is already taken.');
+  await setDoc(doc(db, 'handles', newHandle), { email: currentUser.email });
+  await setDoc(doc(db, 'users', currentUser.email), { handle: newHandle }, { merge: true });
+  profileCache[currentUser.email] = { ...(profileCache[currentUser.email] || {}), handle: newHandle };
+  notify();
+  return newHandle;
+}
+
 onAuthStateChanged(auth, async user => {
   currentUser = user;
   if (user) {
@@ -260,6 +295,9 @@ function injectStyles() {
     }
     .oe-acct-field textarea { resize: vertical; min-height: 60px; }
     .oe-acct-field input[type="text"]:focus, .oe-acct-field textarea:focus { border-color: var(--md-sys-color-primary, #a8c7fa); }
+    .oe-acct-handle-status { font-size: 12px; margin-top: 6px; min-height: 14px; }
+    .oe-acct-handle-status.ok { color: var(--md-sys-color-success, #a6d9a8); }
+    .oe-acct-handle-status.bad { color: var(--md-sys-color-error, #ffb4ab); }
     .oe-acct-actions { display: flex; justify-content: space-between; gap: 12px; }
     .oe-acct-btn {
       display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; padding: 10px 18px;
@@ -330,6 +368,11 @@ function ensureModal() {
       <input type="text" id="oeAcctNameInput" maxlength="40">
     </div>
     <div class="oe-acct-field">
+      <label>Username</label>
+      <input type="text" id="oeAcctHandleInput" maxlength="20" placeholder="lowercase, no spaces">
+      <div class="oe-acct-handle-status" id="oeAcctHandleStatus"></div>
+    </div>
+    <div class="oe-acct-field">
       <label>Bio</label>
       <textarea id="oeAcctBioInput" maxlength="200" rows="3" placeholder="Say something about yourself…"></textarea>
     </div>
@@ -359,15 +402,22 @@ export function openEditProfileModal() {
   const profile = getProfile(currentUser.email, currentUser.displayName, currentUser.photoURL);
   const avatarPreview = modal.querySelector('#oeAcctAvatarPreview');
   const nameInput = modal.querySelector('#oeAcctNameInput');
+  const handleInput = modal.querySelector('#oeAcctHandleInput');
+  const handleStatus = modal.querySelector('#oeAcctHandleStatus');
   const bioInput = modal.querySelector('#oeAcctBioInput');
   const photoInput = modal.querySelector('#oeAcctPhotoInput');
   const saveBtn = modal.querySelector('#oeAcctSave');
 
+  const currentHandle = handleOf(currentUser.email) || '';
   avatarPreview.src = profile.photo || '';
   nameInput.value = profile.name || '';
+  handleInput.value = currentHandle;
+  handleStatus.textContent = '';
+  handleStatus.className = 'oe-acct-handle-status';
   bioInput.value = (profileCache[currentUser.email] && profileCache[currentUser.email].bio) || '';
   photoInput.value = '';
   let pendingFile = null;
+  let handleCheckTimer = null;
 
   photoInput.onchange = () => {
     const f = photoInput.files[0];
@@ -377,10 +427,40 @@ export function openEditProfileModal() {
     avatarPreview.src = URL.createObjectURL(f);
   };
 
+  handleInput.oninput = () => {
+    const value = handleInput.value.trim().toLowerCase();
+    handleInput.value = value;
+    clearTimeout(handleCheckTimer);
+    if (value === currentHandle) { handleStatus.textContent = ''; handleStatus.className = 'oe-acct-handle-status'; return; }
+    if (!value) { handleStatus.textContent = ''; handleStatus.className = 'oe-acct-handle-status'; return; }
+    if (!isValidHandle(value)) {
+      handleStatus.textContent = '3-20 characters: lowercase letters, numbers, periods, underscores.';
+      handleStatus.className = 'oe-acct-handle-status bad';
+      return;
+    }
+    handleStatus.textContent = 'Checking…';
+    handleStatus.className = 'oe-acct-handle-status';
+    handleCheckTimer = setTimeout(async () => {
+      const available = await isHandleAvailable(value);
+      if (handleInput.value !== value) return; // stale, they've kept typing
+      handleStatus.textContent = available ? 'Available' : 'Already taken';
+      handleStatus.className = 'oe-acct-handle-status ' + (available ? 'ok' : 'bad');
+    }, 400);
+  };
+
   saveBtn.onclick = async () => {
+    const newHandle = handleInput.value.trim().toLowerCase();
+    if (newHandle && newHandle !== currentHandle && !isValidHandle(newHandle)) {
+      showToast('Fix your username before saving');
+      return;
+    }
     saveBtn.disabled = true;
     try {
       await updateProfile({ displayName: nameInput.value, photoFile: pendingFile, bio: bioInput.value });
+      if (newHandle && newHandle !== currentHandle) {
+        try { await changeHandle(newHandle); }
+        catch (err) { showToast('Profile saved, but username change failed: ' + err.message); saveBtn.disabled = false; return; }
+      }
       closeModal();
       showToast('Profile updated');
     } catch (err) {
