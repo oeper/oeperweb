@@ -345,14 +345,52 @@
   .ig-subtag { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
   .ig-media { width: 100%; aspect-ratio: 4/5; background: #000; }
   .ig-media img, .ig-media video { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .ig-actions { display: flex; align-items: center; gap: 14px; padding: 10px 14px 4px; }
+  .ig-actions { display: flex; align-items: center; gap: 4px; padding: 10px 14px 4px; }
   .ig-actions .material-symbols-rounded { font-size: 24px; color: var(--md-sys-color-on-surface); }
   .ig-action-count { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-left: -8px; }
+  .ig-vote-btn, .ig-comment-btn {
+    background: none; border: none; padding: 4px; margin: 0; cursor: pointer; display: flex; align-items: center;
+    color: var(--md-sys-color-on-surface); border-radius: 50%;
+  }
+  .ig-vote-btn:hover, .ig-comment-btn:hover { background: rgba(255,255,255,0.06); }
+  .ig-vote-btn.upvoted .material-symbols-rounded { color: #ff5c7a; font-variation-settings: 'FILL' 1; }
+  .ig-vote-btn.downvoted .material-symbols-rounded { color: var(--md-sys-color-error); }
+  .ig-vote-score { font-size: 13px; font-weight: 600; min-width: 16px; text-align: center; margin: 0 2px; }
+  .ig-comment-btn { margin-left: 6px; }
   .ig-likes { padding: 4px 14px 0; font-size: 13px; font-weight: 600; }
   .ig-caption { padding: 6px 14px 0; font-size: 13px; line-height: 1.4; }
   .ig-caption strong { font-weight: 600; margin-right: 6px; }
-  .ig-view-comments { padding: 6px 14px 0; font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .ig-view-comments { padding: 6px 14px 0; font-size: 13px; color: var(--md-sys-color-on-surface-variant); background: none; border: none; cursor: pointer; display: block; text-align: left; font-family: inherit; }
+  .ig-view-comments:hover { text-decoration: underline; }
   .ig-timestamp { padding: 6px 14px 14px; font-size: 11px; color: var(--md-sys-color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.3px; }
+
+  /* Inline comment modal for the home feed */
+  .ig-comment-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 220; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .ig-comment-overlay.open { opacity: 1; pointer-events: all; }
+  .ig-comment-modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -48%); width: min(480px, 92vw);
+    max-height: 80vh; display: flex; flex-direction: column; background: var(--md-sys-color-surface);
+    border-radius: 24px; z-index: 221; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+  }
+  .ig-comment-modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
+  .ig-comment-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--md-sys-color-outline-variant); flex-shrink: 0; }
+  .ig-comment-modal-header h3 { font-size: 16px; font-weight: 500; }
+  .ig-comment-close-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent; color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .ig-comment-close-btn:hover { background: rgba(255,255,255,0.06); }
+  .ig-comment-list { flex: 1; overflow-y: auto; padding: 8px 20px; }
+  .ig-comment-row { display: flex; gap: 10px; padding: 10px 0; }
+  .ig-comment-avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
+  .ig-comment-body-wrap { flex: 1; min-width: 0; font-size: 13px; line-height: 1.4; }
+  .ig-comment-body-wrap strong { font-weight: 600; margin-right: 6px; }
+  .ig-comment-time { font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; }
+  .ig-comment-empty { text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; padding: 30px 0; }
+  .ig-comment-form { display: flex; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--md-sys-color-outline-variant); flex-shrink: 0; }
+  .ig-comment-input {
+    flex: 1; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: 20px;
+    padding: 10px 16px; color: var(--md-sys-color-on-surface); font-family: inherit; font-size: 13px; outline: none; resize: none;
+  }
+  .ig-comment-send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .ig-comment-send-btn:disabled { opacity: 0.4; cursor: default; }
 
   .grid-layout {
     display: grid;
@@ -432,11 +470,26 @@
 
   <div class="page-container" id="pageContainer"></div>
 
+  <div class="ig-comment-overlay" id="igCommentOverlay"></div>
+  <div class="ig-comment-modal" id="igCommentModal">
+    <div class="ig-comment-modal-header">
+      <h3>Comments</h3>
+      <button class="ig-comment-close-btn" id="igCommentCloseBtn"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div class="ig-comment-list" id="igCommentList"></div>
+    <form class="ig-comment-form" id="igCommentForm">
+      <textarea class="ig-comment-input" id="igCommentInput" rows="1" placeholder="Add a comment…" maxlength="2000"></textarea>
+      <button type="submit" class="ig-comment-send-btn" id="igCommentSendBtn"><span class="material-symbols-rounded">send</span></button>
+    </form>
+  </div>
+
 <script type="module">
-  import { db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml } from './shared/account.js?v=9';
+  import { db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser } from './shared/account.js?v=9';
   import { mountTopNav } from './shared/topnav.js';
   import { mountFooter } from './shared/footer.js';
-  import { collection, query, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+  import {
+    collection, query, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp,
+  } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
   mountTopNav();
   mountFooter();
@@ -481,12 +534,28 @@
       feedEl.innerHTML = items.map(item => item._kind === 'video' ? videoCardHtml(item) : postCardHtml(item)).join('');
     }
 
+    function voteActionsHtml(item, kind) {
+      const user = getCurrentUser();
+      const score = (item.upvoters || []).length - (item.downvoters || []).length;
+      const up = user && (item.upvoters || []).includes(user.uid);
+      const down = user && (item.downvoters || []).includes(user.uid);
+      return `
+        <button type="button" class="ig-vote-btn ${up ? 'upvoted' : ''}" data-vote-up data-kind="${kind}" data-id="${item.id}" title="Upvote">
+          <span class="material-symbols-rounded">${up ? 'favorite' : 'favorite_border'}</span>
+        </button>
+        <span class="ig-vote-score">${score}</span>
+        <button type="button" class="ig-vote-btn ${down ? 'downvoted' : ''}" data-vote-down data-kind="${kind}" data-id="${item.id}" title="Downvote">
+          <span class="material-symbols-rounded">arrow_downward</span>
+        </button>
+      `;
+    }
+
     function postCardHtml(p) {
       const profile = getProfile(p.authorEmail, p.authorName, p.authorPhoto);
-      const score = (p.upvoters || []).length - (p.downvoters || []).length;
       const tag = (p.tags || [])[0];
       const img = firstImageUrl(p);
       const vid = !img ? firstVideoUrl(p) : null;
+      const score = (p.upvoters || []).length - (p.downvoters || []).length;
       return `
         <div class="ig-card" data-href="https://oeper.dev/forum.html?post=${p.id}">
           <div class="ig-card-header">
@@ -499,14 +568,16 @@
           ${img ? `<div class="ig-media"><img src="${img}" alt="" loading="lazy"></div>` : ''}
           ${vid ? `<div class="ig-media"><video src="${vid}" muted preload="metadata"></video></div>` : ''}
           <div class="ig-actions">
-            <span class="material-symbols-rounded">favorite_border</span>
-            <span class="material-symbols-rounded">mode_comment</span>
+            ${voteActionsHtml(p, 'post')}
+            <button type="button" class="ig-comment-btn" data-open-comments data-id="${p.id}" title="Comments">
+              <span class="material-symbols-rounded">mode_comment</span>
+            </button>
             <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
             <span class="ig-action-count">${p.views || 0}</span>
           </div>
           <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
           <div class="ig-caption"><strong>${escHtml(profile.name)}</strong>${linkify(p.title)}</div>
-          ${p.commentCount ? `<div class="ig-view-comments">View all ${p.commentCount} comments</div>` : ''}
+          <button type="button" class="ig-view-comments" data-open-comments data-id="${p.id}">${p.commentCount ? `View all ${p.commentCount} comments` : 'Add a comment…'}</button>
           <div class="ig-timestamp">${timeAgo(p._date)}</div>
         </div>
       `;
@@ -526,8 +597,7 @@
           </div>
           <div class="ig-media"><video src="${v.url}" muted preload="metadata"></video></div>
           <div class="ig-actions">
-            <span class="material-symbols-rounded">favorite_border</span>
-            <span class="material-symbols-rounded">smart_display</span>
+            ${voteActionsHtml(v, 'video')}
             <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
             <span class="ig-action-count">${v.views || 0}</span>
           </div>
@@ -538,8 +608,129 @@
       `;
     }
 
+    async function toggleVote(kind, id, direction) {
+      const user = getCurrentUser();
+      if (!user) { alert('Sign in to vote'); return; }
+      const list = kind === 'video' ? latestVideos : latestPosts;
+      const item = list.find(x => x.id === id);
+      if (!item) return;
+      const uid = user.uid;
+      const up = (item.upvoters || []).includes(uid);
+      const down = (item.downvoters || []).includes(uid);
+      const patch = {};
+      if (direction === 'up') {
+        patch.upvoters = up ? arrayRemove(uid) : arrayUnion(uid);
+        if (down) patch.downvoters = arrayRemove(uid);
+      } else {
+        patch.downvoters = down ? arrayRemove(uid) : arrayUnion(uid);
+        if (up) patch.upvoters = arrayRemove(uid);
+      }
+      try {
+        await updateDoc(doc(db, kind === 'video' ? 'videos' : 'posts', id), patch);
+      } catch (err) {
+        alert('Could not vote: ' + err.message);
+      }
+    }
+
+    // ── Inline comment modal (posts only — videos have no comments) ──
+    let openPostId = null;
+    let unsubComments = null;
+    const commentOverlay = document.getElementById('igCommentOverlay');
+    const commentModal = document.getElementById('igCommentModal');
+    const commentList = document.getElementById('igCommentList');
+    const commentForm = document.getElementById('igCommentForm');
+    const commentInput = document.getElementById('igCommentInput');
+    const commentSendBtn = document.getElementById('igCommentSendBtn');
+
+    function renderComments(comments) {
+      if (comments.length === 0) {
+        commentList.innerHTML = '<div class="ig-comment-empty">No comments yet. Be the first!</div>';
+        return;
+      }
+      commentList.innerHTML = comments.map(c => {
+        const profile = getProfile(c.authorEmail, c.authorName, c.authorPhoto);
+        return `
+          <div class="ig-comment-row">
+            <img class="ig-comment-avatar" src="${profile.photo || ''}" alt="">
+            <div class="ig-comment-body-wrap">
+              <div><strong>${escHtml(profile.name)}</strong>${linkify(c.body)}</div>
+              <div class="ig-comment-time">${timeAgo(c._date)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      commentList.scrollTop = commentList.scrollHeight;
+    }
+
+    function openComments(postId) {
+      openPostId = postId;
+      commentOverlay.classList.add('open');
+      commentModal.classList.add('open');
+      commentList.innerHTML = '<div class="ig-comment-empty">Loading…</div>';
+      if (unsubComments) unsubComments();
+      unsubComments = onSnapshot(
+        query(collection(db, 'posts', postId, 'comments'), orderBy('createdAt', 'asc')),
+        async snap => {
+          const comments = snap.docs.map(d => {
+            const data = d.data();
+            return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+          });
+          await Promise.all(comments.map(c => ensureProfileLoaded(c.authorEmail)));
+          if (openPostId === postId) renderComments(comments);
+        },
+        () => { commentList.innerHTML = '<div class="ig-comment-empty">Could not load comments.</div>'; }
+      );
+    }
+
+    function closeComments() {
+      commentOverlay.classList.remove('open');
+      commentModal.classList.remove('open');
+      if (unsubComments) { unsubComments(); unsubComments = null; }
+      openPostId = null;
+    }
+    commentOverlay.addEventListener('click', closeComments);
+    document.getElementById('igCommentCloseBtn').addEventListener('click', closeComments);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeComments(); });
+
+    commentForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const user = getCurrentUser();
+      const body = commentInput.value.trim();
+      if (!openPostId || !body) return;
+      if (!user) { alert('Sign in to comment'); return; }
+      commentSendBtn.disabled = true;
+      try {
+        await addDoc(collection(db, 'posts', openPostId, 'comments'), {
+          body,
+          imageUrl: null,
+          authorEmail: user.email,
+          authorName: user.displayName,
+          authorPhoto: user.photoURL,
+          upvoters: [],
+          downvoters: [],
+          createdAt: serverTimestamp(),
+        });
+        const post = latestPosts.find(x => x.id === openPostId);
+        await updateDoc(doc(db, 'posts', openPostId), { commentCount: (post?.commentCount || 0) + 1 });
+        commentInput.value = '';
+      } catch (err) {
+        alert('Could not comment: ' + err.message);
+      } finally {
+        commentSendBtn.disabled = false;
+      }
+    });
+    commentInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commentForm.requestSubmit(); }
+    });
+
     feedEl.addEventListener('click', e => {
       if (e.target.closest('a')) return; // real links (linkified URLs) behave normally
+      const voteUpBtn = e.target.closest('[data-vote-up]');
+      const voteDownBtn = e.target.closest('[data-vote-down]');
+      const commentBtn = e.target.closest('[data-open-comments]');
+      if (voteUpBtn) { toggleVote(voteUpBtn.dataset.kind, voteUpBtn.dataset.id, 'up'); return; }
+      if (voteDownBtn) { toggleVote(voteDownBtn.dataset.kind, voteDownBtn.dataset.id, 'down'); return; }
+      if (commentBtn) { openComments(commentBtn.dataset.id); return; }
       const card = e.target.closest('.ig-card');
       if (card && card.dataset.href) window.location.href = card.dataset.href;
     });
