@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Server Status — oeper.dev</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<script src="./shared/theme-boot.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-success: #a6d9a8;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 640px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 28px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400; margin-bottom: 12px; letter-spacing: -0.5px; }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 15px; max-width: 500px; line-height: 1.5; }
+
+  .status-list { display: flex; flex-direction: column; gap: 12px; }
+  .status-card { display: flex; align-items: center; gap: 16px; background: var(--md-sys-color-surface); border-radius: 20px; padding: 18px 22px; }
+  .status-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; background: var(--md-sys-color-outline-variant); }
+  .status-dot.up { background: var(--md-sys-color-success); box-shadow: 0 0 8px var(--md-sys-color-success); }
+  .status-dot.down { background: var(--md-sys-color-error); box-shadow: 0 0 8px var(--md-sys-color-error); }
+  .status-dot.checking { background: var(--md-sys-color-primary); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+  .status-main { flex: 1; min-width: 0; }
+  .status-name { font-size: 15px; font-weight: 500; }
+  .status-detail { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; }
+  .status-badge { font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 100px; flex-shrink: 0; }
+  .status-badge.up { background: rgba(166,217,168,0.16); color: var(--md-sys-color-success); }
+  .status-badge.down { background: rgba(255,180,171,0.16); color: var(--md-sys-color-error); }
+  .status-badge.checking { background: rgba(168,199,250,0.16); color: var(--md-sys-color-primary); }
+
+  .refresh-row { display: flex; justify-content: space-between; align-items: center; margin: 24px 0 16px; }
+  .last-checked { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; padding: 8px 16px;
+    border-radius: 100px; border: 1px solid var(--md-sys-color-outline); background: transparent;
+    color: var(--md-sys-color-on-surface); cursor: pointer; font-family: inherit;
+  }
+  .btn:hover { background-color: rgba(255,255,255,0.06); }
+
+  .note { font-size: 13px; color: var(--md-sys-color-on-surface-variant); line-height: 1.6; margin-top: 28px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <div class="header-container">
+      <a href="https://oeper.dev" class="header-link">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>back to oeper.dev</span>
+      </a>
+    </div>
+    <h1>Server Status</h1>
+    <p>Both of these run on a phone at home over a Cloudflare Tunnel — if the phone's off, asleep, or the tunnel dropped, they'll show as down here.</p>
+  </header>
+
+  <div class="status-list" id="statusList"></div>
+
+  <div class="refresh-row">
+    <span class="last-checked" id="lastChecked"></span>
+    <button class="btn" id="refreshBtn"><span class="material-symbols-rounded" style="font-size:16px;">refresh</span> Check again</button>
+  </div>
+
+  <p class="note">Auto-rechecks every 30 seconds while this tab is open. A "down" file server means uploads, downloads, chat attachments, and the Feed's images/videos will fail to load. A "down" AI server just means the AI chat page won't respond.</p>
+</div>
+
+<script type="module">
+import { SERVER_ENDPOINT } from './shared/account.js?v=8';
+
+const AI_ENDPOINT = 'https://ai2.oeper.dev';
+const SERVICES = [
+  { name: 'File server', desc: 'Uploads, downloads, chat attachments', url: SERVER_ENDPOINT + '/' },
+  { name: 'AI server', desc: 'The chat model behind /ai', url: AI_ENDPOINT + '/' },
+];
+
+const listEl = document.getElementById('statusList');
+const lastCheckedEl = document.getElementById('lastChecked');
+
+listEl.innerHTML = SERVICES.map((s, i) => `
+  <div class="status-card">
+    <div class="status-dot checking" id="dot-${i}"></div>
+    <div class="status-main">
+      <div class="status-name">${s.name}</div>
+      <div class="status-detail" id="detail-${i}">${s.desc}</div>
+    </div>
+    <div class="status-badge checking" id="badge-${i}">Checking…</div>
+  </div>
+`).join('');
+
+async function checkService(s, i) {
+  const dot = document.getElementById(`dot-${i}`);
+  const badge = document.getElementById(`badge-${i}`);
+  const detail = document.getElementById(`detail-${i}`);
+  dot.className = 'status-dot checking';
+  badge.className = 'status-badge checking';
+  badge.textContent = 'Checking…';
+
+  const start = performance.now();
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(s.url, { signal: controller.signal, cache: 'no-store' });
+    clearTimeout(timeout);
+    const ms = Math.round(performance.now() - start);
+    if (res.ok) {
+      dot.className = 'status-dot up';
+      badge.className = 'status-badge up';
+      badge.textContent = 'Online';
+      detail.textContent = `${s.desc} · ${ms}ms`;
+    } else {
+      dot.className = 'status-dot down';
+      badge.className = 'status-badge down';
+      badge.textContent = `HTTP ${res.status}`;
+      detail.textContent = s.desc;
+    }
+  } catch (err) {
+    dot.className = 'status-dot down';
+    badge.className = 'status-badge down';
+    badge.textContent = err.name === 'AbortError' ? 'Timed out' : 'Offline';
+    detail.textContent = s.desc;
+  }
+}
+
+async function checkAll() {
+  await Promise.all(SERVICES.map((s, i) => checkService(s, i)));
+  lastCheckedEl.textContent = 'Last checked ' + new Date().toLocaleTimeString();
+}
+
+document.getElementById('refreshBtn').addEventListener('click', checkAll);
+checkAll();
+setInterval(checkAll, 30000);
+</script>
+</body>
+</html>
