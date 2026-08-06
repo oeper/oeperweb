@@ -289,17 +289,48 @@ app.post('/upload-file', optionalAuth, (req, res) => {
 app.get('/my-files', verifyFirebaseToken, (req, res) => {
   const meta = loadMeta();
   const mine = isOwner(req.user.email);
+  const seen = new Set();
   const entries = Object.entries(meta)
     .filter(([, m]) => mine || m.email === req.user.email)
-    .map(([filename, m]) => ({
-      filename,
-      name: m.name || filename,
-      size: m.size || 0,
-      mtime: m.mtime || 0,
-      email: m.email,
-      url: `${PUBLIC_BASE_URL}/docs/${encodeURIComponent(filename)}`,
-    }))
-    .sort((a, b) => b.mtime - a.mtime);
+    .map(([filename, m]) => {
+      seen.add(filename);
+      return {
+        filename,
+        name: m.name || filename,
+        size: m.size || 0,
+        mtime: m.mtime || 0,
+        email: m.email,
+        url: `${PUBLIC_BASE_URL}/docs/${encodeURIComponent(filename)}`,
+      };
+    });
+
+  // Owners also get files that physically exist in USER_FILES_DIR but were
+  // never recorded in file-owners.json — e.g. uploaded before tracking
+  // existed, dropped in manually, or a write that landed on disk but whose
+  // metadata save failed. Without this, those files are invisible forever
+  // since /my-files otherwise only ever reads from the JSON.
+  if (mine) {
+    try {
+      const resolvedDir = path.resolve(USER_FILES_DIR);
+      for (const filename of fs.readdirSync(resolvedDir)) {
+        if (seen.has(filename)) continue;
+        let stat;
+        try { stat = fs.statSync(path.join(resolvedDir, filename)); } catch { continue; }
+        if (!stat.isFile()) continue;
+        entries.push({
+          filename,
+          name: filename,
+          size: stat.size,
+          mtime: stat.mtimeMs,
+          email: null,
+          url: `${PUBLIC_BASE_URL}/docs/${encodeURIComponent(filename)}`,
+          untracked: true,
+        });
+      }
+    } catch {}
+  }
+
+  entries.sort((a, b) => b.mtime - a.mtime);
   res.json({ files: entries });
 });
 
@@ -310,9 +341,15 @@ app.delete('/docs/:filename', verifyFirebaseToken, (req, res) => {
 
   const meta = loadMeta();
   const entry = meta[base];
-  if (!entry) return res.status(404).json({ error: 'File not found' });
-  if (entry.email !== req.user.email && !isOwner(req.user.email)) {
-    return res.status(403).json({ error: 'You can only delete your own files' });
+  const owner = isOwner(req.user.email);
+  if (entry) {
+    if (entry.email !== req.user.email && !owner) {
+      return res.status(403).json({ error: 'You can only delete your own files' });
+    }
+  } else if (!owner) {
+    // No metadata for this file and the requester isn't an owner — there's
+    // no way to prove they uploaded it, so refuse rather than guess.
+    return res.status(404).json({ error: 'File not found' });
   }
 
   const resolvedDir = path.resolve(USER_FILES_DIR);

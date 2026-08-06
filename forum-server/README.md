@@ -44,13 +44,22 @@ everyone's for moderation) and the forum:
   `MAX_MESSAGE_BYTES` (default 20MB).
 
 **Privacy note:** `USER_FILES_DIR` defaults to `/storage/emulated/0/Documents`
-directly. This is safe from casually exposing everything in that folder
-because `/my-files` only ever returns entries recorded in
-`file-owners.json` — never a raw directory listing. The one residual risk:
-`/docs/:filename` static-serves the whole folder, so a pre-existing file in
-Documents with a guessable name would technically be fetchable by URL if
-someone guessed it. If that matters to you, point `USER_FILES_DIR` at a
-dedicated subfolder instead (see below).
+directly. For regular signed-in users, `/my-files` only ever returns entries
+recorded in `file-owners.json`, filtered to their own email — never a raw
+directory listing. **Owners are the exception:** their `/my-files` response
+is topped up with a real `fs.readdirSync` of `USER_FILES_DIR`, so any file
+physically sitting in that folder shows up in `files.html`'s "Everyone's"
+view even if it was never recorded in `file-owners.json` (uploaded before
+tracking existed, dropped in manually, or a write that landed on disk but
+whose metadata save failed) — shown with an "Unknown owner" label since
+there's no record of who put it there. This is intentional: owners are
+responsible for managing the phone's storage and need to actually see
+what's on it. The residual risk this creates: `/docs/:filename`
+static-serves the whole folder, so a pre-existing file in Documents with a
+guessable name would technically be fetchable by URL if someone guessed it
+— and now an owner browsing the "Everyone's" view would also see it listed
+outright. If that matters to you, point `USER_FILES_DIR` at a dedicated
+subfolder instead (see below).
 
 It's meant to run **on your Android phone** via Termux, exposed to the
 internet with a Cloudflare Tunnel — no cloud bill, no server to maintain
