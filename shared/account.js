@@ -129,7 +129,10 @@ onAuthStateChanged(auth, async user => {
   currentUser = user;
   if (user) {
     await ensureProfileLoaded(user.email);
-    ensureJoinDate(user.email); // fire-and-forget, doesn't block sign-in
+    // Awaited (not fire-and-forget): ensureHandle needs displayName to
+    // already be present in Firestore for its own write to pass the rules,
+    // so profile seeding has to finish first.
+    await ensureProfileSeeded(user);
     ensureHandle(user.email, user.displayName);
   }
   authReady = true;
@@ -177,14 +180,28 @@ export async function updateProfile({ displayName, photoFile, bio }) {
   notify();
 }
 
-// Ensures a profile doc has a createdAt ("member since") timestamp, set once
-// the first time we ever see this account — safe to call repeatedly.
-async function ensureJoinDate(email) {
-  const profile = await ensureProfileLoaded(email);
-  if (profile && profile.createdAt) return;
+// Seeds a brand-new account's users/{email} doc with a starting displayName,
+// photoURL (from their Google account), and createdAt ("member since") —
+// all in one write. This has to happen in a single setDoc: firestore.rules
+// requires displayName to be present on every write to this collection, and
+// for a document that doesn't exist yet, a merge patch containing only
+// {createdAt: ...} or {handle: ...} would produce a resulting document with
+// no displayName at all and get silently rejected — which is exactly what
+// used to happen here, leaving brand-new accounts with no join date, no
+// handle, and (since nothing ever copied over their Google photo) a blank
+// avatar on their profile page. Safe to call on every sign-in — only writes
+// fields that are actually missing.
+async function ensureProfileSeeded(user) {
+  const profile = await ensureProfileLoaded(user.email);
+  const patch = {};
+  if (!profile || !profile.displayName) patch.displayName = (user.displayName || user.email).slice(0, 40);
+  if ((!profile || !profile.photoURL) && user.photoURL) patch.photoURL = user.photoURL;
+  if (!profile || !profile.createdAt) patch.createdAt = serverTimestamp();
+  if (Object.keys(patch).length === 0) return;
   try {
-    await setDoc(doc(db, 'users', email), { createdAt: serverTimestamp() }, { merge: true });
-    delete profileCache[email]; // force a fresh read next time so createdAt is populated
+    await setDoc(doc(db, 'users', user.email), patch, { merge: true });
+    delete profileCache[user.email]; // force a fresh read so serverTimestamp-resolved fields populate correctly
+    notify();
   } catch {}
 }
 
