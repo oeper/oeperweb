@@ -376,8 +376,8 @@ app.post('/report', verifyFirebaseToken, async (req, res) => {
     return res.status(400).json({ error: 'A reason is required' });
   }
   // Every reportable content type on the site: forum posts/comments, long-form
-  // videos, Stories, Notes, and chat messages/conversations.
-  if (!['post', 'comment', 'video', 'story', 'note', 'message', 'conversation'].includes(type)) {
+  // videos, Stories, Notes, chat messages/conversations, and profiles.
+  if (!['post', 'comment', 'video', 'story', 'note', 'message', 'conversation', 'profile'].includes(type)) {
     return res.status(400).json({ error: 'Invalid report type' });
   }
 

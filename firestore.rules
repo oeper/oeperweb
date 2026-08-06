@@ -80,6 +80,10 @@ service cloud.firestore {
         && request.resource.data.displayName.size() <= 40
         && (!('photoURL' in request.resource.data) || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 500))
         && (!('bio' in request.resource.data) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 200));
+      // Owners granting/revoking the Official badge on someone else's
+      // account — scoped to just this one field so it can't be used to
+      // rewrite the rest of a profile the owner doesn't otherwise own.
+      allow update: if isOwner() && onlyChanged(['verified']) && request.resource.data.verified is bool;
     }
 
     // Ban list, keyed by email. Public read so the client can show "you're

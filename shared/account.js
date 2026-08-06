@@ -37,13 +37,21 @@ export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const OWNER_EMAILS = ['sanhackerman@gmail.com', 'taejiding@gmail.com'];
 export function isOwnerEmail(email) { return OWNER_EMAILS.includes(email); }
 
+// True if an owner has granted this account the Official badge via the
+// profile page's overflow menu (users/{email}.verified) — separate from
+// isOwnerEmail, which is the fixed, hardcoded list of accounts with actual
+// site-management permissions. Relies on the profile already being cached
+// (ensureProfileLoaded/getProfile's usual call sites already do this before
+// rendering a name, which is also when this gets checked).
+function isVerifiedEmail(email) { return !!(email && profileCache[email] && profileCache[email].verified); }
+
 // A small "Official" badge for owner accounts, Discord-official-message
 // style. Returns '' for everyone else. Self-contained (injects its own
 // tiny stylesheet on first use) so any page can drop this inline next to
 // a name without importing extra CSS.
 let badgeStylesInjected = false;
 export function officialBadgeHtml(email) {
-  if (!isOwnerEmail(email)) return '';
+  if (!isOwnerEmail(email) && !isVerifiedEmail(email)) return '';
   if (!badgeStylesInjected) {
     badgeStylesInjected = true;
     const style = document.createElement('style');
@@ -104,7 +112,19 @@ export function getProfile(email, fallbackName, fallbackPhoto) {
   return {
     name: (override && override.displayName) || fallbackName || 'User',
     photo: (override && override.photoURL) || fallbackPhoto || '',
+    verified: !!(override && override.verified),
   };
+}
+
+// Owner-only: grants or revokes the Official badge on any account (see
+// isVerifiedEmail above). Enforced server-side too — firestore.rules only
+// lets an owner touch the `verified` field, nothing else on someone else's
+// profile — this check just avoids a doomed round-trip for everyone else.
+export async function setVerified(email, verified) {
+  if (!currentUser || !isOwnerEmail(currentUser.email)) throw new Error('Only owners can do this');
+  await setDoc(doc(db, 'users', email), { verified }, { merge: true });
+  profileCache[email] = { ...(profileCache[email] || {}), verified };
+  notify();
 }
 
 // The @handle for a profile, if one's been assigned yet (see ensureHandle).
