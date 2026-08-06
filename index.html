@@ -449,50 +449,103 @@
 
   const feedEl = document.getElementById('homeFeed');
   if (feedEl) {
+    let latestPosts = [];
+    let latestVideos = [];
+    let gotPosts = false, gotVideos = false;
+
+    function renderFeed() {
+      if (!gotPosts || !gotVideos) return; // wait for both so items interleave by date, not by whichever loaded first
+      const items = [...latestPosts, ...latestVideos].sort((a, b) => b._date - a._date).slice(0, 14);
+      if (items.length === 0) {
+        feedEl.innerHTML = '<div class="home-feed-empty">Nothing posted yet — be the first to say something.</div>';
+        return;
+      }
+      feedEl.innerHTML = items.map(item => item._kind === 'video' ? videoCardHtml(item) : postCardHtml(item)).join('');
+    }
+
+    function postCardHtml(p) {
+      const profile = getProfile(p.authorEmail, p.authorName, p.authorPhoto);
+      const score = (p.upvoters || []).length - (p.downvoters || []).length;
+      const tag = (p.tags || [])[0];
+      const img = firstImageUrl(p);
+      const vid = !img ? firstVideoUrl(p) : null;
+      return `
+        <a class="ig-card" href="https://oeper.dev/forum.html?post=${p.id}">
+          <div class="ig-card-header">
+            <img class="ig-avatar" src="${profile.photo || ''}" alt="">
+            <div class="ig-header-text">
+              <div class="ig-username">${escHtml(profile.name)}</div>
+              <div class="ig-subtag">${tag ? escHtml(TAG_LABELS[tag] || tag) : 'oeper.dev'}</div>
+            </div>
+          </div>
+          ${img ? `<div class="ig-media"><img src="${img}" alt="" loading="lazy"></div>` : ''}
+          ${vid ? `<div class="ig-media"><video src="${vid}" muted preload="metadata"></video></div>` : ''}
+          <div class="ig-actions">
+            <span class="material-symbols-rounded">favorite_border</span>
+            <span class="material-symbols-rounded">mode_comment</span>
+            <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
+            <span class="ig-action-count">${p.views || 0}</span>
+          </div>
+          <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
+          <div class="ig-caption"><strong>${escHtml(profile.name)}</strong>${escHtml(p.title)}</div>
+          ${p.commentCount ? `<div class="ig-view-comments">View all ${p.commentCount} comments</div>` : ''}
+          <div class="ig-timestamp">${timeAgo(p._date)}</div>
+        </a>
+      `;
+    }
+
+    function videoCardHtml(v) {
+      const profile = getProfile(v.authorEmail, v.authorName, v.authorPhoto);
+      const score = (v.upvoters || []).length - (v.downvoters || []).length;
+      return `
+        <a class="ig-card" href="https://oeper.dev/videos.html?video=${v.id}">
+          <div class="ig-card-header">
+            <img class="ig-avatar" src="${profile.photo || ''}" alt="">
+            <div class="ig-header-text">
+              <div class="ig-username">${escHtml(profile.name)}</div>
+              <div class="ig-subtag">Video</div>
+            </div>
+          </div>
+          <div class="ig-media"><video src="${v.url}" muted preload="metadata"></video></div>
+          <div class="ig-actions">
+            <span class="material-symbols-rounded">favorite_border</span>
+            <span class="material-symbols-rounded">smart_display</span>
+            <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
+            <span class="ig-action-count">${v.views || 0}</span>
+          </div>
+          <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
+          <div class="ig-caption"><strong>${escHtml(profile.name)}</strong>${escHtml(v.title)}</div>
+          <div class="ig-timestamp">${timeAgo(v._date)}</div>
+        </a>
+      `;
+    }
+
     onSnapshot(
-      query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(12)),
+      query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(14)),
       async snap => {
-        const posts = snap.docs.map(d => {
+        latestPosts = snap.docs.map(d => {
           const data = d.data();
-          return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+          return { _kind: 'post', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
         });
-        await Promise.all(posts.map(p => ensureProfileLoaded(p.authorEmail)));
-        if (posts.length === 0) {
-          feedEl.innerHTML = '<div class="home-feed-empty">No posts yet — be the first to say something.</div>';
-          return;
-        }
-        feedEl.innerHTML = posts.map(p => {
-          const profile = getProfile(p.authorEmail, p.authorName, p.authorPhoto);
-          const score = (p.upvoters || []).length - (p.downvoters || []).length;
-          const tag = (p.tags || [])[0];
-          const img = firstImageUrl(p);
-          const vid = !img ? firstVideoUrl(p) : null;
-          return `
-            <a class="ig-card" href="https://oeper.dev/forum.html?post=${p.id}">
-              <div class="ig-card-header">
-                <img class="ig-avatar" src="${profile.photo || ''}" alt="">
-                <div class="ig-header-text">
-                  <div class="ig-username">${escHtml(profile.name)}</div>
-                  <div class="ig-subtag">${tag ? escHtml(TAG_LABELS[tag] || tag) : 'oeper.dev'}</div>
-                </div>
-              </div>
-              ${img ? `<div class="ig-media"><img src="${img}" alt="" loading="lazy"></div>` : ''}
-              ${vid ? `<div class="ig-media"><video src="${vid}" muted preload="metadata"></video></div>` : ''}
-              <div class="ig-actions">
-                <span class="material-symbols-rounded">favorite_border</span>
-                <span class="material-symbols-rounded">mode_comment</span>
-                <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
-                <span class="ig-action-count">${p.views || 0}</span>
-              </div>
-              <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
-              <div class="ig-caption"><strong>${escHtml(profile.name)}</strong>${escHtml(p.title)}</div>
-              ${p.commentCount ? `<div class="ig-view-comments">View all ${p.commentCount} comments</div>` : ''}
-              <div class="ig-timestamp">${timeAgo(p._date)}</div>
-            </a>
-          `;
-        }).join('');
+        await Promise.all(latestPosts.map(p => ensureProfileLoaded(p.authorEmail)));
+        gotPosts = true;
+        renderFeed();
       },
       err => { feedEl.innerHTML = `<div class="home-feed-empty">Could not load the feed: ${escHtml(err.message)}</div>`; }
+    );
+
+    onSnapshot(
+      query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(14)),
+      async snap => {
+        latestVideos = snap.docs.map(d => {
+          const data = d.data();
+          return { _kind: 'video', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+        });
+        await Promise.all(latestVideos.map(v => ensureProfileLoaded(v.authorEmail)));
+        gotVideos = true;
+        renderFeed();
+      },
+      () => { gotVideos = true; renderFeed(); } // videos rules may not be deployed yet on some setups — degrade to posts-only rather than blocking the feed forever
     );
   }
 </script>
@@ -528,12 +581,6 @@ const PAGES = [
         desc: 'Your own personal file storage.',
         icon: 'folder',
         action: "window.location.href='https://oeper.dev/files'"
-      },
-      {
-        title: 'Videos',
-        desc: 'Long-form videos from anyone signed in.',
-        icon: 'smart_display',
-        action: "window.location.href='https://oeper.dev/videos.html'"
       }
     ]
   },
