@@ -295,6 +295,29 @@
   .home-search-engine:hover { background: rgba(255,255,255,0.06); color: var(--md-sys-color-on-surface); }
   .home-search-engine.active { background: var(--md-sys-color-secondary-container); border-color: transparent; color: var(--md-sys-color-on-secondary-container); }
 
+  .home-feed-section { margin: 40px 0; }
+  .home-feed-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
+  .home-feed-heading h2 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 22px; font-weight: 400; }
+  .home-feed-heading .header-link { display: inline-flex; align-items: center; gap: 4px; }
+  .home-feed-heading .header-link .material-symbols-rounded { font-size: 16px; }
+  .home-feed { display: flex; flex-direction: column; gap: 10px; }
+  .home-feed-empty { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 0; }
+
+  .home-post-card {
+    display: block; background: var(--md-sys-color-surface); border-radius: 18px; padding: 16px 20px;
+    text-decoration: none; color: inherit; transition: background-color 0.2s;
+  }
+  .home-post-card:hover { background-color: #21242c; }
+  .home-post-tag {
+    display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 8px;
+    background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); margin-bottom: 8px;
+  }
+  .home-post-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+  .home-post-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .home-post-meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .home-post-meta .material-symbols-rounded { font-size: 14px; }
+  .home-post-meta img { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; }
+
   .grid-layout {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -390,10 +413,59 @@
   <div class="page-container" id="pageContainer"></div>
 
 <script type="module">
-  import { mountAccountBar } from './shared/account.js?v=5';
+  import { mountAccountBar, db, getProfile, handleOf, ensureProfileLoaded } from './shared/account.js?v=5';
   import { mountFooter } from './shared/footer.js';
+  import { collection, query, orderBy, limit, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
   mountAccountBar(document.getElementById('accountBar'));
   mountFooter();
+
+  function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function timeAgo(date) {
+    const s = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    if (s < 2592000) return Math.floor(s / 86400) + 'd ago';
+    return date.toLocaleDateString();
+  }
+  const TAG_LABELS = { general: 'General', showcase: 'Showcase', help: 'Help', feedback: 'Feedback' };
+
+  const feedEl = document.getElementById('homeFeed');
+  if (feedEl) {
+    onSnapshot(
+      query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(12)),
+      async snap => {
+        const posts = snap.docs.map(d => {
+          const data = d.data();
+          return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+        });
+        await Promise.all(posts.map(p => ensureProfileLoaded(p.authorEmail)));
+        if (posts.length === 0) {
+          feedEl.innerHTML = '<div class="home-feed-empty">No posts yet — be the first to say something.</div>';
+          return;
+        }
+        feedEl.innerHTML = posts.map(p => {
+          const profile = getProfile(p.authorEmail, p.authorName, p.authorPhoto);
+          const score = (p.upvoters || []).length - (p.downvoters || []).length;
+          const tag = (p.tags || [])[0];
+          return `
+            <a class="home-post-card" href="https://oeper.dev/forum.html?post=${p.id}">
+              ${tag ? `<span class="home-post-tag">${escHtml(TAG_LABELS[tag] || tag)}</span>` : ''}
+              <div class="home-post-title">${escHtml(p.title)}</div>
+              <div class="home-post-meta">
+                <span>${profile.photo ? `<img src="${profile.photo}" alt="">` : ''}${escHtml(profile.name)}</span>
+                <span><span class="material-symbols-rounded">arrow_upward</span>${score}</span>
+                <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount || 0}</span>
+                <span>${timeAgo(p._date)}</span>
+              </div>
+            </a>
+          `;
+        }).join('');
+      },
+      err => { feedEl.innerHTML = `<div class="home-feed-empty">Could not load the feed: ${escHtml(err.message)}</div>`; }
+    );
+  }
 </script>
 <script>
 const PAGES = [
@@ -404,12 +476,6 @@ const PAGES = [
     heroTitle: 'Welcome to oeper.dev!',
     heroSub: 'This is my website with a bunch of my stuff like my projects, articles and a lot more. Feel free to do whatever you want!',
     items: [
-      {
-        title: 'Feed',
-        desc: 'Post, tag, and talk with other visitors.',
-        icon: 'forum',
-        action: "window.location.href='https://oeper.dev/forum'"
-      },
       {
         title: 'Projects',
         desc: 'Everything I\'ve made, articles and downloads together.',
@@ -568,6 +634,15 @@ PAGES.forEach((page, index) => {
         </form>
       ` : ''}
     </div>
+    ${isFirst ? `
+      <div class="home-feed-section">
+        <div class="home-feed-heading">
+          <h2>Feed</h2>
+          <a href="https://oeper.dev/forum" class="header-link">See all <span class="material-symbols-rounded">arrow_forward</span></a>
+        </div>
+        <div class="home-feed" id="homeFeed"></div>
+      </div>
+    ` : ''}
     <div class="grid-layout">${cardsHtml}</div>
   `;
 
