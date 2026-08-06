@@ -300,23 +300,29 @@
   .home-feed-heading h2 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 22px; font-weight: 400; }
   .home-feed-heading .header-link { display: inline-flex; align-items: center; gap: 4px; }
   .home-feed-heading .header-link .material-symbols-rounded { font-size: 16px; }
-  .home-feed { display: flex; flex-direction: column; gap: 10px; }
-  .home-feed-empty { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 0; }
+  .home-feed { display: flex; flex-direction: column; gap: 24px; max-width: 470px; margin: 0 auto; }
+  .home-feed-empty { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 0; text-align: center; }
 
-  .home-post-card {
-    display: block; background: var(--md-sys-color-surface); border-radius: 18px; padding: 16px 20px;
-    text-decoration: none; color: inherit; transition: background-color 0.2s;
+  /* Instagram-style post card */
+  .ig-card {
+    display: block; background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 12px; text-decoration: none; color: inherit; overflow: hidden;
   }
-  .home-post-card:hover { background-color: #21242c; }
-  .home-post-tag {
-    display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 8px;
-    background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); margin-bottom: 8px;
-  }
-  .home-post-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
-  .home-post-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-  .home-post-meta span { display: inline-flex; align-items: center; gap: 4px; }
-  .home-post-meta .material-symbols-rounded { font-size: 14px; }
-  .home-post-meta img { width: 16px; height: 16px; border-radius: 50%; object-fit: cover; }
+  .ig-card-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+  .ig-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
+  .ig-header-text { flex: 1; min-width: 0; }
+  .ig-username { font-size: 13px; font-weight: 600; }
+  .ig-subtag { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
+  .ig-media { width: 100%; aspect-ratio: 4/5; background: #000; }
+  .ig-media img, .ig-media video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ig-actions { display: flex; align-items: center; gap: 14px; padding: 10px 14px 4px; }
+  .ig-actions .material-symbols-rounded { font-size: 24px; color: var(--md-sys-color-on-surface); }
+  .ig-action-count { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-left: -8px; }
+  .ig-likes { padding: 4px 14px 0; font-size: 13px; font-weight: 600; }
+  .ig-caption { padding: 6px 14px 0; font-size: 13px; line-height: 1.4; }
+  .ig-caption strong { font-weight: 600; margin-right: 6px; }
+  .ig-view-comments { padding: 6px 14px 0; font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .ig-timestamp { padding: 6px 14px 14px; font-size: 11px; color: var(--md-sys-color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.3px; }
 
   .grid-layout {
     display: grid;
@@ -430,6 +436,16 @@
     return date.toLocaleDateString();
   }
   const TAG_LABELS = { general: 'General', showcase: 'Showcase', help: 'Help', feedback: 'Feedback' };
+  function firstImageUrl(p) {
+    const urls = p.imageUrls && p.imageUrls.length ? p.imageUrls : (p.imageUrl ? [p.imageUrl] : []);
+    const url = urls[0];
+    return url && /\.(jpe?g|png|gif|webp|avif)$/i.test(url) ? url : null;
+  }
+  function firstVideoUrl(p) {
+    const urls = p.imageUrls && p.imageUrls.length ? p.imageUrls : (p.imageUrl ? [p.imageUrl] : []);
+    const url = urls[0];
+    return url && /\.(mp4|webm|mov|m4v|ogv)$/i.test(url) ? url : null;
+  }
 
   const feedEl = document.getElementById('homeFeed');
   if (feedEl) {
@@ -449,16 +465,29 @@
           const profile = getProfile(p.authorEmail, p.authorName, p.authorPhoto);
           const score = (p.upvoters || []).length - (p.downvoters || []).length;
           const tag = (p.tags || [])[0];
+          const img = firstImageUrl(p);
+          const vid = !img ? firstVideoUrl(p) : null;
           return `
-            <a class="home-post-card" href="https://oeper.dev/forum.html?post=${p.id}">
-              ${tag ? `<span class="home-post-tag">${escHtml(TAG_LABELS[tag] || tag)}</span>` : ''}
-              <div class="home-post-title">${escHtml(p.title)}</div>
-              <div class="home-post-meta">
-                <span>${profile.photo ? `<img src="${profile.photo}" alt="">` : ''}${escHtml(profile.name)}</span>
-                <span><span class="material-symbols-rounded">arrow_upward</span>${score}</span>
-                <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount || 0}</span>
-                <span>${timeAgo(p._date)}</span>
+            <a class="ig-card" href="https://oeper.dev/forum.html?post=${p.id}">
+              <div class="ig-card-header">
+                <img class="ig-avatar" src="${profile.photo || ''}" alt="">
+                <div class="ig-header-text">
+                  <div class="ig-username">${escHtml(profile.name)}</div>
+                  <div class="ig-subtag">${tag ? escHtml(TAG_LABELS[tag] || tag) : 'oeper.dev'}</div>
+                </div>
               </div>
+              ${img ? `<div class="ig-media"><img src="${img}" alt="" loading="lazy"></div>` : ''}
+              ${vid ? `<div class="ig-media"><video src="${vid}" muted preload="metadata"></video></div>` : ''}
+              <div class="ig-actions">
+                <span class="material-symbols-rounded">favorite_border</span>
+                <span class="material-symbols-rounded">mode_comment</span>
+                <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
+                <span class="ig-action-count">${p.views || 0}</span>
+              </div>
+              <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
+              <div class="ig-caption"><strong>${escHtml(profile.name)}</strong>${escHtml(p.title)}</div>
+              ${p.commentCount ? `<div class="ig-view-comments">View all ${p.commentCount} comments</div>` : ''}
+              <div class="ig-timestamp">${timeAgo(p._date)}</div>
             </a>
           `;
         }).join('');
