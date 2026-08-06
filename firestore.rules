@@ -123,5 +123,28 @@ service cloud.firestore {
         allow update, delete: if false; // messages are immutable once sent
       }
     }
+
+    // Long-form video posts (videos.html). Same shape/permissions as forum
+    // posts — public read, author/owner manage, anyone signed in can vote
+    // or bump the view count by exactly 1.
+    match /videos/{videoId} {
+      allow read: if true;
+
+      allow create: if isSignedIn() && !isBanned()
+        && request.resource.data.authorEmail == request.auth.token.email
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 150
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 2000
+        && request.resource.data.url is string;
+
+      allow update: if isAuthor(resource.data) || isOwner()
+        || (isSignedIn() && !isBanned() && onlyChanged(['upvoters', 'downvoters']))
+        || (isSignedIn() && onlyChanged(['views'])
+            && request.resource.data.views == (('views' in resource.data) ? resource.data.views : 0) + 1);
+
+      allow delete: if isAuthor(resource.data) || isOwner();
+    }
   }
 }

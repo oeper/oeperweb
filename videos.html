@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Videos — oeper.dev</title>
+<meta name="description" content="Long-form videos on oeper.dev">
+<meta property="og:title" content="Videos — oeper.dev">
+<meta property="og:description" content="Long-form videos on oeper.dev">
+<meta property="og:url" content="https://oeper.dev/videos">
+<meta property="og:type" content="website">
+<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<script src="./shared/theme-boot.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 960px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 28px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400; margin-bottom: 12px; letter-spacing: -0.5px; }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 16px; max-width: 500px; line-height: 1.5; }
+
+  .toolrow { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; padding: 10px 20px;
+    border-radius: 100px; border: 1px solid var(--md-sys-color-outline); background: transparent;
+    color: var(--md-sys-color-on-surface); cursor: pointer; font-family: inherit;
+  }
+  .btn:hover { background-color: rgba(255,255,255,0.06); }
+  .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
+  .btn.primary:hover { opacity: 0.9; }
+  .btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.danger { color: var(--md-sys-color-error); border-color: var(--md-sys-color-error); }
+
+  .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+  .video-card { background: var(--md-sys-color-surface); border-radius: 20px; overflow: hidden; cursor: pointer; transition: background-color 0.2s; }
+  .video-card:hover { background-color: #21242c; }
+  .video-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; background: #000; display: block; }
+  .video-info { padding: 14px 16px; }
+  .video-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .video-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: flex; gap: 10px; flex-wrap: wrap; }
+  .video-meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .video-meta .material-symbols-rounded { font-size: 14px; }
+
+  .empty-note { text-align: center; padding: 80px 24px; color: var(--md-sys-color-on-surface-variant); }
+
+  /* Watch overlay */
+  .watch-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .watch-overlay.open { opacity: 1; pointer-events: all; }
+  .watch-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(720px, 100vw); background: var(--md-sys-color-background);
+    z-index: 201; transform: translateX(100%); transition: transform 0.25s; overflow-y: auto; padding: 24px;
+  }
+  .watch-panel.open { transform: translateX(0); }
+  .watch-panel video { width: 100%; border-radius: 16px; background: #000; margin-bottom: 16px; max-height: 60vh; }
+  .watch-title { font-size: 22px; font-weight: 500; margin-bottom: 10px; }
+  .watch-desc { font-size: 14px; line-height: 1.6; color: var(--md-sys-color-on-surface-variant); white-space: pre-wrap; margin: 16px 0; }
+  .watch-close { position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .watch-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .vote-col { display: flex; align-items: center; gap: 8px; background: var(--md-sys-color-surface); border-radius: 100px; padding: 6px 14px; }
+  .vote-btn { background: none; border: none; color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; }
+  .vote-btn.upvoted { color: var(--md-sys-color-primary); }
+  .vote-btn.downvoted { color: var(--md-sys-color-error); }
+  .vote-count { font-size: 14px; font-weight: 500; min-width: 20px; text-align: center; }
+  .author-link { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+  .author-link:hover { color: var(--md-sys-color-primary); text-decoration: underline; }
+  .author-link img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+
+  /* Upload modal */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 210; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -48%); width: min(480px, 92vw);
+    background: var(--md-sys-color-surface); border-radius: 24px; padding: 28px; z-index: 211;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+  }
+  .modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
+  .modal h3 { font-size: 20px; font-weight: 400; margin-bottom: 18px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 6px; }
+  .field input[type="text"], .field textarea {
+    width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none;
+  }
+  .field textarea { resize: vertical; min-height: 60px; }
+  .field input[type="file"] { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .modal-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 20px; }
+
+  .toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: #303034;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4); border-radius: 16px; padding: 14px 24px; font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-size: 14px; color: #e3e2e6; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 220; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <div class="header-container">
+      <a href="https://oeper.dev" class="header-link">
+        <span class="material-symbols-rounded">arrow_back</span>
+        <span>back to oeper.dev</span>
+      </a>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <a href="/messages.html" class="header-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
+        <a href="/settings" class="header-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
+        <div id="accountBar"></div>
+      </div>
+    </div>
+    <h1>Videos</h1>
+    <p>Long-form videos from anyone signed in. Upvote, downvote, and watch.</p>
+  </header>
+
+  <div class="toolrow">
+    <button class="btn primary" id="uploadBtn"><span class="material-symbols-rounded">upload</span> Upload video</button>
+  </div>
+
+  <div id="grid" class="video-grid"></div>
+  <div class="empty-note" id="emptyNote" style="display:none;">No videos yet — be the first to upload one.</div>
+</div>
+
+<div class="overlay" id="uploadOverlay"></div>
+<div class="modal" id="uploadModal">
+  <h3>Upload a video</h3>
+  <div class="field"><label>Title</label><input type="text" id="titleInput" maxlength="150"></div>
+  <div class="field"><label>Description</label><textarea id="descInput" maxlength="2000" rows="3"></textarea></div>
+  <div class="field"><label>Video file</label><input type="file" id="fileInput" accept="video/*"></div>
+  <div class="modal-actions">
+    <button class="btn danger" id="uploadCancelBtn">Cancel</button>
+    <button class="btn primary" id="uploadSubmitBtn"><span class="material-symbols-rounded" style="font-size:16px;">upload</span> Upload</button>
+  </div>
+</div>
+
+<div class="watch-overlay" id="watchOverlay"></div>
+<div class="watch-panel" id="watchPanel"></div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import {
+  auth, db, SERVER_ENDPOINT, isOwnerEmail, getCurrentUser, onAccountChange,
+  getProfile, handleOf, mountAccountBar, uploadFile, ensureProfileLoaded,
+} from './shared/account.js?v=5';
+import { mountFooter } from './shared/footer.js';
+import {
+  collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
+  arrayUnion, arrayRemove, increment,
+} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+mountAccountBar(document.getElementById('accountBar'));
+mountFooter();
+
+function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function timeAgo(date) {
+  const s = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  if (s < 2592000) return Math.floor(s / 86400) + 'd ago';
+  return date.toLocaleDateString();
+}
+function score(v) { return (v.upvoters || []).length - (v.downvoters || []).length; }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+function authorLinkHtml(v, innerHtml) {
+  const handle = handleOf(v.authorEmail);
+  if (!handle) return `<span class="author-link">${innerHtml}</span>`;
+  return `<a href="/profile.html?u=${encodeURIComponent(handle)}" class="author-link" onclick="event.stopPropagation()">${innerHtml}</a>`;
+}
+
+let videos = [];
+const viewedKey = 'oe-viewed-videos';
+
+onSnapshot(collection(db, 'videos'), async snap => {
+  videos = snap.docs.map(d => {
+    const data = d.data();
+    return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+  }).sort((a, b) => b._date - a._date);
+  await Promise.all(videos.map(v => ensureProfileLoaded(v.authorEmail)));
+  render();
+}, err => { document.getElementById('emptyNote').style.display = 'block'; document.getElementById('emptyNote').textContent = 'Could not load videos: ' + err.message; });
+
+function render() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  videos.forEach(v => grid.appendChild(buildCard(v)));
+  document.getElementById('emptyNote').style.display = videos.length === 0 ? 'block' : 'none';
+}
+
+function buildCard(v) {
+  const card = document.createElement('div');
+  card.className = 'video-card';
+  const profile = getProfile(v.authorEmail, v.authorName, v.authorPhoto);
+  card.innerHTML = `
+    <video class="video-thumb" src="${v.url}" preload="metadata" muted></video>
+    <div class="video-info">
+      <div class="video-title">${escHtml(v.title)}</div>
+      <div class="video-meta">
+        ${authorLinkHtml(v, escHtml(profile.name))}
+        <span><span class="material-symbols-rounded">arrow_upward</span>${score(v)}</span>
+        <span><span class="material-symbols-rounded">visibility</span>${v.views||0}</span>
+        <span>${timeAgo(v._date)}</span>
+      </div>
+    </div>
+  `;
+  card.addEventListener('click', () => openWatch(v));
+  return card;
+}
+
+function bumpViews(v) {
+  if (!getCurrentUser()) return;
+  let seen;
+  try { seen = JSON.parse(localStorage.getItem(viewedKey) || '[]'); } catch { seen = []; }
+  if (seen.includes(v.id)) return;
+  seen.push(v.id);
+  if (seen.length > 500) seen = seen.slice(-500);
+  localStorage.setItem(viewedKey, JSON.stringify(seen));
+  updateDoc(doc(db, 'videos', v.id), { views: increment(1) }).catch(() => {});
+}
+
+function openWatch(v) {
+  const overlay = document.getElementById('watchOverlay');
+  const panel = document.getElementById('watchPanel');
+  const profile = getProfile(v.authorEmail, v.authorName, v.authorPhoto);
+  const user = getCurrentUser();
+  const isMine = user && (user.email === v.authorEmail || isOwnerEmail(user.email));
+  const up = user && (v.upvoters || []).includes(user.uid);
+  const down = user && (v.downvoters || []).includes(user.uid);
+
+  panel.innerHTML = `
+    <button class="watch-close" id="watchCloseBtn"><span class="material-symbols-rounded">close</span></button>
+    <video src="${v.url}" controls autoplay></video>
+    <div class="watch-title">${escHtml(v.title)}</div>
+    <div class="watch-actions">
+      <div class="vote-col">
+        <button class="vote-btn ${up ? 'upvoted' : ''}" id="upBtn"><span class="material-symbols-rounded">arrow_upward</span></button>
+        <span class="vote-count">${score(v)}</span>
+        <button class="vote-btn ${down ? 'downvoted' : ''}" id="downBtn"><span class="material-symbols-rounded">arrow_downward</span></button>
+      </div>
+      ${authorLinkHtml(v, `${profile.photo ? `<img src="${profile.photo}" alt="">` : ''}${escHtml(profile.name)}`)}
+      <span style="color:var(--md-sys-color-on-surface-variant); font-size:13px;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:middle;">visibility</span> ${v.views||0} views</span>
+      ${isMine ? `<button class="btn danger" id="deleteBtn" style="margin-left:auto;">Delete</button>` : ''}
+    </div>
+    <div class="watch-desc">${escHtml(v.description || '') || 'No description.'}</div>
+  `;
+
+  function close() {
+    overlay.classList.remove('open');
+    panel.classList.remove('open');
+    panel.querySelector('video')?.pause();
+  }
+  overlay.onclick = close;
+  document.getElementById('watchCloseBtn').onclick = close;
+
+  document.getElementById('upBtn').addEventListener('click', () => toggleVote(v, 'up'));
+  document.getElementById('downBtn').addEventListener('click', () => toggleVote(v, 'down'));
+  const delBtn = document.getElementById('deleteBtn');
+  if (delBtn) delBtn.addEventListener('click', async () => {
+    if (!confirm('Delete this video? This cannot be undone.')) return;
+    try { await deleteDoc(doc(db, 'videos', v.id)); close(); showToast('Deleted'); }
+    catch (err) { showToast('Could not delete: ' + err.message); }
+  });
+
+  overlay.classList.add('open');
+  panel.classList.add('open');
+  bumpViews(v);
+}
+
+async function toggleVote(v, dir) {
+  const user = getCurrentUser();
+  if (!user) { showToast('Sign in to vote'); return; }
+  const ref = doc(db, 'videos', v.id);
+  const up = (v.upvoters || []).includes(user.uid);
+  const down = (v.downvoters || []).includes(user.uid);
+  const patch = {};
+  if (dir === 'up') {
+    patch.upvoters = up ? arrayRemove(user.uid) : arrayUnion(user.uid);
+    if (down) patch.downvoters = arrayRemove(user.uid);
+  } else {
+    patch.downvoters = down ? arrayRemove(user.uid) : arrayUnion(user.uid);
+    if (up) patch.upvoters = arrayRemove(user.uid);
+  }
+  try { await updateDoc(ref, patch); } catch (err) { showToast('Could not vote: ' + err.message); }
+}
+
+// ── Upload modal ──────────────────────────────────────────────
+const uploadOverlay = document.getElementById('uploadOverlay');
+const uploadModal = document.getElementById('uploadModal');
+function closeUploadModal() { uploadOverlay.classList.remove('open'); uploadModal.classList.remove('open'); }
+
+document.getElementById('uploadBtn').addEventListener('click', () => {
+  if (!getCurrentUser()) { showToast('Sign in to upload'); return; }
+  document.getElementById('titleInput').value = '';
+  document.getElementById('descInput').value = '';
+  document.getElementById('fileInput').value = '';
+  uploadOverlay.classList.add('open');
+  uploadModal.classList.add('open');
+});
+uploadOverlay.addEventListener('click', closeUploadModal);
+document.getElementById('uploadCancelBtn').addEventListener('click', closeUploadModal);
+
+document.getElementById('uploadSubmitBtn').addEventListener('click', async () => {
+  const user = getCurrentUser();
+  if (!user) { showToast('Sign in to upload'); return; }
+  const title = document.getElementById('titleInput').value.trim();
+  const description = document.getElementById('descInput').value.trim();
+  const file = document.getElementById('fileInput').files[0];
+  if (!title) { showToast('Title is required'); return; }
+  if (!file) { showToast('Choose a video file'); return; }
+
+  const btn = document.getElementById('uploadSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading…';
+  try {
+    const url = await uploadFile(file, '/upload-video');
+    const profile = getProfile(user.email, user.displayName, user.photoURL);
+    await addDoc(collection(db, 'videos'), {
+      title, description, url,
+      authorEmail: user.email,
+      authorName: profile.name,
+      authorPhoto: profile.photo,
+      createdAt: serverTimestamp(),
+      views: 0,
+      upvoters: [],
+      downvoters: [],
+    });
+    closeUploadModal();
+    showToast('Uploaded!');
+  } catch (err) {
+    showToast('Could not upload: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-symbols-rounded" style="font-size:16px;">upload</span> Upload';
+  }
+});
+</script>
+</body>
+</html>

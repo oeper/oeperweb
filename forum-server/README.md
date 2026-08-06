@@ -25,6 +25,15 @@ everyone's for moderation) and the forum:
   kept server-side so the webhook URL is never exposed in the site's public
   source (anyone who got hold of it could post arbitrary spam to your
   Discord channel)
+- **`/upload-video`** — long-form video uploads for `videos.html`, any
+  signed-in user. Saved into `VIDEO_DIR` (default
+  `/storage/emulated/0/Download/videos`) and capped by `MAX_VIDEO_BYTES`
+  (default 300MB — much higher than `MAX_FILE_BYTES` since actual video
+  blows past 10MB immediately). Title/description/votes live in Firestore
+  (`videos` collection); this endpoint only stores the raw file and hands
+  back a URL. Uploads run over your home connection's upload speed through
+  the Cloudflare Tunnel, so a 300MB file can take a while — that's a
+  bandwidth reality, not a bug.
 
 **Privacy note:** `USER_FILES_DIR` defaults to `/storage/emulated/0/Documents`
 directly. This is safe from casually exposing everything in that folder
