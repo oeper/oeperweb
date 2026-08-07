@@ -69,6 +69,13 @@
   .profile-bio { font-size: 14px; line-height: 1.6; color: var(--md-sys-color-on-surface); white-space: pre-wrap; max-width: 480px; }
   .profile-bio.empty { color: var(--md-sys-color-on-surface-variant); font-style: italic; }
   .profile-bio a { color: var(--md-sys-color-primary); }
+  .profile-bio a.md-btn {
+    display: inline-flex; align-items: center; gap: 8px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 13px; font-weight: 500;
+    padding: 8px 16px; border-radius: 100px; background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
+    text-decoration: none; margin: 4px 6px 4px 0; vertical-align: middle;
+  }
+  .profile-bio a.md-btn:hover { opacity: 0.9; }
+  .profile-bio a.md-btn .material-symbols-rounded { font-size: 16px; }
 
   .profile-actions { display: flex; gap: 10px; flex-shrink: 0; margin-left: auto; }
 
@@ -257,6 +264,7 @@ function parseBioMarkdown(text) {
   let html = expandShortcodes(escHtml(text))
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\[\[([^\]]+)\]\]\((https?:\/\/[^)]+)\)/g, '<a class="md-btn" href="$2" target="_blank" rel="noopener"><span class="material-symbols-rounded">arrow_forward</span>$1</a>')
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
   return expandIconShorthand(html);
