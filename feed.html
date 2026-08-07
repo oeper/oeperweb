@@ -520,8 +520,33 @@ function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&
 function linkify(str, extraAttrs) {
   return escHtml(str).replace(/(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener"${extraAttrs || ''}>${url}</a>`);
 }
+// Discord-style shorthand: :name: -> an emoji, [icon_name] -> an inline
+// Material Symbols icon.
+const EMOJI_SHORTCODES = {
+  smile: '😄', joy: '😂', laughing: '😆', wink: '😉', blush: '😊', heart_eyes: '😍',
+  thinking: '🤔', neutral_face: '😐', unamused: '😒', disappointed: '😞', sob: '😭',
+  angry: '😠', rage: '😡', fearful: '😨', astonished: '😲', flushed: '😳',
+  sunglasses: '😎', wave: '👋', thumbsup: '👍', thumbsdown: '👎', clap: '👏',
+  pray: '🙏', muscle: '💪', ok_hand: '👌', point_right: '👉', point_left: '👈',
+  fire: '🔥', star: '⭐', sparkles: '✨', heart: '❤️', broken_heart: '💔',
+  100: '💯', tada: '🎉', rocket: '🚀', eyes: '👀', skull: '💀',
+  poop: '💩', check: '✅', x: '❌', warning: '⚠️', bulb: '💡',
+  crown: '👑', gem: '💎', trophy: '🏆', medal: '🏅', gift: '🎁',
+  coffee: '☕', pizza: '🍕', beer: '🍺', cake: '🎂', moon: '🌙',
+  sun: '☀️', cloud: '☁️', zap: '⚡', snowflake: '❄️', rainbow: '🌈',
+  dog: '🐶', cat: '🐱', unicorn: '🦄', ghost: '👻', alien: '👽',
+  robot: '🤖', computer: '💻', phone: '📱', email: '✉️', lock: '🔒',
+  key: '🔑', bell: '🔔', music: '🎵', game: '🎮', book: '📖',
+};
+function expandShortcodes(text) {
+  return text.replace(/:([a-z0-9_+-]+):/g, (m, name) => EMOJI_SHORTCODES[name] || m);
+}
+function expandIconShorthand(html) {
+  return html.replace(/\[([a-z_]{2,40})\]/g, (m, name) =>
+    `<span class="material-symbols-rounded" style="font-size:1.1em;vertical-align:-0.22em;">${name}</span>`);
+}
 function parseMarkdown(md) {
-  let html = escHtml(md || '')
+  let html = expandShortcodes(escHtml(md || ''))
     .replace(/\r\n/g, '\n')
     .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
     .replace(/^##\s+(.+)$/gm,  '<h2>$1</h2>')
@@ -543,7 +568,8 @@ function parseMarkdown(md) {
     // [[Button label]](url) renders as a filled Material button instead of a plain link.
     .replace(/\[\[([^\]]+)\]\]\((https?:\/\/[^)]+)\)/g, '<a class="md-btn" href="$2" target="_blank" rel="noopener"><span class="material-symbols-rounded">arrow_forward</span>$1</a>')
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`)
+    .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
+  html = expandIconShorthand(html)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\n{2,}/g, '</p><p>')
     .replace(/\n/g, '<br>')

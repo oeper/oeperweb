@@ -239,16 +239,42 @@ function timeAgo(date) {
 function conversationId(emailA, emailB) {
   return [emailA, emailB].sort().join('__');
 }
+// Discord-style shorthand: :name: -> an emoji, [icon_name] -> an inline
+// Material Symbols icon.
+const EMOJI_SHORTCODES = {
+  smile: '😄', joy: '😂', laughing: '😆', wink: '😉', blush: '😊', heart_eyes: '😍',
+  thinking: '🤔', neutral_face: '😐', unamused: '😒', disappointed: '😞', sob: '😭',
+  angry: '😠', rage: '😡', fearful: '😨', astonished: '😲', flushed: '😳',
+  sunglasses: '😎', wave: '👋', thumbsup: '👍', thumbsdown: '👎', clap: '👏',
+  pray: '🙏', muscle: '💪', ok_hand: '👌', point_right: '👉', point_left: '👈',
+  fire: '🔥', star: '⭐', sparkles: '✨', heart: '❤️', broken_heart: '💔',
+  100: '💯', tada: '🎉', rocket: '🚀', eyes: '👀', skull: '💀',
+  poop: '💩', check: '✅', x: '❌', warning: '⚠️', bulb: '💡',
+  crown: '👑', gem: '💎', trophy: '🏆', medal: '🏅', gift: '🎁',
+  coffee: '☕', pizza: '🍕', beer: '🍺', cake: '🎂', moon: '🌙',
+  sun: '☀️', cloud: '☁️', zap: '⚡', snowflake: '❄️', rainbow: '🌈',
+  dog: '🐶', cat: '🐱', unicorn: '🦄', ghost: '👻', alien: '👽',
+  robot: '🤖', computer: '💻', phone: '📱', email: '✉️', lock: '🔒',
+  key: '🔑', bell: '🔔', music: '🎵', game: '🎮', book: '📖',
+};
+function expandShortcodes(text) {
+  return text.replace(/:([a-z0-9_+-]+):/g, (m, name) => EMOJI_SHORTCODES[name] || m);
+}
+function expandIconShorthand(html) {
+  return html.replace(/\[([a-z_]{2,40})\]/g, (m, name) =>
+    `<span class="material-symbols-rounded" style="font-size:1.1em;vertical-align:-0.22em;">${name}</span>`);
+}
 // Lightweight markdown for chat bubbles — bold/italic/code/links only, no
 // block-level syntax (headings, tables, bullets) since a message is one
 // short line, not a document.
 function parseMsgMarkdown(text) {
-  return escHtml(text)
+  const html = expandShortcodes(escHtml(text))
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
+  return expandIconShorthand(html);
 }
 
 async function reportItem(type, itemId, contentPreview, aboutHandleOrEmail) {

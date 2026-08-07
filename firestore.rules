@@ -80,19 +80,32 @@ service cloud.firestore {
         && request.resource.data.displayName.size() <= 40
         && (!('photoURL' in request.resource.data) || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 500))
         && (!('bio' in request.resource.data) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 200));
-      // Owners setting or clearing a custom badge on someone else's
-      // account — scoped to just this one field so it can't be used to
-      // rewrite the rest of a profile the owner doesn't otherwise own.
-      // Clearing (setDoc with badge: deleteField()) removes the key
-      // entirely, so the "not present" branch covers that case.
-      allow update: if isOwner() && onlyChanged(['badge'])
+      // Owners setting or clearing a custom badge, or granting/revoking
+      // bio-markdown rendering, on someone else's account — scoped to just
+      // these two fields so it can't be used to rewrite the rest of a
+      // profile the owner doesn't otherwise own. Clearing (setDoc with
+      // badge: deleteField()) removes the key entirely, so the "not
+      // present" branch covers that case.
+      allow update: if isOwner() && onlyChanged(['badge', 'bioMarkdownAllowed'])
         && (!('badge' in request.resource.data) || (
           request.resource.data.badge.label is string
           && request.resource.data.badge.label.size() > 0
           && request.resource.data.badge.label.size() <= 24
           && request.resource.data.badge.icon is string
           && request.resource.data.badge.icon.size() <= 40
-        ));
+        ))
+        && (!('bioMarkdownAllowed' in request.resource.data) || request.resource.data.bioMarkdownAllowed is bool);
+
+      // Owner editing someone else's display name/bio/photo directly
+      // (profile.html's "Edit this profile" kebab option) — same field
+      // validation as the self-write rule above, just without requiring
+      // the writer to be the account owner.
+      allow update: if isOwner() && onlyChanged(['displayName', 'bio', 'photoURL'])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 40
+        && (!('photoURL' in request.resource.data) || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 500))
+        && (!('bio' in request.resource.data) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 200));
     }
 
     // Ban list, keyed by email. Public read so the client can show "you're

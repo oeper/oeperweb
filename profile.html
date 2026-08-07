@@ -68,6 +68,7 @@
   .profile-joined { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 12px; }
   .profile-bio { font-size: 14px; line-height: 1.6; color: var(--md-sys-color-on-surface); white-space: pre-wrap; max-width: 480px; }
   .profile-bio.empty { color: var(--md-sys-color-on-surface-variant); font-style: italic; }
+  .profile-bio a { color: var(--md-sys-color-primary); }
 
   .profile-actions { display: flex; gap: 10px; flex-shrink: 0; margin-left: auto; }
 
@@ -224,6 +225,43 @@ function stripMarkdown(text, maxLen) {
   return s;
 }
 
+// Discord-style shorthand: :name: -> an emoji, [icon_name] -> an inline
+// Material Symbols icon. Applied to bios regardless of the markdown
+// permission below — it's just a typing convenience, not real formatting.
+const EMOJI_SHORTCODES = {
+  smile: '😄', joy: '😂', laughing: '😆', wink: '😉', blush: '😊', heart_eyes: '😍',
+  thinking: '🤔', neutral_face: '😐', unamused: '😒', disappointed: '😞', sob: '😭',
+  angry: '😠', rage: '😡', fearful: '😨', astonished: '😲', flushed: '😳',
+  sunglasses: '😎', wave: '👋', thumbsup: '👍', thumbsdown: '👎', clap: '👏',
+  pray: '🙏', muscle: '💪', ok_hand: '👌', point_right: '👉', point_left: '👈',
+  fire: '🔥', star: '⭐', sparkles: '✨', heart: '❤️', broken_heart: '💔',
+  100: '💯', tada: '🎉', rocket: '🚀', eyes: '👀', skull: '💀',
+  poop: '💩', check: '✅', x: '❌', warning: '⚠️', bulb: '💡',
+  crown: '👑', gem: '💎', trophy: '🏆', medal: '🏅', gift: '🎁',
+  coffee: '☕', pizza: '🍕', beer: '🍺', cake: '🎂', moon: '🌙',
+  sun: '☀️', cloud: '☁️', zap: '⚡', snowflake: '❄️', rainbow: '🌈',
+  dog: '🐶', cat: '🐱', unicorn: '🦄', ghost: '👻', alien: '👽',
+  robot: '🤖', computer: '💻', phone: '📱', email: '✉️', lock: '🔒',
+  key: '🔑', bell: '🔔', music: '🎵', game: '🎮', book: '📖',
+};
+function expandShortcodes(text) {
+  return text.replace(/:([a-z0-9_+-]+):/g, (m, name) => EMOJI_SHORTCODES[name] || m);
+}
+function expandIconShorthand(html) {
+  return html.replace(/\[([a-z_]{2,40})\]/g, (m, name) =>
+    `<span class="material-symbols-rounded" style="font-size:1.1em;vertical-align:-0.22em;">${name}</span>`);
+}
+// Small markdown renderer for bios (bold/italic/links only — a bio is a
+// few lines, not a document) — gated behind bioMarkdownAllowed below.
+function parseBioMarkdown(text) {
+  let html = expandShortcodes(escHtml(text))
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
+  return expandIconShorthand(html);
+}
+
 // ── Followers / Following list modal ────────────────────────
 const followListOverlay = document.getElementById('followListOverlay');
 const followListModal = document.getElementById('followListModal');
@@ -332,6 +370,7 @@ async function init() {
   let profile = getProfile(viewedEmail, null, null);
   let joinDate = null;
   let bio = '';
+  let bioMarkdownAllowed = false;
   let posts = [];
   let commentKarma = 0;
   let followerCount = 0, followingCount = 0;
@@ -384,7 +423,7 @@ async function init() {
           <div class="profile-main">
             <div class="profile-name">${escHtml(profile.name)}${officialBadgeHtml(viewedEmail)}${areFriends ? `<span class="friends-badge"><span class="material-symbols-rounded">people</span>Friends</span>` : ''}</div>
             <div class="profile-joined">@${escHtml(handle)}${joinDate ? ' · Member since ' + joinDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long' }) : ''}${!isOwn && followedBy ? ' · Follows you' : ''}</div>
-            <div class="profile-bio ${bio ? '' : 'empty'}">${bio ? escHtml(bio) : 'No bio yet.'}</div>
+            <div class="profile-bio ${bio ? '' : 'empty'}">${bio ? (bioMarkdownAllowed || isOwnerEmail(viewedEmail) ? parseBioMarkdown(bio) : expandIconShorthand(expandShortcodes(escHtml(bio)))) : 'No bio yet.'}</div>
           </div>
           <div class="profile-actions">
             ${isOwn ? `<button class="btn primary" id="editProfileBtn"><span class="material-symbols-rounded" style="font-size:16px;">edit</span> Edit profile</button>` : ''}
@@ -433,7 +472,11 @@ async function init() {
     if (user && !isOwn) {
       menuItems.push({ label: 'Report', icon: 'flag', dangerous: true, onClick: reportProfile });
     }
-    if (isOwnerViewer && !isOwn && !isOwnerEmail(viewedEmail)) {
+    // Owner can edit their own tag too (previously only other people's) —
+    // isOwn only ever coincides with isOwnerEmail(viewedEmail) when the
+    // owner is viewing themselves, so this still can't touch a non-owner
+    // viewer's own badge.
+    if (isOwnerViewer && (isOwn || !isOwnerEmail(viewedEmail))) {
       menuItems.push({
         label: profile.badge ? 'Edit badge' : 'Set custom badge',
         icon: profile.badge ? 'edit' : 'add_moderator',
@@ -442,6 +485,14 @@ async function init() {
       if (profile.badge) {
         menuItems.push({ label: 'Remove badge', icon: 'remove_moderator', dangerous: true, onClick: () => applyBadge(null) });
       }
+    }
+    if (isOwnerViewer && !isOwn) {
+      menuItems.push({
+        label: bioMarkdownAllowed ? 'Disallow bio markdown' : 'Allow bio markdown',
+        icon: bioMarkdownAllowed ? 'format_clear' : 'format_bold',
+        onClick: toggleBioMarkdown,
+      });
+      menuItems.push({ label: 'Edit this profile', icon: 'manage_accounts', onClick: editOtherProfile });
     }
     const kebabBtn = document.getElementById('profileKebabBtn');
     const kebabMenu = document.getElementById('profileKebabMenu');
@@ -502,6 +553,37 @@ async function init() {
     }
   }
 
+  async function toggleBioMarkdown() {
+    const next = !bioMarkdownAllowed;
+    try {
+      await setDoc(doc(db, 'users', viewedEmail), { bioMarkdownAllowed: next }, { merge: true });
+      bioMarkdownAllowed = next;
+      showToast(next ? 'Bio markdown allowed' : 'Bio markdown disallowed');
+      render();
+    } catch (err) {
+      showToast('Could not update permission: ' + err.message);
+    }
+  }
+
+  async function editOtherProfile() {
+    const newName = window.prompt('Display name:', profile.name || '');
+    if (newName === null) return;
+    const trimmedName = newName.trim().slice(0, 40);
+    if (!trimmedName) { showToast('Name cannot be empty'); return; }
+    const newBio = window.prompt('Bio:', bio || '');
+    if (newBio === null) return;
+    const trimmedBio = newBio.trim().slice(0, 200);
+    try {
+      await setDoc(doc(db, 'users', viewedEmail), { displayName: trimmedName, bio: trimmedBio }, { merge: true });
+      profile = { ...profile, name: trimmedName };
+      bio = trimmedBio;
+      showToast('Profile updated');
+      render();
+    } catch (err) {
+      showToast('Could not update profile: ' + err.message);
+    }
+  }
+
   async function refreshFollowState() {
     followState = await loadFollowState(getCurrentUser());
     render();
@@ -516,6 +598,7 @@ async function init() {
       profile = getProfile(viewedEmail, null, null);
       joinDate = profileDoc && profileDoc.createdAt && profileDoc.createdAt.toDate ? profileDoc.createdAt.toDate() : null;
       bio = (profileDoc && profileDoc.bio) || '';
+      bioMarkdownAllowed = !!(profileDoc && profileDoc.bioMarkdownAllowed);
     }).catch(() => {}),
     getDocs(query(collection(db, 'posts'), where('authorEmail', '==', viewedEmail))).then(snap => {
       posts = snap.docs.map(d => {
