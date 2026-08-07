@@ -17,7 +17,7 @@ function injectStyles() {
     .oe-theme-swatch-btn {
       display: flex; align-items: center; gap: 10px; background: var(--md-sys-color-surface-variant);
       border: 2px solid transparent; border-radius: 14px; padding: 10px 16px; cursor: pointer;
-      font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500;
+      font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; font-weight: 500;
       color: var(--md-sys-color-on-surface); transition: border-color 0.2s, background-color 0.2s;
     }
     .oe-theme-swatch-btn:hover { background: var(--md-sys-state-hover); }
@@ -27,7 +27,7 @@ function injectStyles() {
     .oe-theme-flip-btn {
       display: flex; align-items: center; gap: 10px; background: var(--md-sys-color-surface-variant);
       border: 2px solid transparent; border-radius: 14px; padding: 10px 16px; cursor: pointer;
-      font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500;
+      font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; font-weight: 500;
       color: var(--md-sys-color-on-surface); transition: border-color 0.2s, background-color 0.2s;
       margin-top: 12px;
     }

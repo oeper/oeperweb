@@ -331,13 +331,13 @@ function injectStyles() {
     .oe-acct-signin {
       display: inline-flex; align-items: center; gap: 8px; background-color: var(--md-sys-color-primary, #a8c7fa);
       color: var(--md-sys-color-on-primary, #062e6f); border: none; border-radius: 100px; padding: 10px 20px;
-      font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer;
+      font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; font-weight: 500; cursor: pointer;
     }
     .oe-acct-signin:hover { opacity: 0.9; }
     .oe-acct-chip { display: flex; align-items: center; gap: 8px; }
     .oe-acct-profile-link { display: flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; }
     .oe-acct-chip img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant, #2f353d); }
-    .oe-acct-chip .oe-acct-name { font-size: 13px; color: var(--md-sys-color-on-surface-variant, #c4c7c5); font-family: 'Google Sans', 'Product Sans', sans-serif; }
+    .oe-acct-chip .oe-acct-name { font-size: 13px; color: var(--md-sys-color-on-surface-variant, #c4c7c5); font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); }
     .oe-acct-chip button {
       background: none; border: 1px solid var(--md-sys-color-outline, #43474e); color: var(--md-sys-color-on-surface-variant, #c4c7c5);
       border-radius: 100px; padding: 6px 14px; font-size: 12px; cursor: pointer; font-family: inherit;
@@ -355,7 +355,7 @@ function injectStyles() {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -48%); width: min(420px, 92vw);
       background-color: var(--md-sys-color-surface, #1a1c22); border-radius: 28px; padding: 28px; z-index: 201;
       opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
-      font-family: 'Google Sans', 'Product Sans', sans-serif; color: var(--md-sys-color-on-surface, #e2e2e6);
+      font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); color: var(--md-sys-color-on-surface, #e2e2e6);
     }
     .oe-acct-modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
     .oe-acct-modal h3 { font-size: 20px; font-weight: 400; margin-bottom: 20px; }
@@ -391,7 +391,7 @@ function injectStyles() {
 
     .oe-acct-toast {
       position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: #303034;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4); border-radius: 16px; padding: 14px 24px; font-family: 'Google Sans', 'Product Sans', sans-serif;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4); border-radius: 16px; padding: 14px 24px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
       font-size: 14px; color: #e3e2e6; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 210; white-space: nowrap;
     }
     .oe-acct-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }

@@ -500,9 +500,9 @@ import {
   auth, db, SERVER_ENDPOINT, MAX_IMAGE_BYTES, isOwnerEmail, officialBadgeHtml,
   getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded, handleOf,
   uploadFile, sendNotification,
-} from './shared/account.js?v=13';
-import { mountTopNav } from './shared/topnav.js?v=9';
-import { mountFooter } from './shared/footer.js?v=3';
+} from './shared/account.js?v=14';
+import { mountTopNav } from './shared/topnav.js?v=10';
+import { mountFooter } from './shared/footer.js?v=4';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
   query, orderBy, serverTimestamp, arrayUnion, arrayRemove, increment, Timestamp
@@ -741,14 +741,14 @@ function initStories() {
   const fileInput = document.getElementById('storyFileInput');
   let allStories = [];
 
-  onSnapshot(collection(db, 'stories'), async snap => {
+  onSnapshot(collection(db, 'stories'), snap => {
     const now = Date.now();
     allStories = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(s => s.expiresAt && s.expiresAt.toMillis && s.expiresAt.toMillis() > now)
       .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
-    await Promise.all([...new Set(allStories.map(s => s.authorEmail))].map(ensureProfileLoaded));
     renderStoriesBar();
+    Promise.all([...new Set(allStories.map(s => s.authorEmail))].map(ensureProfileLoaded)).then(renderStoriesBar);
   }, () => { bar.innerHTML = ''; });
 
   function seenIds() {
@@ -1289,16 +1289,23 @@ function runForum() {
 
   // ── Live posts feed ──────────────────────────────────────────
   let firstSnapshot = true;
-  onSnapshot(query(collection(db, 'posts'), orderBy('createdAt', 'desc')), async snap => {
+  onSnapshot(query(collection(db, 'posts'), orderBy('createdAt', 'desc')), snap => {
     posts = snap.docs.map(d => {
       const data = d.data();
       const date = data.createdAt ? data.createdAt.toDate() : new Date();
       return { id: d.id, ...data, _date: date, _ts: date.getTime() };
     });
-    await Promise.all(posts.map(p => ensureProfileLoaded(p.authorEmail)));
+    // Render right away with cached/fallback profile data rather than
+    // blocking the whole feed behind a profile fetch per author — then
+    // patch names/photos in once ensureProfileLoaded resolves.
     refreshTagPills();
     renderList();
     if (openPostId) refreshOpenThreadChrome();
+    Promise.all(posts.map(p => ensureProfileLoaded(p.authorEmail))).then(() => {
+      refreshTagPills();
+      renderList();
+      if (openPostId) refreshOpenThreadChrome();
+    });
     if (firstSnapshot) {
       firstSnapshot = false;
       const params = new URLSearchParams(window.location.search);
@@ -1507,15 +1514,17 @@ function runForum() {
     if (unsubComments.current) unsubComments.current();
     unsubComments.current = onSnapshot(
       query(collection(db, 'posts', postId, 'comments'), orderBy('createdAt', 'asc')),
-      async snap => {
+      snap => {
         latestComments = snap.docs.map(d => {
           const data = d.data();
           const date = data.createdAt ? data.createdAt.toDate() : new Date();
           return { id: d.id, ...data, _date: date };
         });
-        await Promise.all(latestComments.map(c => ensureProfileLoaded(c.authorEmail)));
         renderComments(latestComments, postId, opts.highlightComment);
         opts.highlightComment = null;
+        Promise.all(latestComments.map(c => ensureProfileLoaded(c.authorEmail))).then(() => {
+          renderComments(latestComments, postId, null);
+        });
       }
     );
   }

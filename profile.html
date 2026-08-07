@@ -175,12 +175,12 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=9';
+import { mountTopNav } from './shared/topnav.js?v=10';
 import {
   getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
   openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setUserBadge, sendNotification,
-} from './shared/account.js?v=13';
-import { mountFooter } from './shared/footer.js?v=3';
+} from './shared/account.js?v=14';
+import { mountFooter } from './shared/footer.js?v=4';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, deleteDoc, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -323,47 +323,19 @@ async function init() {
     return;
   }
 
-  const profileDoc = await ensureProfileLoaded(viewedEmail);
-  const profile = getProfile(viewedEmail, null, null);
-  const joinDate = profileDoc && profileDoc.createdAt && profileDoc.createdAt.toDate ? profileDoc.createdAt.toDate() : null;
-  const bio = (profileDoc && profileDoc.bio) || '';
-
+  // Everything below used to be a chain of sequential awaits (handle resolve
+  // -> profile -> posts -> comment karma -> follow counts -> follow state)
+  // with content.innerHTML never touched until all six round-trips finished
+  // — the same render-blocking bug fixed earlier in messages.html. Now:
+  // paint the shell immediately with cached/fallback data, then patch each
+  // piece in as its own fetch resolves, running them in parallel.
+  let profile = getProfile(viewedEmail, null, null);
+  let joinDate = null;
+  let bio = '';
   let posts = [];
-  try {
-    const snap = await getDocs(query(collection(db, 'posts'), where('authorEmail', '==', viewedEmail)));
-    posts = snap.docs.map(d => {
-      const data = d.data();
-      return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
-    }).sort((a, b) => b._date - a._date);
-  } catch (err) {
-    console.warn('Could not load posts for profile:', err.message);
-  }
-
   let commentKarma = 0;
-  try {
-    const snap = await getDocs(query(collectionGroup(db, 'comments'), where('authorEmail', '==', viewedEmail)));
-    snap.docs.forEach(d => {
-      const c = d.data();
-      commentKarma += (c.upvoters || []).length - (c.downvoters || []).length;
-    });
-  } catch (err) {
-    console.warn('Comment stats unavailable (Firestore may need a collection-group index for this query — check the error above for a direct link to create it):', err.message);
-  }
-
-  const postKarma = posts.reduce((sum, p) => sum + (p.upvoters || []).length - (p.downvoters || []).length, 0);
-  const karma = postKarma + commentKarma;
-
   let followerCount = 0, followingCount = 0;
-  try {
-    const [followersSnap, followingSnap] = await Promise.all([
-      getCountFromServer(query(collection(db, 'follows'), where('followeeEmail', '==', viewedEmail))),
-      getCountFromServer(query(collection(db, 'follows'), where('followerEmail', '==', viewedEmail))),
-    ]);
-    followerCount = followersSnap.data().count;
-    followingCount = followingSnap.data().count;
-  } catch (err) {
-    console.warn('Could not load follow counts:', err.message);
-  }
+  let followState = { following: false, followedBy: false };
 
   async function loadFollowState(user) {
     if (!user || user.email === viewedEmail) return { following: false, followedBy: false };
@@ -391,17 +363,19 @@ async function init() {
         followerCount++;
         sendNotification({ recipientEmail: viewedEmail, type: 'follow' });
       }
+      followState = await loadFollowState(user);
       render();
     } catch (err) {
       alert('Could not update follow: ' + err.message);
     }
   }
 
-  async function render() {
+  function render() {
     const user = getCurrentUser();
     const isOwn = user && user.email === viewedEmail;
-    const { following, followedBy } = await loadFollowState(user);
+    const { following, followedBy } = followState;
     const areFriends = following && followedBy;
+    const karma = posts.reduce((sum, p) => sum + (p.upvoters || []).length - (p.downvoters || []).length, 0) + commentKarma;
 
     content.innerHTML = `
       <div class="profile-card">
@@ -528,8 +502,41 @@ async function init() {
     }
   }
 
-  render();
-  onAccountChange(render);
+  async function refreshFollowState() {
+    followState = await loadFollowState(getCurrentUser());
+    render();
+  }
+
+  render(); // paint the shell immediately with cached/fallback data
+  refreshFollowState();
+  onAccountChange(refreshFollowState);
+
+  Promise.all([
+    ensureProfileLoaded(viewedEmail).then(profileDoc => {
+      profile = getProfile(viewedEmail, null, null);
+      joinDate = profileDoc && profileDoc.createdAt && profileDoc.createdAt.toDate ? profileDoc.createdAt.toDate() : null;
+      bio = (profileDoc && profileDoc.bio) || '';
+    }).catch(() => {}),
+    getDocs(query(collection(db, 'posts'), where('authorEmail', '==', viewedEmail))).then(snap => {
+      posts = snap.docs.map(d => {
+        const data = d.data();
+        return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+      }).sort((a, b) => b._date - a._date);
+    }).catch(err => console.warn('Could not load posts for profile:', err.message)),
+    getDocs(query(collectionGroup(db, 'comments'), where('authorEmail', '==', viewedEmail))).then(snap => {
+      snap.docs.forEach(d => {
+        const c = d.data();
+        commentKarma += (c.upvoters || []).length - (c.downvoters || []).length;
+      });
+    }).catch(err => console.warn('Comment stats unavailable (Firestore may need a collection-group index for this query — check the error above for a direct link to create it):', err.message)),
+    Promise.all([
+      getCountFromServer(query(collection(db, 'follows'), where('followeeEmail', '==', viewedEmail))),
+      getCountFromServer(query(collection(db, 'follows'), where('followerEmail', '==', viewedEmail))),
+    ]).then(([followersSnap, followingSnap]) => {
+      followerCount = followersSnap.data().count;
+      followingCount = followingSnap.data().count;
+    }).catch(err => console.warn('Could not load follow counts:', err.message)),
+  ]).then(render);
 }
 </script>
 </body>

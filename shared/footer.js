@@ -44,7 +44,7 @@ function injectStyles() {
     .oe-footer-links { display: flex; flex-wrap: wrap; gap: 20px 28px; justify-content: center; margin-bottom: 20px; }
     .oe-footer-link, .oe-footer-link-static {
       display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
-      color: var(--md-sys-color-on-surface-variant); font-family: 'Google Sans', 'Product Sans', sans-serif;
+      color: var(--md-sys-color-on-surface-variant); font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
       font-size: 14px; font-weight: 500; transition: color 0.2s;
     }
     .oe-footer-link:hover, .oe-footer-link:visited:hover { color: var(--md-sys-color-primary); }

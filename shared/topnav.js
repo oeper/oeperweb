@@ -8,7 +8,7 @@
 // behavior change needs its `?v=N` bumped on every `from './shared/topnav.js?v=N'`
 // import across the site (grep for it) — otherwise visitors can sit on a
 // stale cached copy for hours after a deploy.
-import { mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange } from './account.js?v=13';
+import { mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange } from './account.js?v=14';
 import {
   collection, query, orderBy, limit, getDocs, onSnapshot, where, doc, updateDoc, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -57,7 +57,7 @@ function injectStyles() {
     .oe-nav-logo {
       display: flex; align-items: center; gap: 10px; flex-shrink: 0;
       color: var(--md-sys-color-on-surface); text-decoration: none;
-      font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 22px;
+      font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 22px;
       -webkit-tap-highlight-color: transparent;
     }
     .oe-nav-logo:visited { color: var(--md-sys-color-on-surface); }
@@ -72,7 +72,7 @@ function injectStyles() {
     .oe-nav-search-input {
       width: 100%; background-color: var(--md-sys-color-surface-variant); border: 1px solid transparent;
       border-radius: 20px; padding: 9px 14px 9px 40px; color: var(--md-sys-color-on-surface);
-      font-family: 'Google Sans', 'Roboto Flex', sans-serif; font-size: 14px; outline: none;
+      font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif); font-size: 14px; outline: none;
       transition: border-color 0.2s, background-color 0.2s;
     }
     .oe-nav-search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
@@ -190,7 +190,7 @@ function injectStyles() {
     .oe-nav-item {
       position: relative; display: flex; align-items: center; gap: 6px;
       padding: 10px 18px; text-decoration: none; color: var(--md-sys-color-on-surface-variant);
-      font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 15px; font-weight: 500;
+      font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 15px; font-weight: 500;
       border-radius: 20px; transition: color 400ms cubic-bezier(0.2, 0, 0, 1);
       -webkit-tap-highlight-color: transparent;
     }
