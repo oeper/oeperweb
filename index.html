@@ -655,7 +655,7 @@
       const aud = !img && !vid ? firstAudioUrl(p) : null;
       const score = (p.upvoters || []).length - (p.downvoters || []).length;
       return `
-        <div class="ig-card" data-href="https://oeper.dev/forum?post=${p.id}">
+        <div class="ig-card" data-kind="post" data-id="${p.id}" data-href="https://oeper.dev/forum?post=${p.id}">
           ${cardHeaderHtml(p.authorEmail, profile, tag ? escHtml(TAG_LABELS[tag] || tag) : 'oeper.dev')}
           ${img ? `<div class="ig-media"><img src="${img}" alt="" loading="lazy"></div>` : ''}
           ${vid ? `<div class="ig-media"><video src="${vid}" muted preload="metadata"></video></div>` : ''}
@@ -681,7 +681,7 @@
       const profile = getProfile(v.authorEmail, v.authorName, v.authorPhoto);
       const score = (v.upvoters || []).length - (v.downvoters || []).length;
       return `
-        <div class="ig-card" data-href="https://oeper.dev/videos?video=${v.id}">
+        <div class="ig-card" data-kind="video" data-id="${v.id}" data-href="https://oeper.dev/videos?video=${v.id}">
           ${cardHeaderHtml(v.authorEmail, profile, 'Video')}
           <div class="ig-media" data-video-media>
             <video src="${v.url}" muted preload="metadata"></video>
@@ -850,7 +850,11 @@
         return;
       }
       const card = e.target.closest('.ig-card');
-      if (card && card.dataset.href) window.location.href = card.dataset.href;
+      if (!card) return;
+      // Posts stay on the home feed and open inline (the comment modal doubles
+      // as the post-detail view); videos still go to /videos for the real player.
+      if (card.dataset.kind === 'post') { openComments('post', card.dataset.id); return; }
+      if (card.dataset.href) window.location.href = card.dataset.href;
     });
 
     let unsubFeedPosts = null;

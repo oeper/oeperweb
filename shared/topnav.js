@@ -240,7 +240,7 @@ function injectStyles() {
       .oe-nav-backdrop.open { opacity: 1; pointer-events: all; }
 
       .oe-nav-links {
-        display: flex; position: fixed; top: 72px; left: 0; right: 0; z-index: 150;
+        display: flex; position: fixed; top: 72px; left: 0; right: 0; z-index: 150; height: auto;
         flex-direction: column; align-items: stretch; gap: 2px;
         background-color: var(--md-sys-color-surface); border-bottom: 1px solid var(--md-sys-color-outline-variant);
         padding: 0 8px; overflow: hidden; max-height: 0; opacity: 0; visibility: hidden;
@@ -248,16 +248,16 @@ function injectStyles() {
         transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 220ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1), visibility 0s linear 340ms;
       }
       .oe-nav-links.mobile-open {
-        max-height: calc(100vh - 72px); opacity: 1; visibility: visible; padding: 8px; overflow-y: auto;
+        max-height: min(70vh, calc(100vh - 72px)); opacity: 1; visibility: visible; padding: 8px;
+        overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
         transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 260ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1);
       }
       .oe-nav-item {
         width: auto; height: auto; border-radius: 14px; justify-content: flex-start; padding: 14px 16px; gap: 14px;
-        opacity: 0; transform: translateY(-6px);
-        transition: color 400ms cubic-bezier(0.2, 0, 0, 1), opacity 260ms ease, transform 260ms cubic-bezier(0.2, 0, 0, 1);
+        opacity: 0; transition: color 400ms cubic-bezier(0.2, 0, 0, 1), opacity 260ms ease;
       }
       .oe-nav-item::before { border-radius: 14px; }
-      .oe-nav-links.mobile-open .oe-nav-item { opacity: 1; transform: translateY(0); }
+      .oe-nav-links.mobile-open .oe-nav-item { opacity: 1; }
       .oe-nav-links.mobile-open .oe-nav-item-label { display: inline; font-size: 15px; }
       #oeNavAccountBar { flex-shrink: 0; }
     }
