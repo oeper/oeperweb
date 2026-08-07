@@ -504,8 +504,8 @@
 
 <script type="module">
   import { db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser } from './shared/account.js?v=10';
-  import { mountTopNav } from './shared/topnav.js';
-  import { mountFooter } from './shared/footer.js';
+  import { mountTopNav } from './shared/topnav.js?v=2';
+  import { mountFooter } from './shared/footer.js?v=2';
   import {
     collection, query, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp,
   } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';

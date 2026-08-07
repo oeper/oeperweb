@@ -3,6 +3,11 @@
 // any page can just import mountTopNav() and call it once with no markup
 // changes needed beyond an empty container to mount into (or none — it
 // inserts itself at the top of <body> if no container is given).
+//
+// This file is served with a long browser cache lifetime, so any content or
+// behavior change needs its `?v=N` bumped on every `from './shared/topnav.js?v=N'`
+// import across the site (grep for it) — otherwise visitors can sit on a
+// stale cached copy for hours after a deploy.
 import { mountAccountBar, db, getCurrentUser, getProfile, handleOf } from './account.js?v=10';
 import {
   collection, query, orderBy, limit, getDocs,

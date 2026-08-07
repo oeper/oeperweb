@@ -171,11 +171,11 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js';
+import { mountTopNav } from './shared/topnav.js?v=2';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile,
 } from './shared/account.js?v=10';
-import { mountFooter } from './shared/footer.js';
+import { mountFooter } from './shared/footer.js?v=2';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';

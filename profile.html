@@ -166,12 +166,12 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js';
+import { mountTopNav } from './shared/topnav.js?v=2';
 import {
   getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
   openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setUserBadge,
 } from './shared/account.js?v=10';
-import { mountFooter } from './shared/footer.js';
+import { mountFooter } from './shared/footer.js?v=2';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, deleteDoc, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
