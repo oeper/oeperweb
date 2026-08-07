@@ -11,7 +11,7 @@
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js"></script>
+<script src="./shared/theme-boot.js?v=2"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
@@ -70,7 +70,7 @@
     color: var(--md-sys-color-on-surface-variant); cursor: pointer; transition: all 0.2s ease; white-space: nowrap;
   }
   .pill .material-symbols-rounded { font-size: 18px; }
-  .pill:hover { background-color: rgba(255,255,255,0.04); color: var(--md-sys-color-on-surface); }
+  .pill:hover { background-color: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
   .pill.active { background-color: var(--md-sys-color-secondary-container); border-color: transparent; color: var(--md-sys-color-on-secondary-container); }
 
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
@@ -91,7 +91,7 @@
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .field .hint { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 4px; }
 
-  .customize-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .customize-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--md-sys-state-hover); }
   .color-field { display: flex; align-items: center; gap: 10px; }
   .color-field input[type="color"] { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--md-sys-color-outline); background: none; cursor: pointer; padding: 2px; }
 
@@ -100,7 +100,7 @@
     border-radius: 100px; border: 1px solid var(--md-sys-color-outline); background: transparent;
     color: var(--md-sys-color-on-surface); cursor: pointer; font-family: inherit; width: 100%;
   }
-  .btn:hover { background-color: rgba(255,255,255,0.06); }
+  .btn:hover { background-color: var(--md-sys-state-hover); }
   .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
   .btn.primary:hover { opacity: 0.9; }
 
@@ -229,7 +229,7 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=5';
+import { mountTopNav } from './shared/topnav.js?v=6';
 mountTopNav();
 </script>
 <script>

@@ -1,6 +1,12 @@
 // Renders theme swatches into `container` and wires them to change the
 // site's saved theme (see theme-boot.js, which must be loaded first as a
 // classic <script> in <head> for window.OE_THEMES / applyOeTheme to exist).
+//
+// This file is served with a long browser cache lifetime, so any content or
+// behavior change needs its `?v=N` bumped on every
+// `from './shared/theme-picker.js?v=N'` import across the site (grep for
+// it) — otherwise visitors can sit on a stale cached copy for hours after a
+// deploy.
 let stylesInjected = false;
 function injectStyles() {
   if (stylesInjected) return;
@@ -14,7 +20,7 @@ function injectStyles() {
       font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500;
       color: var(--md-sys-color-on-surface); transition: border-color 0.2s, background-color 0.2s;
     }
-    .oe-theme-swatch-btn:hover { background: rgba(255,255,255,0.06); }
+    .oe-theme-swatch-btn:hover { background: var(--md-sys-state-hover); }
     .oe-theme-swatch-btn.active { border-color: var(--md-sys-color-primary); }
     .oe-theme-swatch-dot { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; }
   `;

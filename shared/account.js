@@ -383,7 +383,7 @@ function injectStyles() {
       border-radius: 100px; border: 1px solid var(--md-sys-color-outline, #43474e); background: transparent;
       color: var(--md-sys-color-on-surface, #e2e2e6); cursor: pointer; font-family: inherit;
     }
-    .oe-acct-btn:hover { background-color: rgba(255,255,255,0.06); }
+    .oe-acct-btn:hover { background-color: var(--md-sys-state-hover); }
     .oe-acct-btn.primary { background-color: var(--md-sys-color-primary, #a8c7fa); color: var(--md-sys-color-on-primary, #062e6f); border-color: transparent; }
     .oe-acct-btn.primary:hover { opacity: 0.9; }
     .oe-acct-btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }

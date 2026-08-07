@@ -11,7 +11,7 @@
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js"></script>
+<script src="./shared/theme-boot.js?v=2"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
@@ -78,7 +78,7 @@
     transition: border-color 0.2s, background-color 0.2s;
   }
   .search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
-  .search-input:focus { border-color: var(--md-sys-color-primary); background-color: #1f2329; }
+  .search-input:focus { border-color: var(--md-sys-color-primary); background-color: var(--md-sys-color-hover-surface); }
 
   .controls-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .pill-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex: 1; }
@@ -88,7 +88,7 @@
     color: var(--md-sys-color-on-surface-variant); cursor: pointer; transition: all 0.2s ease; white-space: nowrap;
   }
   .pill .material-symbols-rounded { font-size: 18px; }
-  .pill:hover { background-color: rgba(255,255,255,0.04); color: var(--md-sys-color-on-surface); }
+  .pill:hover { background-color: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
   .pill.active { background-color: var(--md-sys-color-secondary-container); border-color: transparent; color: var(--md-sys-color-on-secondary-container); }
 
   .upload-btn {
@@ -107,7 +107,7 @@
     display: flex; align-items: center; gap: 16px; background-color: var(--md-sys-color-surface);
     border: 1px solid transparent; border-radius: 20px; padding: 14px 18px; transition: background-color 0.2s, border-color 0.2s;
   }
-  .file-card:hover { background-color: #21242c; border-color: var(--md-sys-color-outline-variant); }
+  .file-card:hover { background-color: var(--md-sys-color-hover-surface); border-color: var(--md-sys-color-outline-variant); }
 
   .file-thumb {
     width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0; object-fit: cover;
@@ -126,7 +126,7 @@
     width: 40px; height: 40px; border-radius: 50%; border: none; background: transparent;
     color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none;
   }
-  .icon-btn:hover { background-color: rgba(255,255,255,0.08); color: var(--md-sys-color-on-surface); }
+  .icon-btn:hover { background-color: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
   .icon-btn.danger:hover { color: var(--md-sys-color-error); }
   .icon-btn .material-symbols-rounded { font-size: 20px; }
 
@@ -207,10 +207,10 @@
 <div class="toast" id="toast"></div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=5';
+import { mountTopNav } from './shared/topnav.js?v=6';
 import {
   SERVER_ENDPOINT, MAX_IMAGE_BYTES, getCurrentUser, onAccountChange, isOwnerEmail, uploadFile,
-} from './shared/account.js?v=12';
+} from './shared/account.js?v=13';
 import { mountFooter } from './shared/footer.js?v=3';
 
 mountTopNav();

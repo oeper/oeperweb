@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js"></script>
+<script src="./shared/theme-boot.js?v=2"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
@@ -65,7 +65,7 @@
     border-radius: 18px; padding: 14px 16px; cursor: pointer; border: none; text-align: left; width: 100%;
     font-family: inherit; color: inherit; transition: background-color 0.2s;
   }
-  .convo-row:hover { background-color: #21242c; }
+  .convo-row:hover { background-color: var(--md-sys-color-hover-surface); }
   .convo-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
   .convo-main { flex: 1; min-width: 0; }
   .convo-name { font-size: 15px; font-weight: 500; }
@@ -174,10 +174,10 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=5';
+import { mountTopNav } from './shared/topnav.js?v=6';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
-} from './shared/account.js?v=12';
+} from './shared/account.js?v=13';
 import { mountFooter } from './shared/footer.js?v=3';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,

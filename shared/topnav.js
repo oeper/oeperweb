@@ -8,7 +8,7 @@
 // behavior change needs its `?v=N` bumped on every `from './shared/topnav.js?v=N'`
 // import across the site (grep for it) — otherwise visitors can sit on a
 // stale cached copy for hours after a deploy.
-import { mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange } from './account.js?v=12';
+import { mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange } from './account.js?v=13';
 import {
   collection, query, orderBy, limit, getDocs, onSnapshot, where, doc, updateDoc, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -48,9 +48,9 @@ function injectStyles() {
   style.textContent = `
     .oe-navbar {
       position: sticky; top: 0; z-index: 100;
-      background-color: rgba(17, 19, 24, 0.8);
+      background-color: rgba(var(--md-sys-color-background-rgb, 17, 19, 24), 0.8);
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(67, 71, 78, 0.4);
+      border-bottom: 1px solid rgba(var(--md-sys-color-outline-rgb, 67, 71, 78), 0.4);
       padding: 0 24px; height: 72px;
       display: flex; align-items: center; gap: 12px;
     }
@@ -93,7 +93,7 @@ function injectStyles() {
       cursor: pointer; text-decoration: none; color: inherit;
     }
     .oe-nsd-row:visited { color: inherit; }
-    .oe-nsd-row:hover { background: rgba(255,255,255,0.06); }
+    .oe-nsd-row:hover { background: var(--md-sys-state-hover); }
     .oe-nsd-icon {
       width: 34px; height: 34px; border-radius: 50%; background: var(--md-sys-color-surface-variant);
       display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;
@@ -151,7 +151,7 @@ function injectStyles() {
       display: flex; align-items: flex-start; gap: 10px; padding: 10px 16px; text-decoration: none; color: inherit;
       transition: background-color 0.15s;
     }
-    .oe-notif-row:hover { background: rgba(255,255,255,0.05); }
+    .oe-notif-row:hover { background: var(--md-sys-state-hover); }
     .oe-notif-row.unread { background: rgba(168,199,250,0.08); }
     .oe-notif-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
     .oe-notif-icon {
@@ -179,7 +179,7 @@ function injectStyles() {
       cursor: pointer; -webkit-tap-highlight-color: transparent; flex-shrink: 0;
       transition: background-color 0.2s;
     }
-    .oe-nav-hamburger:hover { background-color: rgba(255,255,255,0.06); }
+    .oe-nav-hamburger:hover { background-color: var(--md-sys-state-hover); }
     .oe-nav-hamburger .material-symbols-rounded {
       font-size: 24px; display: inline-block; transition: transform 320ms cubic-bezier(0.2, 0, 0, 1);
     }

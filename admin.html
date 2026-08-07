@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js"></script>
+<script src="./shared/theme-boot.js?v=2"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
@@ -104,7 +104,7 @@
     transition: background-color 0.15s;
   }
   .btn .material-symbols-rounded { font-size: 18px; }
-  .btn:hover { background-color: rgba(255,255,255,0.06); }
+  .btn:hover { background-color: var(--md-sys-state-hover); }
   .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
   .btn.primary:hover { opacity: 0.9; }
   .btn.primary:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -134,7 +134,7 @@
     width: 36px; height: 36px; border-radius: 50%; border: none; background: transparent;
     color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
-  .icon-btn:hover { background-color: rgba(255,255,255,0.08); color: var(--md-sys-color-on-surface); }
+  .icon-btn:hover { background-color: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
   .icon-btn.danger:hover { color: var(--md-sys-color-error); }
   .icon-btn .material-symbols-rounded { font-size: 20px; }
 
@@ -308,8 +308,8 @@
 <script type="module">
 import {
   isOwnerEmail, onAccountChange, mountAccountBar, getCurrentUser, db,
-} from './shared/account.js?v=12';
-import { mountTopNav } from './shared/topnav.js?v=5';
+} from './shared/account.js?v=13';
+import { mountTopNav } from './shared/topnav.js?v=6';
 import { mountFooter } from './shared/footer.js?v=3';
 import {
   collection, addDoc, serverTimestamp, Timestamp,
