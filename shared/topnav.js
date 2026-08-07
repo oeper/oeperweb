@@ -234,7 +234,13 @@ function injectStyles() {
       }
 
       .oe-nav-backdrop {
-        position: fixed; inset: 0; top: 72px; z-index: 140; background: rgba(0,0,0,0.4);
+        /* z-index must stay below .oe-navbar's own (100): .oe-navbar creates
+           its own stacking context (position: sticky + z-index), so its
+           children's z-index (e.g. #oeNavLinks at 150) only ranks against
+           siblings inside that context — a backdrop with a higher root-level
+           z-index than the navbar would render on top of the whole navbar,
+           including the dropdown, and silently swallow every tap on it. */
+        position: fixed; inset: 0; top: 72px; z-index: 90; background: rgba(0,0,0,0.4);
         opacity: 0; pointer-events: none; transition: opacity 280ms ease;
       }
       .oe-nav-backdrop.open { opacity: 1; pointer-events: all; }
