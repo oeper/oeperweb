@@ -148,10 +148,12 @@
 
   .post-list { display: flex; flex-direction: column; gap: 10px; }
   .post-row {
-    display: block; background: var(--md-sys-color-surface); border-radius: 18px; padding: 16px 20px;
+    display: flex; align-items: flex-start; gap: 14px; background: var(--md-sys-color-surface); border-radius: 18px; padding: 16px 20px;
     text-decoration: none; color: inherit; transition: background-color 0.2s;
   }
   .post-row:hover { background-color: var(--md-sys-color-hover-surface); }
+  .post-row-thumb { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; flex-shrink: 0; background: var(--md-sys-color-surface-variant); }
+  .post-row-main { flex: 1; min-width: 0; }
   .post-row-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
   .post-row-excerpt {
     font-size: 13px; color: var(--md-sys-color-on-surface-variant); line-height: 1.4; margin-bottom: 8px;
@@ -187,7 +189,7 @@ import { mountTopNav } from './shared/topnav.js?v=10';
 import {
   getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
   openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setUserBadge, sendNotification,
-} from './shared/account.js?v=14';
+} from './shared/account.js?v=15';
 import { mountFooter } from './shared/footer.js?v=4';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, deleteDoc, serverTimestamp,
@@ -230,6 +232,15 @@ function stripMarkdown(text, maxLen) {
     .trim();
   if (maxLen && s.length > maxLen) s = s.slice(0, maxLen).replace(/\s+\S*$/, '') + '…';
   return s;
+}
+// Posts can carry a single legacy `imageUrl` or a newer `imageUrls: []` —
+// either way, grab the first one that's actually an image (not some other
+// attachment type) for the row thumbnail.
+const IMAGE_EXT_RE = /\.(jpe?g|png|gif|webp|bmp|svg|avif)$/i;
+function firstImageUrl(p) {
+  const urls = p.imageUrls && p.imageUrls.length ? p.imageUrls : (p.imageUrl ? [p.imageUrl] : []);
+  const url = urls[0];
+  return url && IMAGE_EXT_RE.test(url.split('?')[0]) ? url : null;
 }
 
 // Discord-style shorthand: :name: -> an emoji, [icon_name] -> an inline
@@ -455,13 +466,16 @@ async function init() {
       <div class="post-list">
         ${posts.length === 0 ? '<div class="empty-note">No posts yet.</div>' : posts.map(p => `
           <a class="post-row" href="/feed?post=${p.id}">
-            <div class="post-row-title">${escHtml(p.title)}</div>
-            ${p.body ? `<div class="post-row-excerpt">${escHtml(stripMarkdown(p.body, 160))}</div>` : ''}
-            <div class="post-row-meta">
-              <span><span class="material-symbols-rounded">arrow_upward</span>${(p.upvoters||[]).length - (p.downvoters||[]).length}</span>
-              <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount||0}</span>
-              <span><span class="material-symbols-rounded">visibility</span>${p.views||0}</span>
-              <span>${timeAgo(p._date)}</span>
+            ${firstImageUrl(p) ? `<img class="post-row-thumb" src="${firstImageUrl(p)}" alt="">` : ''}
+            <div class="post-row-main">
+              <div class="post-row-title">${escHtml(p.title)}</div>
+              ${p.body ? `<div class="post-row-excerpt">${escHtml(stripMarkdown(p.body, 160))}</div>` : ''}
+              <div class="post-row-meta">
+                <span><span class="material-symbols-rounded">favorite</span>${(p.upvoters||[]).length - (p.downvoters||[]).length}</span>
+                <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount||0}</span>
+                <span><span class="material-symbols-rounded">visibility</span>${p.views||0}</span>
+                <span>${timeAgo(p._date)}</span>
+              </div>
             </div>
           </a>
         `).join('')}
@@ -542,10 +556,9 @@ async function init() {
 
   async function editBadge() {
     const current = profile.badge || {};
-    const label = window.prompt('Badge label (e.g. Moderator, VIP, Beta Tester):', current.label || '');
+    const label = window.prompt('Badge label (e.g. Moderator, VIP, Beta Tester) — leave blank for an icon-only badge:', current.label || '');
     if (label === null) return; // cancelled
     const trimmed = label.trim();
-    if (!trimmed) { showToast('Badge label cannot be empty'); return; }
     const icon = window.prompt('Material Symbol icon name (e.g. verified, star, shield, bolt, diamond):', current.icon || 'verified');
     if (icon === null) return;
     await applyBadge({ label: trimmed.slice(0, 24), icon: (icon.trim() || 'verified').slice(0, 40) });

@@ -500,7 +500,7 @@ import {
   auth, db, SERVER_ENDPOINT, MAX_IMAGE_BYTES, isOwnerEmail, officialBadgeHtml,
   getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded, handleOf,
   uploadFile, sendNotification,
-} from './shared/account.js?v=14';
+} from './shared/account.js?v=15';
 import { mountTopNav } from './shared/topnav.js?v=10';
 import { mountFooter } from './shared/footer.js?v=4';
 import {
@@ -1239,7 +1239,7 @@ function runForum() {
     const down = u && (item.downvoters || []).includes(u.uid);
     return `
       <div class="vote-col">
-        <button class="vote-btn ${up ? 'upvoted' : ''}" data-${idPrefix}-up title="Like"><span class="material-symbols-rounded">arrow_upward</span></button>
+        <button class="vote-btn ${up ? 'upvoted' : ''}" data-${idPrefix}-up title="Like"><span class="material-symbols-rounded">${up ? 'favorite' : 'favorite_border'}</span></button>
         <span class="vote-count ${netScore > 0 ? 'positive' : netScore < 0 ? 'negative' : ''}">${netScore}</span>
         <button class="vote-btn ${down ? 'downvoted' : ''}" data-${idPrefix}-down title="Dislike"><span class="material-symbols-rounded">heart_broken</span></button>
       </div>

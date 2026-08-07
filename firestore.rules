@@ -89,7 +89,6 @@ service cloud.firestore {
       allow update: if isOwner() && onlyChanged(['badge', 'bioMarkdownAllowed'])
         && (!('badge' in request.resource.data) || (
           request.resource.data.badge.label is string
-          && request.resource.data.badge.label.size() > 0
           && request.resource.data.badge.label.size() <= 24
           && request.resource.data.badge.icon is string
           && request.resource.data.badge.icon.size() <= 40

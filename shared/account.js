@@ -58,6 +58,7 @@ function ensureBadgeStyles() {
       border-radius: 100px; vertical-align: middle; margin-left: 4px; letter-spacing: 0.2px;
     }
     .oe-badge-official .material-symbols-rounded { font-size: 11px; }
+    .oe-badge-official.icon-only { padding: 3px; gap: 0; }
   `;
   document.head.appendChild(style);
 }
@@ -67,10 +68,11 @@ export function officialBadgeHtml(email) {
     return `<span class="oe-badge-official" title="Official — site owner"><span class="material-symbols-rounded">verified</span>OFFICIAL</span>`;
   }
   const badge = email && profileCache[email] && profileCache[email].badge;
-  if (!badge || !badge.label) return '';
+  if (!badge) return '';
   ensureBadgeStyles();
   const icon = badge.icon || 'verified';
-  return `<span class="oe-badge-official" title="${escBadgeHtml(badge.label)}"><span class="material-symbols-rounded">${escBadgeHtml(icon)}</span>${escBadgeHtml(badge.label.toUpperCase())}</span>`;
+  const hasLabel = !!badge.label;
+  return `<span class="oe-badge-official${hasLabel ? '' : ' icon-only'}" title="${escBadgeHtml(badge.label || 'Badge')}"><span class="material-symbols-rounded">${escBadgeHtml(icon)}</span>${hasLabel ? escBadgeHtml(badge.label.toUpperCase()) : ''}</span>`;
 }
 
 const app = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
