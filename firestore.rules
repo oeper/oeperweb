@@ -144,8 +144,18 @@ service cloud.firestore {
             (request.resource.data.audioUrl is string
               && request.resource.data.audioUrl.size() > 0
               && request.resource.data.audioDuration is number)
+            ||
+            (request.resource.data.imageUrl is string
+              && request.resource.data.imageUrl.size() > 0)
           );
-        allow update, delete: if false; // messages are immutable once sent
+        // Only the sender can edit (text messages only — voice/image
+        // attachments stay immutable) or delete their own message.
+        allow update: if isSignedIn() && request.auth.token.email == resource.data.senderEmail
+          && onlyChanged(['text', 'edited', 'editedAt'])
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000;
+        allow delete: if isSignedIn() && request.auth.token.email == resource.data.senderEmail;
       }
     }
 

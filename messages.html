@@ -18,6 +18,11 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
+  /* The literal word behind each Material Symbols glyph (e.g. "flag") is
+     real DOM text — without this, selecting/copying a message or note that
+     sits next to one of these icon buttons copies that word along with it. */
+  .material-symbols-rounded { -webkit-user-select: none; user-select: none; }
+
   :focus { outline: none; }
   :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
 
@@ -94,6 +99,35 @@
   .msg-report-btn .material-symbols-rounded { font-size: 16px; }
   .msg-bubble { max-width: 75%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; background: var(--md-sys-color-surface); }
   .msg.mine .msg-bubble { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .msg-bubble a { color: inherit; text-decoration: underline; }
+  .msg-bubble code { background: rgba(0,0,0,0.18); border-radius: 4px; padding: 1px 5px; font-size: 0.9em; }
+  .msg-col { display: flex; flex-direction: column; max-width: 75%; }
+  .msg.mine .msg-col { align-items: flex-end; }
+  .msg-col .msg-bubble { max-width: none; }
+  .msg-meta-row { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+  .msg-time { font-size: 10px; color: var(--md-sys-color-on-surface-variant); }
+  .msg-edited-tag { font-size: 10px; color: var(--md-sys-color-on-surface-variant); font-style: italic; }
+  .msg-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.15s; }
+  .msg:hover .msg-actions { opacity: 1; }
+  .msg-action-btn {
+    width: 22px; height: 22px; border-radius: 50%; border: none; background: none;
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .msg-action-btn:hover { background: var(--md-sys-color-hover-surface); color: var(--md-sys-color-on-surface); }
+  .msg-action-btn.danger:hover { color: var(--md-sys-color-error); }
+  .msg-action-btn .material-symbols-rounded { font-size: 15px; }
+  .msg-image { max-width: 240px; max-height: 320px; border-radius: 14px; display: block; cursor: zoom-in; }
+
+  .edit-indicator {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--md-sys-color-surface-variant); border-radius: 14px; padding: 8px 12px; margin-bottom: 8px; font-size: 12px;
+  }
+  .edit-indicator button { width: 24px; height: 24px; border-radius: 50%; border: none; background: none; color: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .edit-indicator button:hover { background: var(--md-sys-color-hover-surface); }
+  .attach-btn { width: 38px; height: 38px; border-radius: 50%; border: none; flex-shrink: 0; background: transparent; color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .attach-btn:hover { color: var(--md-sys-color-on-surface); }
+  .attach-btn input { display: none; }
 
   /* Voice message bubble */
   .msg-audio { display: flex; align-items: center; gap: 8px; min-width: 176px; }
@@ -127,7 +161,11 @@
   .rec-send-btn { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
 
   /* Notes */
-  .notes-bar { display: flex; gap: 16px; overflow-x: auto; padding: 4px 2px 20px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  /* overflow-x: auto without an explicit overflow-y forces the browser to
+     compute overflow-y as auto too (not visible) — which clips the
+     note-bubble tooltip that sits *above* the row via position:absolute,
+     since it counts as vertical overflow of this scroll container. */
+  .notes-bar { display: flex; gap: 16px; overflow-x: auto; overflow-y: visible; padding: 36px 2px 20px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .notes-bar::-webkit-scrollbar { display: none; }
   .note-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; width: 62px; cursor: pointer; }
   .note-avatar-wrap { position: relative; }
@@ -182,7 +220,7 @@ import {
 } from './shared/account.js?v=13';
 import { mountFooter } from './shared/footer.js?v=3';
 import {
-  collection, collectionGroup, doc, getDoc, setDoc, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
+  collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 mountTopNav();
@@ -200,6 +238,17 @@ function timeAgo(date) {
 }
 function conversationId(emailA, emailB) {
   return [emailA, emailB].sort().join('__');
+}
+// Lightweight markdown for chat bubbles — bold/italic/code/links only, no
+// block-level syntax (headings, tables, bullets) since a message is one
+// short line, not a document.
+function parseMsgMarkdown(text) {
+  return escHtml(text)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
 }
 
 async function reportItem(type, itemId, contentPreview, aboutHandleOrEmail) {
@@ -365,8 +414,11 @@ async function openByHandle(handle, user) {
 }
 
 function showInbox(user) {
-  document.getElementById('backLink').href = 'https://oeper.dev/feed';
+  const backLink = document.getElementById('backLink');
+  backLink.href = 'https://oeper.dev/feed';
+  backLink.onclick = null; // clear any handler left over from a previous openThread() — otherwise this link stops navigating
   document.getElementById('backLinkText').textContent = 'back to feed';
+  document.getElementById('notesBar').style.display = '';
   content.innerHTML = '<div class="empty-note">Loading…</div>';
 
   unsubConvos = onSnapshot(
@@ -419,6 +471,7 @@ async function openThread(otherEmail, user) {
   document.getElementById('backLink').href = '#';
   document.getElementById('backLinkText').textContent = 'back to chats';
   document.getElementById('backLink').onclick = e => { e.preventDefault(); showInbox(user); };
+  document.getElementById('notesBar').style.display = 'none'; // notes belong on the inbox screen, not inside a conversation
 
   const convoId = conversationId(user.email, otherEmail);
   const otherProfile = getProfile(otherEmail, null, null);
@@ -433,11 +486,16 @@ async function openThread(otherEmail, user) {
         <span class="name">${escHtml(otherProfile.name)}${officialBadgeHtml(otherEmail)}</span>
       </div>
       <div class="msg-list" id="msgList"></div>
+      <div class="edit-indicator" id="editIndicator" style="display:none;">
+        <span>Editing message</span>
+        <button type="button" id="cancelEditBtn" title="Cancel edit"><span class="material-symbols-rounded">close</span></button>
+      </div>
       <div class="thread-inputbar">
         <div class="input-normal" id="inputNormal">
+          <label class="attach-btn" title="Send an image"><span class="material-symbols-rounded">image</span><input type="file" id="imageInput" accept="image/*"></label>
           <textarea id="msgInput" placeholder="Message…" rows="1"></textarea>
           <button class="mic-btn" id="micBtn" title="Record voice message"><span class="material-symbols-rounded">mic</span></button>
-          <button class="send-btn" id="sendMsgBtn"><span class="material-symbols-rounded">arrow_upward</span></button>
+          <button class="send-btn" id="sendMsgBtn"><span class="material-symbols-rounded" id="sendMsgIcon">arrow_upward</span></button>
         </div>
         <div class="recording-bar" id="recordingBar" style="display:none;">
           <div class="recording-dot"></div>
@@ -464,30 +522,96 @@ async function openThread(otherEmail, user) {
   const msgList = document.getElementById('msgList');
   const msgInput = document.getElementById('msgInput');
   const sendBtn = document.getElementById('sendMsgBtn');
+  const sendMsgIcon = document.getElementById('sendMsgIcon');
   const inputNormal = document.getElementById('inputNormal');
   const micBtn = document.getElementById('micBtn');
+  const imageInput = document.getElementById('imageInput');
+  const editIndicator = document.getElementById('editIndicator');
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
   const recordingBar = document.getElementById('recordingBar');
   const recordingTime = document.getElementById('recordingTime');
   const recCancelBtn = document.getElementById('recCancelBtn');
   const recSendBtn = document.getElementById('recSendBtn');
   let activeAudio = null;
   let activeAudioBtn = null;
+  let editingMessageId = null;
+
+  function formatClockTime(date) {
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function bubbleInnerHtml(m) {
+    if (m.audioUrl) return audioBubbleHtml(m);
+    if (m.imageUrl) return `<img class="msg-image" src="${escHtml(m.imageUrl)}" alt="" onclick="window.open('${escHtml(m.imageUrl)}','_blank')">`;
+    return parseMsgMarkdown(m.text || '');
+  }
+
+  function startEdit(m) {
+    editingMessageId = m.id;
+    msgInput.value = m.text || '';
+    msgInput.focus();
+    editIndicator.style.display = 'flex';
+    sendMsgIcon.textContent = 'check';
+  }
+  function cancelEdit() {
+    editingMessageId = null;
+    msgInput.value = '';
+    editIndicator.style.display = 'none';
+    sendMsgIcon.textContent = 'arrow_upward';
+  }
+  cancelEditBtn.addEventListener('click', cancelEdit);
+
+  async function deleteMessage(m) {
+    if (!confirm('Delete this message?')) return;
+    try {
+      await deleteDoc(doc(db, 'conversations', convoId, 'messages', m.id));
+    } catch (err) {
+      alert('Could not delete message: ' + err.message);
+    }
+  }
 
   unsubMessages = onSnapshot(
     query(collection(db, 'conversations', convoId, 'messages'), orderBy('createdAt', 'asc')),
     snap => {
       const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       const mine = m => m.senderEmail === user.email;
-      msgList.innerHTML = msgs.map(m => `
+      msgList.innerHTML = msgs.map(m => {
+        const time = m.createdAt && m.createdAt.toDate ? formatClockTime(m.createdAt.toDate()) : '';
+        return `
         <div class="msg ${mine(m) ? 'mine' : ''}">
-          <div class="msg-bubble">${m.audioUrl ? audioBubbleHtml(m) : escHtml(m.text)}</div>
+          <div class="msg-col">
+            <div class="msg-bubble">${bubbleInnerHtml(m)}</div>
+            <div class="msg-meta-row">
+              ${mine(m) ? `
+                <div class="msg-actions">
+                  ${!m.audioUrl && !m.imageUrl ? `<button class="msg-action-btn" data-edit-id="${escHtml(m.id)}" title="Edit"><span class="material-symbols-rounded">edit</span></button>` : ''}
+                  <button class="msg-action-btn danger" data-delete-id="${escHtml(m.id)}" title="Delete"><span class="material-symbols-rounded">delete</span></button>
+                </div>
+              ` : ''}
+              <span class="msg-time">${time}</span>
+              ${m.edited ? '<span class="msg-edited-tag">edited</span>' : ''}
+            </div>
+          </div>
           ${!mine(m) ? `<button class="msg-report-btn" data-id="${escHtml(m.id)}" title="Report"><span class="material-symbols-rounded">flag</span></button>` : ''}
         </div>
-      `).join('');
+      `;
+      }).join('');
       msgList.querySelectorAll('.msg-report-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const m = msgs.find(x => x.id === btn.dataset.id);
           if (m) reportItem('message', m.id, m.audioUrl ? '🎤 Voice message' : m.text, otherEmail);
+        });
+      });
+      msgList.querySelectorAll('[data-edit-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const m = msgs.find(x => x.id === btn.dataset.editId);
+          if (m) startEdit(m);
+        });
+      });
+      msgList.querySelectorAll('[data-delete-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const m = msgs.find(x => x.id === btn.dataset.deleteId);
+          if (m) deleteMessage(m);
         });
       });
       msgList.querySelectorAll('.audio-play-btn').forEach(btn => {
@@ -572,15 +696,23 @@ async function openThread(otherEmail, user) {
   async function send() {
     const text = msgInput.value.trim();
     if (!text) return;
-    msgInput.value = '';
     sendBtn.disabled = true;
     try {
-      await touchConversation(text.slice(0, 200));
-      await addDoc(collection(db, 'conversations', convoId, 'messages'), {
-        senderEmail: user.email,
-        text,
-        createdAt: serverTimestamp(),
-      });
+      if (editingMessageId) {
+        const id = editingMessageId;
+        await updateDoc(doc(db, 'conversations', convoId, 'messages', id), {
+          text, edited: true, editedAt: serverTimestamp(),
+        });
+        cancelEdit();
+      } else {
+        msgInput.value = '';
+        await touchConversation(text.slice(0, 200));
+        await addDoc(collection(db, 'conversations', convoId, 'messages'), {
+          senderEmail: user.email,
+          text,
+          createdAt: serverTimestamp(),
+        });
+      }
     } catch (err) {
       alert('Could not send: ' + err.message);
     } finally {
@@ -591,6 +723,27 @@ async function openThread(otherEmail, user) {
   sendBtn.addEventListener('click', send);
   msgInput.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    if (e.key === 'Escape' && editingMessageId) cancelEdit();
+  });
+
+  imageInput.addEventListener('change', async () => {
+    const file = imageInput.files[0];
+    imageInput.value = '';
+    if (!file) return;
+    sendBtn.disabled = true;
+    try {
+      const imageUrl = await uploadFile(file, '/upload-message');
+      await touchConversation('📷 Photo');
+      await addDoc(collection(db, 'conversations', convoId, 'messages'), {
+        senderEmail: user.email,
+        imageUrl,
+        createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      alert('Could not send image: ' + err.message);
+    } finally {
+      sendBtn.disabled = false;
+    }
   });
 
   // ── Voice messages ──────────────────────────────────────────
