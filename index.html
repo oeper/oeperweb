@@ -385,6 +385,11 @@
   .ig-likes { padding: 4px 14px 0; font-size: 13px; font-weight: 600; }
   .ig-caption { padding: 6px 14px 0; font-size: 13px; line-height: 1.4; }
   .ig-caption strong { font-weight: 600; margin-right: 6px; }
+  .ig-description {
+    padding: 4px 14px 0; font-size: 13px; line-height: 1.4; color: var(--md-sys-color-on-surface-variant);
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .ig-description a { color: var(--md-sys-color-primary); }
   .ig-view-comments { padding: 6px 14px 0; font-size: 13px; color: var(--md-sys-color-on-surface-variant); background: none; border: none; cursor: pointer; display: block; text-align: left; font-family: inherit; }
   .ig-view-comments:hover { text-decoration: underline; }
   .ig-timestamp { padding: 6px 14px 14px; font-size: 11px; color: var(--md-sys-color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.3px; }
@@ -523,6 +528,36 @@
   function linkify(str) {
     return escHtml(str).replace(/(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
   }
+  // Plain-text excerpt for a markdown post/video body — strips formatting
+  // syntax (headings, bullets, tables, links, emphasis) rather than
+  // rendering it, since a card excerpt has no room for real markdown layout
+  // and raw ** / # / | syntax would just look like noise.
+  function stripMarkdown(text, maxLen) {
+    if (!text) return '';
+    let s = text
+      .replace(/\r\n/g, '\n')
+      .replace(/```[\s\S]*?```/g, ' ')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/^#{1,6}[ \t]+/gm, '')
+      .replace(/^>[ \t]?/gm, '')
+      .replace(/^[ \t]*\|.*\|[ \t]*$/gm, '')
+      .replace(/^[ \t]*(-{3,}|\*{3,}|_{3,})[ \t]*$/gm, '')
+      .replace(/^[ \t]*[-*+][ \t]+/gm, '• ')
+      .replace(/^[ \t]*\d+\.[ \t]+/gm, '')
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+      .replace(/\[\[([^\]]+)\]\]\([^)]+\)/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/__(.+?)__/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/(?<!\w)_([^_\s][^_]*)_(?!\w)/g, '$1')
+      .split('\n').map(l => l.trim()).filter(Boolean).join(' ')
+      .replace(/[ \t]{2,}/g, ' ')
+      .trim();
+    if (maxLen && s.length > maxLen) s = s.slice(0, maxLen).replace(/\s+\S*$/, '') + '…';
+    return s;
+  }
   function timeAgo(date) {
     const s = Math.floor((Date.now() - date.getTime()) / 1000);
     if (s < 60) return 'just now';
@@ -632,6 +667,7 @@
           </div>
           <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
           <div class="ig-caption"><strong>${authorNameHtml(p.authorEmail, profile)}</strong>${linkify(p.title)}</div>
+          ${p.body ? `<div class="ig-description">${linkify(stripMarkdown(p.body, 220))}</div>` : ''}
           <button type="button" class="ig-view-comments" data-open-comments data-kind="post" data-id="${p.id}">${p.commentCount ? `View all ${p.commentCount} comments` : 'Add a comment…'}</button>
           <div class="ig-timestamp">${timeAgo(p._date)}</div>
         </div>
@@ -658,6 +694,7 @@
           </div>
           <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
           <div class="ig-caption"><strong>${authorNameHtml(v.authorEmail, profile)}</strong>${linkify(v.title)}</div>
+          ${v.description ? `<div class="ig-description">${linkify(stripMarkdown(v.description, 220))}</div>` : ''}
           <button type="button" class="ig-view-comments" data-open-comments data-kind="video" data-id="${v.id}">${v.commentCount ? `View all ${v.commentCount} comments` : 'Add a comment…'}</button>
           <div class="ig-timestamp">${timeAgo(v._date)}</div>
         </div>
