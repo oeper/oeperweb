@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Music Composer — oeper.dev</title>
-<meta name="description" content="A free, no-signup step-sequencer music composer">
+<meta name="description" content="A free, no-signup melody composer, based on Chrome Music Lab's Melody Maker">
 <meta property="og:title" content="Music Composer — oeper.dev">
-<meta property="og:description" content="A free, no-signup step-sequencer music composer">
-<meta property="og:url" content="https://oeper.dev/composer.html">
+<meta property="og:description" content="A free, no-signup melody composer, based on Chrome Music Lab's Melody Maker">
+<meta property="og:url" content="https://oeper.dev/composer">
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
@@ -45,19 +45,12 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  .page { position: relative; max-width: 1000px; margin: 0 auto; padding: 56px 24px 100px; }
+  .page { position: relative; max-width: 720px; margin: 0 auto; padding: 56px 24px 100px; }
 
-  .header { margin-bottom: 28px; }
-  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
-  .header-link {
-    display: inline-flex; align-items: center; gap: 8px;
-    color: var(--md-sys-color-primary); text-decoration: none;
-    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
-  }
-  .header-link:hover { opacity: 0.8; }
-  .header-link:visited { color: var(--md-sys-color-primary); }
-  .header h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.2rem, 6vw, 3rem); font-weight: 400; margin-bottom: 12px; letter-spacing: -0.5px; }
-  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 15px; max-width: 560px; line-height: 1.5; }
+  .header { margin-bottom: 24px; }
+  .header h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.2rem, 6vw, 3rem); font-weight: 400; margin-bottom: 8px; letter-spacing: -0.5px; }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 14px; max-width: 560px; line-height: 1.5; }
+  .header p a { color: var(--md-sys-color-primary); }
 
   .toolbar {
     display: flex; align-items: center; gap: 18px; flex-wrap: wrap; background: var(--md-sys-color-surface);
@@ -75,35 +68,33 @@
     color: var(--md-sys-color-on-surface); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
   .icon-btn:hover { opacity: 0.85; }
-  .toolbar-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
-  .toolbar-field select, .toolbar-field input[type="range"] { accent-color: var(--md-sys-color-primary); }
-  .toolbar-field select {
-    background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface);
-    border-radius: 10px; padding: 8px 10px; font-family: inherit; font-size: 13px;
+  .harmony-btn {
+    display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 100px;
+    border: 1px solid var(--md-sys-color-outline); background: transparent; color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500; flex-shrink: 0;
   }
+  .harmony-btn.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent; }
+  .harmony-btn .material-symbols-rounded { font-size: 18px; }
+  .toolbar-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .toolbar-field input[type="range"] { accent-color: var(--md-sys-color-primary); }
   .bpm-value, .vol-value { color: var(--md-sys-color-on-surface); font-weight: 500; min-width: 34px; }
   .toolbar-end { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
-  .seq-wrap { background: var(--md-sys-color-surface); border-radius: 20px; padding: 16px; overflow-x: auto; }
-  .seq-grid { display: inline-block; }
-  .seq-row { display: flex; align-items: center; }
-  .note-label {
-    width: 60px; flex-shrink: 0; font-size: 12px; font-weight: 600; text-align: right; padding-right: 10px;
-    font-family: 'Google Sans', 'Product Sans', sans-serif;
+  .grid-wrap { background: var(--md-sys-color-surface); border-radius: 20px; padding: 16px; overflow-x: auto; }
+  .mm-grid { display: inline-flex; flex-direction: column; gap: 2px; }
+  .mm-row { display: flex; gap: 2px; }
+  .mm-tile {
+    width: 40px; height: 26px; border-radius: 6px; background: var(--md-sys-color-surface-variant);
+    cursor: pointer; flex-shrink: 0; transition: filter 0.1s, transform 0.05s; position: relative;
   }
-  .section-label {
-    margin: 14px 0 6px; padding-left: 70px; font-size: 11px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.6px; color: var(--md-sys-color-on-surface-variant);
+  .mm-tile:hover { filter: brightness(1.25); }
+  .mm-tile:active { transform: scale(0.94); }
+  .mm-tile.on { background: var(--tile-color); box-shadow: 0 2px 6px rgba(0,0,0,0.35); }
+  .mm-tile.col-playing { outline: 2px solid rgba(255,255,255,0.85); outline-offset: -2px; }
+  .mm-tile.harmony-echo::after {
+    content: ''; position: absolute; inset: 3px; border-radius: 4px; border: 2px solid rgba(255,255,255,0.75);
+    pointer-events: none;
   }
-  .step-cell {
-    width: 30px; height: 30px; margin: 2px; border-radius: 9px; background: var(--md-sys-color-surface-variant);
-    cursor: pointer; flex-shrink: 0; transition: filter 0.1s, transform 0.05s;
-  }
-  .step-cell:hover { filter: brightness(1.3); }
-  .step-cell:active { transform: scale(0.92); }
-  .step-cell.on { background: var(--row-color); box-shadow: 0 3px 8px rgba(0,0,0,0.35); }
-  .step-cell.beat { outline: 1px solid rgba(255,255,255,0.08); }
-  .step-cell.playing { outline: 3px solid #fff; outline-offset: -3px; filter: brightness(1.35); }
 
   .empty-hint { text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; margin-top: 16px; }
 </style>
@@ -112,191 +103,121 @@
 
 <div class="page">
   <header class="header">
-    <h1>Music Composer</h1>
+    <h1>Melody Maker</h1>
+    <p>Click a tile in each column to place a note — one note per column, top is highest. Based on <a href="https://github.com/googlecreativelab/chrome-music-lab/tree/master/melodymaker" target="_blank" rel="noopener">Chrome Music Lab's Melody Maker</a> (Google Creative Lab, Apache-2.0).</p>
   </header>
 
   <div class="toolbar">
     <button class="play-toggle-btn" id="playToggleBtn" title="Play"><span class="material-symbols-rounded">play_arrow</span></button>
+    <button class="harmony-btn" id="harmonyBtn" title="Toggle harmony echo">
+      <span class="material-symbols-rounded">graphic_eq</span>
+      <span id="harmonyLabel">Harmony: off</span>
+    </button>
     <div class="toolbar-field">
-      Tempo <input type="range" id="bpmInput" min="60" max="220" value="120"> <span class="bpm-value" id="bpmValue">120</span> BPM
+      Tempo <input type="range" id="bpmInput" min="60" max="200" value="120"> <span class="bpm-value" id="bpmValue">120</span> BPM
     </div>
     <div class="toolbar-field">
       Volume <input type="range" id="volInput" min="0" max="100" value="70"> <span class="vol-value" id="volValue">70</span>%
     </div>
-    <div class="toolbar-field">
-      Scale
-      <select id="scaleSelect">
-        <option value="majorPentatonic" selected>Major Pentatonic</option>
-        <option value="minorPentatonic">Minor Pentatonic</option>
-        <option value="major">Major</option>
-        <option value="minor">Minor</option>
-        <option value="chromatic">Chromatic</option>
-      </select>
-    </div>
-    <div class="toolbar-field">
-      Key
-      <select id="keySelect">
-        <option value="0" selected>C</option>
-        <option value="1">C#</option>
-        <option value="2">D</option>
-        <option value="3">D#</option>
-        <option value="4">E</option>
-        <option value="5">F</option>
-        <option value="6">F#</option>
-        <option value="7">G</option>
-        <option value="8">G#</option>
-        <option value="9">A</option>
-        <option value="10">A#</option>
-        <option value="11">B</option>
-      </select>
-    </div>
-    <div class="toolbar-field">
-      Instrument
-      <select id="instrumentSelect">
-        <option value="piano" selected>Piano</option>
-        <option value="strings">Strings</option>
-        <option value="synth">Synth</option>
-        <option value="marimba">Marimba</option>
-        <option value="woodwind">Woodwind</option>
-      </select>
-    </div>
-    <div class="toolbar-field">
-      Steps
-      <select id="stepsSelect">
-        <option value="16" selected>16</option>
-        <option value="32">32</option>
-      </select>
-    </div>
     <div class="toolbar-end">
       <button class="icon-btn" id="clearBtn" title="Clear all notes"><span class="material-symbols-rounded">delete_sweep</span></button>
-      <button class="icon-btn" id="exportBtn" title="Export as WAV"><span class="material-symbols-rounded">download</span></button>
     </div>
   </div>
 
-  <div class="seq-wrap">
-    <div class="seq-grid" id="seqGrid"></div>
+  <div class="grid-wrap">
+    <div class="mm-grid" id="mmGrid"></div>
   </div>
-  <p class="empty-hint">Tip: each colourful row is a note in the scale (top = highest), the grey rows at the bottom are a beat. Click a cell to toggle it, then press play.</p>
+  <p class="empty-hint">Tip: each row is a note (two octaves of C major, C3 up to B4). Turn on Harmony to hear a shifting echo of your melody play alongside it.</p>
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=2';
+import { mountTopNav } from './shared/topnav.js?v=3';
 mountTopNav();
 </script>
 <script>
-// ── Scales, keys, note math ─────────────────────────────────
-const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-function noteName(midi) { return NOTE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1); }
-function noteFreq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
-
-const LOW_MIDI = 48;  // C3
-const HIGH_MIDI = 72; // C5
-
-const SCALES = {
-  majorPentatonic: [0, 2, 4, 7, 9],
-  minorPentatonic: [0, 3, 5, 7, 10],
-  major: [0, 2, 4, 5, 7, 9, 11],
-  minor: [0, 2, 3, 5, 7, 8, 10],
-  chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+// ── Melody Maker port ───────────────────────────────────────
+// Grid shape, pitch range, and per-note colors are taken from Chrome Music
+// Lab's Melody Maker experiment (github.com/googlecreativelab/chrome-music-lab,
+// melodymaker/app/data/{Config,Colors}.js — Apache-2.0, Google Creative Lab).
+// The one-note-per-column grid model and the "harmony echo" that walks
+// across the grid and wraps around are ported from melodymaker/app/grid/
+// {Grid,AI}.js. Rendering is plain DOM instead of their canvas+TWEEN.js
+// layer, and sound is native Web Audio instead of Tone.js, since this page
+// doesn't pull in either dependency — but the grid math and the two-voice
+// melody/harmony synth balance (triangle oscillators, melody louder and
+// brighter than the softer harmony voice) mirror the original.
+const GRID_W = 8;
+const GRID_H = 14;
+const PITCHES = ['C3','D3','E3','F3','G3','A3','B3','C4','D4','E4','F4','G4','A4','B4'];
+const NOTE_COLORS = {
+  C: '#BF4FA8', D: '#4D61D8', E: '#45B5A1', F: '#95C631',
+  G: '#EDD929', A: '#F7943D', B: '#E33159',
 };
+const NOTE_FREQS = { C3:130.81,D3:146.83,E3:164.81,F3:174.61,G3:196.00,A3:220.00,B3:246.94,
+  C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392.00,A4:440.00,B4:493.88 };
 
-function buildScaleNotes(scaleKey, keyOffset) {
-  const intervals = SCALES[scaleKey] || SCALES.majorPentatonic;
-  const notes = [];
-  for (let m = HIGH_MIDI; m >= LOW_MIDI; m--) {
-    const rel = ((m - keyOffset) % 12 + 12) % 12;
-    if (intervals.includes(rel)) notes.push(m);
-  }
-  return notes;
-}
-
-const PERC_ROWS = [
-  { kind: 'perc', type: 'kick', label: 'Kick' },
-  { kind: 'perc', type: 'snare', label: 'Snare' },
-  { kind: 'perc', type: 'hihat', label: 'Hi-hat' },
-];
-const PERC_COLORS = { kick: '#ff8a65', snare: '#ffd54f', hihat: '#4fc3f7' };
-
-const INSTRUMENTS = {
-  piano:    { wave: 'triangle', attack: 0.005, decayTo: 0.05, sustainFactor: 0.85 },
-  strings:  { wave: 'sawtooth', attack: 0.09,  decayTo: 0.35, sustainFactor: 0.95 },
-  synth:    { wave: 'square',   attack: 0.005, decayTo: 0.02, sustainFactor: 0.6  },
-  marimba:  { wave: 'triangle', attack: 0.002, decayTo: 0.01, sustainFactor: 0.35 },
-  woodwind: { wave: 'sine',     attack: 0.035, decayTo: 0.15, sustainFactor: 0.9  },
-};
+function pitchAtRow(row) { return PITCHES[GRID_H - 1 - row]; } // row 0 = top = highest
+function colorForPitch(pitch) { return NOTE_COLORS[pitch[0]]; }
 
 // ── State ────────────────────────────────────────────────────
-let steps = 16;
-let grid = {}; // "row_col" -> true
+const tiles = new Array(GRID_W).fill(-1); // tiles[col] = row, or -1
+let harmonyOn = false;
+let harmonyOffset = 0; // columns the echo has walked so far this loop
 let bpm = 120;
 let volume = 0.7;
-let instrumentKey = 'piano';
-let scale = 'majorPentatonic';
-let keyOffset = 0;
-let ROWS = []; // built by buildGrid()
 
-const seqGrid = document.getElementById('seqGrid');
-
-function buildGrid() {
-  const noteMidis = buildScaleNotes(scale, keyOffset);
-  ROWS = noteMidis.map(midi => ({ kind: 'note', midi })).concat(PERC_ROWS);
-  grid = {};
-  seqGrid.innerHTML = '';
-
-  function appendRow(rowDef, row, color, label) {
-    const rowEl = document.createElement('div');
-    rowEl.className = 'seq-row';
-    rowEl.style.setProperty('--row-color', color);
-    const labelEl = document.createElement('div');
-    labelEl.className = 'note-label';
-    labelEl.style.color = color;
-    labelEl.textContent = label;
-    rowEl.appendChild(labelEl);
-    for (let col = 0; col < steps; col++) {
-      const cell = document.createElement('div');
-      cell.className = 'step-cell' + (col % 4 === 0 ? ' beat' : '');
-      cell.dataset.row = row;
-      cell.dataset.col = col;
-      cell.addEventListener('click', () => {
-        const key = row + '_' + col;
-        if (grid[key]) { delete grid[key]; cell.classList.remove('on'); }
-        else { grid[key] = true; cell.classList.add('on'); }
-      });
-      rowEl.appendChild(cell);
-    }
-    seqGrid.appendChild(rowEl);
+// ── Grid render ──────────────────────────────────────────────
+const mmGrid = document.getElementById('mmGrid');
+const cellEls = []; // [row][col]
+for (let row = 0; row < GRID_H; row++) {
+  const rowEl = document.createElement('div');
+  rowEl.className = 'mm-row';
+  const rowCells = [];
+  for (let col = 0; col < GRID_W; col++) {
+    const cell = document.createElement('div');
+    cell.className = 'mm-tile';
+    cell.style.setProperty('--tile-color', colorForPitch(pitchAtRow(row)));
+    cell.dataset.row = row;
+    cell.dataset.col = col;
+    cell.title = pitchAtRow(row);
+    cell.addEventListener('click', () => onTileClick(row, col));
+    rowEl.appendChild(cell);
+    rowCells.push(cell);
   }
-
-  noteMidis.forEach((midi, row) => {
-    const hue = Math.round((row / Math.max(1, noteMidis.length - 1)) * 300);
-    appendRow({ kind: 'note', midi }, row, `hsl(${hue}, 70%, 58%)`, noteName(midi));
-  });
-
-  const divider = document.createElement('div');
-  divider.className = 'section-label';
-  divider.textContent = 'Rhythm';
-  seqGrid.appendChild(divider);
-
-  PERC_ROWS.forEach((rowDef, i) => {
-    appendRow(rowDef, noteMidis.length + i, PERC_COLORS[rowDef.type], rowDef.label);
-  });
+  mmGrid.appendChild(rowEl);
+  cellEls.push(rowCells);
 }
-buildGrid();
 
-document.getElementById('stepsSelect').addEventListener('change', e => {
-  playing && stop();
-  steps = Number(e.target.value);
-  buildGrid();
+function renderTiles() {
+  for (let row = 0; row < GRID_H; row++) {
+    for (let col = 0; col < GRID_W; col++) {
+      cellEls[row][col].classList.toggle('on', tiles[col] === row);
+    }
+  }
+}
+
+function onTileClick(row, col) {
+  if (tiles[col] === row) {
+    tiles[col] = -1; // tap the active tile again to clear the column
+  } else {
+    tiles[col] = row; // one note per column — this replaces whatever was there
+    tapPreview(pitchAtRow(row));
+  }
+  renderTiles();
+}
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  tiles.fill(-1);
+  renderTiles();
 });
-document.getElementById('scaleSelect').addEventListener('change', e => {
-  playing && stop();
-  scale = e.target.value;
-  buildGrid();
-});
-document.getElementById('keySelect').addEventListener('change', e => {
-  playing && stop();
-  keyOffset = Number(e.target.value);
-  buildGrid();
+
+const harmonyBtn = document.getElementById('harmonyBtn');
+const harmonyLabel = document.getElementById('harmonyLabel');
+harmonyBtn.addEventListener('click', () => {
+  harmonyOn = !harmonyOn;
+  harmonyOffset = 0;
+  harmonyBtn.classList.toggle('active', harmonyOn);
+  harmonyLabel.textContent = 'Harmony: ' + (harmonyOn ? 'echo →' : 'off');
 });
 
 document.getElementById('bpmInput').addEventListener('input', e => {
@@ -307,130 +228,81 @@ document.getElementById('volInput').addEventListener('input', e => {
   volume = Number(e.target.value) / 100;
   document.getElementById('volValue').textContent = e.target.value;
 });
-document.getElementById('instrumentSelect').addEventListener('change', e => { instrumentKey = e.target.value; });
 
-document.getElementById('clearBtn').addEventListener('click', () => {
-  grid = {};
-  document.querySelectorAll('.step-cell.on').forEach(c => c.classList.remove('on'));
-});
-
-// ── Sound synthesis (context-agnostic — reused for live playback and offline export) ──
-function scheduleNote(ctx, destination, midi, time) {
-  const preset = INSTRUMENTS[instrumentKey] || INSTRUMENTS.piano;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = preset.wave;
-  osc.frequency.setValueAtTime(noteFreq(midi), time);
-  const peak = volume * 0.5;
-  gain.gain.setValueAtTime(0, time);
-  gain.gain.linearRampToValueAtTime(peak, time + preset.attack);
-  gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak * preset.decayTo), time + stepDuration() * preset.sustainFactor);
-  osc.connect(gain);
-  gain.connect(destination);
-  osc.start(time);
-  osc.stop(time + stepDuration() + 0.05);
-}
-
-function makeNoiseBuffer(ctx, duration) {
-  const size = Math.max(1, Math.ceil(ctx.sampleRate * duration));
-  const buf = ctx.createBuffer(1, size, ctx.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
-  return buf;
-}
-
-function scheduleKick(ctx, destination, time) {
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(150, time);
-  osc.frequency.exponentialRampToValueAtTime(42, time + 0.12);
-  gain.gain.setValueAtTime(volume * 0.9, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.28);
-  osc.connect(gain);
-  gain.connect(destination);
-  osc.start(time);
-  osc.stop(time + 0.3);
-}
-
-function scheduleSnare(ctx, destination, time) {
-  const noise = ctx.createBufferSource();
-  noise.buffer = makeNoiseBuffer(ctx, 0.2);
-  const filter = ctx.createBiquadFilter();
-  filter.type = 'highpass';
-  filter.frequency.value = 1200;
-  const noiseGain = ctx.createGain();
-  noiseGain.gain.setValueAtTime(volume * 0.7, time);
-  noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.16);
-  noise.connect(filter);
-  filter.connect(noiseGain);
-  noiseGain.connect(destination);
-  noise.start(time);
-  noise.stop(time + 0.2);
-
-  const osc = ctx.createOscillator();
-  const oscGain = ctx.createGain();
-  osc.type = 'triangle';
-  osc.frequency.setValueAtTime(190, time);
-  oscGain.gain.setValueAtTime(volume * 0.45, time);
-  oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.09);
-  osc.connect(oscGain);
-  oscGain.connect(destination);
-  osc.start(time);
-  osc.stop(time + 0.1);
-}
-
-function scheduleHihat(ctx, destination, time) {
-  const noise = ctx.createBufferSource();
-  noise.buffer = makeNoiseBuffer(ctx, 0.08);
-  const filter = ctx.createBiquadFilter();
-  filter.type = 'highpass';
-  filter.frequency.value = 7500;
-  const gain = ctx.createGain();
-  gain.gain.setValueAtTime(volume * 0.35, time);
-  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-  noise.connect(filter);
-  filter.connect(gain);
-  gain.connect(destination);
-  noise.start(time);
-  noise.stop(time + 0.08);
-}
-
-function scheduleRow(ctx, destination, rowDef, time) {
-  if (rowDef.kind === 'note') { scheduleNote(ctx, destination, rowDef.midi, time); return; }
-  if (rowDef.type === 'kick') { scheduleKick(ctx, destination, time); return; }
-  if (rowDef.type === 'snare') { scheduleSnare(ctx, destination, time); return; }
-  if (rowDef.type === 'hihat') { scheduleHihat(ctx, destination, time); return; }
-}
-
-// ── Playback (lookahead scheduler) ──────────────────────────
+// ── Sound: two triangle-wave voices, melody brighter/louder than harmony ──
 let audioCtx = null;
+function ctx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function pluck(pitch, time, { gain, release }) {
+  const c = ctx();
+  const osc = c.createOscillator();
+  const env = c.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(NOTE_FREQS[pitch], time);
+  const peak = volume * gain;
+  env.gain.setValueAtTime(0, time);
+  env.gain.linearRampToValueAtTime(peak, time + 0.01);
+  env.gain.linearRampToValueAtTime(peak * 0.55, time + 0.1);
+  env.gain.exponentialRampToValueAtTime(Math.max(0.0001, peak * 0.02), time + release);
+  osc.connect(env);
+  env.connect(c.destination);
+  osc.start(time);
+  osc.stop(time + release + 0.05);
+}
+function playMelody(pitch, time) { pluck(pitch, time, { gain: 0.55, release: 1.1 }); }
+function playHarmony(pitch, time) { pluck(pitch, time, { gain: 0.32, release: 1.4 }); }
+function tapPreview(pitch) { ctx().resume(); pluck(pitch, ctx().currentTime, { gain: 0.55, release: 0.35 }); }
+
+// ── Playback (lookahead scheduler over the 8-column loop) ──────
 let playing = false;
 let currentStep = 0;
 let nextStepTime = 0;
 let schedulerTimer = null;
-const SCHEDULE_AHEAD = 0.1;
+const SCHEDULE_AHEAD = 0.15;
 const LOOKAHEAD_MS = 25;
 
-function stepDuration() { return 60 / bpm / 4; } // 16th notes
+function stepDuration() { return 60 / bpm / 2; } // eighth note
 
 function scheduler() {
-  while (nextStepTime < audioCtx.currentTime + SCHEDULE_AHEAD) {
-    ROWS.forEach((rowDef, row) => {
-      if (grid[row + '_' + currentStep]) scheduleRow(audioCtx, audioCtx.destination, rowDef, nextStepTime);
-    });
-    const stepToHighlight = currentStep;
-    setTimeout(() => highlightStep(stepToHighlight), Math.max(0, (nextStepTime - audioCtx.currentTime) * 1000));
+  const c = ctx();
+  while (nextStepTime < c.currentTime + SCHEDULE_AHEAD) {
+    const step = currentStep;
+    if (tiles[step] !== -1) playMelody(pitchAtRow(tiles[step]), nextStepTime);
+    if (harmonyOn) {
+      for (let col = 0; col < GRID_W; col++) {
+        if (tiles[col] === -1) continue;
+        if ((col + harmonyOffset) % GRID_W === step && harmonyOffset !== 0) {
+          playHarmony(pitchAtRow(tiles[col]), nextStepTime);
+        }
+      }
+    }
+    const stepToHighlight = step;
+    const delayMs = Math.max(0, (nextStepTime - c.currentTime) * 1000);
+    setTimeout(() => highlightStep(stepToHighlight), delayMs);
     nextStepTime += stepDuration();
-    currentStep = (currentStep + 1) % steps;
+    currentStep = (currentStep + 1) % GRID_W;
+    if (currentStep === 0 && harmonyOn) harmonyOffset = (harmonyOffset + 1) % GRID_W;
   }
   schedulerTimer = setTimeout(scheduler, LOOKAHEAD_MS);
 }
 
 function highlightStep(col) {
-  document.querySelectorAll('.step-cell.playing').forEach(c => c.classList.remove('playing'));
+  for (let row = 0; row < GRID_H; row++) {
+    for (let c = 0; c < GRID_W; c++) cellEls[row][c].classList.remove('col-playing', 'harmony-echo');
+  }
   if (!playing) return;
-  document.querySelectorAll(`.step-cell[data-col="${col}"]`).forEach(c => c.classList.add('playing'));
+  for (let row = 0; row < GRID_H; row++) cellEls[row][col].classList.add('col-playing');
+  if (harmonyOn) {
+    for (let srcCol = 0; srcCol < GRID_W; srcCol++) {
+      if (tiles[srcCol] === -1) continue;
+      if ((srcCol + harmonyOffset) % GRID_W === col && harmonyOffset !== 0) {
+        cellEls[tiles[srcCol]][col].classList.add('harmony-echo');
+      }
+    }
+  }
 }
 
 const playToggleBtn = document.getElementById('playToggleBtn');
@@ -441,83 +313,23 @@ function updatePlayToggle() {
 
 function play() {
   if (playing) return;
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  audioCtx.resume();
+  ctx().resume();
   playing = true;
   currentStep = 0;
-  nextStepTime = audioCtx.currentTime + 0.05;
+  harmonyOffset = 0;
+  nextStepTime = ctx().currentTime + 0.05;
   scheduler();
   updatePlayToggle();
 }
 function stop() {
   playing = false;
   clearTimeout(schedulerTimer);
-  document.querySelectorAll('.step-cell.playing').forEach(c => c.classList.remove('playing'));
+  highlightStep(-1);
   updatePlayToggle();
 }
-
 playToggleBtn.addEventListener('click', () => { playing ? stop() : play(); });
 
-// ── Export as WAV (offline render of one loop) ──────────────
-async function exportWav() {
-  const totalSeconds = steps * stepDuration() + 1;
-  const sampleRate = 44100;
-  const offlineCtx = new OfflineAudioContext(1, Math.ceil(sampleRate * totalSeconds), sampleRate);
-
-  for (let col = 0; col < steps; col++) {
-    const time = col * stepDuration();
-    ROWS.forEach((rowDef, row) => {
-      if (grid[row + '_' + col]) scheduleRow(offlineCtx, offlineCtx.destination, rowDef, time);
-    });
-  }
-
-  const rendered = await offlineCtx.startRendering();
-  const wavBlob = bufferToWav(rendered);
-  const url = URL.createObjectURL(wavBlob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'composition.wav';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function bufferToWav(buffer) {
-  const numChannels = buffer.numberOfChannels;
-  const sampleRate = buffer.sampleRate;
-  const samples = buffer.getChannelData(0);
-  const dataLength = samples.length * 2;
-  const bufferArr = new ArrayBuffer(44 + dataLength);
-  const view = new DataView(bufferArr);
-
-  function writeString(offset, str) { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); }
-
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + dataLength, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * numChannels * 2, true);
-  view.setUint16(32, numChannels * 2, true);
-  view.setUint16(34, 16, true);
-  writeString(36, 'data');
-  view.setUint32(40, dataLength, true);
-
-  let offset = 44;
-  for (let i = 0; i < samples.length; i++) {
-    const s = Math.max(-1, Math.min(1, samples[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-    offset += 2;
-  }
-  return new Blob([bufferArr], { type: 'audio/wav' });
-}
-
-document.getElementById('exportBtn').addEventListener('click', () => {
-  if (Object.keys(grid).length === 0) { alert('Place a few notes first.'); return; }
-  exportWav();
-});
+renderTiles();
 </script>
 </body>
 </html>

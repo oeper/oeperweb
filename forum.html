@@ -481,9 +481,9 @@ import {
   auth, db, SERVER_ENDPOINT, MAX_IMAGE_BYTES, isOwnerEmail, officialBadgeHtml,
   getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded, handleOf,
   uploadFile,
-} from './shared/account.js?v=10';
-import { mountTopNav } from './shared/topnav.js?v=2';
-import { mountFooter } from './shared/footer.js?v=2';
+} from './shared/account.js?v=11';
+import { mountTopNav } from './shared/topnav.js?v=3';
+import { mountFooter } from './shared/footer.js?v=3';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
   query, orderBy, serverTimestamp, arrayUnion, arrayRemove, increment, Timestamp
@@ -894,7 +894,7 @@ function runForum() {
     const badge = officialBadgeHtml(item.authorEmail);
     const handle = handleOf(item.authorEmail);
     if (!handle) return `<span class="author-link">${innerHtml}${badge}</span>`;
-    return `<a href="/profile.html?u=${encodeURIComponent(handle)}" class="author-link" ${extraAttrs || ''}>${innerHtml}${badge}</a>`;
+    return `<a href="/profile?u=${encodeURIComponent(handle)}" class="author-link" ${extraAttrs || ''}>${innerHtml}${badge}</a>`;
   }
 
   const VIEWED_KEY = 'oe-viewed-posts';

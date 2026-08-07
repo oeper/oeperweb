@@ -140,7 +140,7 @@ export async function setUserBadge(email, badge) {
 }
 
 // The @handle for a profile, if one's been assigned yet (see ensureHandle).
-// Used to build /profile.html?u=<handle> links without ever putting a real
+// Used to build /profile?u=<handle> links without ever putting a real
 // email in a URL. Returns null if this account hasn't been assigned one
 // yet (e.g. they haven't signed in since this feature shipped) — callers
 // should render plain, non-linked text in that case rather than guessing.
@@ -542,7 +542,7 @@ export function mountAccountBar(container) {
       container.innerHTML = `
         <div class="oe-acct-chip">
           ${handle
-            ? `<a href="/profile.html?u=${encodeURIComponent(handle)}" class="oe-acct-profile-link" title="View profile">${profileInner}</a>`
+            ? `<a href="/profile?u=${encodeURIComponent(handle)}" class="oe-acct-profile-link" title="View profile">${profileInner}</a>`
             : `<span class="oe-acct-profile-link">${profileInner}</span>`}
           <button class="oe-acct-icon-btn" id="oeAcctEditBtn" title="Edit profile"><span class="material-symbols-rounded">edit</span></button>
         </div>

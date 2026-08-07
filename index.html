@@ -364,9 +364,15 @@
     font-size: 30px; color: #fff; background: rgba(0,0,0,0.45); border-radius: 50%; padding: 14px;
   }
   .ig-media.playing .ig-play-overlay { opacity: 0; }
+  .ig-audio-attach {
+    display: flex; align-items: center; gap: 10px; margin: 12px 14px 0; padding: 12px 14px;
+    background: var(--md-sys-color-surface-variant); border-radius: 12px; cursor: default;
+  }
+  .ig-audio-attach .material-symbols-rounded { font-size: 22px; color: var(--md-sys-color-primary); flex-shrink: 0; }
+  .ig-audio-attach audio { flex: 1; min-width: 0; height: 32px; }
   .ig-actions { display: flex; align-items: center; gap: 4px; padding: 10px 14px 4px; }
   .ig-actions .material-symbols-rounded { font-size: 24px; color: var(--md-sys-color-on-surface); }
-  .ig-action-count { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-left: -8px; }
+  .ig-action-count { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
   .ig-vote-btn, .ig-comment-btn {
     background: none; border: none; padding: 4px; margin: 0; cursor: pointer; display: flex; align-items: center;
     color: var(--md-sys-color-on-surface); border-radius: 50%;
@@ -503,9 +509,9 @@
   </div>
 
 <script type="module">
-  import { db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser } from './shared/account.js?v=10';
-  import { mountTopNav } from './shared/topnav.js?v=2';
-  import { mountFooter } from './shared/footer.js?v=2';
+  import { db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser } from './shared/account.js?v=11';
+  import { mountTopNav } from './shared/topnav.js?v=3';
+  import { mountFooter } from './shared/footer.js?v=3';
   import {
     collection, query, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp,
   } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -535,6 +541,11 @@
     const urls = p.imageUrls && p.imageUrls.length ? p.imageUrls : (p.imageUrl ? [p.imageUrl] : []);
     const url = urls[0];
     return url && /\.(mp4|webm|mov|m4v|ogv)$/i.test(url) ? url : null;
+  }
+  function firstAudioUrl(p) {
+    const urls = p.imageUrls && p.imageUrls.length ? p.imageUrls : (p.imageUrl ? [p.imageUrl] : []);
+    const url = urls[0];
+    return url && /\.(mp3|wav|ogg|m4a|flac|aac|opus|weba)$/i.test(url) ? url : null;
   }
 
   const feedEl = document.getElementById('homeFeed');
@@ -581,7 +592,7 @@
     function authorNameHtml(email, profile) {
       const handle = handleOf(email);
       const inner = `${escHtml(profile.name)}${officialBadgeHtml(email)}`;
-      return handle ? `<a href="/profile.html?u=${encodeURIComponent(handle)}">${inner}</a>` : `<span>${inner}</span>`;
+      return handle ? `<a href="/profile?u=${encodeURIComponent(handle)}">${inner}</a>` : `<span>${inner}</span>`;
     }
 
     function cardHeaderHtml(email, profile, subtag) {
@@ -589,7 +600,7 @@
       const avatar = `<img class="ig-avatar" src="${profile.photo || ''}" alt="">`;
       return `
         <div class="ig-card-header">
-          ${handle ? `<a href="/profile.html?u=${encodeURIComponent(handle)}">${avatar}</a>` : avatar}
+          ${handle ? `<a href="/profile?u=${encodeURIComponent(handle)}">${avatar}</a>` : avatar}
           <div class="ig-header-text">
             <div class="ig-username">${authorNameHtml(email, profile)}</div>
             <div class="ig-subtag">${subtag}</div>
@@ -603,12 +614,14 @@
       const tag = (p.tags || [])[0];
       const img = firstImageUrl(p);
       const vid = !img ? firstVideoUrl(p) : null;
+      const aud = !img && !vid ? firstAudioUrl(p) : null;
       const score = (p.upvoters || []).length - (p.downvoters || []).length;
       return `
-        <div class="ig-card" data-href="https://oeper.dev/forum.html?post=${p.id}">
+        <div class="ig-card" data-href="https://oeper.dev/forum?post=${p.id}">
           ${cardHeaderHtml(p.authorEmail, profile, tag ? escHtml(TAG_LABELS[tag] || tag) : 'oeper.dev')}
           ${img ? `<div class="ig-media"><img src="${img}" alt="" loading="lazy"></div>` : ''}
           ${vid ? `<div class="ig-media"><video src="${vid}" muted preload="metadata"></video></div>` : ''}
+          ${aud ? `<div class="ig-audio-attach" onclick="event.stopPropagation()"><span class="material-symbols-rounded">music_note</span><audio controls preload="metadata" src="${aud}"></audio></div>` : ''}
           <div class="ig-actions">
             ${voteActionsHtml(p, 'post')}
             <button type="button" class="ig-comment-btn" data-open-comments data-kind="post" data-id="${p.id}" title="Comments">
@@ -629,7 +642,7 @@
       const profile = getProfile(v.authorEmail, v.authorName, v.authorPhoto);
       const score = (v.upvoters || []).length - (v.downvoters || []).length;
       return `
-        <div class="ig-card" data-href="https://oeper.dev/videos.html?video=${v.id}">
+        <div class="ig-card" data-href="https://oeper.dev/videos?video=${v.id}">
           ${cardHeaderHtml(v.authorEmail, profile, 'Video')}
           <div class="ig-media" data-video-media>
             <video src="${v.url}" muted preload="metadata"></video>
@@ -886,7 +899,7 @@ const PAGES = [
     id: 'videos',
     title: 'Videos',
     icon: 'smart_display',
-    url: 'https://oeper.dev/videos.html',
+    url: 'https://oeper.dev/videos',
     heroTitle: 'Long-Form Videos',
     heroSub: 'Watch and upload videos from anyone signed in.',
     items: []
@@ -913,7 +926,7 @@ const PAGES = [
     id: 'tools',
     title: 'Tools',
     icon: 'build',
-    url: 'https://oeper.dev/tools.html',
+    url: 'https://oeper.dev/tools',
     heroTitle: 'Free Tools',
     heroSub: 'No sign-up, no paywall.',
     items: []

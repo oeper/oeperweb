@@ -8,7 +8,7 @@
 // behavior change needs its `?v=N` bumped on every `from './shared/topnav.js?v=N'`
 // import across the site (grep for it) — otherwise visitors can sit on a
 // stale cached copy for hours after a deploy.
-import { mountAccountBar, db, getCurrentUser, getProfile, handleOf } from './account.js?v=10';
+import { mountAccountBar, db, getCurrentUser, getProfile, handleOf } from './account.js?v=11';
 import {
   collection, query, orderBy, limit, getDocs,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -21,10 +21,10 @@ export const LOGO_SVG = `<svg viewBox="0 0 98 118" fill="currentColor" xmlns="ht
 const NAV_ITEMS = [
   { id: 'home', title: 'Home', icon: 'home', url: 'https://oeper.dev/', path: '/' },
   { id: 'forum', title: 'Feed', icon: 'forum', url: 'https://oeper.dev/forum', path: '/forum' },
-  { id: 'videos', title: 'Videos', icon: 'smart_display', url: 'https://oeper.dev/videos.html', path: '/videos' },
+  { id: 'videos', title: 'Videos', icon: 'smart_display', url: 'https://oeper.dev/videos', path: '/videos' },
   { id: 'projects', title: 'Projects', icon: 'apps', url: 'https://oeper.dev/projects', path: '/projects' },
   { id: 'files', title: 'Files', icon: 'folder', url: 'https://oeper.dev/files', path: '/files' },
-  { id: 'tools', title: 'Tools', icon: 'build', url: 'https://oeper.dev/tools.html', path: '/tools' },
+  { id: 'tools', title: 'Tools', icon: 'build', url: 'https://oeper.dev/tools', path: '/tools' },
 ];
 
 function escHtml(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -210,7 +210,7 @@ export function mountTopNav(container) {
       <button class="oe-nav-mobile-search-btn" id="oeNavMobileSearchBtn" aria-label="Search"><span class="material-symbols-rounded">search</span></button>
       <div class="oe-nav-right">
         <div class="oe-nav-links" id="oeNavLinks"></div>
-        <a href="/messages.html" class="oe-nav-icon-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
+        <a href="/messages" class="oe-nav-icon-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
         <a href="/settings" class="oe-nav-icon-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
         <div id="oeNavAccountBar"></div>
       </div>
@@ -301,20 +301,20 @@ function initSearch(navEl) {
         matchRank(name, q) === -1 ? 99 : matchRank(name, q),
         matchRank(u.handle, q) === -1 ? 99 : matchRank(u.handle, q)
       );
-      if (rank < 99) results.push({ rank, name, sub: 'in People', url: `/profile.html?u=${encodeURIComponent(u.handle)}`, photo: getProfile(u.email, u.displayName, u.photoURL).photo, icon: 'person' });
+      if (rank < 99) results.push({ rank, name, sub: 'in People', url: `/profile?u=${encodeURIComponent(u.handle)}`, photo: getProfile(u.email, u.displayName, u.photoURL).photo, icon: 'person' });
     });
     corpus.posts.forEach(p => {
       const name = p.title || p.body || '';
       const rank = matchRank(name, q);
-      if (rank !== -1) results.push({ rank, name, sub: 'in Feed', url: `/forum.html?post=${p.id}`, icon: 'forum' });
+      if (rank !== -1) results.push({ rank, name, sub: 'in Feed', url: `/forum?post=${p.id}`, icon: 'forum' });
     });
     corpus.videos.forEach(v => {
       const rank = matchRank(v.title, q);
-      if (rank !== -1) results.push({ rank, name: v.title || '', sub: 'in Videos', url: `/videos.html?video=${v.id}`, icon: 'smart_display' });
+      if (rank !== -1) results.push({ rank, name: v.title || '', sub: 'in Videos', url: `/videos?video=${v.id}`, icon: 'smart_display' });
     });
     corpus.projects.forEach(p => {
       const rank = matchRank(p.title, q);
-      if (rank !== -1) results.push({ rank, name: p.title || '', sub: 'in Projects', url: `/projects.html?project=${p.id}`, icon: 'apps' });
+      if (rank !== -1) results.push({ rank, name: p.title || '', sub: 'in Projects', url: `/projects?project=${p.id}`, icon: 'apps' });
     });
 
     results.sort((a, b) => a.rank - b.rank);

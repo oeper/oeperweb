@@ -189,9 +189,9 @@
 import {
   auth, db, SERVER_ENDPOINT, isOwnerEmail, officialBadgeHtml, getCurrentUser, onAccountChange,
   getProfile, handleOf, uploadFile, ensureProfileLoaded,
-} from './shared/account.js?v=10';
-import { mountTopNav } from './shared/topnav.js?v=2';
-import { mountFooter } from './shared/footer.js?v=2';
+} from './shared/account.js?v=11';
+import { mountTopNav } from './shared/topnav.js?v=3';
+import { mountFooter } from './shared/footer.js?v=3';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
   arrayUnion, arrayRemove, increment, query, orderBy,
@@ -250,7 +250,7 @@ function authorLinkHtml(v, innerHtml) {
   const badge = officialBadgeHtml(v.authorEmail);
   const handle = handleOf(v.authorEmail);
   if (!handle) return `<span class="author-link">${innerHtml}${badge}</span>`;
-  return `<a href="/profile.html?u=${encodeURIComponent(handle)}" class="author-link" onclick="event.stopPropagation()">${innerHtml}${badge}</a>`;
+  return `<a href="/profile?u=${encodeURIComponent(handle)}" class="author-link" onclick="event.stopPropagation()">${innerHtml}${badge}</a>`;
 }
 
 let videos = [];

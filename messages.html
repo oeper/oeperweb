@@ -150,7 +150,7 @@
 
 <div class="page">
   <div class="header-container">
-    <a href="https://oeper.dev/forum.html" class="header-link" id="backLink">
+    <a href="https://oeper.dev/forum" class="header-link" id="backLink">
       <span class="material-symbols-rounded">arrow_back</span>
       <span id="backLinkText">back to feed</span>
     </a>
@@ -171,11 +171,11 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=2';
+import { mountTopNav } from './shared/topnav.js?v=3';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
-} from './shared/account.js?v=10';
-import { mountFooter } from './shared/footer.js?v=2';
+} from './shared/account.js?v=11';
+import { mountFooter } from './shared/footer.js?v=3';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -282,7 +282,7 @@ function initNotes() {
     if (myItem) myItem.addEventListener('click', openNoteModal);
     bar.querySelectorAll('.note-item[data-handle]').forEach(el => {
       el.addEventListener('click', () => {
-        if (el.dataset.handle) window.location.href = '/profile.html?u=' + encodeURIComponent(el.dataset.handle);
+        if (el.dataset.handle) window.location.href = '/profile?u=' + encodeURIComponent(el.dataset.handle);
       });
       const reportBtn = el.querySelector('[data-report-note]');
       if (reportBtn) reportBtn.addEventListener('click', e => {
@@ -339,7 +339,7 @@ onAccountChange(user => {
   const params = new URLSearchParams(window.location.search);
   const toHandle = params.get('to');
   if (toHandle) {
-    window.history.replaceState({}, '', '/messages.html');
+    window.history.replaceState({}, '', '/messages');
     openByHandle(toHandle, user);
   } else {
     showInbox(user);
@@ -360,7 +360,7 @@ async function openByHandle(handle, user) {
 }
 
 function showInbox(user) {
-  document.getElementById('backLink').href = 'https://oeper.dev/forum.html';
+  document.getElementById('backLink').href = 'https://oeper.dev/forum';
   document.getElementById('backLinkText').textContent = 'back to feed';
   content.innerHTML = '<div class="empty-note">Loading…</div>';
 
@@ -418,7 +418,7 @@ async function openThread(otherEmail, user) {
     <div class="thread-shell">
       <div class="thread-header">
         ${otherHandle
-          ? `<a href="/profile.html?u=${encodeURIComponent(otherHandle)}"><img src="${otherProfile.photo || ''}" alt=""></a>`
+          ? `<a href="/profile?u=${encodeURIComponent(otherHandle)}"><img src="${otherProfile.photo || ''}" alt=""></a>`
           : `<img src="${otherProfile.photo || ''}" alt="">`}
         <span class="name">${escHtml(otherProfile.name)}${officialBadgeHtml(otherEmail)}</span>
       </div>

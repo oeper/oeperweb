@@ -166,12 +166,12 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=2';
+import { mountTopNav } from './shared/topnav.js?v=3';
 import {
   getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
   openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setUserBadge,
-} from './shared/account.js?v=10';
-import { mountFooter } from './shared/footer.js?v=2';
+} from './shared/account.js?v=11';
+import { mountFooter } from './shared/footer.js?v=3';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, deleteDoc, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -217,7 +217,7 @@ async function openFollowList(kind, viewedEmail) {
         <div class="follow-list-name">${escHtml(p.name)}${officialBadgeHtml(email)}</div>
       `;
       return h
-        ? `<a class="follow-list-row" href="/profile.html?u=${encodeURIComponent(h)}">${inner}</a>`
+        ? `<a class="follow-list-row" href="/profile?u=${encodeURIComponent(h)}">${inner}</a>`
         : `<div class="follow-list-row">${inner}</div>`;
     }).join('');
   } catch (err) {
@@ -371,7 +371,7 @@ async function init() {
           <div class="profile-actions">
             ${isOwn ? `<button class="btn primary" id="editProfileBtn"><span class="material-symbols-rounded" style="font-size:16px;">edit</span> Edit profile</button>` : ''}
             ${!isOwn && user ? `<button class="btn ${following ? '' : 'primary'}" id="followBtn"><span class="material-symbols-rounded" style="font-size:16px;">${following ? 'how_to_reg' : 'person_add'}</span> ${following ? 'Following' : 'Follow'}</button>` : ''}
-            ${!isOwn && user ? `<a class="btn primary" href="/messages.html?to=${encodeURIComponent(handle)}"><span class="material-symbols-rounded" style="font-size:16px;">chat</span> Chat</a>` : ''}
+            ${!isOwn && user ? `<a class="btn primary" href="/messages?to=${encodeURIComponent(handle)}"><span class="material-symbols-rounded" style="font-size:16px;">chat</span> Chat</a>` : ''}
             <div class="kebab-wrap">
               <button type="button" class="kebab-btn" id="profileKebabBtn" title="More options"><span class="material-symbols-rounded">more_vert</span></button>
               <div class="kebab-menu" id="profileKebabMenu"></div>
@@ -390,7 +390,7 @@ async function init() {
       <div class="section-heading">Posts</div>
       <div class="post-list">
         ${posts.length === 0 ? '<div class="empty-note">No posts yet.</div>' : posts.map(p => `
-          <a class="post-row" href="/forum.html?post=${p.id}">
+          <a class="post-row" href="/forum?post=${p.id}">
             <div class="post-row-title">${escHtml(p.title)}</div>
             <div class="post-row-meta">
               <span><span class="material-symbols-rounded">arrow_upward</span>${(p.upvoters||[]).length - (p.downvoters||[]).length}</span>

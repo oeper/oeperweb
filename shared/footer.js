@@ -29,9 +29,9 @@ const SITE_ICON = `<svg viewBox="0 0 98 118"><path d="M97.21 104.246C99.8214 110
 const STATUS_ICON = `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`;
 
 const SITE_LINKS = [
-  { name: 'oeper.dev profile', handle: '@oeperdev', url: '/profile.html?u=oeperdev', icon: SITE_ICON },
-  { name: 'oeper.dev profile', handle: '@sanhackerman', url: '/profile.html?u=sanhackerman', icon: SITE_ICON },
-  { name: 'Server status', handle: 'Server status', url: '/status.html', icon: STATUS_ICON },
+  { name: 'oeper.dev profile', handle: '@oeperdev', url: '/profile?u=oeperdev', icon: SITE_ICON },
+  { name: 'oeper.dev profile', handle: '@sanhackerman', url: '/profile?u=sanhackerman', icon: SITE_ICON },
+  { name: 'Server status', handle: 'Server status', url: '/status', icon: STATUS_ICON },
 ];
 
 let stylesInjected = false;
