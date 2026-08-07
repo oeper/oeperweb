@@ -1213,9 +1213,9 @@ function runForum() {
     const down = u && (item.downvoters || []).includes(u.uid);
     return `
       <div class="vote-col">
-        <button class="vote-btn ${up ? 'upvoted' : ''}" data-${idPrefix}-up title="Upvote"><span class="material-symbols-rounded">arrow_upward</span></button>
+        <button class="vote-btn ${up ? 'upvoted' : ''}" data-${idPrefix}-up title="Like"><span class="material-symbols-rounded">arrow_upward</span></button>
         <span class="vote-count ${netScore > 0 ? 'positive' : netScore < 0 ? 'negative' : ''}">${netScore}</span>
-        <button class="vote-btn ${down ? 'downvoted' : ''}" data-${idPrefix}-down title="Downvote"><span class="material-symbols-rounded">arrow_downward</span></button>
+        <button class="vote-btn ${down ? 'downvoted' : ''}" data-${idPrefix}-down title="Dislike"><span class="material-symbols-rounded">heart_broken</span></button>
       </div>
     `;
   }

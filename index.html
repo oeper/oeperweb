@@ -701,12 +701,12 @@
       const up = user && (item.upvoters || []).includes(user.uid);
       const down = user && (item.downvoters || []).includes(user.uid);
       return `
-        <button type="button" class="ig-vote-btn ${up ? 'upvoted' : ''}" data-vote-up data-kind="${kind}" data-id="${item.id}" title="Upvote">
+        <button type="button" class="ig-vote-btn ${up ? 'upvoted' : ''}" data-vote-up data-kind="${kind}" data-id="${item.id}" title="Like">
           <span class="material-symbols-rounded">${up ? 'favorite' : 'favorite_border'}</span>
         </button>
         <span class="ig-vote-score">${score}</span>
-        <button type="button" class="ig-vote-btn ${down ? 'downvoted' : ''}" data-vote-down data-kind="${kind}" data-id="${item.id}" title="Downvote">
-          <span class="material-symbols-rounded">arrow_downward</span>
+        <button type="button" class="ig-vote-btn ${down ? 'downvoted' : ''}" data-vote-down data-kind="${kind}" data-id="${item.id}" title="Dislike">
+          <span class="material-symbols-rounded">heart_broken</span>
         </button>
       `;
     }
@@ -752,7 +752,7 @@
             <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
             <span class="ig-action-count">${p.views || 0}</span>
           </div>
-          <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
+          <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
           <div class="ig-caption"><strong>${authorNameHtml(p.authorEmail, profile)}</strong>${linkify(p.title)}</div>
           ${p.body ? `<div class="ig-description">${linkify(stripMarkdown(p.body, 220))}</div>` : ''}
           <button type="button" class="ig-view-comments" data-open-comments data-kind="post" data-id="${p.id}">${p.commentCount ? `View all ${p.commentCount} comments` : 'Add a comment…'}</button>
@@ -779,7 +779,7 @@
             <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
             <span class="ig-action-count">${v.views || 0}</span>
           </div>
-          <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
+          <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
           <div class="ig-caption"><strong>${authorNameHtml(v.authorEmail, profile)}</strong>${linkify(v.title)}</div>
           ${v.description ? `<div class="ig-description">${linkify(stripMarkdown(v.description, 220))}</div>` : ''}
           <button type="button" class="ig-view-comments" data-open-comments data-kind="video" data-id="${v.id}">${v.commentCount ? `View all ${v.commentCount} comments` : 'Add a comment…'}</button>
@@ -853,17 +853,17 @@
         ${cardHeaderHtml(item.authorEmail, profile, kind === 'video' ? 'Video' : 'oeper.dev')}
         ${mediaHtml}
         <div class="ig-actions">
-          <button type="button" class="ig-vote-btn ${up ? 'upvoted' : ''}" data-modal-vote-up title="Upvote">
+          <button type="button" class="ig-vote-btn ${up ? 'upvoted' : ''}" data-modal-vote-up title="Like">
             <span class="material-symbols-rounded">${up ? 'favorite' : 'favorite_border'}</span>
           </button>
           <span class="ig-vote-score">${score}</span>
-          <button type="button" class="ig-vote-btn ${down ? 'downvoted' : ''}" data-modal-vote-down title="Downvote">
-            <span class="material-symbols-rounded">arrow_downward</span>
+          <button type="button" class="ig-vote-btn ${down ? 'downvoted' : ''}" data-modal-vote-down title="Dislike">
+            <span class="material-symbols-rounded">heart_broken</span>
           </button>
           <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
           <span class="ig-action-count">${item.views || 0}</span>
         </div>
-        <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
+        <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
         <div class="ig-caption"><strong>${authorNameHtml(item.authorEmail, profile)}</strong>${linkify(item.title)}</div>
         ${body ? `<div class="ig-modal-full-body">${parseMarkdown(body)}</div>` : ''}
         <div class="ig-timestamp">${timeAgo(item._date)}</div>

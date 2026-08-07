@@ -352,9 +352,9 @@ function openWatch(v) {
     <div class="watch-title">${escHtml(v.title)}</div>
     <div class="watch-actions">
       <div class="vote-col">
-        <button class="vote-btn ${up ? 'upvoted' : ''}" id="upBtn"><span class="material-symbols-rounded">arrow_upward</span></button>
+        <button class="vote-btn ${up ? 'upvoted' : ''}" id="upBtn" title="Like"><span class="material-symbols-rounded">arrow_upward</span></button>
         <span class="vote-count">${score(v)}</span>
-        <button class="vote-btn ${down ? 'downvoted' : ''}" id="downBtn"><span class="material-symbols-rounded">arrow_downward</span></button>
+        <button class="vote-btn ${down ? 'downvoted' : ''}" id="downBtn" title="Dislike"><span class="material-symbols-rounded">heart_broken</span></button>
       </div>
       ${authorLinkHtml(v, `${profile.photo ? `<img src="${profile.photo}" alt="">` : ''}${escHtml(profile.name)}`)}
       <span style="color:var(--md-sys-color-on-surface-variant); font-size:13px;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:middle;">visibility</span> ${v.views||0} views</span>
@@ -396,9 +396,9 @@ function openWatch(v) {
         return `
           <div class="watch-comment-row" id="watch-comment-${c.id}">
             <div class="vote-col">
-              <button class="vote-btn ${cUp ? 'upvoted' : ''}" data-comment-up="${c.id}" title="Upvote"><span class="material-symbols-rounded">arrow_upward</span></button>
+              <button class="vote-btn ${cUp ? 'upvoted' : ''}" data-comment-up="${c.id}" title="Like"><span class="material-symbols-rounded">arrow_upward</span></button>
               <span class="vote-count ${netScore > 0 ? 'positive' : netScore < 0 ? 'negative' : ''}">${netScore}</span>
-              <button class="vote-btn ${cDown ? 'downvoted' : ''}" data-comment-down="${c.id}" title="Downvote"><span class="material-symbols-rounded">arrow_downward</span></button>
+              <button class="vote-btn ${cDown ? 'downvoted' : ''}" data-comment-down="${c.id}" title="Dislike"><span class="material-symbols-rounded">heart_broken</span></button>
             </div>
             <img class="watch-comment-avatar" src="${cp.photo || ''}" alt="">
             <div class="watch-comment-body-wrap">
