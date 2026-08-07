@@ -261,7 +261,7 @@ function expandShortcodes(text) {
   return text.replace(/:([a-z0-9_+-]+):/g, (m, name) => EMOJI_SHORTCODES[name] || m);
 }
 function expandIconShorthand(html) {
-  return html.replace(/\[([a-z_]{2,40})\]/g, (m, name) =>
+  return html.replace(/\{([a-z_]{2,40})\}/g, (m, name) =>
     `<span class="material-symbols-rounded" style="font-size:1.1em;vertical-align:-0.22em;">${name}</span>`);
 }
 // Lightweight markdown for chat bubbles — bold/italic/code/links only, no
