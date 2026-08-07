@@ -115,7 +115,7 @@ function injectStyles() {
     .oe-nav-right { display: flex; align-items: center; gap: 16px; min-width: 0; margin-left: auto; }
 
     .oe-nav-notif-wrap { position: relative; flex-shrink: 0; }
-    .oe-nav-notif-btn { position: relative; }
+    .oe-nav-notif-btn { position: relative; border: none; background: transparent; padding: 0; cursor: pointer; }
     .oe-nav-notif-dot {
       position: absolute; top: -2px; right: -2px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 100px;
       background: var(--md-sys-color-error, #ffb4ab); color: #410002; font-size: 10px; font-weight: 700;
@@ -167,7 +167,7 @@ function injectStyles() {
     .oe-nav-icon-link {
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
       color: var(--md-sys-color-on-surface-variant); text-decoration: none;
-      -webkit-tap-highlight-color: transparent;
+      -webkit-tap-highlight-color: transparent; border: none; background: transparent; padding: 0; font: inherit;
     }
     .oe-nav-icon-link:visited { color: var(--md-sys-color-on-surface-variant); }
     .oe-nav-icon-link .material-symbols-rounded { font-size: 24px; }

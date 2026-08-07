@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js?v=2"></script>
+<script src="./shared/theme-boot.js?v=3"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
@@ -174,7 +174,7 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=6';
+import { mountTopNav } from './shared/topnav.js?v=7';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
 } from './shared/account.js?v=13';
@@ -369,7 +369,7 @@ function showInbox(user) {
 
   unsubConvos = onSnapshot(
     query(collection(db, 'conversations'), where('participants', 'array-contains', user.email)),
-    async snap => {
+    snap => {
       const convos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       convos.sort((a, b) => (b.updatedAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || 0));
 
@@ -378,27 +378,33 @@ function showInbox(user) {
         return;
       }
 
-      const rows = await Promise.all(convos.map(async c => {
-        const otherEmail = c.participants.find(p => p !== user.email);
-        await ensureProfileLoaded(otherEmail);
-        const profile = getProfile(otherEmail, null, null);
-        return { c, otherEmail, profile };
-      }));
+      // Render right away with whatever's already cached (falls back to
+      // "User" for names we haven't seen this session) rather than blocking
+      // the whole list behind a profile fetch per conversation — then patch
+      // names/photos in place as ensureProfileLoaded resolves for each.
+      function renderRows() {
+        content.innerHTML = `<div class="convo-list">${convos.map(c => {
+          const otherEmail = c.participants.find(p => p !== user.email);
+          const profile = getProfile(otherEmail, null, null);
+          return `
+            <button class="convo-row" data-email="${escHtml(otherEmail)}">
+              <img class="convo-avatar" src="${profile.photo || ''}" alt="">
+              <div class="convo-main">
+                <div class="convo-name">${escHtml(profile.name)}${officialBadgeHtml(otherEmail)}</div>
+                <div class="convo-preview">${escHtml(c.lastMessage || '')}</div>
+              </div>
+              <div class="convo-time">${c.updatedAt?.toDate ? timeAgo(c.updatedAt.toDate()) : ''}</div>
+            </button>
+          `;
+        }).join('')}</div>`;
+        content.querySelectorAll('.convo-row').forEach(btn => {
+          btn.addEventListener('click', () => openThread(btn.dataset.email, user));
+        });
+      }
 
-      content.innerHTML = `<div class="convo-list">${rows.map(({ c, otherEmail, profile }) => `
-        <button class="convo-row" data-email="${escHtml(otherEmail)}">
-          <img class="convo-avatar" src="${profile.photo || ''}" alt="">
-          <div class="convo-main">
-            <div class="convo-name">${escHtml(profile.name)}${officialBadgeHtml(otherEmail)}</div>
-            <div class="convo-preview">${escHtml(c.lastMessage || '')}</div>
-          </div>
-          <div class="convo-time">${c.updatedAt?.toDate ? timeAgo(c.updatedAt.toDate()) : ''}</div>
-        </button>
-      `).join('')}</div>`;
-
-      content.querySelectorAll('.convo-row').forEach(btn => {
-        btn.addEventListener('click', () => openThread(btn.dataset.email, user));
-      });
+      renderRows();
+      const otherEmails = [...new Set(convos.map(c => c.participants.find(p => p !== user.email)))];
+      Promise.all(otherEmails.map(e => ensureProfileLoaded(e))).then(renderRows);
     },
     err => { content.innerHTML = `<div class="empty-note">Could not load chats: ${escHtml(err.message)}</div>`; }
   );
@@ -412,7 +418,6 @@ async function openThread(otherEmail, user) {
   document.getElementById('backLinkText').textContent = 'back to chats';
   document.getElementById('backLink').onclick = e => { e.preventDefault(); showInbox(user); };
 
-  await ensureProfileLoaded(otherEmail);
   const convoId = conversationId(user.email, otherEmail);
   const otherProfile = getProfile(otherEmail, null, null);
   const otherHandle = handleOf(otherEmail);
@@ -441,6 +446,18 @@ async function openThread(otherEmail, user) {
       </div>
     </div>
   `;
+
+  // The header may be showing a stale/fallback name+photo if this contact
+  // wasn't already cached from the inbox list — patch it in place once the
+  // real profile loads, rather than blocking the whole thread (message
+  // list, input box) from appearing until that single fetch resolves.
+  ensureProfileLoaded(otherEmail).then(() => {
+    const fresh = getProfile(otherEmail, null, null);
+    const nameEl = content.querySelector('.thread-header .name');
+    const avatarEl = content.querySelector('.thread-header img');
+    if (nameEl) nameEl.innerHTML = `${escHtml(fresh.name)}${officialBadgeHtml(otherEmail)}`;
+    if (avatarEl && fresh.photo) avatarEl.src = fresh.photo;
+  });
 
   const msgList = document.getElementById('msgList');
   const msgInput = document.getElementById('msgInput');
