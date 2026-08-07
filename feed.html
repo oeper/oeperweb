@@ -1310,6 +1310,10 @@ function runForum() {
       if (wantedPost && posts.find(p => p.id === wantedPost)) {
         openThread(wantedPost, { highlightComment: params.get('comment') });
       }
+      if (params.get('new') === '1') {
+        history.replaceState({}, '', '/feed');
+        openPostModal(null);
+      }
     }
   }, err => showToast('Could not load posts: ' + err.message));
 

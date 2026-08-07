@@ -359,11 +359,80 @@
   .hsd-empty, .hsd-loading { padding: 20px; text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; }
 
   .home-feed-section { margin: 40px 0; }
-  .home-feed-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
+  .home-feed-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .home-feed-heading h2 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 22px; font-weight: 400; }
-  .home-feed-heading .header-link { display: inline-flex; align-items: center; gap: 4px; }
-  .home-feed-heading .header-link:visited { color: var(--md-sys-color-primary); }
+  .home-feed-heading .header-link {
+    display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+    background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 13px; font-weight: 500;
+    padding: 8px 16px; border-radius: 100px; transition: opacity 0.2s;
+  }
+  .home-feed-heading .header-link:visited { color: var(--md-sys-color-on-primary); }
+  .home-feed-heading .header-link:hover { opacity: 0.88; }
   .home-feed-heading .header-link .material-symbols-rounded { font-size: 16px; }
+
+  .toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: #303034;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4); border-radius: 16px; padding: 14px 24px;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
+    font-size: 14px; color: #e3e2e6; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 300; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Stories */
+  .stories-bar { display: flex; gap: 14px; overflow-x: auto; overflow-y: visible; padding: 36px 2px 8px; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 470px; margin: 0 auto; }
+  .stories-bar::-webkit-scrollbar { display: none; }
+  .story-item { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; cursor: pointer; width: 64px; }
+  .story-ring {
+    width: 60px; height: 60px; border-radius: 50%; padding: 2.5px;
+    background: linear-gradient(45deg, var(--md-sys-color-primary), var(--md-sys-color-secondary-container));
+  }
+  .story-ring.seen { background: var(--md-sys-color-outline-variant); opacity: 0.5; }
+  .story-ring img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid var(--md-sys-color-background); background: var(--md-sys-color-surface-variant); display: block; }
+  .story-label { font-size: 11px; color: var(--md-sys-color-on-surface-variant); max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .story-add .story-ring { background: var(--md-sys-color-surface-variant); position: relative; }
+  .story-add .story-ring .material-symbols-rounded { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface-variant); font-size: 24px; }
+
+  .story-viewer { position: fixed; inset: 0; background: #000; z-index: 300; display: none; flex-direction: column; align-items: center; justify-content: center; }
+  .story-viewer.open { display: flex; }
+  .story-viewer-media { max-width: 100vw; max-height: 100vh; object-fit: contain; }
+  .story-progress-row { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; gap: 4px; }
+  .story-progress-track { flex: 1; height: 3px; border-radius: 3px; background: rgba(255,255,255,0.3); overflow: hidden; }
+  .story-progress-fill { height: 100%; width: 0%; background: #fff; }
+  .story-viewer-header { position: absolute; top: 24px; left: 16px; right: 16px; display: flex; align-items: center; gap: 10px; color: #fff; z-index: 2; }
+  .story-viewer-header img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+  .story-viewer-close { position: absolute; top: 24px; right: 16px; background: none; border: none; color: #fff; cursor: pointer; z-index: 2; }
+  .story-tap-zone { position: absolute; top: 0; bottom: 0; width: 33%; z-index: 1; }
+  .story-tap-zone.left { left: 0; } .story-tap-zone.right { right: 0; }
+  .story-bottom-actions { position: absolute; bottom: 24px; right: 16px; display: flex; gap: 10px; z-index: 2; }
+  .story-icon-btn {
+    width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15);
+    color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);
+  }
+  .story-icon-btn:hover { background: rgba(255,255,255,0.25); }
+
+  /* Notes */
+  .notes-bar { display: flex; gap: 16px; overflow-x: auto; overflow-y: visible; padding: 36px 2px 20px; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 470px; margin: 0 auto; }
+  .notes-bar::-webkit-scrollbar { display: none; }
+  .note-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; width: 62px; cursor: pointer; }
+  .note-avatar-wrap { position: relative; }
+  .note-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); }
+  .note-bubble {
+    position: absolute; bottom: 38px; left: 50%; transform: translateX(-50%); background: var(--md-sys-color-surface-variant);
+    border: 1px solid var(--md-sys-color-outline); border-radius: 14px; padding: 6px 10px; font-size: 11px;
+    white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; color: var(--md-sys-color-on-surface);
+  }
+  .note-label { font-size: 11px; color: var(--md-sys-color-on-surface-variant); max-width: 62px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .note-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 210; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .note-overlay.open { opacity: 1; pointer-events: all; }
+  .note-modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -48%); width: min(360px, 90vw);
+    background: var(--md-sys-color-surface); border-radius: 24px; padding: 24px; z-index: 211;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+  }
+  .note-modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
+  .note-modal input { width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none; margin-bottom: 16px; }
+  .note-modal-actions { display: flex; justify-content: space-between; gap: 12px; }
   .home-feed { display: flex; flex-direction: column; gap: 24px; max-width: 470px; margin: 0 auto; }
   .home-feed-empty { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 0; text-align: center; }
   .home-feed-load-more {
@@ -566,17 +635,361 @@
     </form>
   </div>
 
+  <div class="toast" id="toast"></div>
+
+  <div class="story-viewer" id="storyViewer">
+    <div class="story-tap-zone left" id="storyPrevZone"></div>
+    <div class="story-tap-zone right" id="storyNextZone"></div>
+    <div class="story-progress-row" id="storyProgressRow"></div>
+    <div class="story-viewer-header">
+      <img id="storyViewerAvatar" src="" alt="">
+      <span id="storyViewerName" style="font-size:14px; font-weight:500;"></span>
+    </div>
+    <button class="story-viewer-close" id="storyViewerClose"><span class="material-symbols-rounded">close</span></button>
+    <img class="story-viewer-media" id="storyViewerImg" style="display:none;">
+    <video class="story-viewer-media" id="storyViewerVideo" style="display:none;" autoplay muted></video>
+    <div class="story-bottom-actions">
+      <button class="story-icon-btn" id="storyShareBtn" title="Share"><span class="material-symbols-rounded">link</span></button>
+      <button class="story-icon-btn" id="storyReportBtn" title="Report"><span class="material-symbols-rounded">flag</span></button>
+    </div>
+  </div>
+
+  <div class="note-overlay" id="noteOverlay"></div>
+  <div class="note-modal" id="noteModal">
+    <input type="text" id="noteInput" maxlength="60" placeholder="Share a thought…">
+    <div class="note-modal-actions">
+      <button type="button" id="noteCancelBtn" class="ig-comment-close-btn" style="width:auto;border-radius:100px;padding:10px 18px;border:1px solid var(--md-sys-color-error);color:var(--md-sys-color-error);">Cancel</button>
+      <button type="button" id="noteShareBtn" class="ig-comment-send-btn" style="width:auto;border-radius:100px;padding:10px 20px;">Share</button>
+    </div>
+  </div>
+
 <script type="module">
-  import { db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser, sendNotification } from './shared/account.js?v=13';
+  import {
+    db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser, sendNotification,
+    onAccountChange, SERVER_ENDPOINT, MAX_IMAGE_BYTES, uploadFile,
+  } from './shared/account.js?v=13';
   import { mountTopNav } from './shared/topnav.js?v=9';
   import { mountFooter } from './shared/footer.js?v=3';
   import {
     collection, query, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp,
-    getDocs, where,
+    getDocs, where, setDoc, Timestamp,
   } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
   mountTopNav();
   mountFooter();
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+  async function copyLink(url, label) {
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast((label || 'Link') + ' copied to clipboard');
+    } catch {
+      window.prompt('Copy this link:', url);
+    }
+  }
+  async function reportItem(type, itemId, contentPreview, aboutHandleOrEmail, url) {
+    const u = getCurrentUser();
+    if (!u) { showToast('Sign in to report'); return; }
+    if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
+    const reason = window.prompt('Why are you reporting this?');
+    if (!reason || !reason.trim()) return;
+    try {
+      const idToken = await u.getIdToken();
+      const res = await fetch(SERVER_ENDPOINT + '/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
+        body: JSON.stringify({
+          type, reason: reason.trim(), itemId,
+          url: url || `About: ${aboutHandleOrEmail}${contentPreview ? ` — "${contentPreview.slice(0, 200)}"` : ''}`,
+        }),
+      });
+      if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try { msg = (await res.json()).error || msg; } catch {}
+        throw new Error(msg);
+      }
+      showToast('Report sent — thank you');
+    } catch (err) { showToast('Could not send report: ' + err.message); }
+  }
+
+  // ── Stories ──────────────────────────────────────────────────
+  const STORY_LIFETIME_MS = 24 * 60 * 60 * 1000;
+  const STORY_SEEN_KEY = 'oe-seen-stories';
+  function initStories() {
+    const bar = document.getElementById('storiesBar');
+    const fileInput = document.getElementById('storyFileInput');
+    if (!bar) return;
+    let allStories = [];
+
+    onSnapshot(collection(db, 'stories'), async snap => {
+      const now = Date.now();
+      allStories = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(s => s.expiresAt && s.expiresAt.toMillis && s.expiresAt.toMillis() > now)
+        .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+      await Promise.all([...new Set(allStories.map(s => s.authorEmail))].map(ensureProfileLoaded));
+      renderStoriesBar();
+    }, () => { bar.innerHTML = ''; });
+
+    function seenIds() {
+      try { return new Set(JSON.parse(localStorage.getItem(STORY_SEEN_KEY) || '[]')); } catch { return new Set(); }
+    }
+    function markSeen(id) {
+      const set = seenIds();
+      set.add(id);
+      localStorage.setItem(STORY_SEEN_KEY, JSON.stringify([...set].slice(-500)));
+    }
+
+    function renderStoriesBar() {
+      const user = getCurrentUser();
+      const byAuthor = new Map();
+      allStories.forEach(s => {
+        if (!byAuthor.has(s.authorEmail)) byAuthor.set(s.authorEmail, []);
+        byAuthor.get(s.authorEmail).push(s);
+      });
+      const seen = seenIds();
+
+      let html = '';
+      if (user) {
+        html += `
+          <div class="story-item story-add" id="storyAddBtn">
+            <div class="story-ring"><span class="material-symbols-rounded">add</span></div>
+            <div class="story-label">Your story</div>
+          </div>
+        `;
+      }
+      for (const [email, stories] of byAuthor) {
+        const profile = getProfile(email, stories[0].authorName, stories[0].authorPhoto);
+        const allSeen = stories.every(s => seen.has(s.id));
+        html += `
+          <div class="story-item" data-author="${escHtml(email)}">
+            <div class="story-ring ${allSeen ? 'seen' : ''}"><img src="${profile.photo || ''}" alt=""></div>
+            <div class="story-label">${escHtml(profile.name)}</div>
+          </div>
+        `;
+      }
+      bar.innerHTML = html;
+
+      const addBtn = document.getElementById('storyAddBtn');
+      if (addBtn) addBtn.addEventListener('click', () => fileInput.click());
+      bar.querySelectorAll('.story-item[data-author]').forEach(el => {
+        el.addEventListener('click', () => openStoryViewer(byAuthor.get(el.dataset.author)));
+      });
+    }
+
+    fileInput.addEventListener('change', async () => {
+      const user = getCurrentUser();
+      const file = fileInput.files[0];
+      fileInput.value = '';
+      if (!user || !file) return;
+      if (file.size > MAX_IMAGE_BYTES) { showToast(`File must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); return; }
+      const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+      try {
+        const url = await uploadFile(file, '/upload');
+        const profile = getProfile(user.email, user.displayName, user.photoURL);
+        await addDoc(collection(db, 'stories'), {
+          authorEmail: user.email,
+          authorName: profile.name,
+          authorPhoto: profile.photo,
+          mediaUrl: url,
+          mediaType,
+          createdAt: serverTimestamp(),
+          expiresAt: Timestamp.fromMillis(Date.now() + STORY_LIFETIME_MS),
+        });
+        showToast('Story posted — visible for 24h');
+      } catch (err) {
+        showToast('Could not post story: ' + err.message);
+      }
+    });
+
+    const viewer = document.getElementById('storyViewer');
+    const imgEl = document.getElementById('storyViewerImg');
+    const videoEl = document.getElementById('storyViewerVideo');
+    const avatarEl = document.getElementById('storyViewerAvatar');
+    const nameEl = document.getElementById('storyViewerName');
+    const progressRow = document.getElementById('storyProgressRow');
+    let currentSet = [];
+    let currentIndex = 0;
+    let advanceTimer = null;
+
+    function openStoryViewer(stories) {
+      currentSet = stories;
+      currentIndex = 0;
+      progressRow.innerHTML = stories.map(() => '<div class="story-progress-track"><div class="story-progress-fill"></div></div>').join('');
+      viewer.classList.add('open');
+      showStory(0);
+    }
+    function closeStoryViewer() {
+      viewer.classList.remove('open');
+      videoEl.pause();
+      clearTimeout(advanceTimer);
+    }
+    function showStory(i) {
+      clearTimeout(advanceTimer);
+      if (i < 0 || i >= currentSet.length) { closeStoryViewer(); return; }
+      currentIndex = i;
+      const s = currentSet[i];
+      markSeen(s.id);
+      const profile = getProfile(s.authorEmail, s.authorName, s.authorPhoto);
+      avatarEl.src = profile.photo || '';
+      nameEl.textContent = profile.name;
+
+      const fills = progressRow.querySelectorAll('.story-progress-fill');
+      fills.forEach((f, idx) => { f.style.transition = 'none'; f.style.width = idx < i ? '100%' : '0%'; });
+      void progressRow.offsetWidth;
+
+      if (s.mediaType === 'video') {
+        imgEl.style.display = 'none';
+        videoEl.style.display = 'block';
+        videoEl.src = s.mediaUrl;
+        videoEl.currentTime = 0;
+        videoEl.play();
+        videoEl.onloadedmetadata = () => animateFill(i, Math.min(videoEl.duration * 1000, 15000));
+        videoEl.onended = () => showStory(i + 1);
+      } else {
+        videoEl.pause();
+        videoEl.style.display = 'none';
+        imgEl.style.display = 'block';
+        imgEl.src = s.mediaUrl;
+        animateFill(i, 5000);
+        advanceTimer = setTimeout(() => showStory(i + 1), 5000);
+      }
+    }
+    function animateFill(i, durationMs) {
+      const fills = progressRow.querySelectorAll('.story-progress-fill');
+      const fill = fills[i];
+      if (!fill) return;
+      requestAnimationFrame(() => {
+        fill.style.transition = `width ${durationMs}ms linear`;
+        fill.style.width = '100%';
+      });
+    }
+    function storyUrl(id) {
+      const url = new URL(window.location.href.split('?')[0]);
+      url.searchParams.set('story', id);
+      return url.toString();
+    }
+
+    document.getElementById('storyShareBtn').addEventListener('click', () => {
+      const s = currentSet[currentIndex];
+      if (s) copyLink(storyUrl(s.id), 'Story link');
+    });
+    document.getElementById('storyReportBtn').addEventListener('click', () => {
+      const s = currentSet[currentIndex];
+      if (s) reportItem('story', s.id, null, s.authorEmail, storyUrl(s.id));
+    });
+
+    document.getElementById('storyViewerClose').addEventListener('click', closeStoryViewer);
+    document.getElementById('storyPrevZone').addEventListener('click', () => showStory(currentIndex - 1));
+    document.getElementById('storyNextZone').addEventListener('click', () => showStory(currentIndex + 1));
+    viewer.addEventListener('click', e => { if (e.target === viewer) closeStoryViewer(); });
+  }
+
+  // ── Notes ────────────────────────────────────────────────────
+  const NOTE_LIFETIME_MS = 24 * 60 * 60 * 1000;
+  function initNotes() {
+    const bar = document.getElementById('notesBar');
+    if (!bar) return;
+    const overlay = document.getElementById('noteOverlay');
+    const modal = document.getElementById('noteModal');
+    const input = document.getElementById('noteInput');
+
+    onSnapshot(collection(db, 'notes'), snap => {
+      const now = Date.now();
+      const notes = snap.docs
+        .map(d => ({ email: d.id, ...d.data() }))
+        .filter(n => n.expiresAt && n.expiresAt.toMillis && n.expiresAt.toMillis() > now);
+      render(notes);
+    }, () => { bar.innerHTML = ''; });
+
+    function render(notes) {
+      const user = getCurrentUser();
+      let html = '';
+      if (user) {
+        const mine = notes.find(n => n.email === user.email);
+        const profile = getProfile(user.email, user.displayName, user.photoURL);
+        html += `
+          <div class="note-item" id="myNoteItem">
+            <div class="note-avatar-wrap">
+              ${mine ? `<div class="note-bubble">${escHtml(mine.text)}</div>` : ''}
+              <img class="note-avatar" src="${profile.photo || ''}" alt="">
+            </div>
+            <div class="note-label">${mine ? 'Your note' : 'Add a note'}</div>
+          </div>
+        `;
+      }
+      notes.filter(n => !user || n.email !== user.email).forEach(n => {
+        const profile = getProfile(n.email, n.authorName, n.authorPhoto);
+        html += `
+          <div class="note-item" data-handle="${escHtml(handleOf(n.email) || '')}" data-email="${escHtml(n.email)}">
+            <div class="note-avatar-wrap">
+              <div class="note-bubble">
+                ${escHtml(n.text)}
+                <button class="ig-comment-close-btn" data-report-note style="opacity:1; width:16px; height:16px; vertical-align:middle; display:inline-flex;" title="Report"><span class="material-symbols-rounded" style="font-size:12px;">flag</span></button>
+              </div>
+              <img class="note-avatar" src="${profile.photo || ''}" alt="">
+            </div>
+            <div class="note-label">${escHtml(profile.name)}</div>
+          </div>
+        `;
+      });
+      bar.innerHTML = html;
+
+      const myItem = document.getElementById('myNoteItem');
+      if (myItem) myItem.addEventListener('click', openNoteModal);
+      bar.querySelectorAll('.note-item[data-handle]').forEach(el => {
+        el.addEventListener('click', () => {
+          if (el.dataset.handle) window.location.href = '/profile?u=' + encodeURIComponent(el.dataset.handle);
+        });
+        const reportBtn = el.querySelector('[data-report-note]');
+        if (reportBtn) reportBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          const n = notes.find(x => x.email === el.dataset.email);
+          if (n) reportItem('note', el.dataset.email, n.text, el.dataset.handle || el.dataset.email);
+        });
+      });
+    }
+
+    function openNoteModal() {
+      input.value = '';
+      overlay.classList.add('open');
+      modal.classList.add('open');
+      input.focus();
+    }
+    function closeNoteModal() {
+      overlay.classList.remove('open');
+      modal.classList.remove('open');
+    }
+    overlay.addEventListener('click', closeNoteModal);
+    document.getElementById('noteCancelBtn').addEventListener('click', closeNoteModal);
+    document.getElementById('noteShareBtn').addEventListener('click', async () => {
+      const user = getCurrentUser();
+      const text = input.value.trim();
+      if (!user || !text) return;
+      try {
+        await setDoc(doc(db, 'notes', user.email), {
+          text,
+          authorName: getProfile(user.email, user.displayName, user.photoURL).name,
+          authorPhoto: getProfile(user.email, user.displayName, user.photoURL).photo,
+          createdAt: serverTimestamp(),
+          expiresAt: Timestamp.fromMillis(Date.now() + NOTE_LIFETIME_MS),
+        });
+        closeNoteModal();
+      } catch (err) {
+        alert('Could not share note: ' + err.message);
+      }
+    });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('noteShareBtn').click(); });
+  }
+
+  initStories();
+  initNotes();
 
   function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function linkify(str) {
@@ -1046,6 +1459,7 @@
     google: { action: 'https://www.google.com/search', param: 'q' },
     duckduckgo: { action: 'https://duckduckgo.com/', param: 'q' },
     bing: { action: 'https://www.bing.com/search', param: 'q' },
+    oeper: { action: '#', param: 'q' },
   };
   const searchForm = document.getElementById('homeSearchForm');
   if (searchForm) {
@@ -1134,7 +1548,7 @@
       const top = results.slice(0, 6);
 
       const engineName = SEARCH_ENGINES[engine] ? engine[0].toUpperCase() + engine.slice(1) : 'Google';
-      const footer = `<div class="hsd-footer"><span class="material-symbols-rounded" style="font-size:16px;">public</span>Press Enter to search the web on ${engineName}</div>`;
+      const footer = engine === 'oeper' ? '' : `<div class="hsd-footer"><span class="material-symbols-rounded" style="font-size:16px;">public</span>Press Enter to search the web on ${engineName}</div>`;
 
       if (top.length === 0) {
         dropdown.innerHTML = `<div class="hsd-empty">No oeper.dev results for "${escHtml(qRaw.trim())}"</div>${footer}`;
@@ -1161,6 +1575,14 @@
     searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') closeDropdown(); });
     document.addEventListener('click', e => {
       if (!dropdown.contains(e.target) && e.target !== searchInput) closeDropdown();
+    });
+    // "oeper.dev" isn't a real search engine to submit to — Enter just
+    // jumps to the top result already shown in the dropdown above.
+    searchForm.addEventListener('submit', e => {
+      if (engine !== 'oeper') return;
+      e.preventDefault();
+      const first = dropdown.querySelector('.hsd-row');
+      if (first) window.location.href = first.getAttribute('href');
     });
   }
 </script>
@@ -1288,14 +1710,19 @@ PAGES.forEach((page, index) => {
             <button type="button" class="home-search-engine" data-engine="google">Google</button>
             <button type="button" class="home-search-engine" data-engine="duckduckgo">DuckDuckGo</button>
             <button type="button" class="home-search-engine" data-engine="bing">Bing</button>
+            <button type="button" class="home-search-engine" data-engine="oeper">oeper.dev</button>
           </div>
         </form>
       ` : ''}
     </div>
     ${isFirst ? `
+      <div class="stories-bar" id="storiesBar"></div>
+      <input type="file" id="storyFileInput" accept="image/*,video/*" style="display:none;">
+      <div class="notes-bar" id="notesBar"></div>
       <div class="home-feed-section">
         <div class="home-feed-heading">
           <h2>Feed</h2>
+          <a href="/feed?new=1" class="header-link" id="homeNewPostBtn"><span class="material-symbols-rounded">add</span> New post</a>
         </div>
         <div class="home-feed" id="homeFeed"></div>
       </div>
