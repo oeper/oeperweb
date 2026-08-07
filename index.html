@@ -293,6 +293,34 @@
   }
   .home-search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
   .home-search-input:focus { border-color: var(--md-sys-color-primary); background-color: var(--md-sys-color-hover-surface); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .home-search-dropdown {
+    position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+    background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 20px; padding: 8px; max-height: 400px; overflow-y: auto; z-index: 20; text-align: left;
+    opacity: 0; pointer-events: none; transform: translateY(-6px);
+    transition: opacity 0.15s, transform 0.15s;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+  }
+  .home-search-dropdown.open { opacity: 1; pointer-events: all; transform: translateY(0); }
+  .hsd-row {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px;
+    cursor: pointer; text-decoration: none; color: inherit;
+  }
+  .hsd-row:hover { background: var(--md-sys-state-hover); }
+  .hsd-icon {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--md-sys-color-surface-variant);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;
+  }
+  .hsd-icon img { width: 100%; height: 100%; object-fit: cover; }
+  .hsd-icon .material-symbols-rounded { font-size: 18px; color: var(--md-sys-color-on-surface-variant); }
+  .hsd-main { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hsd-name { font-weight: 500; }
+  .hsd-cat { color: var(--md-sys-color-on-surface-variant); font-weight: 400; }
+  .hsd-empty, .hsd-loading { padding: 18px; text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; }
+  .hsd-footer {
+    display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin-top: 4px; border-top: 1px solid var(--md-sys-color-outline-variant);
+    font-size: 13px; color: var(--md-sys-color-on-surface-variant);
+  }
   .home-search-engines { display: flex; gap: 6px; margin-top: 10px; }
   .home-search-engine {
     background: transparent; border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface-variant);
@@ -541,6 +569,7 @@
   import { mountFooter } from './shared/footer.js?v=3';
   import {
     collection, query, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp,
+    getDocs, where,
   } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
   mountTopNav();
@@ -1037,15 +1066,136 @@
         searchInput.focus();
       });
     });
+
+    // ── oeper.dev content results, shown right in this box as you type ──
+    // Submitting the form (Enter, or no result picked) still goes to the
+    // chosen web search engine as before — this is additive, not a replacement.
+    const dropdown = document.getElementById('homeSearchDropdown');
+    function closeDropdown() { dropdown.classList.remove('open'); }
+
+    let corpusPromise = null;
+    function loadCorpus() {
+      if (corpusPromise) return corpusPromise;
+      corpusPromise = Promise.allSettled([
+        getDocs(query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(300))),
+        getDocs(query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(300))),
+        getDocs(query(collection(db, 'projects'), orderBy('createdAt', 'desc'), limit(300))),
+        getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(300))),
+      ]).then(([postsR, videosR, projectsR, usersR]) => ({
+        posts: postsR.status === 'fulfilled' ? postsR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
+        videos: videosR.status === 'fulfilled' ? videosR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
+        projects: projectsR.status === 'fulfilled' ? projectsR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
+        users: usersR.status === 'fulfilled' ? usersR.value.docs.map(d => ({ email: d.id, ...d.data() })) : [],
+      }));
+      return corpusPromise;
+    }
+    function matchRank(name, q) {
+      const idx = (name || '').toLowerCase().indexOf(q);
+      if (idx === -1) return -1;
+      return idx === 0 ? 0 : 1;
+    }
+    async function runSiteSearch(qRaw) {
+      const q = qRaw.trim().toLowerCase();
+      if (!q) { closeDropdown(); return; }
+      dropdown.innerHTML = '<div class="hsd-loading">Searching oeper.dev…</div>';
+      dropdown.classList.add('open');
+
+      let corpus;
+      try { corpus = await loadCorpus(); } catch { corpus = { posts: [], videos: [], projects: [], users: [] }; }
+      if (searchInput.value.trim().toLowerCase() !== q) return;
+
+      const results = [];
+      corpus.users.forEach(u => {
+        if (!u.handle) return;
+        const name = u.displayName || u.handle;
+        const rank = Math.min(
+          matchRank(name, q) === -1 ? 99 : matchRank(name, q),
+          matchRank(u.handle, q) === -1 ? 99 : matchRank(u.handle, q)
+        );
+        if (rank < 99) results.push({ rank, name, sub: 'in People', url: `/profile?u=${encodeURIComponent(u.handle)}`, photo: getProfile(u.email, u.displayName, u.photoURL).photo, icon: 'person' });
+      });
+      corpus.posts.forEach(p => {
+        const name = p.title || p.body || '';
+        const rank = matchRank(name, q);
+        if (rank !== -1) results.push({ rank, name, sub: 'in Feed', url: `/forum?post=${p.id}`, icon: 'forum' });
+      });
+      corpus.videos.forEach(v => {
+        const rank = matchRank(v.title, q);
+        if (rank !== -1) results.push({ rank, name: v.title || '', sub: 'in Videos', url: `/videos?video=${v.id}`, icon: 'smart_display' });
+      });
+      corpus.projects.forEach(p => {
+        const rank = matchRank(p.title, q);
+        if (rank !== -1) results.push({ rank, name: p.title || '', sub: 'in Projects', url: `/projects?project=${p.id}`, icon: 'apps' });
+      });
+      results.sort((a, b) => a.rank - b.rank);
+      const top = results.slice(0, 6);
+
+      const engineName = SEARCH_ENGINES[engine] ? engine[0].toUpperCase() + engine.slice(1) : 'Google';
+      const footer = `<div class="hsd-footer"><span class="material-symbols-rounded" style="font-size:16px;">public</span>Press Enter to search the web on ${engineName}</div>`;
+
+      if (top.length === 0) {
+        dropdown.innerHTML = `<div class="hsd-empty">No oeper.dev results for "${escHtml(qRaw.trim())}"</div>${footer}`;
+        return;
+      }
+      dropdown.innerHTML = top.map(r => `
+        <a class="hsd-row" href="${r.url}">
+          <div class="hsd-icon">${r.photo ? `<img src="${r.photo}" alt="">` : `<span class="material-symbols-rounded">${r.icon}</span>`}</div>
+          <div class="hsd-main"><span class="hsd-name">${escHtml(r.name)}</span> <span class="hsd-cat">${r.sub}</span></div>
+        </a>
+      `).join('') + footer;
+    }
+
+    let debounceTimer = null;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      const q = searchInput.value.trim();
+      if (!q) { closeDropdown(); return; }
+      debounceTimer = setTimeout(() => runSiteSearch(q), 220);
+    });
+    searchInput.addEventListener('focus', () => {
+      if (searchInput.value.trim()) dropdown.classList.add('open');
+    });
+    searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') closeDropdown(); });
+    document.addEventListener('click', e => {
+      if (!dropdown.contains(e.target) && e.target !== searchInput) closeDropdown();
+    });
   }
 </script>
 <script>
+// A varied greeting instead of a single fixed title — mostly just for
+// personality, with a few entries that lean on the time of day without
+// the whole thing being reduced to "good morning / good afternoon / good
+// evening / good night" every single visit.
+const HOME_GREETINGS = [
+  'Welcome to oeper.dev!',
+  "Hey, you're here.",
+  'Good to see you.',
+  "Let's see what's new.",
+  'Glad you stopped by.',
+  'Welcome back.',
+  "What's on your mind?",
+  'Make yourself at home.',
+  'oeper.dev, at your service.',
+  'Look around, stay a while.',
+];
+function homeGreetingByHour() {
+  const h = new Date().getHours();
+  if (h < 5) return ['Still up?', 'Burning the midnight oil?', 'Night owl mode.'];
+  if (h < 12) return ['Rise and shine.', 'Fresh start today.', 'Morning.'];
+  if (h < 18) return ["Here's what's new.", 'Back for more?', 'Afternoon.'];
+  return ['Winding down?', 'Evening.', 'End-of-day check-in.'];
+}
+function homeGreeting() {
+  const pool = HOME_GREETINGS.concat(homeGreetingByHour());
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 const PAGES = [
   {
     id: 'home',
     title: 'Home',
     icon: 'home',
-    heroTitle: 'Welcome to oeper.dev!',
+    heroTitle: homeGreeting(),
     heroSub: 'This is my website with a bunch of my stuff like my projects, articles and a lot more. Feel free to do whatever you want!',
     items: []
   },
@@ -1129,6 +1279,7 @@ PAGES.forEach((page, index) => {
           <div class="home-search-wrap">
             <span class="material-symbols-rounded home-search-icon">search</span>
             <input class="home-search-input" type="text" name="q" id="homeSearchInput" placeholder="Search the web…" autocomplete="off">
+            <div class="home-search-dropdown" id="homeSearchDropdown"></div>
           </div>
           <div class="home-search-engines" id="homeSearchEngines">
             <button type="button" class="home-search-engine" data-engine="google">Google</button>
