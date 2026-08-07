@@ -128,7 +128,7 @@ service cloud.firestore {
         && request.resource.data.participants.size() == 2
         && request.auth.token.email in request.resource.data.participants;
       allow update: if isSignedIn() && request.auth.token.email in resource.data.participants
-        && onlyChanged(['lastMessage', 'lastMessageAt', 'updatedAt']);
+        && onlyChanged(['lastMessage', 'lastMessageSenderEmail', 'lastMessageAt', 'updatedAt']);
 
       match /messages/{messageId} {
         allow read: if isSignedIn()

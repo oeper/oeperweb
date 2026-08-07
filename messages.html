@@ -214,7 +214,7 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=8';
+import { mountTopNav } from './shared/topnav.js?v=9';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
 } from './shared/account.js?v=13';
@@ -476,6 +476,7 @@ async function openThread(otherEmail, user) {
   const convoId = conversationId(user.email, otherEmail);
   const otherProfile = getProfile(otherEmail, null, null);
   const otherHandle = handleOf(otherEmail);
+  localStorage.setItem('oe-chat-read-' + convoId, String(Date.now()));
 
   content.innerHTML = `
     <div class="thread-shell">
@@ -685,12 +686,14 @@ async function openThread(otherEmail, user) {
       await setDoc(convoRef, {
         participants: [user.email, otherEmail],
         lastMessage: preview,
+        lastMessageSenderEmail: user.email,
         lastMessageAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
     } else {
-      await setDoc(convoRef, { lastMessage: preview, lastMessageAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+      await setDoc(convoRef, { lastMessage: preview, lastMessageSenderEmail: user.email, lastMessageAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
     }
+    localStorage.setItem('oe-chat-read-' + convoId, String(Date.now()));
   }
 
   async function send() {

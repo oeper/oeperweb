@@ -298,7 +298,7 @@ export function mountTopNav(container) {
           </button>
           <div class="oe-notif-dropdown" id="oeNotifDropdown"></div>
         </div>
-        <a href="/messages" class="oe-nav-icon-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
+        <a href="/messages" class="oe-nav-icon-link" title="Chat"><span class="material-symbols-rounded" id="oeNavChatIcon">chat_bubble</span></a>
         <a href="/settings" class="oe-nav-icon-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
         <div id="oeNavAccountBar"></div>
       </div>
@@ -345,6 +345,36 @@ export function mountTopNav(container) {
   mountAccountBar(navEl.querySelector('#oeNavAccountBar'));
   initSearch(navEl);
   initNotifications(navEl);
+  initChatUnread(navEl);
+}
+
+// ── Chat unread icon ────────────────────────────────────────
+// No server-tracked read state — "read" is just a localStorage
+// timestamp per conversation, written by messages.html when a thread is
+// opened. A conversation counts as unread if its last message wasn't
+// sent by you and arrived after that timestamp (or was never opened).
+function initChatUnread(navEl) {
+  const icon = navEl.querySelector('#oeNavChatIcon');
+  let unsub = null;
+  function subscribe(user) {
+    if (unsub) { unsub(); unsub = null; }
+    if (!user) { icon.textContent = 'chat_bubble'; return; }
+    unsub = onSnapshot(
+      query(collection(db, 'conversations'), where('participants', 'array-contains', user.email)),
+      snap => {
+        const hasUnread = snap.docs.some(d => {
+          const c = d.data();
+          if (!c.lastMessageSenderEmail || c.lastMessageSenderEmail === user.email) return false;
+          const lastMs = c.updatedAt && c.updatedAt.toMillis ? c.updatedAt.toMillis() : 0;
+          const readMs = Number(localStorage.getItem('oe-chat-read-' + d.id) || 0);
+          return lastMs > readMs;
+        });
+        icon.textContent = hasUnread ? 'mark_chat_unread' : 'chat_bubble';
+      },
+      () => { icon.textContent = 'chat_bubble'; }
+    );
+  }
+  onAccountChange(subscribe);
 }
 
 function initSearch(navEl) {
@@ -493,6 +523,7 @@ function notifUrl(n) {
 
 function initNotifications(navEl) {
   const btn = navEl.querySelector('#oeNavNotifBtn');
+  const bellIcon = btn.querySelector('.material-symbols-rounded');
   const dot = navEl.querySelector('#oeNavNotifDot');
   const dropdown = navEl.querySelector('#oeNotifDropdown');
   let items = [];
@@ -533,6 +564,7 @@ function initNotifications(navEl) {
     const read = items.filter(n => n.read);
     dot.style.display = unread.length ? 'flex' : 'none';
     dot.textContent = unread.length > 9 ? '9+' : String(unread.length);
+    bellIcon.textContent = unread.length ? 'notifications_unread' : 'notifications';
 
     if (items.length === 0) {
       dropdown.innerHTML = `
