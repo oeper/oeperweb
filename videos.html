@@ -19,7 +19,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
 
   :root {
     --md-sys-color-background: #111318;
@@ -188,9 +191,9 @@
 <script type="module">
 import {
   auth, db, SERVER_ENDPOINT, isOwnerEmail, officialBadgeHtml, getCurrentUser, onAccountChange,
-  getProfile, handleOf, uploadFile, ensureProfileLoaded,
-} from './shared/account.js?v=11';
-import { mountTopNav } from './shared/topnav.js?v=3';
+  getProfile, handleOf, uploadFile, ensureProfileLoaded, sendNotification,
+} from './shared/account.js?v=12';
+import { mountTopNav } from './shared/topnav.js?v=4';
 import { mountFooter } from './shared/footer.js?v=3';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
@@ -397,6 +400,7 @@ function openWatch(v) {
         createdAt: serverTimestamp(),
       });
       await updateDoc(doc(db, 'videos', v.id), { commentCount: increment(1) });
+      sendNotification({ recipientEmail: v.authorEmail, type: 'comment', targetKind: 'video', targetId: v.id, preview: body.slice(0, 120) });
       watchCommentInput.value = '';
     } catch (err) {
       showToast('Could not comment: ' + err.message);
@@ -453,7 +457,10 @@ async function toggleVote(v, dir) {
     patch.downvoters = down ? arrayRemove(user.uid) : arrayUnion(user.uid);
     if (up) patch.upvoters = arrayRemove(user.uid);
   }
-  try { await updateDoc(ref, patch); } catch (err) { showToast('Could not vote: ' + err.message); }
+  try {
+    await updateDoc(ref, patch);
+    if (dir === 'up' && !up) sendNotification({ recipientEmail: v.authorEmail, type: 'upvote', targetKind: 'video', targetId: v.id, preview: v.title });
+  } catch (err) { showToast('Could not vote: ' + err.message); }
 }
 
 // ── Upload modal ──────────────────────────────────────────────

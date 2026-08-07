@@ -20,7 +20,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
 
   :root {
     --md-sys-color-background: #111318;
@@ -226,7 +229,7 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=3';
+import { mountTopNav } from './shared/topnav.js?v=4';
 mountTopNav();
 </script>
 <script>

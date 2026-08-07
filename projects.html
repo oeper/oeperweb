@@ -19,7 +19,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
 
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
 
   :root {
     --md-sys-color-background: #111318;
@@ -186,9 +189,9 @@
 <script type="module">
 import {
   auth, db, SERVER_ENDPOINT, isOwnerEmail, officialBadgeHtml, getCurrentUser, onAccountChange,
-  getProfile, handleOf, uploadFile, ensureProfileLoaded,
-} from './shared/account.js?v=11';
-import { mountTopNav } from './shared/topnav.js?v=3';
+  getProfile, handleOf, uploadFile, ensureProfileLoaded, sendNotification,
+} from './shared/account.js?v=12';
+import { mountTopNav } from './shared/topnav.js?v=4';
 import { mountFooter } from './shared/footer.js?v=3';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
@@ -391,7 +394,10 @@ async function toggleVote(p, dir) {
     patch.downvoters = down ? arrayRemove(user.uid) : arrayUnion(user.uid);
     if (up) patch.upvoters = arrayRemove(user.uid);
   }
-  try { await updateDoc(ref, patch); } catch (err) { showToast('Could not vote: ' + err.message); }
+  try {
+    await updateDoc(ref, patch);
+    if (dir === 'up' && !up) sendNotification({ recipientEmail: p.authorEmail, type: 'upvote', targetKind: 'project', targetId: p.id, preview: p.title });
+  } catch (err) { showToast('Could not vote: ' + err.message); }
 }
 
 // ── Upload modal ──────────────────────────────────────────────

@@ -236,6 +236,21 @@ service cloud.firestore {
       allow delete: if isAuthor(resource.data) || isOwner();
     }
 
+    // Notifications for the bell icon in topnav.js. Written client-side by
+    // whoever triggers them (upvoting, commenting, following, granting a
+    // badge) — recipientEmail is who sees it, actorEmail must match the
+    // writer so nobody can forge a notification "from" someone else.
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && request.auth.token.email == resource.data.recipientEmail;
+      allow create: if isSignedIn()
+        && request.resource.data.actorEmail == request.auth.token.email
+        && request.resource.data.recipientEmail is string
+        && request.resource.data.recipientEmail != request.auth.token.email;
+      allow update: if isSignedIn() && request.auth.token.email == resource.data.recipientEmail
+        && onlyChanged(['read']);
+      allow delete: if isSignedIn() && request.auth.token.email == resource.data.recipientEmail;
+    }
+
     // Follow graph. followId is "<followerEmail>__<followeeEmail>" (computed
     // client-side, order matters here unlike conversations). Mutual follow
     // (both directions exist) is what the client treats as "Friends" — no

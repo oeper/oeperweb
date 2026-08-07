@@ -14,7 +14,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  getFirestore, doc, getDoc, setDoc, serverTimestamp, deleteField
+  getFirestore, doc, getDoc, setDoc, serverTimestamp, deleteField, collection, addDoc
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 export const FIREBASE_CONFIG = {
@@ -137,6 +137,30 @@ export async function setUserBadge(email, badge) {
   if (badge) next.badge = badge; else delete next.badge;
   profileCache[email] = next;
   notify();
+  sendNotification({ recipientEmail: email, type: 'badge', preview: badge ? badge.label : null });
+}
+
+// Writes a notification doc for the bell icon in topnav.js. Called from
+// every place across the site that does something notification-worthy
+// (upvote, comment, follow, badge grant) — silently skips signed-out
+// visitors and self-notifications (e.g. upvoting your own post) rather
+// than making every call site check both. Best-effort: a failure here
+// (e.g. rules not yet published) shouldn't block the action that triggered
+// it, so callers don't need to await or catch this.
+export function sendNotification({ recipientEmail, type, targetKind, targetId, preview }) {
+  if (!currentUser || !recipientEmail || recipientEmail === currentUser.email) return;
+  addDoc(collection(db, 'notifications'), {
+    recipientEmail,
+    actorEmail: currentUser.email,
+    actorName: currentUser.displayName,
+    actorPhoto: currentUser.photoURL,
+    type,
+    targetKind: targetKind || null,
+    targetId: targetId || null,
+    preview: preview || null,
+    read: false,
+    createdAt: serverTimestamp(),
+  }).catch(() => {});
 }
 
 // The @handle for a profile, if one's been assigned yet (see ensureHandle).

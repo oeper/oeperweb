@@ -8,9 +8,9 @@
 // behavior change needs its `?v=N` bumped on every `from './shared/topnav.js?v=N'`
 // import across the site (grep for it) — otherwise visitors can sit on a
 // stale cached copy for hours after a deploy.
-import { mountAccountBar, db, getCurrentUser, getProfile, handleOf } from './account.js?v=11';
+import { mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange } from './account.js?v=12';
 import {
-  collection, query, orderBy, limit, getDocs,
+  collection, query, orderBy, limit, getDocs, onSnapshot, where, doc, updateDoc, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 // The site's actual logo (icon.svg's path, inlined so it recolors via
@@ -114,6 +114,56 @@ function injectStyles() {
 
     .oe-nav-right { display: flex; align-items: center; gap: 16px; min-width: 0; margin-left: auto; }
 
+    .oe-nav-notif-wrap { position: relative; flex-shrink: 0; }
+    .oe-nav-notif-btn { position: relative; }
+    .oe-nav-notif-dot {
+      position: absolute; top: -2px; right: -2px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 100px;
+      background: var(--md-sys-color-error, #ffb4ab); color: #410002; font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; line-height: 1;
+      animation: oeNotifDotIn 260ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    @keyframes oeNotifDotIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+    .oe-notif-dropdown {
+      position: absolute; top: calc(100% + 12px); right: 0; width: min(380px, 90vw);
+      background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+      border-radius: 16px; max-height: 480px; overflow-y: auto; z-index: 20;
+      opacity: 0; pointer-events: none; transform: translateY(-6px) scale(0.98);
+      transition: opacity 180ms ease, transform 220ms cubic-bezier(0.2, 0, 0, 1);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    }
+    .oe-notif-dropdown.open { opacity: 1; pointer-events: all; transform: translateY(0) scale(1); }
+    .oe-notif-header {
+      display: flex; align-items: center; justify-content: space-between; padding: 14px 16px;
+      border-bottom: 1px solid var(--md-sys-color-outline-variant); position: sticky; top: 0;
+      background: var(--md-sys-color-surface);
+    }
+    .oe-notif-header h3 { font-size: 15px; font-weight: 500; }
+    .oe-notif-mark-read {
+      background: none; border: none; color: var(--md-sys-color-primary); font-size: 12px; font-weight: 500;
+      cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
+    }
+    .oe-notif-section-label {
+      padding: 10px 16px 4px; font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.4px; color: var(--md-sys-color-on-surface-variant);
+    }
+    .oe-notif-row {
+      display: flex; align-items: flex-start; gap: 10px; padding: 10px 16px; text-decoration: none; color: inherit;
+      transition: background-color 0.15s;
+    }
+    .oe-notif-row:hover { background: rgba(255,255,255,0.05); }
+    .oe-notif-row.unread { background: rgba(168,199,250,0.08); }
+    .oe-notif-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
+    .oe-notif-icon {
+      width: 36px; height: 36px; border-radius: 50%; background: var(--md-sys-color-surface-variant); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-primary);
+    }
+    .oe-notif-main { flex: 1; min-width: 0; font-size: 13px; line-height: 1.4; }
+    .oe-notif-main strong { font-weight: 600; }
+    .oe-notif-time { color: var(--md-sys-color-on-surface-variant); font-size: 11px; margin-top: 2px; }
+    .oe-notif-unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 6px; }
+    .oe-notif-empty { padding: 40px 20px; text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; }
+
     .oe-nav-icon-link {
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
       color: var(--md-sys-color-on-surface-variant); text-decoration: none;
@@ -127,9 +177,13 @@ function injectStyles() {
       display: none; align-items: center; justify-content: center; width: 40px; height: 40px;
       border-radius: 50%; border: none; background: transparent; color: var(--md-sys-color-on-surface);
       cursor: pointer; -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+      transition: background-color 0.2s;
     }
     .oe-nav-hamburger:hover { background-color: rgba(255,255,255,0.06); }
-    .oe-nav-hamburger .material-symbols-rounded { font-size: 24px; }
+    .oe-nav-hamburger .material-symbols-rounded {
+      font-size: 24px; display: inline-block; transition: transform 320ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .oe-nav-hamburger.open .material-symbols-rounded { transform: rotate(90deg); }
 
     .oe-nav-links { display: flex; gap: 8px; height: 100%; align-items: center; }
 
@@ -166,6 +220,11 @@ function injectStyles() {
       .oe-nav-search-wrap.mobile-open {
         display: flex; align-items: center; position: fixed; top: 0; left: 0; right: 0; height: 72px;
         background: var(--md-sys-color-background); z-index: 160; margin: 0; padding: 0 56px 0 12px; max-width: none;
+        animation: oeNavSearchIn 220ms cubic-bezier(0.2, 0, 0, 1);
+      }
+      @keyframes oeNavSearchIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
       }
       .oe-nav-search-wrap.mobile-open .oe-nav-search-dropdown { top: 72px; left: 12px; right: 12px; border-radius: 16px; }
       .oe-nav-search-wrap.mobile-open .oe-nav-search-mobile-close {
@@ -174,16 +233,31 @@ function injectStyles() {
         color: var(--md-sys-color-on-surface); align-items: center; justify-content: center; cursor: pointer;
       }
 
-      .oe-nav-links {
-        display: none; position: fixed; top: 72px; left: 0; right: 0; z-index: 150;
-        flex-direction: column; align-items: stretch; height: auto; gap: 2px;
-        background-color: var(--md-sys-color-surface); border-bottom: 1px solid var(--md-sys-color-outline-variant);
-        padding: 8px; max-height: calc(100vh - 72px); overflow-y: auto;
-        box-shadow: 0 12px 24px rgba(0,0,0,0.35);
+      .oe-nav-backdrop {
+        position: fixed; inset: 0; top: 72px; z-index: 140; background: rgba(0,0,0,0.4);
+        opacity: 0; pointer-events: none; transition: opacity 280ms ease;
       }
-      .oe-nav-links.mobile-open { display: flex; }
-      .oe-nav-item { width: auto; height: auto; border-radius: 14px; justify-content: flex-start; padding: 14px 16px; gap: 14px; }
+      .oe-nav-backdrop.open { opacity: 1; pointer-events: all; }
+
+      .oe-nav-links {
+        display: flex; position: fixed; top: 72px; left: 0; right: 0; z-index: 150;
+        flex-direction: column; align-items: stretch; gap: 2px;
+        background-color: var(--md-sys-color-surface); border-bottom: 1px solid var(--md-sys-color-outline-variant);
+        padding: 0 8px; overflow: hidden; max-height: 0; opacity: 0; visibility: hidden;
+        box-shadow: 0 12px 24px rgba(0,0,0,0.35);
+        transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 220ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1), visibility 0s linear 340ms;
+      }
+      .oe-nav-links.mobile-open {
+        max-height: calc(100vh - 72px); opacity: 1; visibility: visible; padding: 8px; overflow-y: auto;
+        transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 260ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1);
+      }
+      .oe-nav-item {
+        width: auto; height: auto; border-radius: 14px; justify-content: flex-start; padding: 14px 16px; gap: 14px;
+        opacity: 0; transform: translateY(-6px);
+        transition: color 400ms cubic-bezier(0.2, 0, 0, 1), opacity 260ms ease, transform 260ms cubic-bezier(0.2, 0, 0, 1);
+      }
       .oe-nav-item::before { border-radius: 14px; }
+      .oe-nav-links.mobile-open .oe-nav-item { opacity: 1; transform: translateY(0); }
       .oe-nav-links.mobile-open .oe-nav-item-label { display: inline; font-size: 15px; }
       #oeNavAccountBar { flex-shrink: 0; }
     }
@@ -195,8 +269,9 @@ export function mountTopNav(container) {
   injectStyles();
   const el = document.createElement('div');
   el.innerHTML = `
+    <div class="oe-nav-backdrop" id="oeNavBackdrop"></div>
     <nav class="oe-navbar">
-      <button class="oe-nav-hamburger" id="oeNavHamburger" aria-label="Menu"><span class="material-symbols-rounded">menu</span></button>
+      <button class="oe-nav-hamburger" id="oeNavHamburger" aria-label="Menu" aria-expanded="false"><span class="material-symbols-rounded">menu</span></button>
       <a href="https://oeper.dev/" class="oe-nav-logo">
         <span class="oe-nav-logo-icon">${LOGO_SVG}</span>
         <span>oeper.dev</span>
@@ -210,15 +285,28 @@ export function mountTopNav(container) {
       <button class="oe-nav-mobile-search-btn" id="oeNavMobileSearchBtn" aria-label="Search"><span class="material-symbols-rounded">search</span></button>
       <div class="oe-nav-right">
         <div class="oe-nav-links" id="oeNavLinks"></div>
+        <div class="oe-nav-notif-wrap">
+          <button class="oe-nav-icon-link oe-nav-notif-btn" id="oeNavNotifBtn" title="Notifications" style="display:none;">
+            <span class="material-symbols-rounded">notifications</span>
+            <span class="oe-nav-notif-dot" id="oeNavNotifDot" style="display:none;"></span>
+          </button>
+          <div class="oe-notif-dropdown" id="oeNotifDropdown"></div>
+        </div>
         <a href="/messages" class="oe-nav-icon-link" title="Chat"><span class="material-symbols-rounded">chat_bubble</span></a>
         <a href="/settings" class="oe-nav-icon-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
         <div id="oeNavAccountBar"></div>
       </div>
     </nav>
   `;
-  const navEl = el.firstElementChild;
-  if (container) container.appendChild(navEl);
-  else document.body.insertBefore(navEl, document.body.firstChild);
+  const navEl = el.querySelector('.oe-navbar');
+  const backdropEl = el.querySelector('#oeNavBackdrop');
+  if (container) {
+    container.appendChild(backdropEl);
+    container.appendChild(navEl);
+  } else {
+    document.body.insertBefore(navEl, document.body.firstChild);
+    document.body.insertBefore(backdropEl, navEl);
+  }
 
   const navLinks = navEl.querySelector('#oeNavLinks');
   NAV_ITEMS.forEach(item => {
@@ -230,16 +318,27 @@ export function mountTopNav(container) {
   });
 
   const hamburger = navEl.querySelector('#oeNavHamburger');
-  hamburger.addEventListener('click', () => navLinks.classList.toggle('mobile-open'));
-  navLinks.addEventListener('click', e => { if (e.target.closest('.oe-nav-item')) navLinks.classList.remove('mobile-open'); });
+  const backdrop = backdropEl;
+  const hamburgerIcon = hamburger.querySelector('.material-symbols-rounded');
+  function setMobileMenu(open) {
+    navLinks.classList.toggle('mobile-open', open);
+    hamburger.classList.toggle('open', open);
+    hamburger.setAttribute('aria-expanded', String(open));
+    hamburgerIcon.textContent = open ? 'close' : 'menu';
+    backdrop.classList.toggle('open', open);
+  }
+  hamburger.addEventListener('click', () => setMobileMenu(!navLinks.classList.contains('mobile-open')));
+  backdrop.addEventListener('click', () => setMobileMenu(false));
+  navLinks.addEventListener('click', e => { if (e.target.closest('.oe-nav-item')) setMobileMenu(false); });
   document.addEventListener('click', e => {
     if (navLinks.classList.contains('mobile-open') && !navLinks.contains(e.target) && !hamburger.contains(e.target)) {
-      navLinks.classList.remove('mobile-open');
+      setMobileMenu(false);
     }
   });
 
   mountAccountBar(navEl.querySelector('#oeNavAccountBar'));
   initSearch(navEl);
+  initNotifications(navEl);
 }
 
 function initSearch(navEl) {
@@ -352,4 +451,130 @@ function initSearch(navEl) {
   document.addEventListener('click', e => {
     if (!dropdown.contains(e.target) && e.target !== searchInput) closeDropdown();
   });
+}
+
+// ── Notifications bell ──────────────────────────────────────
+// Reads the notifications collection written by sendNotification()
+// (shared/account.js) — upvotes, comments, follows, badge grants. The
+// query below (recipientEmail == you, ordered by createdAt) needs a
+// Firestore composite index; the first time this runs against a fresh
+// project, the console will print a one-click link to create it.
+function notifTimeAgo(date) {
+  const s = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  if (s < 2592000) return Math.floor(s / 86400) + 'd ago';
+  return date.toLocaleDateString();
+}
+function notifText(n) {
+  const name = `<strong>${escHtml(n.actorName || 'Someone')}</strong>`;
+  const target = escHtml(n.targetKind || 'post');
+  if (n.type === 'upvote') return `${name} upvoted your ${target}${n.preview ? ': ' + escHtml(n.preview) : ''}`;
+  if (n.type === 'comment') return `${name} commented on your ${target}${n.preview ? ': ' + escHtml(n.preview) : ''}`;
+  if (n.type === 'follow') return `${name} started following you`;
+  if (n.type === 'badge') return `You were given a badge${n.preview ? ': ' + escHtml(n.preview) : ''}`;
+  return name;
+}
+function notifUrl(n) {
+  if (n.type === 'follow') { const h = handleOf(n.actorEmail); return h ? `/profile?u=${encodeURIComponent(h)}` : '/'; }
+  if (n.type === 'badge') return '/settings';
+  if (n.targetKind === 'post') return `/forum?post=${n.targetId}`;
+  if (n.targetKind === 'video') return `/videos?video=${n.targetId}`;
+  if (n.targetKind === 'project') return `/projects?project=${n.targetId}`;
+  return '/';
+}
+
+function initNotifications(navEl) {
+  const btn = navEl.querySelector('#oeNavNotifBtn');
+  const dot = navEl.querySelector('#oeNavNotifDot');
+  const dropdown = navEl.querySelector('#oeNotifDropdown');
+  let items = [];
+  let unsub = null;
+
+  function closeDropdown() { dropdown.classList.remove('open'); }
+
+  function rowHtml(n) {
+    const profile = getProfile(n.actorEmail, n.actorName, n.actorPhoto);
+    const icon = { upvote: 'favorite', comment: 'mode_comment', follow: 'person_add', badge: 'verified' }[n.type] || 'notifications';
+    return `
+      <a class="oe-notif-row ${n.read ? '' : 'unread'}" href="${notifUrl(n)}" data-id="${n.id}">
+        ${n.type === 'badge'
+          ? `<div class="oe-notif-icon"><span class="material-symbols-rounded">${icon}</span></div>`
+          : `<img class="oe-notif-avatar" src="${profile.photo || ''}" alt="">`}
+        <div class="oe-notif-main">
+          <div>${notifText(n)}</div>
+          <div class="oe-notif-time">${notifTimeAgo(n._date)}</div>
+        </div>
+        ${n.read ? '' : '<div class="oe-notif-unread-dot"></div>'}
+      </a>
+    `;
+  }
+
+  function render() {
+    const unread = items.filter(n => !n.read);
+    const read = items.filter(n => n.read);
+    dot.style.display = unread.length ? 'flex' : 'none';
+    dot.textContent = unread.length > 9 ? '9+' : String(unread.length);
+
+    if (items.length === 0) {
+      dropdown.innerHTML = `
+        <div class="oe-notif-header"><h3>Notifications</h3></div>
+        <div class="oe-notif-empty">Nothing yet — activity on your posts, comments, and profile shows up here.</div>
+      `;
+      return;
+    }
+    dropdown.innerHTML = `
+      <div class="oe-notif-header">
+        <h3>Notifications</h3>
+        ${unread.length ? `<button type="button" class="oe-notif-mark-read" id="oeNotifMarkAll">Mark all read</button>` : ''}
+      </div>
+      ${unread.length ? `<div class="oe-notif-section-label">New</div>${unread.map(rowHtml).join('')}` : ''}
+      ${read.length ? `<div class="oe-notif-section-label">Earlier</div>${read.map(rowHtml).join('')}` : ''}
+    `;
+    const markAllBtn = dropdown.querySelector('#oeNotifMarkAll');
+    if (markAllBtn) markAllBtn.addEventListener('click', async e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const batch = writeBatch(db);
+      unread.forEach(n => batch.update(doc(db, 'notifications', n.id), { read: true }));
+      try { await batch.commit(); } catch {}
+    });
+    dropdown.querySelectorAll('.oe-notif-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const n = items.find(x => x.id === row.dataset.id);
+        if (n && !n.read) updateDoc(doc(db, 'notifications', n.id), { read: true }).catch(() => {});
+      });
+    });
+  }
+
+  function subscribe(user) {
+    if (unsub) { unsub(); unsub = null; }
+    if (!user) {
+      btn.style.display = 'none';
+      items = [];
+      closeDropdown();
+      return;
+    }
+    btn.style.display = 'flex';
+    unsub = onSnapshot(
+      query(collection(db, 'notifications'), where('recipientEmail', '==', user.email), orderBy('createdAt', 'desc'), limit(40)),
+      async snap => {
+        items = snap.docs.map(d => {
+          const data = d.data();
+          return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+        });
+        await Promise.all(items.map(n => ensureProfileLoaded(n.actorEmail)));
+        render();
+      },
+      () => { btn.style.display = 'none'; } // rules/index not ready yet, or offline — degrade quietly
+    );
+  }
+
+  btn.addEventListener('click', () => dropdown.classList.toggle('open'));
+  document.addEventListener('click', e => {
+    if (!dropdown.contains(e.target) && !btn.contains(e.target)) closeDropdown();
+  });
+
+  onAccountChange(subscribe);
 }

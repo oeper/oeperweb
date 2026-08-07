@@ -13,7 +13,10 @@
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
  
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
 
   :root {
     --md-sys-color-background: #111318;
@@ -514,8 +517,8 @@
   </div>
 
 <script type="module">
-  import { db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser } from './shared/account.js?v=11';
-  import { mountTopNav } from './shared/topnav.js?v=3';
+  import { db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser, sendNotification } from './shared/account.js?v=12';
+  import { mountTopNav } from './shared/topnav.js?v=4';
   import { mountFooter } from './shared/footer.js?v=3';
   import {
     collection, query, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp,
@@ -720,6 +723,9 @@
       }
       try {
         await updateDoc(doc(db, kind === 'video' ? 'videos' : 'posts', id), patch);
+        if (direction === 'up' && !up) {
+          sendNotification({ recipientEmail: item.authorEmail, type: 'upvote', targetKind: kind, targetId: id, preview: item.title });
+        }
       } catch (err) {
         alert('Could not vote: ' + err.message);
       }
@@ -810,6 +816,7 @@
         const list = openItemKind === 'video' ? latestVideos : latestPosts;
         const item = list.find(x => x.id === openItemId);
         await updateDoc(doc(db, collectionName, openItemId), { commentCount: (item?.commentCount || 0) + 1 });
+        if (item) sendNotification({ recipientEmail: item.authorEmail, type: 'comment', targetKind: openItemKind, targetId: openItemId, preview: body.slice(0, 120) });
         commentInput.value = '';
       } catch (err) {
         alert('Could not comment: ' + err.message);
