@@ -214,9 +214,7 @@ function score(p) { return (p.upvoters || []).length - (p.downvoters || []).leng
 function isImageUrl(url) { return url && /\.(jpe?g|png|gif|webp|avif)$/i.test(url); }
 function isAudioUrl(url) { return url && /\.(mp3|wav|ogg|m4a|flac|aac|opus|weba)$/i.test(url); }
 function projectUrl(id) {
-  const url = new URL(window.location.href.split('?')[0]);
-  url.searchParams.set('project', id);
-  return url.toString();
+  return 'https://oeper.dev/projects/' + encodeURIComponent(id);
 }
 async function copyLink(url, label) {
   try { await navigator.clipboard.writeText(url); showToast((label || 'Link') + ' copied to clipboard'); }
@@ -269,7 +267,11 @@ onSnapshot(collection(db, 'projects'), async snap => {
   render();
   if (!openedFromLink) {
     openedFromLink = true;
-    const wanted = new URLSearchParams(window.location.search).get('project');
+    let wanted = new URLSearchParams(window.location.search).get('project');
+    if (!wanted) {
+      const pathMatch = window.location.pathname.match(/^\/projects\/([^/]+)\/?$/);
+      if (pathMatch) wanted = decodeURIComponent(pathMatch[1]);
+    }
     const match = wanted && projects.find(p => p.id === wanted);
     if (match) openDetail(match);
   }
@@ -354,9 +356,7 @@ function openDetail(p) {
   function close() {
     overlay.classList.remove('open');
     panel.classList.remove('open');
-    const url = new URL(window.location);
-    url.searchParams.delete('project');
-    history.pushState({}, '', url);
+    history.pushState({}, '', '/projects');
   }
   overlay.onclick = close;
   document.getElementById('watchCloseBtn').onclick = close;
@@ -374,9 +374,7 @@ function openDetail(p) {
 
   overlay.classList.add('open');
   panel.classList.add('open');
-  const url = new URL(window.location);
-  url.searchParams.set('project', p.id);
-  history.pushState({ project: p.id }, '', url);
+  history.pushState({ project: p.id }, '', '/projects/' + encodeURIComponent(p.id));
   bumpViews(p);
 }
 

@@ -143,6 +143,10 @@
   }
   .post-row:hover { background-color: var(--md-sys-color-hover-surface); }
   .post-row-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .post-row-excerpt {
+    font-size: 13px; color: var(--md-sys-color-on-surface-variant); line-height: 1.4; margin-bottom: 8px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
   .post-row-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: flex; gap: 12px; flex-wrap: wrap; }
   .post-row-meta span { display: inline-flex; align-items: center; gap: 4px; }
   .post-row-meta .material-symbols-rounded { font-size: 14px; }
@@ -189,6 +193,34 @@ document.addEventListener('click', () => {
 });
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// Plain-text excerpt for a post's markdown body — same rules as index.html's
+// home-feed excerpts, since a compact row has no room for real markdown.
+function stripMarkdown(text, maxLen) {
+  if (!text) return '';
+  let s = text
+    .replace(/\r\n/g, '\n')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^#{1,6}[ \t]+/gm, '')
+    .replace(/^>[ \t]?/gm, '')
+    .replace(/^[ \t]*\|.*\|[ \t]*$/gm, '')
+    .replace(/^[ \t]*(-{3,}|\*{3,}|_{3,})[ \t]*$/gm, '')
+    .replace(/^[ \t]*[-*+][ \t]+/gm, '• ')
+    .replace(/^[ \t]*\d+\.[ \t]+/gm, '')
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    .replace(/\[\[([^\]]+)\]\]\([^)]+\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/(?<!\w)_([^_\s][^_]*)_(?!\w)/g, '$1')
+    .split('\n').map(l => l.trim()).filter(Boolean).join(' ')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+  if (maxLen && s.length > maxLen) s = s.slice(0, maxLen).replace(/\s+\S*$/, '') + '…';
+  return s;
+}
 
 // ── Followers / Following list modal ────────────────────────
 const followListOverlay = document.getElementById('followListOverlay');
@@ -260,11 +292,19 @@ function timeAgo(date) {
 
 const content = document.getElementById('content');
 const params = new URLSearchParams(window.location.search);
-const handle = params.get('u');
+// Accepts both /profile?u=<handle> (legacy/notification links) and the
+// clean /profile/<handle> path (what 404.html redirects here as, and what
+// we rewrite the address bar to below once resolved).
+let handle = params.get('u');
+if (!handle) {
+  const pathMatch = window.location.pathname.match(/^\/profile\/([^/]+)\/?$/);
+  if (pathMatch) handle = decodeURIComponent(pathMatch[1]);
+}
 
 if (!handle) {
   content.innerHTML = '<div class="empty-note">No profile specified. Open a profile from a post author\'s name in the forum, or add ?u=&lt;handle&gt; to the URL.</div>';
 } else {
+  history.replaceState(null, '', '/profile/' + encodeURIComponent(handle));
   init();
 }
 
@@ -297,11 +337,9 @@ async function init() {
     console.warn('Could not load posts for profile:', err.message);
   }
 
-  let commentCount = null;
   let commentKarma = 0;
   try {
     const snap = await getDocs(query(collectionGroup(db, 'comments'), where('authorEmail', '==', viewedEmail)));
-    commentCount = snap.size;
     snap.docs.forEach(d => {
       const c = d.data();
       commentKarma += (c.upvoters || []).length - (c.downvoters || []).length;
@@ -384,7 +422,6 @@ async function init() {
         </div>
         <div class="stats-row">
           <div class="stat"><div class="stat-value">${posts.length}</div><div class="stat-label">Posts</div></div>
-          <div class="stat"><div class="stat-value">${commentCount === null ? '—' : commentCount}</div><div class="stat-label">Comments</div></div>
           <div class="stat"><div class="stat-value">${karma}</div><div class="stat-label">Karma</div></div>
           <div class="stat clickable" id="followersStat"><div class="stat-value">${followerCount}</div><div class="stat-label">Followers</div></div>
           <div class="stat clickable" id="followingStat"><div class="stat-value">${followingCount}</div><div class="stat-label">Following</div></div>
@@ -396,6 +433,7 @@ async function init() {
         ${posts.length === 0 ? '<div class="empty-note">No posts yet.</div>' : posts.map(p => `
           <a class="post-row" href="/forum?post=${p.id}">
             <div class="post-row-title">${escHtml(p.title)}</div>
+            ${p.body ? `<div class="post-row-excerpt">${escHtml(stripMarkdown(p.body, 160))}</div>` : ''}
             <div class="post-row-meta">
               <span><span class="material-symbols-rounded">arrow_upward</span>${(p.upvoters||[]).length - (p.downvoters||[]).length}</span>
               <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount||0}</span>

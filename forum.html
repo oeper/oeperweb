@@ -575,14 +575,10 @@ async function copyLink(url, label) {
   }
 }
 function postUrl(postId) {
-  const url = new URL(window.location.href.split('?')[0]);
-  url.searchParams.set('post', postId);
-  return url.toString();
+  return 'https://oeper.dev/forum/' + encodeURIComponent(postId);
 }
 function commentUrl(postId, commentId) {
-  const url = new URL(postUrl(postId));
-  url.searchParams.set('comment', commentId);
-  return url.toString();
+  return postUrl(postId) + '?comment=' + encodeURIComponent(commentId);
 }
 async function reportItem(type, postId, commentId, itemId, url) {
   const u = getCurrentUser();
@@ -1303,7 +1299,11 @@ function runForum() {
     if (firstSnapshot) {
       firstSnapshot = false;
       const params = new URLSearchParams(window.location.search);
-      const wantedPost = params.get('post');
+      let wantedPost = params.get('post');
+      if (!wantedPost) {
+        const pathMatch = window.location.pathname.match(/^\/forum\/([^/]+)\/?$/);
+        if (pathMatch) wantedPost = decodeURIComponent(pathMatch[1]);
+      }
       if (wantedPost && posts.find(p => p.id === wantedPost)) {
         openThread(wantedPost, { highlightComment: params.get('comment') });
       }
@@ -1494,9 +1494,7 @@ function runForum() {
       threadPanel.classList.add('open');
       threadPanel.scrollTop = 0;
       document.body.style.overflow = 'hidden';
-      const url = new URL(window.location);
-      url.searchParams.set('post', postId);
-      history.pushState({ post: postId }, '', url);
+      history.pushState({ post: postId }, '', '/forum/' + encodeURIComponent(postId));
     }
 
     if (unsubComments.current) unsubComments.current();
@@ -1611,10 +1609,7 @@ function runForum() {
     document.body.style.overflow = '';
     if (unsubComments.current) { unsubComments.current(); unsubComments.current = null; }
     openPostId = null;
-    const url = new URL(window.location);
-    url.searchParams.delete('post');
-    url.searchParams.delete('comment');
-    history.pushState({}, '', url);
+    history.pushState({}, '', '/forum');
   }
   document.getElementById('threadCloseBtn').addEventListener('click', closeThread);
   threadOverlay.addEventListener('click', closeThread);

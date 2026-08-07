@@ -234,9 +234,7 @@ function timeAgo(date) {
 }
 function score(v) { return (v.upvoters || []).length - (v.downvoters || []).length; }
 function videoUrl(id) {
-  const url = new URL(window.location.href.split('?')[0]);
-  url.searchParams.set('video', id);
-  return url.toString();
+  return 'https://oeper.dev/videos/' + encodeURIComponent(id);
 }
 async function copyLink(url, label) {
   try { await navigator.clipboard.writeText(url); showToast((label || 'Link') + ' copied to clipboard'); }
@@ -289,7 +287,11 @@ onSnapshot(collection(db, 'videos'), async snap => {
   render();
   if (!openedFromLink) {
     openedFromLink = true;
-    const wanted = new URLSearchParams(window.location.search).get('video');
+    let wanted = new URLSearchParams(window.location.search).get('video');
+    if (!wanted) {
+      const pathMatch = window.location.pathname.match(/^\/videos\/([^/]+)\/?$/);
+      if (pathMatch) wanted = decodeURIComponent(pathMatch[1]);
+    }
     const match = wanted && videos.find(v => v.id === wanted);
     if (match) openWatch(match);
   }
@@ -454,9 +456,7 @@ function openWatch(v) {
     panel.classList.remove('open');
     panel.querySelector('video')?.pause();
     if (unsubWatchComments) { unsubWatchComments(); unsubWatchComments = null; }
-    const url = new URL(window.location);
-    url.searchParams.delete('video');
-    history.pushState({}, '', url);
+    history.pushState({}, '', '/videos');
   }
   overlay.onclick = close;
   document.getElementById('watchCloseBtn').onclick = close;
@@ -474,9 +474,7 @@ function openWatch(v) {
 
   overlay.classList.add('open');
   panel.classList.add('open');
-  const url = new URL(window.location);
-  url.searchParams.set('video', v.id);
-  history.pushState({ video: v.id }, '', url);
+  history.pushState({ video: v.id }, '', '/videos/' + encodeURIComponent(v.id));
   bumpViews(v);
 }
 
