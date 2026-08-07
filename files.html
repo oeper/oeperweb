@@ -116,6 +116,7 @@
   .file-main { flex: 1; min-width: 0; }
   .file-name { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .file-meta { font-size: 13px; color: var(--md-sys-color-on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-audio-player { width: 100%; max-width: 360px; height: 32px; display: block; margin-top: 8px; }
 
   .file-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
   .icon-btn {
@@ -220,6 +221,7 @@ let scope = 'mine'; // 'mine' | 'all' (owners only)
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function isImage(name) { return /\.(jpe?g|png|gif|webp|bmp|svg|avif)$/i.test(name); }
 function isVideo(name) { return /\.(mp4|webm|mov|m4v|ogv)$/i.test(name); }
+function isAudio(name) { return /\.(mp3|wav|ogg|m4a|flac|aac|opus|weba)$/i.test(name); }
 function iconFor(name) {
   if (/\.(zip|rar|7z|tar|gz|bz2|xz)$/i.test(name)) return 'folder_zip';
   if (/\.(txt|md|log|csv|json|ya?ml|xml|js|jsx|ts|tsx|py|rb|php|java|c|h|cpp|cs|go|rs|html?|css|sql|sh)$/i.test(name)) return 'description';
@@ -333,6 +335,7 @@ function buildCard(f) {
   let thumbHtml;
   if (isImage(f.name)) thumbHtml = `<img class="file-thumb" src="${f.url}" alt="" loading="lazy">`;
   else if (isVideo(f.name)) thumbHtml = `<video class="file-thumb" src="${f.url}" preload="metadata"></video>`;
+  else if (isAudio(f.name)) thumbHtml = `<div class="file-thumb"><span class="material-symbols-rounded">music_note</span></div>`;
   else thumbHtml = `<div class="file-thumb"><span class="material-symbols-rounded">${iconFor(f.name)}</span></div>`;
 
   card.innerHTML = `
@@ -340,6 +343,7 @@ function buildCard(f) {
     <div class="file-main">
       <div class="file-name">${escHtml(f.name)}</div>
       <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${showUploader ? ' · ' + escHtml(f.untracked ? 'Unknown owner' : (f.email || 'Anonymous')) : ''}</div>
+      ${isAudio(f.name) ? `<audio class="file-audio-player" controls preload="metadata" src="${f.url}"></audio>` : ''}
     </div>
     <div class="file-actions">
       <button class="icon-btn" data-copy title="Copy link"><span class="material-symbols-rounded">link</span></button>

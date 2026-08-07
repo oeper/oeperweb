@@ -173,7 +173,7 @@
 <script type="module">
 import { mountTopNav } from './shared/topnav.js?v=2';
 import {
-  getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile,
+  getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
 } from './shared/account.js?v=10';
 import { mountFooter } from './shared/footer.js?v=2';
 import {
@@ -377,6 +377,7 @@ function showInbox(user) {
 
       const rows = await Promise.all(convos.map(async c => {
         const otherEmail = c.participants.find(p => p !== user.email);
+        await ensureProfileLoaded(otherEmail);
         const profile = getProfile(otherEmail, null, null);
         return { c, otherEmail, profile };
       }));
@@ -408,6 +409,7 @@ async function openThread(otherEmail, user) {
   document.getElementById('backLinkText').textContent = 'back to chats';
   document.getElementById('backLink').onclick = e => { e.preventDefault(); showInbox(user); };
 
+  await ensureProfileLoaded(otherEmail);
   const convoId = conversationId(user.email, otherEmail);
   const otherProfile = getProfile(otherEmail, null, null);
   const otherHandle = handleOf(otherEmail);

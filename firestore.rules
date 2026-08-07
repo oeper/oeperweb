@@ -116,7 +116,13 @@ service cloud.firestore {
     // here, just that the creator is one of the two participants, since a
     // mismatched id only produces an orphaned doc nobody else can read.
     match /conversations/{conversationId} {
-      allow read: if isSignedIn() && request.auth.token.email in resource.data.participants;
+      // resource == null when the doc doesn't exist yet (the very first
+      // message between two people) — allowing that case through isn't a
+      // leak (there's nothing to read), and without it the client's own
+      // existence-check getDoc() before creating the first message fails
+      // with "Missing or insufficient permissions" instead of a clean
+      // exists:false, since resource.data errors out on a null resource.
+      allow read: if isSignedIn() && (resource == null || request.auth.token.email in resource.data.participants);
       allow create: if isSignedIn()
         && request.resource.data.participants is list
         && request.resource.data.participants.size() == 2

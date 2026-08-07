@@ -289,6 +289,14 @@
   .thread-gallery .file-chip { width: 100%; height: 140px; justify-content: center; }
   .post-thumb-wrap .file-chip { display: flex; }
 
+  .audio-attach {
+    display: flex; align-items: center; gap: 12px; background: var(--md-sys-color-surface-variant);
+    border-radius: 12px; padding: 12px 16px; max-width: 100%;
+  }
+  .audio-attach-icon { font-size: 22px; flex-shrink: 0; color: var(--md-sys-color-primary); }
+  .audio-attach-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .audio-attach-body audio { width: 100%; height: 32px; }
+
   /* New post modal */
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 60; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
   .overlay.open { opacity: 1; pointer-events: all; }
@@ -575,6 +583,7 @@ function attachmentsOf(item) {
 }
 const IMAGE_EXT_RE = /\.(jpe?g|png|gif|webp|bmp|svg|avif)$/i;
 const VIDEO_EXT_RE = /\.(mp4|webm|mov|m4v|ogv)$/i;
+const AUDIO_EXT_RE = /\.(mp3|wav|ogg|m4a|flac|aac|opus|weba)$/i;
 const ARCHIVE_EXT_RE = /\.(zip|rar|7z|tar|gz|bz2|xz)$/i;
 const TEXT_EXT_RE = /\.(txt|md|log|csv|json|ya?ml|xml|js|jsx|ts|tsx|mjs|cjs|py|rb|php|java|c|h|cpp|hpp|cs|go|rs|swift|kt|html?|css|scss|sql|sh|bash|ini|conf|toml)$/i;
 
@@ -583,6 +592,7 @@ function fileKind(url) {
   const clean = (url || '').split('?')[0];
   if (IMAGE_EXT_RE.test(clean)) return 'image';
   if (VIDEO_EXT_RE.test(clean)) return 'video';
+  if (AUDIO_EXT_RE.test(clean)) return 'audio';
   if (ARCHIVE_EXT_RE.test(clean)) return 'archive';
   if (TEXT_EXT_RE.test(clean)) return 'text';
   return 'file';
@@ -624,8 +634,19 @@ function attachmentHtml(url, opts) {
   if (kind === 'video') {
     return `<video class="${cls} attach-video" src="${url}" controls preload="metadata"></video>`;
   }
+  if (kind === 'audio' && !cls.includes('post-thumb')) {
+    return `
+      <div class="audio-attach ${cls}">
+        <span class="material-symbols-rounded audio-attach-icon">music_note</span>
+        <div class="audio-attach-body">
+          <div class="file-chip-name">${escHtml(fileNameFromUrl(url))}</div>
+          <audio controls preload="metadata" src="${url}"></audio>
+        </div>
+      </div>
+    `;
+  }
 
-  const icon = kind === 'archive' ? 'folder_zip' : kind === 'text' ? 'description' : 'draft';
+  const icon = kind === 'archive' ? 'folder_zip' : kind === 'text' ? 'description' : kind === 'audio' ? 'music_note' : 'draft';
   const chip = `
     <a class="file-chip ${cls}" href="${url}" target="_blank" rel="noopener" download>
       <span class="material-symbols-rounded">${icon}</span>

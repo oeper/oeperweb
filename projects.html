@@ -112,6 +112,7 @@
   .author-link:hover { color: var(--md-sys-color-primary); text-decoration: underline; }
   .author-link img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
   .watch-links { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
+  .project-audio-player { width: 100%; margin: 0 0 16px; }
 
   /* Upload modal */
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 210; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
@@ -208,6 +209,7 @@ function timeAgo(date) {
 }
 function score(p) { return (p.upvoters || []).length - (p.downvoters || []).length; }
 function isImageUrl(url) { return url && /\.(jpe?g|png|gif|webp|avif)$/i.test(url); }
+function isAudioUrl(url) { return url && /\.(mp3|wav|ogg|m4a|flac|aac|opus|weba)$/i.test(url); }
 function projectUrl(id) {
   const url = new URL(window.location.href.split('?')[0]);
   url.searchParams.set('project', id);
@@ -279,7 +281,7 @@ function render() {
 
 function thumbHtml(p) {
   if (isImageUrl(p.fileUrl)) return `<img src="${p.fileUrl}" alt="" loading="lazy">`;
-  return `<span class="material-symbols-rounded">${p.fileUrl ? 'draft' : 'apps'}</span>`;
+  return `<span class="material-symbols-rounded">${isAudioUrl(p.fileUrl) ? 'music_note' : p.fileUrl ? 'draft' : 'apps'}</span>`;
 }
 
 function buildCard(p) {
@@ -342,6 +344,7 @@ function openDetail(p) {
       ${p.link ? `<a class="btn primary" href="${escHtml(p.link)}" target="_blank" rel="noopener"><span class="material-symbols-rounded" style="font-size:16px;">open_in_new</span> Visit link</a>` : ''}
       ${p.fileUrl && !isImageUrl(p.fileUrl) ? `<a class="btn" href="${p.fileUrl}" target="_blank" rel="noopener" download><span class="material-symbols-rounded" style="font-size:16px;">download</span> Download file</a>` : ''}
     </div>
+    ${isAudioUrl(p.fileUrl) ? `<audio class="project-audio-player" controls preload="metadata" src="${p.fileUrl}"></audio>` : ''}
     <div class="watch-desc">${escHtml(p.description || '') || 'No description.'}</div>
   `;
 
