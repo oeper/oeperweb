@@ -75,11 +75,17 @@
   .btn.danger { color: var(--md-sys-color-error); border-color: var(--md-sys-color-error); }
 
   .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
-  .video-card { background: var(--md-sys-color-surface); border-radius: 20px; overflow: hidden; cursor: pointer; transition: background-color 0.2s; }
-  .video-card:hover { background-color: var(--md-sys-color-hover-surface); }
+  .video-card {
+    background: var(--md-sys-color-surface); border: 1px solid transparent; border-radius: 20px; overflow: hidden;
+    cursor: pointer; transition: background-color 0.2s, border-color 0.2s;
+  }
+  .video-card:hover { background-color: var(--md-sys-color-hover-surface); border-color: var(--md-sys-color-outline-variant); }
   .video-thumb { width: 100%; aspect-ratio: 16/9; object-fit: cover; background: #000; display: block; }
   .video-info { padding: 14px 16px; }
-  .video-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .video-title {
+    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 15px; font-weight: 500; margin-bottom: 4px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
   .video-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: flex; gap: 10px; flex-wrap: wrap; }
   .video-meta span { display: inline-flex; align-items: center; gap: 4px; }
   .video-meta .material-symbols-rounded { font-size: 14px; }
@@ -99,8 +105,17 @@
   .watch-desc { font-size: 14px; line-height: 1.6; color: var(--md-sys-color-on-surface-variant); white-space: pre-wrap; margin: 16px 0; }
   .watch-comments { margin-top: 24px; border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 16px; }
   .watch-comments .section-heading { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 16px; font-weight: 500; margin-bottom: 12px; }
-  .watch-comment-row { display: flex; gap: 10px; padding: 8px 0; }
-  .watch-comment-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
+  /* Same card treatment as forum.html's .comment, so a comment looks and
+     behaves the same whether it's on a post or a video. */
+  .watch-comment-list { display: flex; flex-direction: column; gap: 16px; }
+  .watch-comment-row {
+    display: flex; gap: 10px; background-color: var(--md-sys-color-surface); border-radius: 16px; padding: 14px 18px;
+  }
+  .watch-comment-row .vote-col { flex-direction: row; padding: 0; gap: 4px; align-self: flex-start; background: none; }
+  .watch-comment-row .vote-btn { width: 24px; height: 24px; }
+  .watch-comment-row .vote-btn .material-symbols-rounded { font-size: 16px; }
+  .watch-comment-row .vote-count { font-size: 12px; }
+  .watch-comment-avatar { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
   .watch-comment-body-wrap { flex: 1; min-width: 0; font-size: 13px; line-height: 1.4; }
   .watch-comment-body-wrap strong { font-weight: 600; margin-right: 6px; }
   .watch-comment-time { font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; }
@@ -114,16 +129,21 @@
   .watch-comment-send-btn:disabled { opacity: 0.4; cursor: default; }
   .watch-close { position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .watch-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-  .vote-col { display: flex; align-items: center; gap: 8px; background: var(--md-sys-color-surface); border-radius: 100px; padding: 6px 14px; }
+  .vote-col { display: flex; align-items: center; gap: 2px; background: var(--md-sys-color-surface); border-radius: 100px; padding: 4px; }
   .watch-icon-btn {
     width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--md-sys-color-surface);
     color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
   .watch-icon-btn:hover { color: var(--md-sys-color-on-surface); }
-  .vote-btn { background: none; border: none; color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; }
+  .vote-btn {
+    width: 30px; height: 30px; border-radius: 50%; background: none; border: none; color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .vote-btn .material-symbols-rounded { font-size: 20px; }
+  .vote-btn:hover { background-color: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
   .vote-btn.upvoted { color: var(--md-sys-color-primary); }
   .vote-btn.downvoted { color: var(--md-sys-color-error); }
-  .vote-count { font-size: 14px; font-weight: 500; min-width: 20px; text-align: center; }
+  .vote-count { font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant); padding: 2px 0; min-width: 20px; text-align: center; }
   .author-link { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
   .author-link:hover { color: var(--md-sys-color-primary); text-decoration: underline; }
   .author-link img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
@@ -365,8 +385,17 @@ function openWatch(v) {
       }
       watchCommentList.innerHTML = comments.map(c => {
         const cp = getProfile(c.authorEmail, c.authorName, c.authorPhoto);
+        const netScore = (c.upvoters || []).length - (c.downvoters || []).length;
+        const cu = getCurrentUser();
+        const cUp = cu && (c.upvoters || []).includes(cu.uid);
+        const cDown = cu && (c.downvoters || []).includes(cu.uid);
         return `
-          <div class="watch-comment-row">
+          <div class="watch-comment-row" id="watch-comment-${c.id}">
+            <div class="vote-col">
+              <button class="vote-btn ${cUp ? 'upvoted' : ''}" data-comment-up="${c.id}" title="Upvote"><span class="material-symbols-rounded">arrow_upward</span></button>
+              <span class="vote-count ${netScore > 0 ? 'positive' : netScore < 0 ? 'negative' : ''}">${netScore}</span>
+              <button class="vote-btn ${cDown ? 'downvoted' : ''}" data-comment-down="${c.id}" title="Downvote"><span class="material-symbols-rounded">arrow_downward</span></button>
+            </div>
             <img class="watch-comment-avatar" src="${cp.photo || ''}" alt="">
             <div class="watch-comment-body-wrap">
               <div><strong>${escHtml(cp.name)}${officialBadgeHtml(c.authorEmail)}</strong>${escHtml(c.body)}</div>
@@ -375,6 +404,14 @@ function openWatch(v) {
           </div>
         `;
       }).join('');
+      watchCommentList.querySelectorAll('[data-comment-up]').forEach(btn => {
+        const c = comments.find(x => x.id === btn.dataset.commentUp);
+        btn.addEventListener('click', () => toggleCommentVote(v.id, c, 'up'));
+      });
+      watchCommentList.querySelectorAll('[data-comment-down]').forEach(btn => {
+        const c = comments.find(x => x.id === btn.dataset.commentDown);
+        btn.addEventListener('click', () => toggleCommentVote(v.id, c, 'down'));
+      });
     },
     () => { watchCommentList.innerHTML = '<div class="watch-comment-empty">Could not load comments.</div>'; }
   );
@@ -461,6 +498,23 @@ async function toggleVote(v, dir) {
     await updateDoc(ref, patch);
     if (dir === 'up' && !up) sendNotification({ recipientEmail: v.authorEmail, type: 'upvote', targetKind: 'video', targetId: v.id, preview: v.title });
   } catch (err) { showToast('Could not vote: ' + err.message); }
+}
+
+async function toggleCommentVote(videoId, c, dir) {
+  const user = getCurrentUser();
+  if (!user) { showToast('Sign in to vote'); return; }
+  const ref = doc(db, 'videos', videoId, 'comments', c.id);
+  const up = (c.upvoters || []).includes(user.uid);
+  const down = (c.downvoters || []).includes(user.uid);
+  const patch = {};
+  if (dir === 'up') {
+    patch.upvoters = up ? arrayRemove(user.uid) : arrayUnion(user.uid);
+    if (down) patch.downvoters = arrayRemove(user.uid);
+  } else {
+    patch.downvoters = down ? arrayRemove(user.uid) : arrayUnion(user.uid);
+    if (up) patch.upvoters = arrayRemove(user.uid);
+  }
+  try { await updateDoc(ref, patch); } catch (err) { showToast('Could not vote: ' + err.message); }
 }
 
 // ── Upload modal ──────────────────────────────────────────────

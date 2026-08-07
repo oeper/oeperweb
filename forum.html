@@ -125,10 +125,10 @@
   }
   .vote-btn .material-symbols-rounded { font-size: 20px; }
   .vote-btn:hover { background-color: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
-  .vote-btn.upvoted { color: #6ea8fe; }
+  .vote-btn.upvoted { color: var(--md-sys-color-primary); }
   .vote-btn.downvoted { color: var(--md-sys-color-error); }
   .vote-count { font-size: 13px; font-weight: 600; color: var(--md-sys-color-on-surface-variant); padding: 2px 0; }
-  .vote-count.positive { color: #6ea8fe; }
+  .vote-count.positive { color: var(--md-sys-color-primary); }
   .vote-count.negative { color: var(--md-sys-color-error); }
 
   .post-body { padding: 16px 44px 16px 4px; flex: 1; min-width: 0; }
@@ -187,20 +187,22 @@
   .kebab-item .material-symbols-rounded { font-size: 17px; }
 
   /* Thread panel (post detail + comments) */
-  .thread-overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.6); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  /* Same side-drawer pattern as videos.html's .watch-panel / projects.html's
+     .watch-panel — kept in sync by hand across the three pages so opening
+     any piece of content (post, video, project) feels like the same UI. */
+  .thread-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.75); opacity: 0; pointer-events: none; transition: opacity 0.2s; }
   .thread-overlay.open { opacity: 1; pointer-events: all; }
   .thread-panel {
-    position: fixed; inset: 0; background-color: var(--md-sys-color-background); overflow-y: auto; z-index: 51;
-    transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.05, 0.7, 0.1, 1); display: flex; flex-direction: column;
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(720px, 100vw); background-color: var(--md-sys-color-background);
+    z-index: 201; transform: translateX(100%); transition: transform 0.25s; overflow-y: auto; padding: 24px;
   }
-  .thread-panel.open { transform: translateY(0); }
-  .thread-close { position: sticky; top: 0; z-index: 2; display: flex; justify-content: flex-end; padding: 16px 24px; background: linear-gradient(to bottom, var(--md-sys-color-background) 70%, transparent); }
+  .thread-panel.open { transform: translateX(0); }
   .thread-close-btn {
-    width: 48px; height: 48px; border-radius: 50%; background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
-    display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface); cursor: pointer; transition: background-color 0.2s;
+    position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%;
+    background: var(--md-sys-color-surface); border: none; display: flex; align-items: center; justify-content: center;
+    color: var(--md-sys-color-on-surface); cursor: pointer;
   }
-  .thread-close-btn:hover { background-color: var(--md-sys-color-surface-variant); }
-  .thread-content { flex: 1; width: 100%; max-width: 720px; margin: 0 auto; padding: 0 24px 100px; }
+  .thread-content { padding-bottom: 24px; }
 
   .thread-post-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
   .thread-title { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 400; line-height: 1.25; margin-bottom: 16px; }
@@ -435,9 +437,7 @@
 <!-- Thread (post detail + comments) -->
 <div class="thread-overlay" id="threadOverlay"></div>
 <div class="thread-panel" id="threadPanel">
-  <div class="thread-close">
-    <button class="thread-close-btn" id="threadCloseBtn" title="Close"><span class="material-symbols-rounded">close</span></button>
-  </div>
+  <button class="thread-close-btn" id="threadCloseBtn" title="Close"><span class="material-symbols-rounded">close</span></button>
   <div class="thread-content" id="threadContent"></div>
 </div>
 
