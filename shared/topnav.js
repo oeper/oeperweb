@@ -511,6 +511,17 @@ function initNotifications(navEl) {
     `;
   }
 
+  function renderError(err) {
+    dot.style.display = 'none';
+    const needsSetup = err && (err.code === 'permission-denied' || err.code === 'failed-precondition');
+    dropdown.innerHTML = `
+      <div class="oe-notif-header"><h3>Notifications</h3></div>
+      <div class="oe-notif-empty">${needsSetup
+        ? "Notifications aren't fully set up yet on this site — ask the owner to publish firestore.rules and create the notifications index (check the browser console for a one-click link)."
+        : 'Could not load notifications. Try again shortly.'}</div>
+    `;
+  }
+
   function render() {
     const unread = items.filter(n => !n.read);
     const read = items.filter(n => n.read);
@@ -567,7 +578,13 @@ function initNotifications(navEl) {
         await Promise.all(items.map(n => ensureProfileLoaded(n.actorEmail)));
         render();
       },
-      () => { btn.style.display = 'none'; } // rules/index not ready yet, or offline — degrade quietly
+      err => {
+        // Rules not published yet, or the composite index hasn't been
+        // created — keep the bell visible (it's how you'd discover the
+        // feature exists) and explain it instead of vanishing silently.
+        console.error('Notifications query failed:', err);
+        renderError(err);
+      }
     );
   }
 
