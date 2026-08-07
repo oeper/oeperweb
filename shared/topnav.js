@@ -8,6 +8,11 @@ import {
   collection, query, orderBy, limit, getDocs,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
+// The site's actual logo (icon.svg's path, inlined so it recolors via
+// currentColor and doesn't cost an extra request) — keep in sync with
+// icon.svg at the repo root if that ever changes.
+export const LOGO_SVG = `<svg viewBox="0 0 98 118" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M97.21 104.246C99.8214 110.812 94.9842 117.941 87.918 117.941H10.0098C2.94348 117.941 -1.89373 110.812 0.717769 104.246L24.9966 43.2019C25.2993 42.4406 26.0357 41.941 26.855 41.941H71.0728C71.892 41.941 72.6284 42.4406 72.9312 43.2019L97.21 104.246ZM39.6719 6.30428C43.0151 -2.10143 54.9127 -2.10143 58.2559 6.30428L65.3744 24.2018C65.8967 25.515 64.9293 26.941 63.516 26.941H34.4117C32.9985 26.941 32.031 25.515 32.5533 24.2018L39.6719 6.30428Z"/></svg>`;
+
 const NAV_ITEMS = [
   { id: 'home', title: 'Home', icon: 'home', url: 'https://oeper.dev/', path: '/' },
   { id: 'forum', title: 'Feed', icon: 'forum', url: 'https://oeper.dev/forum', path: '/forum' },
@@ -51,7 +56,8 @@ function injectStyles() {
       -webkit-tap-highlight-color: transparent;
     }
     .oe-nav-logo:visited { color: var(--md-sys-color-on-surface); }
-    .oe-nav-logo .material-symbols-rounded { color: var(--md-sys-color-primary); font-size: 28px; }
+    .oe-nav-logo-icon { width: 26px; height: 26px; color: var(--md-sys-color-primary); flex-shrink: 0; }
+    .oe-nav-logo-icon svg { width: 100%; height: 100%; display: block; }
 
     .oe-nav-search-wrap { position: relative; flex: 1 1 auto; min-width: 0; max-width: 420px; margin: 0 4px; }
     .oe-nav-search-icon {
@@ -187,7 +193,7 @@ export function mountTopNav(container) {
     <nav class="oe-navbar">
       <button class="oe-nav-hamburger" id="oeNavHamburger" aria-label="Menu"><span class="material-symbols-rounded">menu</span></button>
       <a href="https://oeper.dev/" class="oe-nav-logo">
-        <span class="material-symbols-rounded">token</span>
+        <span class="oe-nav-logo-icon">${LOGO_SVG}</span>
         <span>oeper.dev</span>
       </a>
       <div class="oe-nav-search-wrap" id="oeNavSearchWrap">

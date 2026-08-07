@@ -17,7 +17,10 @@ const SOCIALS = [
   { name: 'YouTube', handle: '@oeperdev', url: 'https://youtube.com/@oeperdev', icon: ICONS.youtube },
 ];
 
-const SITE_ICON = `<span class="material-symbols-rounded" style="font-size:18px;">token</span>`;
+// The site's actual logo (icon.svg's path, inlined so it recolors via
+// currentColor and doesn't cost an extra request) — keep in sync with
+// icon.svg at the repo root if that ever changes.
+const SITE_ICON = `<svg viewBox="0 0 98 118"><path d="M97.21 104.246C99.8214 110.812 94.9842 117.941 87.918 117.941H10.0098C2.94348 117.941 -1.89373 110.812 0.717769 104.246L24.9966 43.2019C25.2993 42.4406 26.0357 41.941 26.855 41.941H71.0728C71.892 41.941 72.6284 42.4406 72.9312 43.2019L97.21 104.246ZM39.6719 6.30428C43.0151 -2.10143 54.9127 -2.10143 58.2559 6.30428L65.3744 24.2018C65.8967 25.515 64.9293 26.941 63.516 26.941H34.4117C32.9985 26.941 32.031 25.515 32.5533 24.2018L39.6719 6.30428Z"/></svg>`;
 const STATUS_ICON = `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`;
 
 const SITE_LINKS = [
