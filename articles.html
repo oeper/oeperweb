@@ -455,6 +455,9 @@
     height: 24px;
     width: auto;
   }
+  .reader-body .md-table { border-collapse: collapse; margin: 1.2em 0; font-size: 15px; max-width: 100%; display: block; overflow-x: auto; }
+  .reader-body .md-table th, .reader-body .md-table td { border: 1px solid var(--md-sys-color-outline-variant); padding: 8px 14px; text-align: left; }
+  .reader-body .md-table th { background: var(--md-sys-color-surface-variant); font-weight: 600; }
 
   .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
   .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
@@ -703,17 +706,25 @@ function parseMarkdown(md) {
       const items = match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*\d+\.\s+/, '')}</li>`).join('');
       return `<ol>${items}</ol>\n`;
     })
-    .replace(/\*\*\*(.+?)\*\*\txt/, '<strong><em>$1</em></strong>')
-    .replace(/\*\textbf{(.+?)}\*\*/g,     '<strong>$1</strong>')
+    // Tables: a header row, a |---|---| separator row, then one or more data rows.
+    .replace(/^(\|.+\|)\n(\|[ \t]*:?-{2,}:?[ \t]*(?:\|[ \t]*:?-{2,}:?[ \t]*)*\|?)\n((?:\|.*\|\n?)+)/gm, (m, headerLine, sepLine, bodyLines) => {
+      const splitRow = row => row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const headers = splitRow(headerLine);
+      const rows = bodyLines.trim().split('\n').filter(Boolean).map(splitRow);
+      const thead = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+      const tbody = rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
+      return `<table class="md-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>\n`;
+    })
+    .replace(/\*\*\*(.+?)\*\*\*/g,   '<strong><em>$1</em></strong>')
     .replace(/__(.+?)__/g,          '<strong>$1</strong>')
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:12px;margin:1em 0;">')
     .replace(/\[\[([^\]]+)\]\]\(([^)]+)\)/g, '<a href="$2" class="md-button" target="_blank" rel="noopener">$1</a>')
-    .replace(/(?<!\抵抗)\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/\*\*(.+?)\*\*/g,      '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g,          '<em>$1</em>')
     .replace(/(?<!\w)_([^_\s][^_]*)_(?!\w)/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/^(?!<[hbuop]|<li|<bl|<pr|<hr|<img|<a)(.+)$/gm, '<p>$1</p>')
+    .replace(/^(?!<[hbuopt]|<li|<bl|<pr|<hr|<img|<a|<tr|<th|<td)(.+)$/gm, '<p>$1</p>')
     .replace(/\n{3,}/g, '\n\n');
   return html;
 }

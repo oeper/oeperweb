@@ -335,6 +335,19 @@
   .btn.danger { color: var(--md-sys-color-error); border-color: var(--md-sys-color-error); }
   .modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; gap: 12px; }
 
+  a.md-btn {
+    display: inline-flex; align-items: center; gap: 8px; font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500;
+    padding: 10px 18px; border-radius: 100px; background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
+    text-decoration: none; margin: 4px 6px 4px 0; vertical-align: middle;
+  }
+  a.md-btn:hover { opacity: 0.9; }
+  a.md-btn .material-symbols-rounded { font-size: 18px; }
+  .md-table { border-collapse: collapse; margin: 12px 0; font-size: 14px; max-width: 100%; display: block; overflow-x: auto; }
+  .md-table th, .md-table td { border: 1px solid var(--md-sys-color-outline-variant); padding: 8px 12px; text-align: left; }
+  .md-table th { background: var(--md-sys-color-surface-variant); font-weight: 600; }
+  .thread-body ul, .post-excerpt ul, .comment-body ul { margin: 0.6em 0 0.6em 1.4em; }
+  .thread-body li, .post-excerpt li, .comment-body li { margin-bottom: 0.3em; }
+
   .toast {
     position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: #303034;
     box-shadow: 0 4px 12px rgba(0,0,0,0.4); border-radius: 16px; padding: 14px 24px; font-family: 'Google Sans', 'Product Sans', sans-serif;
@@ -428,7 +441,7 @@
 <!-- New post modal -->
 <div class="overlay" id="overlay"></div>
 <div class="modal" id="modal">
-  <h3>New post</h3>
+  <h3 id="modalTitle">New post</h3>
   <form id="postForm">
     <div class="field">
       <label>Title *</label>
@@ -436,7 +449,7 @@
     </div>
     <div class="field">
       <label>Body</label>
-      <textarea name="body" maxlength="8000" placeholder="Write in markdown — # headings, **bold**, *italic*, [link](url)"></textarea>
+      <textarea name="body" maxlength="8000" placeholder="Write in markdown — # headings, **bold**, *italic*, - bullets, [link](url), [[Button label]](url), or a | table | like | this |"></textarea>
     </div>
     <div class="field">
       <label>Files (up to <span id="maxImagesLabel"></span>, optional)</label>
@@ -452,7 +465,7 @@
     </div>
     <div class="modal-actions">
       <button type="button" class="btn danger" id="cancelPostBtn">Cancel</button>
-      <button type="submit" class="btn primary" id="submitPostBtn"><span class="material-symbols-rounded">send</span> Post</button>
+      <button type="submit" class="btn primary" id="submitPostBtn"><span class="material-symbols-rounded" id="submitPostIcon">send</span> <span id="submitPostLabel">Post</span></button>
     </div>
   </form>
 </div>
@@ -507,13 +520,32 @@ function parseMarkdown(md) {
     .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
     .replace(/^##\s+(.+)$/gm,  '<h2>$1</h2>')
     .replace(/^#\s+(.+)$/gm,   '<h1>$1</h1>')
+    // Tables: a header row, a |---|---| separator row, then one or more data rows.
+    .replace(/^(\|.+\|)\n(\|[ \t]*:?-{2,}:?[ \t]*(?:\|[ \t]*:?-{2,}:?[ \t]*)*\|?)\n((?:\|.*\|\n?)+)/gm, (m, headerLine, sepLine, bodyLines) => {
+      const splitRow = row => row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const headers = splitRow(headerLine);
+      const rows = bodyLines.trim().split('\n').filter(Boolean).map(splitRow);
+      const thead = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+      const tbody = rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
+      return `<table class="md-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>\n`;
+    })
+    // Bullet lists: consecutive "- item" / "* item" lines.
+    .replace(/^(?:[ \t]*[-*+][ \t]+.+\n?)+/gm, match =>
+      `<ul>${match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*[-*+][ \t]+/, '')}</li>`).join('')}</ul>\n`)
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // [[Button label]](url) renders as a filled Material button instead of a plain link.
+    .replace(/\[\[([^\]]+)\]\]\((https?:\/\/[^)]+)\)/g, '<a class="md-btn" href="$2" target="_blank" rel="noopener"><span class="material-symbols-rounded">arrow_forward</span>$1</a>')
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\n{2,}/g, '</p><p>')
-    .replace(/\n/g, '<br>');
+    .replace(/\n/g, '<br>')
+    // Lists/tables already carry their own block markup — undo the <p>/<br> wrapping the two passes above just applied around them.
+    .replace(/<p>(\s*<(?:ul|table)[\s\S]*?<\/(?:ul|table)>\s*)<\/p>/g, '$1')
+    .replace(/<br>(\s*<(?:ul|table|\/ul|\/table))/g, '$1')
+    .replace(/(<\/(?:ul|table)>)<br>/g, '$1')
+    .replace(/<li><br>/g, '<li>').replace(/<br><\/li>/g, '</li>');
   return `<p>${html}</p>`;
 }
 function timeAgo(date) {
@@ -963,6 +995,9 @@ function runForum() {
       { label: 'Share', icon: 'link', onClick: () => copyLink(postUrl(p.id), 'Post link') },
       { label: 'Report', icon: 'flag', onClick: () => reportItem('post', p.id, null) },
     ];
+    if (u && p.authorEmail === u.email) {
+      items.push({ label: 'Edit post', icon: 'edit', onClick: () => openPostModal(p) });
+    }
     if (u && isOwner(u.email) && p.authorEmail !== u.email) {
       items.push({ label: 'Ban user', icon: 'block', dangerous: true, onClick: () => banUser(p.authorEmail) });
     }
@@ -1001,9 +1036,19 @@ function runForum() {
   // Post form: up to MAX_POST_IMAGES.
   function createMultiImageAttach(container, maxCount) {
     let files = [];
+    let existingUrls = []; // already-uploaded URLs when editing a post
+    function totalCount() { return files.length + existingUrls.length; }
     function render() {
-      const canAddMore = files.length < maxCount;
+      const canAddMore = totalCount() < maxCount;
       container.innerHTML = `
+        ${existingUrls.map((url, i) => `
+          <div class="image-preview-wrap" data-i="${i}">
+            ${/\.(jpe?g|png|gif|webp|bmp|svg|avif)$/i.test(url)
+              ? `<img src="${url}" alt="">`
+              : `<span class="file-chip-preview"><span class="material-symbols-rounded">draft</span><span class="file-chip-name">${escHtml(fileNameFromUrl(url))}</span></span>`}
+            <button type="button" class="image-preview-remove" data-remove-existing="${i}"><span class="material-symbols-rounded">close</span></button>
+          </div>
+        `).join('')}
         ${files.map((f, i) => `
           <div class="image-preview-wrap" data-i="${i}">
             ${filePreviewHtml(f)}
@@ -1012,7 +1057,7 @@ function runForum() {
         `).join('')}
         ${canAddMore ? `
           <label class="image-attach-btn">
-            <span class="material-symbols-rounded" style="font-size:16px;">attach_file</span> Add file (${files.length}/${maxCount})
+            <span class="material-symbols-rounded" style="font-size:16px;">attach_file</span> Add file (${totalCount()}/${maxCount})
             <input type="file" multiple>
           </label>
         ` : ''}
@@ -1020,11 +1065,14 @@ function runForum() {
       container.querySelectorAll('[data-remove]').forEach(btn => {
         btn.addEventListener('click', () => { files.splice(+btn.dataset.remove, 1); render(); });
       });
+      container.querySelectorAll('[data-remove-existing]').forEach(btn => {
+        btn.addEventListener('click', () => { existingUrls.splice(+btn.dataset.removeExisting, 1); render(); });
+      });
       const input = container.querySelector('input[type="file"]');
       if (input) {
         input.addEventListener('change', e => {
           for (const f of [...e.target.files]) {
-            if (files.length >= maxCount) { showToast(`Up to ${maxCount} files per post`); break; }
+            if (totalCount() >= maxCount) { showToast(`Up to ${maxCount} files per post`); break; }
             if (f.size > MAX_IMAGE_BYTES) { showToast(`Each file must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); continue; }
             files.push(f);
           }
@@ -1033,7 +1081,12 @@ function runForum() {
       }
     }
     render();
-    return { getFiles: () => files, reset: () => { files = []; render(); } };
+    return {
+      getFiles: () => files,
+      getExistingUrls: () => existingUrls,
+      setExistingUrls: urls => { existingUrls = [...(urls || [])]; render(); },
+      reset: () => { files = []; existingUrls = []; render(); },
+    };
   }
 
   // Comment form: single file.
@@ -1177,7 +1230,7 @@ function runForum() {
           ${(p.tags||[]).map(id => `<span class="post-tag">${escHtml(tagInfo(id).label)}</span>`).join('')}
           <span class="post-author">
             ${authorLinkHtml(p, `${photo ? `<img src="${photo}" alt="">` : ''}${escHtml(nameOf(p))}`, 'onclick="event.stopPropagation()"')}
-            · ${timeAgo(p._date)}
+            · ${timeAgo(p._date)}${p.editedAt ? ' (edited)' : ''}
           </span>
         </div>
         <div class="post-title">${linkify(p.title, ' onclick="event.stopPropagation()"')}</div>
@@ -1273,17 +1326,32 @@ function runForum() {
     });
   }
 
-  document.getElementById('newPostBtn').addEventListener('click', () => {
+  let editingPostId = null;
+
+  function openPostModal(post) {
     if (!currentUser()) { showToast('Sign in to post'); return; }
     if (isBanned()) { showToast("You've been banned from posting"); return; }
     postForm.reset();
-    selectedTags = [];
     postImageAttach.reset();
+    editingPostId = post ? post.id : null;
+    document.getElementById('modalTitle').textContent = post ? 'Edit post' : 'New post';
+    document.getElementById('submitPostIcon').textContent = post ? 'save' : 'send';
+    document.getElementById('submitPostLabel').textContent = post ? 'Save' : 'Post';
+    if (post) {
+      postForm.elements.title.value = post.title || '';
+      postForm.elements.body.value = post.body || '';
+      selectedTags = [...(post.tags || [])];
+      postImageAttach.setExistingUrls(post.imageUrls && post.imageUrls.length ? post.imageUrls : (post.imageUrl ? [post.imageUrl] : []));
+    } else {
+      selectedTags = [];
+    }
     renderTagSelect();
     overlay.classList.add('open');
     modal.classList.add('open');
-  });
-  function closeModal() { overlay.classList.remove('open'); modal.classList.remove('open'); }
+  }
+
+  document.getElementById('newPostBtn').addEventListener('click', () => openPostModal(null));
+  function closeModal() { overlay.classList.remove('open'); modal.classList.remove('open'); editingPostId = null; }
   document.getElementById('cancelPostBtn').addEventListener('click', closeModal);
   overlay.addEventListener('click', closeModal);
   document.getElementById('addTagBtn').addEventListener('click', () => {
@@ -1307,22 +1375,34 @@ function runForum() {
     const submitBtn = document.getElementById('submitPostBtn');
     submitBtn.disabled = true;
     try {
-      const imageUrls = await uploadFilesIfAny(postImageAttach.getFiles());
-      await addDoc(collection(db, 'posts'), {
-        title,
-        body: fd.get('body').trim(),
-        tags: selectedTags,
-        imageUrls,
-        authorEmail: u.email,
-        authorName: u.displayName,
-        authorPhoto: u.photoURL,
-        upvoters: [],
-        downvoters: [],
-        commentCount: 0,
-        createdAt: serverTimestamp(),
-      });
+      const newUrls = await uploadFilesIfAny(postImageAttach.getFiles());
+      const imageUrls = [...postImageAttach.getExistingUrls(), ...newUrls];
+      if (editingPostId) {
+        await updateDoc(postRef(editingPostId), {
+          title,
+          body: fd.get('body').trim(),
+          tags: selectedTags,
+          imageUrls,
+          editedAt: serverTimestamp(),
+        });
+        showToast('Post updated');
+      } else {
+        await addDoc(collection(db, 'posts'), {
+          title,
+          body: fd.get('body').trim(),
+          tags: selectedTags,
+          imageUrls,
+          authorEmail: u.email,
+          authorName: u.displayName,
+          authorPhoto: u.photoURL,
+          upvoters: [],
+          downvoters: [],
+          commentCount: 0,
+          createdAt: serverTimestamp(),
+        });
+        showToast('Posted!');
+      }
       closeModal();
-      showToast('Posted!');
     } catch (err) {
       showToast('Could not post: ' + err.message);
     } finally {
@@ -1369,7 +1449,7 @@ function runForum() {
         ${(p.tags||[]).map(id => `<span class="post-tag">${escHtml(tagInfo(id).label)}</span>`).join('')}
         <span class="post-author">
           ${authorLinkHtml(p, `${photo ? `<img src="${photo}" alt="">` : ''}${escHtml(nameOf(p))}`)}
-          · ${timeAgo(p._date)} · ${p.views||0} views
+          · ${timeAgo(p._date)}${p.editedAt ? ' (edited)' : ''} · ${p.views||0} views
         </span>
         <span class="kebab-slot" data-kebab style="margin-left:auto;"></span>
       </div>

@@ -189,6 +189,14 @@
   .md-preview h1, .md-preview h2, .md-preview h3 { font-family: 'Google Sans', 'Product Sans', sans-serif; margin: 0.8em 0 0.4em; }
   .md-preview p { margin-bottom: 1em; }
   .md-preview a { color: var(--md-sys-color-primary); }
+  .md-preview a.md-button {
+    display: inline-flex; align-items: center; justify-content: center; background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary); padding: 12px 24px; border-radius: 100px; font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-size: 15px; font-weight: 500; text-decoration: none; margin: 8px 0;
+  }
+  .md-preview .md-table { border-collapse: collapse; margin: 1em 0; font-size: 14px; max-width: 100%; display: block; overflow-x: auto; }
+  .md-preview .md-table th, .md-preview .md-table td { border: 1px solid var(--md-sys-color-outline-variant); padding: 6px 12px; text-align: left; }
+  .md-preview .md-table th { background: var(--md-sys-color-surface-variant); font-weight: 600; }
 
   .modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; gap: 12px; }
   .modal-actions .right { display: flex; gap: 8px; }
@@ -438,14 +446,23 @@ function parseMarkdown(md) {
     .replace(/^(-{3,}|\*{3,}|_{3,})$/gm, '<hr>')
     .replace(/((?:^[ \t]*[-*+]\s+.+\n?)+)/gm, match => `<ul>${match.trim().split('\n').map(l=>`<li>${l.replace(/^[ \t]*[-*+]\s+/,'')}</li>`).join('')}</ul>\n`)
     .replace(/((?:^[ \t]*\d+\.\s+.+\n?)+)/gm, match => `<ol>${match.trim().split('\n').map(l=>`<li>${l.replace(/^[ \t]*\d+\.\s+/,'')}</li>`).join('')}</ol>\n`)
+    // Tables: a header row, a |---|---| separator row, then one or more data rows.
+    .replace(/^(\|.+\|)\n(\|[ \t]*:?-{2,}:?[ \t]*(?:\|[ \t]*:?-{2,}:?[ \t]*)*\|?)\n((?:\|.*\|\n?)+)/gm, (m, headerLine, sepLine, bodyLines) => {
+      const splitRow = row => row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const headers = splitRow(headerLine);
+      const rows = bodyLines.trim().split('\n').filter(Boolean).map(splitRow);
+      const thead = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+      const tbody = rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
+      return `<table class="md-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>\n`;
+    })
     .replace(/__(.+?)__/g, '<strong>$1</strong>')
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:12px;margin:1em 0;">')
-    .replace(/\[\[([^\]]+)\]\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\[\[([^\]]+)\]\]\(([^)]+)\)/g, '<a href="$2" class="md-button" target="_blank" rel="noopener">$1</a>')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/^(?!<[hbuop]|<li|<bl|<pr|<hr|<img|<a)(.+)$/gm, '<p>$1</p>')
+    .replace(/^(?!<[hbuopt]|<li|<bl|<pr|<hr|<img|<a|<tr|<th|<td)(.+)$/gm, '<p>$1</p>')
     .replace(/\n{3,}/g, '\n\n');
   return html;
 }
