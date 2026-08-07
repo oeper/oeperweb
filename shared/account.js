@@ -1,6 +1,6 @@
 // Shared account system (Firebase Auth + profile) used across every page.
 // Import and call mountAccountBar(container) to render sign-in/profile UI.
-// forum.html additionally imports auth/db/getProfile/etc. directly for
+// feed.html additionally imports auth/db/getProfile/etc. directly for
 // posting, voting, moderation — those are forum-specific, not part of the
 // public API other pages need.
 //
@@ -27,7 +27,7 @@ export const FIREBASE_CONFIG = {
 };
 
 // Your Cloudflare Tunnel URL (forum-server/README.md). Used for profile
-// photo uploads here, and for forum image uploads + reports in forum.html.
+// photo uploads here, and for forum image uploads + reports in feed.html.
 export const SERVER_ENDPOINT = 'https://fs.oeper.dev';
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 

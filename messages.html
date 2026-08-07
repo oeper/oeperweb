@@ -155,7 +155,7 @@
 
 <div class="page">
   <div class="header-container">
-    <a href="https://oeper.dev/forum" class="header-link" id="backLink">
+    <a href="https://oeper.dev/feed" class="header-link" id="backLink">
       <span class="material-symbols-rounded">arrow_back</span>
       <span id="backLinkText">back to feed</span>
     </a>
@@ -365,7 +365,7 @@ async function openByHandle(handle, user) {
 }
 
 function showInbox(user) {
-  document.getElementById('backLink').href = 'https://oeper.dev/forum';
+  document.getElementById('backLink').href = 'https://oeper.dev/feed';
   document.getElementById('backLinkText').textContent = 'back to feed';
   content.innerHTML = '<div class="empty-note">Loading…</div>';
 

@@ -11,7 +11,7 @@
 
 <script>
 // GitHub Pages has no server-side rewrites, so a clean URL like
-// /forum/<postId> or /profile/<handle> 404s here instead of loading the
+// /feed/<postId> or /profile/<handle> 404s here instead of loading the
 // real page directly. This is that fallback: recognize the known clean
 // path shapes and redirect (not just link) to the real file + query
 // string it corresponds to. Each of those pages then rewrites the address
@@ -25,8 +25,8 @@
   var m;
   if ((m = path.match(/^\/profile\/([^/]+)\/?$/))) {
     location.replace('/profile.html?u=' + m[1]);
-  } else if ((m = path.match(/^\/forum\/([^/]+)\/?$/))) {
-    location.replace('/forum.html?post=' + m[1]);
+  } else if ((m = path.match(/^\/feed\/([^/]+)\/?$/))) {
+    location.replace('/feed.html?post=' + m[1]);
   } else if ((m = path.match(/^\/videos\/([^/]+)\/?$/))) {
     location.replace('/videos.html?video=' + m[1]);
   } else if ((m = path.match(/^\/projects\/([^/]+)\/?$/))) {

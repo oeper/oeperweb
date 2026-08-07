@@ -433,7 +433,7 @@ async function init() {
       <div class="section-heading">Posts</div>
       <div class="post-list">
         ${posts.length === 0 ? '<div class="empty-note">No posts yet.</div>' : posts.map(p => `
-          <a class="post-row" href="/forum?post=${p.id}">
+          <a class="post-row" href="/feed?post=${p.id}">
             <div class="post-row-title">${escHtml(p.title)}</div>
             ${p.body ? `<div class="post-row-excerpt">${escHtml(stripMarkdown(p.body, 160))}</div>` : ''}
             <div class="post-row-meta">

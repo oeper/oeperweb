@@ -323,7 +323,7 @@ mountTopNav();
 mountFooter();
 
 // Converts the old [[label]](url) link syntax used in articles.json into
-// standard markdown [label](url), which forum.html's parseMarkdown expects.
+// standard markdown [label](url), which feed.html's parseMarkdown expects.
 function toFeedMarkdown(text) {
   return (text || '').replace(/\[\[(.+?)\]\]\((.+?)\)/g, '[$1]($2)');
 }

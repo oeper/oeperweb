@@ -20,7 +20,7 @@ export const LOGO_SVG = `<svg viewBox="0 0 98 118" fill="currentColor" xmlns="ht
 
 const NAV_ITEMS = [
   { id: 'home', title: 'Home', icon: 'home', url: 'https://oeper.dev/', path: '/' },
-  { id: 'forum', title: 'Feed', icon: 'forum', url: 'https://oeper.dev/forum', path: '/forum' },
+  { id: 'feed', title: 'Feed', icon: 'forum', url: 'https://oeper.dev/feed', path: '/feed' },
   { id: 'videos', title: 'Videos', icon: 'smart_display', url: 'https://oeper.dev/videos', path: '/videos' },
   { id: 'projects', title: 'Projects', icon: 'apps', url: 'https://oeper.dev/projects', path: '/projects' },
   { id: 'files', title: 'Files', icon: 'folder', url: 'https://oeper.dev/files', path: '/files' },
@@ -411,7 +411,7 @@ function initSearch(navEl) {
     corpus.posts.forEach(p => {
       const name = p.title || p.body || '';
       const rank = matchRank(name, q);
-      if (rank !== -1) results.push({ rank, name, sub: 'in Feed', url: `/forum?post=${p.id}`, icon: 'forum' });
+      if (rank !== -1) results.push({ rank, name, sub: 'in Feed', url: `/feed?post=${p.id}`, icon: 'forum' });
     });
     corpus.videos.forEach(v => {
       const rank = matchRank(v.title, q);
@@ -485,7 +485,7 @@ function notifText(n) {
 function notifUrl(n) {
   if (n.type === 'follow') { const h = handleOf(n.actorEmail); return h ? `/profile?u=${encodeURIComponent(h)}` : '/'; }
   if (n.type === 'badge') return '/settings';
-  if (n.targetKind === 'post') return `/forum?post=${n.targetId}`;
+  if (n.targetKind === 'post') return `/feed?post=${n.targetId}`;
   if (n.targetKind === 'video') return `/videos?video=${n.targetId}`;
   if (n.targetKind === 'project') return `/projects?project=${n.targetId}`;
   return '/';

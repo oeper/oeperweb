@@ -7,7 +7,7 @@
 <meta name="description" content="Talk to other visitors of oeper.dev">
 <meta property="og:title" content="Feed — oeper.dev">
 <meta property="og:description" content="Talk to other visitors of oeper.dev">
-<meta property="og:url" content="https://oeper.dev/forum">
+<meta property="og:url" content="https://oeper.dev/feed">
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
@@ -207,7 +207,7 @@
   }
   .thread-content { padding-bottom: 24px; }
 
-  .thread-post-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .thread-post-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; padding-right: 48px; }
   .thread-title { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 400; line-height: 1.25; margin-bottom: 16px; }
   .thread-body { font-size: 16px; line-height: 1.7; margin-bottom: 12px; }
   .thread-body p { margin-bottom: 1.2em; }
@@ -578,7 +578,7 @@ async function copyLink(url, label) {
   }
 }
 function postUrl(postId) {
-  return 'https://oeper.dev/forum/' + encodeURIComponent(postId);
+  return 'https://oeper.dev/feed/' + encodeURIComponent(postId);
 }
 function commentUrl(postId, commentId) {
   return postUrl(postId) + '?comment=' + encodeURIComponent(commentId);
@@ -1304,7 +1304,7 @@ function runForum() {
       const params = new URLSearchParams(window.location.search);
       let wantedPost = params.get('post');
       if (!wantedPost) {
-        const pathMatch = window.location.pathname.match(/^\/forum\/([^/]+)\/?$/);
+        const pathMatch = window.location.pathname.match(/^\/feed\/([^/]+)\/?$/);
         if (pathMatch) wantedPost = decodeURIComponent(pathMatch[1]);
       }
       if (wantedPost && posts.find(p => p.id === wantedPost)) {
@@ -1497,7 +1497,7 @@ function runForum() {
       threadPanel.classList.add('open');
       threadPanel.scrollTop = 0;
       document.body.style.overflow = 'hidden';
-      history.pushState({ post: postId }, '', '/forum/' + encodeURIComponent(postId));
+      history.pushState({ post: postId }, '', '/feed/' + encodeURIComponent(postId));
     }
 
     if (unsubComments.current) unsubComments.current();
@@ -1612,7 +1612,7 @@ function runForum() {
     document.body.style.overflow = '';
     if (unsubComments.current) { unsubComments.current(); unsubComments.current = null; }
     openPostId = null;
-    history.pushState({}, '', '/forum');
+    history.pushState({}, '', '/feed');
   }
   document.getElementById('threadCloseBtn').addEventListener('click', closeThread);
   threadOverlay.addEventListener('click', closeThread);
