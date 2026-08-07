@@ -9,7 +9,8 @@
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
-<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
  
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -331,6 +332,12 @@
   .home-feed-heading .header-link .material-symbols-rounded { font-size: 16px; }
   .home-feed { display: flex; flex-direction: column; gap: 24px; max-width: 470px; margin: 0 auto; }
   .home-feed-empty { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 0; text-align: center; }
+  .home-feed-load-more {
+    display: block; margin: 4px auto 0; padding: 10px 24px; border-radius: 100px; border: 1px solid var(--md-sys-color-outline);
+    background: transparent; color: var(--md-sys-color-on-surface); font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-size: 14px; font-weight: 500; cursor: pointer;
+  }
+  .home-feed-load-more:hover { background: rgba(255,255,255,0.06); }
 
   /* Instagram-style post card */
   .ig-card {
@@ -338,13 +345,25 @@
     border-radius: 12px; text-decoration: none; color: inherit; overflow: hidden; cursor: pointer;
   }
   .ig-caption a { color: var(--md-sys-color-primary); text-decoration: underline; }
+  .ig-caption strong a { color: inherit; text-decoration: none; }
+  .ig-caption strong a:hover { text-decoration: underline; }
   .ig-card-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+  .ig-card-header a { color: inherit; text-decoration: none; display: flex; align-items: center; }
   .ig-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
   .ig-header-text { flex: 1; min-width: 0; }
   .ig-username { font-size: 13px; font-weight: 600; }
+  .ig-username a:hover { text-decoration: underline; }
   .ig-subtag { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
-  .ig-media { width: 100%; aspect-ratio: 4/5; background: #000; }
+  .ig-media { width: 100%; aspect-ratio: 4/5; background: #000; position: relative; }
   .ig-media img, .ig-media video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ig-play-overlay {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.15); pointer-events: none; transition: opacity 0.15s;
+  }
+  .ig-play-overlay .material-symbols-rounded {
+    font-size: 30px; color: #fff; background: rgba(0,0,0,0.45); border-radius: 50%; padding: 14px;
+  }
+  .ig-media.playing .ig-play-overlay { opacity: 0; }
   .ig-actions { display: flex; align-items: center; gap: 4px; padding: 10px 14px 4px; }
   .ig-actions .material-symbols-rounded { font-size: 24px; color: var(--md-sys-color-on-surface); }
   .ig-action-count { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-left: -8px; }
@@ -484,7 +503,7 @@
   </div>
 
 <script type="module">
-  import { db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser } from './shared/account.js?v=9';
+  import { db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser } from './shared/account.js?v=10';
   import { mountTopNav } from './shared/topnav.js';
   import { mountFooter } from './shared/footer.js';
   import {
@@ -523,15 +542,24 @@
     let latestPosts = [];
     let latestVideos = [];
     let gotPosts = false, gotVideos = false;
+    let feedLimit = 20;
 
     function renderFeed() {
       if (!gotPosts || !gotVideos) return; // wait for both so items interleave by date, not by whichever loaded first
-      const items = [...latestPosts, ...latestVideos].sort((a, b) => b._date - a._date).slice(0, 14);
+      const items = [...latestPosts, ...latestVideos].sort((a, b) => b._date - a._date).slice(0, feedLimit);
       if (items.length === 0) {
         feedEl.innerHTML = '<div class="home-feed-empty">Nothing posted yet — be the first to say something.</div>';
         return;
       }
-      feedEl.innerHTML = items.map(item => item._kind === 'video' ? videoCardHtml(item) : postCardHtml(item)).join('');
+      const canLoadMore = latestPosts.length >= feedLimit || latestVideos.length >= feedLimit;
+      feedEl.innerHTML = items.map(item => item._kind === 'video' ? videoCardHtml(item) : postCardHtml(item)).join('')
+        + (canLoadMore ? `<button type="button" class="home-feed-load-more" id="feedLoadMoreBtn">Load more</button>` : '');
+      const loadMoreBtn = document.getElementById('feedLoadMoreBtn');
+      if (loadMoreBtn) loadMoreBtn.addEventListener('click', () => {
+        feedLimit += 20;
+        gotPosts = false; gotVideos = false;
+        subscribeFeed();
+      });
     }
 
     function voteActionsHtml(item, kind) {
@@ -550,6 +578,26 @@
       `;
     }
 
+    function authorNameHtml(email, profile) {
+      const handle = handleOf(email);
+      const inner = `${escHtml(profile.name)}${officialBadgeHtml(email)}`;
+      return handle ? `<a href="/profile.html?u=${encodeURIComponent(handle)}">${inner}</a>` : `<span>${inner}</span>`;
+    }
+
+    function cardHeaderHtml(email, profile, subtag) {
+      const handle = handleOf(email);
+      const avatar = `<img class="ig-avatar" src="${profile.photo || ''}" alt="">`;
+      return `
+        <div class="ig-card-header">
+          ${handle ? `<a href="/profile.html?u=${encodeURIComponent(handle)}">${avatar}</a>` : avatar}
+          <div class="ig-header-text">
+            <div class="ig-username">${authorNameHtml(email, profile)}</div>
+            <div class="ig-subtag">${subtag}</div>
+          </div>
+        </div>
+      `;
+    }
+
     function postCardHtml(p) {
       const profile = getProfile(p.authorEmail, p.authorName, p.authorPhoto);
       const tag = (p.tags || [])[0];
@@ -558,26 +606,20 @@
       const score = (p.upvoters || []).length - (p.downvoters || []).length;
       return `
         <div class="ig-card" data-href="https://oeper.dev/forum.html?post=${p.id}">
-          <div class="ig-card-header">
-            <img class="ig-avatar" src="${profile.photo || ''}" alt="">
-            <div class="ig-header-text">
-              <div class="ig-username">${escHtml(profile.name)}${officialBadgeHtml(p.authorEmail)}</div>
-              <div class="ig-subtag">${tag ? escHtml(TAG_LABELS[tag] || tag) : 'oeper.dev'}</div>
-            </div>
-          </div>
+          ${cardHeaderHtml(p.authorEmail, profile, tag ? escHtml(TAG_LABELS[tag] || tag) : 'oeper.dev')}
           ${img ? `<div class="ig-media"><img src="${img}" alt="" loading="lazy"></div>` : ''}
           ${vid ? `<div class="ig-media"><video src="${vid}" muted preload="metadata"></video></div>` : ''}
           <div class="ig-actions">
             ${voteActionsHtml(p, 'post')}
-            <button type="button" class="ig-comment-btn" data-open-comments data-id="${p.id}" title="Comments">
+            <button type="button" class="ig-comment-btn" data-open-comments data-kind="post" data-id="${p.id}" title="Comments">
               <span class="material-symbols-rounded">mode_comment</span>
             </button>
             <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
             <span class="ig-action-count">${p.views || 0}</span>
           </div>
           <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
-          <div class="ig-caption"><strong>${escHtml(profile.name)}</strong>${linkify(p.title)}</div>
-          <button type="button" class="ig-view-comments" data-open-comments data-id="${p.id}">${p.commentCount ? `View all ${p.commentCount} comments` : 'Add a comment…'}</button>
+          <div class="ig-caption"><strong>${authorNameHtml(p.authorEmail, profile)}</strong>${linkify(p.title)}</div>
+          <button type="button" class="ig-view-comments" data-open-comments data-kind="post" data-id="${p.id}">${p.commentCount ? `View all ${p.commentCount} comments` : 'Add a comment…'}</button>
           <div class="ig-timestamp">${timeAgo(p._date)}</div>
         </div>
       `;
@@ -588,21 +630,22 @@
       const score = (v.upvoters || []).length - (v.downvoters || []).length;
       return `
         <div class="ig-card" data-href="https://oeper.dev/videos.html?video=${v.id}">
-          <div class="ig-card-header">
-            <img class="ig-avatar" src="${profile.photo || ''}" alt="">
-            <div class="ig-header-text">
-              <div class="ig-username">${escHtml(profile.name)}${officialBadgeHtml(v.authorEmail)}</div>
-              <div class="ig-subtag">Video</div>
-            </div>
+          ${cardHeaderHtml(v.authorEmail, profile, 'Video')}
+          <div class="ig-media" data-video-media>
+            <video src="${v.url}" muted preload="metadata"></video>
+            <div class="ig-play-overlay"><span class="material-symbols-rounded">play_arrow</span></div>
           </div>
-          <div class="ig-media"><video src="${v.url}" muted preload="metadata"></video></div>
           <div class="ig-actions">
             ${voteActionsHtml(v, 'video')}
+            <button type="button" class="ig-comment-btn" data-open-comments data-kind="video" data-id="${v.id}" title="Comments">
+              <span class="material-symbols-rounded">mode_comment</span>
+            </button>
             <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
             <span class="ig-action-count">${v.views || 0}</span>
           </div>
           <div class="ig-likes">${score} upvote${score === 1 ? '' : 's'}</div>
-          <div class="ig-caption"><strong>${escHtml(profile.name)}</strong>${linkify(v.title)}</div>
+          <div class="ig-caption"><strong>${authorNameHtml(v.authorEmail, profile)}</strong>${linkify(v.title)}</div>
+          <button type="button" class="ig-view-comments" data-open-comments data-kind="video" data-id="${v.id}">${v.commentCount ? `View all ${v.commentCount} comments` : 'Add a comment…'}</button>
           <div class="ig-timestamp">${timeAgo(v._date)}</div>
         </div>
       `;
@@ -632,8 +675,9 @@
       }
     }
 
-    // ── Inline comment modal (posts only — videos have no comments) ──
-    let openPostId = null;
+    // ── Inline comment modal (posts and videos both use posts/videos/{id}/comments) ──
+    let openItemId = null;
+    let openItemKind = null;
     let unsubComments = null;
     const commentOverlay = document.getElementById('igCommentOverlay');
     const commentModal = document.getElementById('igCommentModal');
@@ -653,7 +697,7 @@
           <div class="ig-comment-row">
             <img class="ig-comment-avatar" src="${profile.photo || ''}" alt="">
             <div class="ig-comment-body-wrap">
-              <div><strong>${escHtml(profile.name)}</strong>${linkify(c.body)}</div>
+              <div><strong>${escHtml(profile.name)}${officialBadgeHtml(c.authorEmail)}</strong>${linkify(c.body)}</div>
               <div class="ig-comment-time">${timeAgo(c._date)}</div>
             </div>
           </div>
@@ -662,21 +706,22 @@
       commentList.scrollTop = commentList.scrollHeight;
     }
 
-    function openComments(postId) {
-      openPostId = postId;
+    function openComments(kind, itemId) {
+      openItemKind = kind;
+      openItemId = itemId;
       commentOverlay.classList.add('open');
       commentModal.classList.add('open');
       commentList.innerHTML = '<div class="ig-comment-empty">Loading…</div>';
       if (unsubComments) unsubComments();
       unsubComments = onSnapshot(
-        query(collection(db, 'posts', postId, 'comments'), orderBy('createdAt', 'asc')),
+        query(collection(db, kind === 'video' ? 'videos' : 'posts', itemId, 'comments'), orderBy('createdAt', 'asc')),
         async snap => {
           const comments = snap.docs.map(d => {
             const data = d.data();
             return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
           });
           await Promise.all(comments.map(c => ensureProfileLoaded(c.authorEmail)));
-          if (openPostId === postId) renderComments(comments);
+          if (openItemId === itemId) renderComments(comments);
         },
         () => { commentList.innerHTML = '<div class="ig-comment-empty">Could not load comments.</div>'; }
       );
@@ -686,7 +731,8 @@
       commentOverlay.classList.remove('open');
       commentModal.classList.remove('open');
       if (unsubComments) { unsubComments(); unsubComments = null; }
-      openPostId = null;
+      openItemId = null;
+      openItemKind = null;
     }
     commentOverlay.addEventListener('click', closeComments);
     document.getElementById('igCommentCloseBtn').addEventListener('click', closeComments);
@@ -696,11 +742,12 @@
       e.preventDefault();
       const user = getCurrentUser();
       const body = commentInput.value.trim();
-      if (!openPostId || !body) return;
+      if (!openItemId || !body) return;
       if (!user) { alert('Sign in to comment'); return; }
       commentSendBtn.disabled = true;
       try {
-        await addDoc(collection(db, 'posts', openPostId, 'comments'), {
+        const collectionName = openItemKind === 'video' ? 'videos' : 'posts';
+        await addDoc(collection(db, collectionName, openItemId, 'comments'), {
           body,
           imageUrl: null,
           authorEmail: user.email,
@@ -710,8 +757,9 @@
           downvoters: [],
           createdAt: serverTimestamp(),
         });
-        const post = latestPosts.find(x => x.id === openPostId);
-        await updateDoc(doc(db, 'posts', openPostId), { commentCount: (post?.commentCount || 0) + 1 });
+        const list = openItemKind === 'video' ? latestVideos : latestPosts;
+        const item = list.find(x => x.id === openItemId);
+        await updateDoc(doc(db, collectionName, openItemId), { commentCount: (item?.commentCount || 0) + 1 });
         commentInput.value = '';
       } catch (err) {
         alert('Could not comment: ' + err.message);
@@ -730,40 +778,90 @@
       const commentBtn = e.target.closest('[data-open-comments]');
       if (voteUpBtn) { toggleVote(voteUpBtn.dataset.kind, voteUpBtn.dataset.id, 'up'); return; }
       if (voteDownBtn) { toggleVote(voteDownBtn.dataset.kind, voteDownBtn.dataset.id, 'down'); return; }
-      if (commentBtn) { openComments(commentBtn.dataset.id); return; }
+      if (commentBtn) { openComments(commentBtn.dataset.kind, commentBtn.dataset.id); return; }
+      const videoMedia = e.target.closest('[data-video-media]');
+      if (videoMedia) {
+        const videoEl = videoMedia.querySelector('video');
+        if (videoEl.paused) {
+          videoEl.muted = false;
+          videoEl.controls = true;
+          videoEl.play();
+          videoMedia.classList.add('playing');
+        } else {
+          videoEl.pause();
+        }
+        return;
+      }
       const card = e.target.closest('.ig-card');
       if (card && card.dataset.href) window.location.href = card.dataset.href;
     });
 
-    onSnapshot(
-      query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(14)),
-      async snap => {
-        latestPosts = snap.docs.map(d => {
-          const data = d.data();
-          return { _kind: 'post', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
-        });
-        await Promise.all(latestPosts.map(p => ensureProfileLoaded(p.authorEmail)));
-        gotPosts = true;
-        renderFeed();
-      },
-      err => { feedEl.innerHTML = `<div class="home-feed-empty">Could not load the feed: ${escHtml(err.message)}</div>`; }
-    );
+    let unsubFeedPosts = null;
+    let unsubFeedVideos = null;
 
-    onSnapshot(
-      query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(14)),
-      async snap => {
-        latestVideos = snap.docs.map(d => {
-          const data = d.data();
-          return { _kind: 'video', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
-        });
-        await Promise.all(latestVideos.map(v => ensureProfileLoaded(v.authorEmail)));
-        gotVideos = true;
-        renderFeed();
-      },
-      () => { gotVideos = true; renderFeed(); } // videos rules may not be deployed yet on some setups — degrade to posts-only rather than blocking the feed forever
-    );
+    function subscribeFeed() {
+      if (unsubFeedPosts) unsubFeedPosts();
+      if (unsubFeedVideos) unsubFeedVideos();
+
+      unsubFeedPosts = onSnapshot(
+        query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(feedLimit)),
+        async snap => {
+          latestPosts = snap.docs.map(d => {
+            const data = d.data();
+            return { _kind: 'post', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+          });
+          await Promise.all(latestPosts.map(p => ensureProfileLoaded(p.authorEmail)));
+          gotPosts = true;
+          renderFeed();
+        },
+        err => { feedEl.innerHTML = `<div class="home-feed-empty">Could not load the feed: ${escHtml(err.message)}</div>`; }
+      );
+
+      unsubFeedVideos = onSnapshot(
+        query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(feedLimit)),
+        async snap => {
+          latestVideos = snap.docs.map(d => {
+            const data = d.data();
+            return { _kind: 'video', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+          });
+          await Promise.all(latestVideos.map(v => ensureProfileLoaded(v.authorEmail)));
+          gotVideos = true;
+          renderFeed();
+        },
+        () => { gotVideos = true; renderFeed(); } // videos rules may not be deployed yet on some setups — degrade to posts-only rather than blocking the feed forever
+      );
+    }
+    subscribeFeed();
   }
 
+  const SEARCH_ENGINES = {
+    google: { action: 'https://www.google.com/search', param: 'q' },
+    duckduckgo: { action: 'https://duckduckgo.com/', param: 'q' },
+    bing: { action: 'https://www.bing.com/search', param: 'q' },
+  };
+  const searchForm = document.getElementById('homeSearchForm');
+  if (searchForm) {
+    const searchInput = document.getElementById('homeSearchInput');
+    const engineButtons = document.querySelectorAll('#homeSearchEngines .home-search-engine');
+    let engine = localStorage.getItem('oe-search-engine') || 'google';
+    if (!SEARCH_ENGINES[engine]) engine = 'google';
+
+    function applyEngine() {
+      searchForm.action = SEARCH_ENGINES[engine].action;
+      searchInput.name = SEARCH_ENGINES[engine].param;
+      engineButtons.forEach(b => b.classList.toggle('active', b.dataset.engine === engine));
+    }
+    applyEngine();
+
+    engineButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        engine = btn.dataset.engine;
+        localStorage.setItem('oe-search-engine', engine);
+        applyEngine();
+        searchInput.focus();
+      });
+    });
+  }
 </script>
 <script>
 const PAGES = [
@@ -850,12 +948,24 @@ PAGES.forEach((page, index) => {
     <div class="hero-section${isFirst ? ' home-hero' : ''}">
       <h1 class="${isFirst ? 'animate-text-hero' : ''}">${page.heroTitle}</h1>
       ${isFirst ? '' : `<p>${page.heroSub}</p>`}
+      ${isFirst ? `
+        <form class="home-search-form" id="homeSearchForm" action="https://www.google.com/search" method="GET" autocomplete="off">
+          <div class="home-search-wrap">
+            <span class="material-symbols-rounded home-search-icon">search</span>
+            <input class="home-search-input" type="text" name="q" id="homeSearchInput" placeholder="Search the web…" autocomplete="off">
+          </div>
+          <div class="home-search-engines" id="homeSearchEngines">
+            <button type="button" class="home-search-engine" data-engine="google">Google</button>
+            <button type="button" class="home-search-engine" data-engine="duckduckgo">DuckDuckGo</button>
+            <button type="button" class="home-search-engine" data-engine="bing">Bing</button>
+          </div>
+        </form>
+      ` : ''}
     </div>
     ${isFirst ? `
       <div class="home-feed-section">
         <div class="home-feed-heading">
           <h2>Feed</h2>
-          <a href="https://oeper.dev/forum" class="header-link">See all <span class="material-symbols-rounded">arrow_forward</span></a>
         </div>
         <div class="home-feed" id="homeFeed"></div>
       </div>

@@ -9,7 +9,8 @@
 <meta property="og:description" content="Talk to other visitors of oeper.dev">
 <meta property="og:url" content="https://oeper.dev/forum">
 <meta property="og:type" content="website">
-<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
 <script src="./shared/theme-boot.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -371,7 +372,6 @@
 <div class="page">
   <header class="header">
     <h1>Feed</h1>
-    <p>Post, tag, discuss. Anyone signed in with Google can join.</p>
   </header>
 
   <div class="stories-bar" id="storiesBar"></div>
@@ -473,7 +473,7 @@ import {
   auth, db, SERVER_ENDPOINT, MAX_IMAGE_BYTES, isOwnerEmail, officialBadgeHtml,
   getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded, handleOf,
   uploadFile,
-} from './shared/account.js?v=9';
+} from './shared/account.js?v=10';
 import { mountTopNav } from './shared/topnav.js';
 import { mountFooter } from './shared/footer.js';
 import {

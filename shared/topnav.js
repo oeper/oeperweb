@@ -3,7 +3,7 @@
 // any page can just import mountTopNav() and call it once with no markup
 // changes needed beyond an empty container to mount into (or none — it
 // inserts itself at the top of <body> if no container is given).
-import { mountAccountBar, db, getCurrentUser, getProfile, handleOf } from './account.js?v=9';
+import { mountAccountBar, db, getCurrentUser, getProfile, handleOf } from './account.js?v=10';
 import {
   collection, query, orderBy, limit, getDocs,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';

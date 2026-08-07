@@ -80,10 +80,19 @@ service cloud.firestore {
         && request.resource.data.displayName.size() <= 40
         && (!('photoURL' in request.resource.data) || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 500))
         && (!('bio' in request.resource.data) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 200));
-      // Owners granting/revoking the Official badge on someone else's
+      // Owners setting or clearing a custom badge on someone else's
       // account — scoped to just this one field so it can't be used to
       // rewrite the rest of a profile the owner doesn't otherwise own.
-      allow update: if isOwner() && onlyChanged(['verified']) && request.resource.data.verified is bool;
+      // Clearing (setDoc with badge: deleteField()) removes the key
+      // entirely, so the "not present" branch covers that case.
+      allow update: if isOwner() && onlyChanged(['badge'])
+        && (!('badge' in request.resource.data) || (
+          request.resource.data.badge.label is string
+          && request.resource.data.badge.label.size() > 0
+          && request.resource.data.badge.label.size() <= 24
+          && request.resource.data.badge.icon is string
+          && request.resource.data.badge.icon.size() <= 40
+        ));
     }
 
     // Ban list, keyed by email. Public read so the client can show "you're
@@ -152,9 +161,25 @@ service cloud.firestore {
       allow update: if isAuthor(resource.data) || isOwner()
         || (isSignedIn() && !isBanned() && onlyChanged(['upvoters', 'downvoters']))
         || (isSignedIn() && onlyChanged(['views'])
-            && request.resource.data.views == (('views' in resource.data) ? resource.data.views : 0) + 1);
+            && request.resource.data.views == (('views' in resource.data) ? resource.data.views : 0) + 1)
+        || (isSignedIn() && onlyChanged(['commentCount'])
+            && request.resource.data.commentCount == (('commentCount' in resource.data) ? resource.data.commentCount : 0) + 1);
 
       allow delete: if isAuthor(resource.data) || isOwner();
+
+      match /comments/{commentId} {
+        allow read: if true;
+
+        allow create: if isSignedIn() && !isBanned()
+          && request.resource.data.authorEmail == request.auth.token.email
+          && request.resource.data.body is string
+          && request.resource.data.body.size() > 0
+          && request.resource.data.body.size() <= 2000;
+
+        allow update: if isSignedIn() && !isBanned() && onlyChanged(['upvoters', 'downvoters']);
+
+        allow delete: if isAuthor(resource.data) || isOwner();
+      }
     }
 
     // 24h-expiring Stories. expiresAt is set client-side at creation

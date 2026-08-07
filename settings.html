@@ -9,7 +9,8 @@
 <meta property="og:description" content="Customize how oeper.dev looks">
 <meta property="og:url" content="https://oeper.dev/settings">
 <meta property="og:type" content="website">
-<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
 <script src="./shared/theme-boot.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -94,7 +95,6 @@
 <div class="page">
   <header class="header">
     <h1>Settings</h1>
-    <p>Customize how oeper.dev looks for you. These settings live in this browser, so they carry across every page on the site.</p>
   </header>
 
   <div class="settings-section">
@@ -149,7 +149,7 @@
 </div>
 
 <script type="module">
-import { getCurrentUser, onAccountChange, handleOf, signIn, signOutUser } from './shared/account.js?v=9';
+import { getCurrentUser, onAccountChange, handleOf, signIn, signOutUser } from './shared/account.js?v=10';
 import { mountTopNav } from './shared/topnav.js';
 import { mountThemePicker } from './shared/theme-picker.js';
 import { mountFooter } from './shared/footer.js';

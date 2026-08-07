@@ -9,7 +9,8 @@
 <meta property="og:description" content="Long-form videos on oeper.dev">
 <meta property="og:url" content="https://oeper.dev/videos">
 <meta property="og:type" content="website">
-<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
 <script src="./shared/theme-boot.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -93,6 +94,21 @@
   .watch-panel video { width: 100%; border-radius: 16px; background: #000; margin-bottom: 16px; max-height: 60vh; }
   .watch-title { font-size: 22px; font-weight: 500; margin-bottom: 10px; }
   .watch-desc { font-size: 14px; line-height: 1.6; color: var(--md-sys-color-on-surface-variant); white-space: pre-wrap; margin: 16px 0; }
+  .watch-comments { margin-top: 24px; border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 16px; }
+  .watch-comments .section-heading { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 16px; font-weight: 500; margin-bottom: 12px; }
+  .watch-comment-row { display: flex; gap: 10px; padding: 8px 0; }
+  .watch-comment-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
+  .watch-comment-body-wrap { flex: 1; min-width: 0; font-size: 13px; line-height: 1.4; }
+  .watch-comment-body-wrap strong { font-weight: 600; margin-right: 6px; }
+  .watch-comment-time { font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; }
+  .watch-comment-empty { color: var(--md-sys-color-on-surface-variant); font-size: 13px; padding: 12px 0; }
+  .watch-comment-form { display: flex; gap: 8px; margin-top: 12px; }
+  .watch-comment-input {
+    flex: 1; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: 20px;
+    padding: 10px 16px; color: var(--md-sys-color-on-surface); font-family: inherit; font-size: 13px; outline: none; resize: none;
+  }
+  .watch-comment-send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .watch-comment-send-btn:disabled { opacity: 0.4; cursor: default; }
   .watch-close { position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); display: flex; align-items: center; justify-content: center; cursor: pointer; }
   .watch-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
   .vote-col { display: flex; align-items: center; gap: 8px; background: var(--md-sys-color-surface); border-radius: 100px; padding: 6px 14px; }
@@ -142,7 +158,6 @@
 <div class="page">
   <header class="header">
     <h1>Videos</h1>
-    <p>Long-form videos from anyone signed in. Upvote, downvote, and watch.</p>
   </header>
 
   <div class="toolrow">
@@ -174,12 +189,12 @@
 import {
   auth, db, SERVER_ENDPOINT, isOwnerEmail, officialBadgeHtml, getCurrentUser, onAccountChange,
   getProfile, handleOf, uploadFile, ensureProfileLoaded,
-} from './shared/account.js?v=9';
+} from './shared/account.js?v=10';
 import { mountTopNav } from './shared/topnav.js';
 import { mountFooter } from './shared/footer.js';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
-  arrayUnion, arrayRemove, increment,
+  arrayUnion, arrayRemove, increment, query, orderBy,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 mountTopNav();
@@ -321,12 +336,83 @@ function openWatch(v) {
       ${isMine ? `<button class="btn danger" id="deleteBtn">Delete</button>` : ''}
     </div>
     <div class="watch-desc">${escHtml(v.description || '') || 'No description.'}</div>
+    <div class="watch-comments">
+      <div class="section-heading">Comments</div>
+      <div class="watch-comment-list" id="watchCommentList"><div class="watch-comment-empty">Loading…</div></div>
+      <form class="watch-comment-form" id="watchCommentForm">
+        <textarea class="watch-comment-input" id="watchCommentInput" rows="1" placeholder="Add a comment…" maxlength="2000"></textarea>
+        <button type="submit" class="watch-comment-send-btn" id="watchCommentSendBtn"><span class="material-symbols-rounded">send</span></button>
+      </form>
+    </div>
   `;
+
+  let unsubWatchComments = null;
+  const watchCommentList = document.getElementById('watchCommentList');
+  unsubWatchComments = onSnapshot(
+    query(collection(db, 'videos', v.id, 'comments'), orderBy('createdAt', 'asc')),
+    async snap => {
+      const comments = snap.docs.map(d => {
+        const data = d.data();
+        return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+      });
+      await Promise.all(comments.map(c => ensureProfileLoaded(c.authorEmail)));
+      if (comments.length === 0) {
+        watchCommentList.innerHTML = '<div class="watch-comment-empty">No comments yet. Be the first!</div>';
+        return;
+      }
+      watchCommentList.innerHTML = comments.map(c => {
+        const cp = getProfile(c.authorEmail, c.authorName, c.authorPhoto);
+        return `
+          <div class="watch-comment-row">
+            <img class="watch-comment-avatar" src="${cp.photo || ''}" alt="">
+            <div class="watch-comment-body-wrap">
+              <div><strong>${escHtml(cp.name)}${officialBadgeHtml(c.authorEmail)}</strong>${escHtml(c.body)}</div>
+              <div class="watch-comment-time">${timeAgo(c._date)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    },
+    () => { watchCommentList.innerHTML = '<div class="watch-comment-empty">Could not load comments.</div>'; }
+  );
+
+  const watchCommentForm = document.getElementById('watchCommentForm');
+  const watchCommentInput = document.getElementById('watchCommentInput');
+  const watchCommentSendBtn = document.getElementById('watchCommentSendBtn');
+  watchCommentForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const commenter = getCurrentUser();
+    const body = watchCommentInput.value.trim();
+    if (!body) return;
+    if (!commenter) { showToast('Sign in to comment'); return; }
+    watchCommentSendBtn.disabled = true;
+    try {
+      await addDoc(collection(db, 'videos', v.id, 'comments'), {
+        body,
+        authorEmail: commenter.email,
+        authorName: commenter.displayName,
+        authorPhoto: commenter.photoURL,
+        upvoters: [],
+        downvoters: [],
+        createdAt: serverTimestamp(),
+      });
+      await updateDoc(doc(db, 'videos', v.id), { commentCount: increment(1) });
+      watchCommentInput.value = '';
+    } catch (err) {
+      showToast('Could not comment: ' + err.message);
+    } finally {
+      watchCommentSendBtn.disabled = false;
+    }
+  });
+  watchCommentInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); watchCommentForm.requestSubmit(); }
+  });
 
   function close() {
     overlay.classList.remove('open');
     panel.classList.remove('open');
     panel.querySelector('video')?.pause();
+    if (unsubWatchComments) { unsubWatchComments(); unsubWatchComments = null; }
     const url = new URL(window.location);
     url.searchParams.delete('video');
     history.pushState({}, '', url);

@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Server Status — oeper.dev</title>
 <meta name="robots" content="noindex, nofollow">
-<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
 <script src="./shared/theme-boot.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -85,7 +86,6 @@
 <div class="page">
   <header class="header">
     <h1>Server Status</h1>
-    <p>Both of these run on a phone at home over a Cloudflare Tunnel — if the phone's off, asleep, or the tunnel dropped, they'll show as down here.</p>
   </header>
 
   <div class="status-list" id="statusList"></div>
@@ -99,7 +99,7 @@
 </div>
 
 <script type="module">
-import { SERVER_ENDPOINT } from './shared/account.js?v=9';
+import { SERVER_ENDPOINT } from './shared/account.js?v=10';
 import { mountTopNav } from './shared/topnav.js';
 mountTopNav();
 

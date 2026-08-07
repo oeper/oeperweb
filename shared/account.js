@@ -14,7 +14,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  getFirestore, doc, getDoc, setDoc, serverTimestamp
+  getFirestore, doc, getDoc, setDoc, serverTimestamp, deleteField
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 export const FIREBASE_CONFIG = {
@@ -37,35 +37,40 @@ export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const OWNER_EMAILS = ['sanhackerman@gmail.com', 'taejiding@gmail.com'];
 export function isOwnerEmail(email) { return OWNER_EMAILS.includes(email); }
 
-// True if an owner has granted this account the Official badge via the
-// profile page's overflow menu (users/{email}.verified) — separate from
-// isOwnerEmail, which is the fixed, hardcoded list of accounts with actual
-// site-management permissions. Relies on the profile already being cached
-// (ensureProfileLoaded/getProfile's usual call sites already do this before
-// rendering a name, which is also when this gets checked).
-function isVerifiedEmail(email) { return !!(email && profileCache[email] && profileCache[email].verified); }
-
-// A small "Official" badge for owner accounts, Discord-official-message
-// style. Returns '' for everyone else. Self-contained (injects its own
-// tiny stylesheet on first use) so any page can drop this inline next to
-// a name without importing extra CSS.
+// A small pill-shaped badge next to a name, Discord-official-message style.
+// Owner accounts (the fixed OWNER_EMAILS list) always get a hardcoded
+// "OFFICIAL" badge that can't be overridden. Any other account can be given
+// a custom badge (any label + Material Symbol icon) by an owner via the
+// profile page's overflow menu — stored at users/{email}.badge. Returns ''
+// for everyone else. Self-contained (injects its own tiny stylesheet on
+// first use) so any page can drop this inline next to a name without
+// importing extra CSS.
+function escBadgeHtml(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 let badgeStylesInjected = false;
+function ensureBadgeStyles() {
+  if (badgeStylesInjected) return;
+  badgeStylesInjected = true;
+  const style = document.createElement('style');
+  style.textContent = `
+    .oe-badge-official {
+      display: inline-flex; align-items: center; gap: 3px; background: var(--md-sys-color-primary, #a8c7fa);
+      color: var(--md-sys-color-on-primary, #062e6f); font-size: 10px; font-weight: 600; padding: 2px 7px 2px 5px;
+      border-radius: 100px; vertical-align: middle; margin-left: 4px; letter-spacing: 0.2px;
+    }
+    .oe-badge-official .material-symbols-rounded { font-size: 11px; }
+  `;
+  document.head.appendChild(style);
+}
 export function officialBadgeHtml(email) {
-  if (!isOwnerEmail(email) && !isVerifiedEmail(email)) return '';
-  if (!badgeStylesInjected) {
-    badgeStylesInjected = true;
-    const style = document.createElement('style');
-    style.textContent = `
-      .oe-badge-official {
-        display: inline-flex; align-items: center; gap: 3px; background: var(--md-sys-color-primary, #a8c7fa);
-        color: var(--md-sys-color-on-primary, #062e6f); font-size: 10px; font-weight: 600; padding: 2px 7px 2px 5px;
-        border-radius: 100px; vertical-align: middle; margin-left: 4px; letter-spacing: 0.2px;
-      }
-      .oe-badge-official .material-symbols-rounded { font-size: 11px; }
-    `;
-    document.head.appendChild(style);
+  if (isOwnerEmail(email)) {
+    ensureBadgeStyles();
+    return `<span class="oe-badge-official" title="Official — site owner"><span class="material-symbols-rounded">verified</span>OFFICIAL</span>`;
   }
-  return `<span class="oe-badge-official" title="Official — site owner"><span class="material-symbols-rounded">verified</span>OFFICIAL</span>`;
+  const badge = email && profileCache[email] && profileCache[email].badge;
+  if (!badge || !badge.label) return '';
+  ensureBadgeStyles();
+  const icon = badge.icon || 'verified';
+  return `<span class="oe-badge-official" title="${escBadgeHtml(badge.label)}"><span class="material-symbols-rounded">${escBadgeHtml(icon)}</span>${escBadgeHtml(badge.label.toUpperCase())}</span>`;
 }
 
 const app = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
@@ -112,18 +117,25 @@ export function getProfile(email, fallbackName, fallbackPhoto) {
   return {
     name: (override && override.displayName) || fallbackName || 'User',
     photo: (override && override.photoURL) || fallbackPhoto || '',
-    verified: !!(override && override.verified),
+    badge: (override && override.badge) || null,
   };
 }
 
-// Owner-only: grants or revokes the Official badge on any account (see
-// isVerifiedEmail above). Enforced server-side too — firestore.rules only
-// lets an owner touch the `verified` field, nothing else on someone else's
+// Owner-only: sets or clears a custom badge on any account (see
+// officialBadgeHtml above) — pass { label, icon } to set one, or null/
+// undefined to clear it. Enforced server-side too — firestore.rules only
+// lets an owner touch the `badge` field, nothing else on someone else's
 // profile — this check just avoids a doomed round-trip for everyone else.
-export async function setVerified(email, verified) {
+export async function setUserBadge(email, badge) {
   if (!currentUser || !isOwnerEmail(currentUser.email)) throw new Error('Only owners can do this');
-  await setDoc(doc(db, 'users', email), { verified }, { merge: true });
-  profileCache[email] = { ...(profileCache[email] || {}), verified };
+  if (badge) {
+    await setDoc(doc(db, 'users', email), { badge }, { merge: true });
+  } else {
+    await setDoc(doc(db, 'users', email), { badge: deleteField() }, { merge: true });
+  }
+  const next = { ...(profileCache[email] || {}) };
+  if (badge) next.badge = badge; else delete next.badge;
+  profileCache[email] = next;
   notify();
 }
 

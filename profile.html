@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Profile — oeper.dev</title>
 <meta name="robots" content="noindex, nofollow">
-<link rel="icon" href="https://oeper.dev/icon.ico" type="image/x-icon">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
 <script src="./shared/theme-boot.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -108,6 +109,28 @@
   }
   .friends-badge .material-symbols-rounded { font-size: 13px; }
 
+  .follow-list-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 220; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .follow-list-overlay.open { opacity: 1; pointer-events: all; }
+  .follow-list-modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -48%); width: min(400px, 92vw);
+    max-height: 70vh; display: flex; flex-direction: column; background: var(--md-sys-color-surface);
+    border-radius: 24px; z-index: 221; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+  }
+  .follow-list-modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
+  .follow-list-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--md-sys-color-outline-variant); flex-shrink: 0; }
+  .follow-list-header h3 { font-size: 16px; font-weight: 500; }
+  .follow-list-close-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent; color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .follow-list-close-btn:hover { background: rgba(255,255,255,0.06); }
+  .follow-list-body { flex: 1; overflow-y: auto; padding: 8px; }
+  .follow-list-row {
+    display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px;
+    text-decoration: none; color: inherit; cursor: default;
+  }
+  a.follow-list-row { cursor: pointer; }
+  a.follow-list-row:hover { background: rgba(255,255,255,0.06); }
+  .follow-list-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
+  .follow-list-name { font-size: 14px; font-weight: 500; }
+
   .section-heading { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 18px; font-weight: 500; margin-bottom: 14px; }
 
   .post-list { display: flex; flex-direction: column; gap: 10px; }
@@ -133,12 +156,21 @@
   </div>
 </div>
 
+<div class="follow-list-overlay" id="followListOverlay"></div>
+<div class="follow-list-modal" id="followListModal">
+  <div class="follow-list-header">
+    <h3 id="followListTitle">Followers</h3>
+    <button class="follow-list-close-btn" id="followListCloseBtn"><span class="material-symbols-rounded">close</span></button>
+  </div>
+  <div class="follow-list-body" id="followListBody"></div>
+</div>
+
 <script type="module">
 import { mountTopNav } from './shared/topnav.js';
 import {
   getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
-  openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setVerified,
-} from './shared/account.js?v=9';
+  openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setUserBadge,
+} from './shared/account.js?v=10';
 import { mountFooter } from './shared/footer.js';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, deleteDoc, serverTimestamp,
@@ -154,6 +186,51 @@ document.addEventListener('click', () => {
 });
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Followers / Following list modal ────────────────────────
+const followListOverlay = document.getElementById('followListOverlay');
+const followListModal = document.getElementById('followListModal');
+const followListTitle = document.getElementById('followListTitle');
+const followListBody = document.getElementById('followListBody');
+
+async function openFollowList(kind, viewedEmail) {
+  followListTitle.textContent = kind === 'followers' ? 'Followers' : 'Following';
+  followListBody.innerHTML = '<div class="empty-note">Loading…</div>';
+  followListOverlay.classList.add('open');
+  followListModal.classList.add('open');
+  try {
+    const q = kind === 'followers'
+      ? query(collection(db, 'follows'), where('followeeEmail', '==', viewedEmail))
+      : query(collection(db, 'follows'), where('followerEmail', '==', viewedEmail));
+    const snap = await getDocs(q);
+    const emails = snap.docs.map(d => kind === 'followers' ? d.data().followerEmail : d.data().followeeEmail);
+    if (emails.length === 0) {
+      followListBody.innerHTML = `<div class="empty-note">No ${escHtml(kind)} yet.</div>`;
+      return;
+    }
+    await Promise.all(emails.map(e => ensureProfileLoaded(e)));
+    followListBody.innerHTML = emails.map(email => {
+      const p = getProfile(email, null, null);
+      const h = handleOf(email);
+      const inner = `
+        <img class="follow-list-avatar" src="${p.photo || ''}" alt="">
+        <div class="follow-list-name">${escHtml(p.name)}${officialBadgeHtml(email)}</div>
+      `;
+      return h
+        ? `<a class="follow-list-row" href="/profile.html?u=${encodeURIComponent(h)}">${inner}</a>`
+        : `<div class="follow-list-row">${inner}</div>`;
+    }).join('');
+  } catch (err) {
+    followListBody.innerHTML = `<div class="empty-note">Could not load: ${escHtml(err.message)}</div>`;
+  }
+}
+function closeFollowList() {
+  followListOverlay.classList.remove('open');
+  followListModal.classList.remove('open');
+}
+followListOverlay.addEventListener('click', closeFollowList);
+document.getElementById('followListCloseBtn').addEventListener('click', closeFollowList);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeFollowList(); });
 function showToast(msg) {
   const el = document.createElement('div');
   el.textContent = msg;
@@ -305,8 +382,8 @@ async function init() {
           <div class="stat"><div class="stat-value">${posts.length}</div><div class="stat-label">Posts</div></div>
           <div class="stat"><div class="stat-value">${commentCount === null ? '—' : commentCount}</div><div class="stat-label">Comments</div></div>
           <div class="stat"><div class="stat-value">${karma}</div><div class="stat-label">Karma</div></div>
-          <div class="stat"><div class="stat-value">${followerCount}</div><div class="stat-label">Followers</div></div>
-          <div class="stat"><div class="stat-value">${followingCount}</div><div class="stat-label">Following</div></div>
+          <div class="stat clickable" id="followersStat"><div class="stat-value">${followerCount}</div><div class="stat-label">Followers</div></div>
+          <div class="stat clickable" id="followingStat"><div class="stat-value">${followingCount}</div><div class="stat-label">Following</div></div>
         </div>
       </div>
 
@@ -338,12 +415,15 @@ async function init() {
     if (user && !isOwn) {
       menuItems.push({ label: 'Report', icon: 'flag', dangerous: true, onClick: reportProfile });
     }
-    if (isOwnerViewer && !isOwn) {
+    if (isOwnerViewer && !isOwn && !isOwnerEmail(viewedEmail)) {
       menuItems.push({
-        label: profile.verified ? 'Revoke Official badge' : 'Grant Official badge',
-        icon: profile.verified ? 'remove_moderator' : 'verified',
-        onClick: () => toggleVerified(!profile.verified),
+        label: profile.badge ? 'Edit badge' : 'Set custom badge',
+        icon: profile.badge ? 'edit' : 'add_moderator',
+        onClick: editBadge,
       });
+      if (profile.badge) {
+        menuItems.push({ label: 'Remove badge', icon: 'remove_moderator', dangerous: true, onClick: () => applyBadge(null) });
+      }
     }
     const kebabBtn = document.getElementById('profileKebabBtn');
     const kebabMenu = document.getElementById('profileKebabMenu');
@@ -356,6 +436,9 @@ async function init() {
       el.addEventListener('click', () => { kebabMenu.classList.remove('open'); menuItems[i].onClick(); });
     });
     kebabBtn.addEventListener('click', e => { e.stopPropagation(); kebabMenu.classList.toggle('open'); });
+
+    document.getElementById('followersStat').addEventListener('click', () => openFollowList('followers', viewedEmail));
+    document.getElementById('followingStat').addEventListener('click', () => openFollowList('following', viewedEmail));
   }
 
   async function reportProfile() {
@@ -380,13 +463,24 @@ async function init() {
     } catch (err) { showToast('Could not send report: ' + err.message); }
   }
 
-  async function toggleVerified(newValue) {
+  async function editBadge() {
+    const current = profile.badge || {};
+    const label = window.prompt('Badge label (e.g. Moderator, VIP, Beta Tester):', current.label || '');
+    if (label === null) return; // cancelled
+    const trimmed = label.trim();
+    if (!trimmed) { showToast('Badge label cannot be empty'); return; }
+    const icon = window.prompt('Material Symbol icon name (e.g. verified, star, shield, bolt, diamond):', current.icon || 'verified');
+    if (icon === null) return;
+    await applyBadge({ label: trimmed.slice(0, 24), icon: (icon.trim() || 'verified').slice(0, 40) });
+  }
+
+  async function applyBadge(badge) {
     try {
-      await setVerified(viewedEmail, newValue);
-      showToast(newValue ? 'Granted the Official badge' : 'Revoked the Official badge');
+      await setUserBadge(viewedEmail, badge);
+      showToast(badge ? 'Badge updated' : 'Badge removed');
       render();
     } catch (err) {
-      showToast('Could not update: ' + err.message);
+      showToast('Could not update badge: ' + err.message);
     }
   }
 
