@@ -17,7 +17,7 @@ const SOCIALS = [
   { name: 'YouTube', handle: '@oeperdev', url: 'https://youtube.com/@oeperdev', icon: ICONS.youtube },
 ];
 
-const SITE_ICON = `<svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-4.42 0-8 2.24-8 5v3h16v-3c0-2.76-3.58-5-8-5z"/></svg>`;
+const SITE_ICON = `<span class="material-symbols-rounded" style="font-size:18px;">token</span>`;
 const STATUS_ICON = `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`;
 
 const SITE_LINKS = [
