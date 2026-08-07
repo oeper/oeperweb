@@ -7,12 +7,13 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js?v=4"></script>
+<script src="./shared/theme-boot.js?v=5"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Freehand&display=swap" rel="stylesheet">
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -38,7 +39,8 @@
   body {
     min-height: 100vh;
     background-color: var(--md-sys-color-background);
-    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    background-image: var(--oe-bg-image, none);
     color: var(--md-sys-color-on-surface);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -50,11 +52,11 @@
   .header-link {
     display: inline-flex; align-items: center; gap: 8px;
     color: var(--md-sys-color-primary); text-decoration: none;
-    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; font-weight: 500; transition: opacity 0.2s;
   }
   .header-link:hover { opacity: 0.8; }
   .header-link:visited { color: var(--md-sys-color-primary); }
-  h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 400; margin-bottom: 20px; }
+  h1 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 400; margin-bottom: 20px; }
 
   .signin-note { text-align: center; padding: 80px 24px; color: var(--md-sys-color-on-surface-variant); }
 

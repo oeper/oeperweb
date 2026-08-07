@@ -7,12 +7,13 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js?v=4"></script>
+<script src="./shared/theme-boot.js?v=5"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Freehand&display=swap" rel="stylesheet">
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -39,7 +40,8 @@
   body {
     min-height: 100vh;
     background-color: var(--md-sys-color-background);
-    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    background-image: var(--oe-bg-image, none);
     color: var(--md-sys-color-on-surface);
     -webkit-font-smoothing: antialiased;
   }
@@ -50,13 +52,13 @@
   .header-link {
     display: inline-flex; align-items: center; gap: 8px;
     color: var(--md-sys-color-primary); text-decoration: none;
-    font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: 14px; font-weight: 500; margin-bottom: 16px;
   }
   .header-link:hover { opacity: 0.8; }
   .header-link:visited { color: var(--md-sys-color-primary); }
   .header h1 {
-    font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400;
     margin-bottom: 8px; letter-spacing: -0.5px;
   }
@@ -75,7 +77,7 @@
   .tabs { display: flex; gap: 8px; margin: 28px 0 20px; border-bottom: 1px solid var(--md-sys-color-outline); }
   .tab {
     background: none; border: none; padding: 12px 18px;
-    font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: 15px; font-weight: 500; color: var(--md-sys-color-on-surface-variant);
     cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
     display: inline-flex; align-items: center; gap: 8px;
@@ -97,7 +99,7 @@
 
   .btn {
     display: inline-flex; align-items: center; gap: 8px;
-    font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: 14px; font-weight: 500;
     padding: 10px 18px; border-radius: 100px; border: 1px solid var(--md-sys-color-outline);
     background: transparent; color: var(--md-sys-color-on-surface); cursor: pointer;
@@ -114,7 +116,7 @@
 
   /* Add button row */
   .toolrow { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; flex-wrap: wrap; }
-  .toolrow h2 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 18px; font-weight: 400; }
+  .toolrow h2 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 18px; font-weight: 400; }
 
   /* Item list */
   .item-list { display: flex; flex-direction: column; gap: 10px; }
@@ -151,7 +153,7 @@
     z-index: 51; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
   }
   .modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
-  .modal h3 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 20px; font-weight: 400; margin-bottom: 20px; }
+  .modal h3 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 20px; font-weight: 400; margin-bottom: 20px; }
 
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 6px; }
@@ -189,12 +191,12 @@
     border-radius: 12px; padding: 16px; min-height: 220px; font-size: 14px; line-height: 1.6; overflow-y: auto; max-height: 400px;
   }
   .md-preview.show { display: block; }
-  .md-preview h1, .md-preview h2, .md-preview h3 { font-family: 'Google Sans', 'Product Sans', sans-serif; margin: 0.8em 0 0.4em; }
+  .md-preview h1, .md-preview h2, .md-preview h3 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); margin: 0.8em 0 0.4em; }
   .md-preview p { margin-bottom: 1em; }
   .md-preview a { color: var(--md-sys-color-primary); }
   .md-preview a.md-button {
     display: inline-flex; align-items: center; justify-content: center; background-color: var(--md-sys-color-primary);
-    color: var(--md-sys-color-on-primary); padding: 12px 24px; border-radius: 100px; font-family: 'Google Sans', 'Product Sans', sans-serif;
+    color: var(--md-sys-color-on-primary); padding: 12px 24px; border-radius: 100px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: 15px; font-weight: 500; text-decoration: none; margin: 8px 0;
   }
   .md-preview .md-table { border-collapse: collapse; margin: 1em 0; font-size: 14px; max-width: 100%; display: block; overflow-x: auto; }
@@ -226,7 +228,7 @@
     width: 72px; height: 72px; border-radius: 50%; background: var(--md-sys-color-surface-variant);
     display: flex; align-items: center; justify-content: center; margin-bottom: 20px;
   }
-  .lock-screen h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 26px; font-weight: 400; margin-bottom: 8px; }
+  .lock-screen h1 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 26px; font-weight: 400; margin-bottom: 8px; }
   .lock-screen p { color: var(--md-sys-color-on-surface-variant); font-size: 14px; max-width: 360px; margin-bottom: 28px; line-height: 1.5; }
   #googleSignInBtn { min-height: 40px; }
   .lock-denied {

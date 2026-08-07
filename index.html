@@ -4,11 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>oeper.dev — Portal</title>
-<script src="./shared/theme-boot.js?v=4"></script>
+<script src="./shared/theme-boot.js?v=5"></script>
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Freehand&display=swap" rel="stylesheet">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
  
@@ -44,7 +45,8 @@
   body {
     min-height: 100vh;
     background-color: var(--md-sys-color-background);
-    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    background-image: var(--oe-bg-image, none);
     color: var(--md-sys-color-on-surface);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -103,7 +105,7 @@
     gap: 10px;
     color: var(--md-sys-color-on-surface);
     text-decoration: none;
-    font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: 22px;
     -webkit-tap-highlight-color: transparent;
   }
@@ -146,7 +148,7 @@
     padding: 10px 18px;
     text-decoration: none;
     color: var(--md-sys-color-on-surface-variant);
-    font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: 15px;
     font-weight: 500;
     border-radius: 20px;
@@ -265,7 +267,7 @@
   .hero-section.home-hero .home-search-form { margin-left: auto; margin-right: auto; }
   .hero-section.home-hero .home-search-engines { justify-content: center; }
   .hero-section h1 {
-    font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: clamp(2.8rem, 7vw, 4rem);
     font-weight: 400;
     letter-spacing: -1px;
@@ -288,7 +290,8 @@
   .home-search-input {
     width: 100%; background-color: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
     border-radius: 28px; padding: 16px 20px 16px 56px; color: var(--md-sys-color-on-surface);
-    font-family: 'Google Sans', 'Roboto Flex', sans-serif; font-size: 16px; outline: none;
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    font-size: 16px; outline: none;
     transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
   }
   .home-search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
@@ -324,7 +327,7 @@
   .home-search-engines { display: flex; gap: 6px; margin-top: 10px; }
   .home-search-engine {
     background: transparent; border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface-variant);
-    border-radius: 100px; padding: 5px 14px; font-size: 12px; font-family: 'Google Sans', 'Product Sans', sans-serif;
+    border-radius: 100px; padding: 5px 14px; font-size: 12px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-weight: 500; cursor: pointer; transition: all 0.2s;
   }
   .home-search-engine:hover { background: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
@@ -357,7 +360,7 @@
 
   .home-feed-section { margin: 40px 0; }
   .home-feed-heading { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
-  .home-feed-heading h2 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 22px; font-weight: 400; }
+  .home-feed-heading h2 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 22px; font-weight: 400; }
   .home-feed-heading .header-link { display: inline-flex; align-items: center; gap: 4px; }
   .home-feed-heading .header-link:visited { color: var(--md-sys-color-primary); }
   .home-feed-heading .header-link .material-symbols-rounded { font-size: 16px; }
@@ -365,7 +368,7 @@
   .home-feed-empty { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 0; text-align: center; }
   .home-feed-load-more {
     display: block; margin: 4px auto 0; padding: 10px 24px; border-radius: 100px; border: 1px solid var(--md-sys-color-outline);
-    background: transparent; color: var(--md-sys-color-on-surface); font-family: 'Google Sans', 'Product Sans', sans-serif;
+    background: transparent; color: var(--md-sys-color-on-surface); font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: 14px; font-weight: 500; cursor: pointer;
   }
   .home-feed-load-more:hover { background: var(--md-sys-state-hover); }
@@ -449,7 +452,7 @@
   .ig-modal-full-body th { background: var(--md-sys-color-surface-variant); }
   .ig-modal-divider { height: 1px; background: var(--md-sys-color-outline-variant); margin: 12px 20px; }
   .ig-modal-full-body a.md-btn {
-    display: inline-flex; align-items: center; gap: 8px; font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 13px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 8px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 13px; font-weight: 500;
     padding: 8px 16px; border-radius: 100px; background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
     text-decoration: none; margin: 4px 6px 4px 0;
   }
@@ -528,7 +531,7 @@
   }
 
   .interactive-card h3 {
-    font-family: 'Google Sans', 'Product Sans', sans-serif;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: 20px;
     font-weight: 400;
     margin-bottom: 6px;

@@ -11,12 +11,13 @@
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js?v=4"></script>
+<script src="./shared/theme-boot.js?v=5"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Freehand&display=swap" rel="stylesheet">
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -42,7 +43,8 @@
   body {
     min-height: 100vh;
     background-color: var(--md-sys-color-background);
-    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    background-image: var(--oe-bg-image, none);
     color: var(--md-sys-color-on-surface);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -51,7 +53,7 @@
   .page { position: relative; max-width: 720px; margin: 0 auto; padding: 56px 24px 100px; }
 
   .header { margin-bottom: 24px; }
-  .header h1 { font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2.2rem, 6vw, 3rem); font-weight: 400; margin-bottom: 8px; letter-spacing: -0.5px; }
+  .header h1 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2.2rem, 6vw, 3rem); font-weight: 400; margin-bottom: 8px; letter-spacing: -0.5px; }
   .header p { color: var(--md-sys-color-on-surface-variant); font-size: 14px; max-width: 560px; line-height: 1.5; }
   .header p a { color: var(--md-sys-color-primary); }
 
