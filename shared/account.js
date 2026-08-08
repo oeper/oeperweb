@@ -262,12 +262,17 @@ export function signOutUser() {
   return signOut(auth);
 }
 
-export async function uploadFile(file, endpointPath) {
+export async function uploadFile(file, endpointPath, extraFields) {
   if (!file) return null;
   if (!SERVER_ENDPOINT) throw new Error('Image uploads are not set up yet');
   if (!currentUser) throw new Error('Sign in first');
   const idToken = await currentUser.getIdToken();
   const fd = new FormData();
+  // Extra text fields (e.g. files.html's target folder) must be appended
+  // before the file — multer/busboy parse multipart fields in stream
+  // order, so anything appended after 'file' isn't guaranteed to be in
+  // req.body by the time the server's upload callback runs.
+  if (extraFields) for (const key in extraFields) fd.append(key, extraFields[key]);
   fd.append('file', file);
   const res = await fetch(SERVER_ENDPOINT + (endpointPath || '/upload'), {
     method: 'POST',

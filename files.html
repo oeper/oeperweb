@@ -101,6 +101,66 @@
   }
   .upload-btn:hover { opacity: 0.9; }
   .upload-btn input { display: none; }
+  .toolbar-btn {
+    display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid var(--md-sys-color-outline);
+    color: var(--md-sys-color-on-surface); border-radius: 100px; padding: 10px 20px;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; font-weight: 500; cursor: pointer; flex-shrink: 0;
+  }
+  .toolbar-btn:hover { background-color: var(--md-sys-state-hover); }
+
+  .breadcrumb-row { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; margin-bottom: 16px; font-size: 14px; }
+  .breadcrumb-item {
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; padding: 5px 10px; border-radius: 8px;
+    background: none; border: none; font: inherit; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
+  }
+  .breadcrumb-item:hover { background: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
+  .breadcrumb-item.current { color: var(--md-sys-color-on-surface); font-weight: 500; cursor: default; }
+  .breadcrumb-item.current:hover { background: none; }
+  .breadcrumb-sep { color: var(--md-sys-color-on-surface-variant); font-size: 16px; display: flex; }
+
+  .folder-card {
+    display: flex; align-items: center; gap: 16px; background-color: var(--md-sys-color-surface);
+    border: 1px solid transparent; border-radius: 20px; padding: 14px 18px; cursor: pointer; transition: background-color 0.2s, border-color 0.2s;
+  }
+  .folder-card:hover { background-color: var(--md-sys-color-hover-surface); border-color: var(--md-sys-color-outline-variant); }
+  .folder-icon-box {
+    width: 52px; height: 52px; border-radius: 12px; flex-shrink: 0; background: var(--md-sys-color-surface-variant);
+    display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-primary); font-size: 24px; overflow: hidden;
+  }
+  .folder-icon-box img { width: 100%; height: 100%; object-fit: cover; }
+  .folder-main { flex: 1; min-width: 0; }
+  .folder-name { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .folder-meta { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+
+  .kebab-wrap { position: relative; }
+  .kebab-menu {
+    position: absolute; top: calc(100% + 4px); right: 0; background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 14px; padding: 6px; min-width: 170px; z-index: 20; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    opacity: 0; transform: translateY(-6px) scale(0.97); pointer-events: none; transition: opacity 0.15s, transform 0.15s;
+  }
+  .kebab-menu.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+  .kebab-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border-radius: 9px; border: none;
+    background: transparent; color: var(--md-sys-color-on-surface); font-size: 13px; cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .kebab-item:hover { background: var(--md-sys-state-hover); }
+  .kebab-item.dangerous { color: var(--md-sys-color-error); }
+  .kebab-item .material-symbols-rounded { font-size: 17px; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal-box {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -48%); width: min(380px, 90vw);
+    background: var(--md-sys-color-surface); border-radius: 20px; padding: 24px; z-index: 201;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+  }
+  .modal-box.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
+  .modal-box h3 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 18px; font-weight: 500; margin-bottom: 16px; }
+  .modal-box input, .modal-box select {
+    width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: 12px;
+    padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none; margin-bottom: 16px;
+  }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
   .stats { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 24px; padding-left: 4px; }
   .stats strong { color: var(--md-sys-color-primary); font-weight: 500; }
@@ -186,6 +246,9 @@
           <span class="material-symbols-rounded">groups</span> Everyone's
         </button>
       </div>
+      <button type="button" class="toolbar-btn" id="newFolderBtn">
+        <span class="material-symbols-rounded">create_new_folder</span> New folder
+      </button>
       <label class="upload-btn">
         <span class="material-symbols-rounded">upload</span> Upload
         <input type="file" id="uploadInput" multiple>
@@ -193,7 +256,9 @@
     </div>
   </div>
 
-  <div class="stats" id="stats" style="display:none;"><span>Total: <strong id="visibleCount">0</strong> files</span></div>
+  <div class="breadcrumb-row" id="breadcrumbRow" style="display:none;"></div>
+
+  <div class="stats" id="stats" style="display:none;"><span>Total: <strong id="visibleCount">0</strong> items</span></div>
 
   <div class="file-list" id="fileList"></div>
 
@@ -205,11 +270,41 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="modal-overlay" id="folderModalOverlay"></div>
+<div class="modal-box" id="folderModal">
+  <h3>New folder</h3>
+  <input type="text" id="folderNameInput" maxlength="40" placeholder="Folder name">
+  <div class="modal-actions">
+    <button type="button" class="toolbar-btn" id="folderCancelBtn">Cancel</button>
+    <button type="button" class="upload-btn" id="folderCreateBtn" style="border-radius:100px;">Create</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="renameModalOverlay"></div>
+<div class="modal-box" id="renameModal">
+  <h3>Rename</h3>
+  <input type="text" id="renameInput" maxlength="200" placeholder="File name">
+  <div class="modal-actions">
+    <button type="button" class="toolbar-btn" id="renameCancelBtn">Cancel</button>
+    <button type="button" class="upload-btn" id="renameSaveBtn" style="border-radius:100px;">Save</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="moveModalOverlay"></div>
+<div class="modal-box" id="moveModal">
+  <h3>Move to folder</h3>
+  <select id="moveFolderSelect"></select>
+  <div class="modal-actions">
+    <button type="button" class="toolbar-btn" id="moveCancelBtn">Cancel</button>
+    <button type="button" class="upload-btn" id="moveConfirmBtn" style="border-radius:100px;">Move</button>
+  </div>
+</div>
+
 <script type="module">
 import { mountTopNav } from './shared/topnav.js?v=10';
 import {
   SERVER_ENDPOINT, getCurrentUser, onAccountChange, isOwnerEmail, uploadFile,
-} from './shared/account.js?v=16';
+} from './shared/account.js?v=17';
 import { mountFooter } from './shared/footer.js?v=4';
 
 mountTopNav();
@@ -223,7 +318,10 @@ const ANON_MAX_BYTES = 25 * 1024 * 1024; // 25MB
 const ANON_MAX_FILES = 10; // also enforced server-side, per IP, forever
 
 let files = [];
+let folders = []; // { email, path }[]
 let scope = 'mine'; // 'mine' | 'all' (owners only)
+let currentFolder = ''; // path within the space currently being browsed
+let currentOwnerEmail = null; // scope 'all' only: null = "pick a user" screen, else whose space we're in
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function isImage(name) { return /\.(jpe?g|png|gif|webp|bmp|svg|avif)$/i.test(name); }
@@ -265,6 +363,172 @@ function currentIsOwner() {
   const u = getCurrentUser();
   return !!(u && isOwnerEmail(u.email));
 }
+// Whose account's folder tree we're currently browsing — your own in 'mine'
+// scope, or whichever user was picked in 'all' scope (owners only).
+function spaceEmail() {
+  const u = getCurrentUser();
+  if (scope === 'all') return currentOwnerEmail;
+  return u ? u.email : null;
+}
+function isOwnSpace() {
+  const u = getCurrentUser();
+  return !!(u && spaceEmail() === u.email);
+}
+
+// ── Kebab menus (file/folder row actions) ───────────────────
+function closeAllKebabMenus() {
+  document.querySelectorAll('.kebab-menu.open').forEach(m => m.classList.remove('open'));
+}
+document.addEventListener('click', closeAllKebabMenus);
+function buildKebabMenu(items) {
+  const wrap = document.createElement('div');
+  wrap.className = 'kebab-wrap';
+  wrap.innerHTML = `
+    <button type="button" class="icon-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button>
+    <div class="kebab-menu">
+      ${items.map((it, i) => `<button type="button" class="kebab-item ${it.dangerous ? 'dangerous' : ''}" data-idx="${i}"><span class="material-symbols-rounded">${it.icon}</span>${escHtml(it.label)}</button>`).join('')}
+    </div>
+  `;
+  const btn = wrap.querySelector('.icon-btn');
+  const menu = wrap.querySelector('.kebab-menu');
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const willOpen = !menu.classList.contains('open');
+    closeAllKebabMenus();
+    if (willOpen) menu.classList.add('open');
+  });
+  wrap.querySelectorAll('.kebab-item').forEach((el, i) => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      menu.classList.remove('open');
+      items[i].onClick();
+    });
+  });
+  return wrap;
+}
+
+// ── Small prompt-style modals (new folder / rename / move) ──
+function openModal(overlayId, modalId) {
+  document.getElementById(overlayId).classList.add('open');
+  document.getElementById(modalId).classList.add('open');
+}
+function closeModal(overlayId, modalId) {
+  document.getElementById(overlayId).classList.remove('open');
+  document.getElementById(modalId).classList.remove('open');
+}
+document.getElementById('folderModalOverlay').addEventListener('click', () => closeModal('folderModalOverlay', 'folderModal'));
+document.getElementById('folderCancelBtn').addEventListener('click', () => closeModal('folderModalOverlay', 'folderModal'));
+document.getElementById('renameModalOverlay').addEventListener('click', () => closeModal('renameModalOverlay', 'renameModal'));
+document.getElementById('renameCancelBtn').addEventListener('click', () => closeModal('renameModalOverlay', 'renameModal'));
+document.getElementById('moveModalOverlay').addEventListener('click', () => closeModal('moveModalOverlay', 'moveModal'));
+document.getElementById('moveCancelBtn').addEventListener('click', () => closeModal('moveModalOverlay', 'moveModal'));
+
+async function apiCall(path, body) {
+  const user = getCurrentUser();
+  if (!user) throw new Error('Sign in first');
+  const idToken = await user.getIdToken();
+  const res = await fetch(SERVER_ENDPOINT + path, {
+    method: body ? 'POST' : 'GET',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { msg = (await res.json()).error || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+async function apiDelete(path, body) {
+  const user = getCurrentUser();
+  if (!user) throw new Error('Sign in first');
+  const idToken = await user.getIdToken();
+  const res = await fetch(SERVER_ENDPOINT + path, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
+    body: JSON.stringify(body || {}),
+  });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { msg = (await res.json()).error || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+document.getElementById('newFolderBtn').addEventListener('click', () => {
+  document.getElementById('folderNameInput').value = '';
+  openModal('folderModalOverlay', 'folderModal');
+  document.getElementById('folderNameInput').focus();
+});
+document.getElementById('folderCreateBtn').addEventListener('click', async () => {
+  const name = document.getElementById('folderNameInput').value.trim();
+  if (!name) return;
+  const path = currentFolder ? currentFolder + '/' + name : name;
+  try {
+    await apiCall('/folders', { path });
+    closeModal('folderModalOverlay', 'folderModal');
+    showToast('Folder created');
+    loadList();
+  } catch (err) {
+    showToast('Could not create folder: ' + err.message);
+  }
+});
+document.getElementById('folderNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('folderCreateBtn').click(); });
+
+async function deleteFolder(path) {
+  if (!confirm(`Delete the folder "${path.split('/').pop()}"? It must be empty.`)) return;
+  try {
+    await apiDelete('/folders', { path, email: spaceEmail() });
+    showToast('Folder deleted');
+    loadList();
+  } catch (err) {
+    showToast('Could not delete folder: ' + err.message);
+  }
+}
+
+let renamingFilename = null;
+function openRenameModal(f) {
+  renamingFilename = f.filename;
+  document.getElementById('renameInput').value = f.name;
+  openModal('renameModalOverlay', 'renameModal');
+  document.getElementById('renameInput').focus();
+}
+document.getElementById('renameSaveBtn').addEventListener('click', async () => {
+  const name = document.getElementById('renameInput').value.trim();
+  if (!name || !renamingFilename) return;
+  try {
+    await apiCall('/rename-file', { filename: renamingFilename, name });
+    closeModal('renameModalOverlay', 'renameModal');
+    showToast('Renamed');
+    loadList();
+  } catch (err) {
+    showToast('Could not rename: ' + err.message);
+  }
+});
+document.getElementById('renameInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('renameSaveBtn').click(); });
+
+let movingFilename = null;
+function openMoveModal(f) {
+  movingFilename = f.filename;
+  const mine = folders.filter(x => x.email === spaceEmail());
+  const select = document.getElementById('moveFolderSelect');
+  select.innerHTML = `<option value="">(root — no folder)</option>` +
+    mine.map(x => `<option value="${escHtml(x.path)}" ${x.path === f.folder ? 'selected' : ''}>${escHtml(x.path)}</option>`).join('');
+  openModal('moveModalOverlay', 'moveModal');
+}
+document.getElementById('moveConfirmBtn').addEventListener('click', async () => {
+  if (!movingFilename) return;
+  const folder = document.getElementById('moveFolderSelect').value;
+  try {
+    await apiCall('/move-file', { filename: movingFilename, folder });
+    closeModal('moveModalOverlay', 'moveModal');
+    showToast('Moved');
+    loadList();
+  } catch (err) {
+    showToast('Could not move: ' + err.message);
+  }
+});
 
 onAccountChange(user => {
   const signedIn = !!user;
@@ -272,11 +536,16 @@ onAccountChange(user => {
   document.getElementById('stats').style.display = signedIn ? '' : 'none';
   document.getElementById('anonPanel').style.display = signedIn ? 'none' : '';
   document.getElementById('allScopePill').style.display = currentIsOwner() ? '' : 'none';
+  scope = 'mine';
+  currentFolder = '';
+  currentOwnerEmail = null;
   if (signedIn) {
     loadList();
   } else {
     files = [];
+    folders = [];
     document.getElementById('fileList').innerHTML = '';
+    document.getElementById('breadcrumbRow').style.display = 'none';
     document.getElementById('emptyState').style.display = 'none';
   }
 });
@@ -297,39 +566,150 @@ async function loadList() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     files = data.files || [];
+    folders = data.folders || [];
   } catch (err) {
     showToast('Could not load files: ' + err.message);
     files = [];
+    folders = [];
   }
   render();
 }
 
-function render() {
-  const user = getCurrentUser();
-  const q = document.getElementById('searchInput').value.toLowerCase().trim();
-  const filtered = (files || []).filter(f => {
-    const inScope = scope === 'all' || !user || f.email === user.email;
-    return inScope && (!q || f.name.toLowerCase().includes(q));
+function renderBreadcrumb() {
+  const row = document.getElementById('breadcrumbRow');
+  const inUserList = scope === 'all' && currentOwnerEmail === null;
+  if (files === null || inUserList) { row.style.display = 'none'; return; }
+  row.style.display = 'flex';
+
+  const crumbs = [];
+  if (scope === 'all') {
+    crumbs.push({ label: 'Everyone', onClick: () => { currentOwnerEmail = null; currentFolder = ''; render(); } });
+    crumbs.push({ label: currentOwnerEmail, onClick: () => { currentFolder = ''; render(); } });
+  } else {
+    crumbs.push({ label: 'My files', onClick: () => { currentFolder = ''; render(); } });
+  }
+  const segments = currentFolder ? currentFolder.split('/') : [];
+  segments.forEach((seg, i) => {
+    const path = segments.slice(0, i + 1).join('/');
+    crumbs.push({ label: seg, onClick: () => { currentFolder = path; render(); } });
   });
 
-  const list = document.getElementById('fileList');
-  list.innerHTML = '';
-  filtered.forEach(f => list.appendChild(buildCard(f)));
-  document.getElementById('visibleCount').textContent = filtered.length;
+  row.innerHTML = crumbs.map((c, i) => `
+    ${i > 0 ? '<span class="breadcrumb-sep material-symbols-rounded">chevron_right</span>' : ''}
+    <button type="button" class="breadcrumb-item${i === crumbs.length - 1 ? ' current' : ''}" data-idx="${i}">${escHtml(c.label)}</button>
+  `).join('');
+  row.querySelectorAll('.breadcrumb-item').forEach((el, i) => {
+    if (i === crumbs.length - 1) return; // current location, not clickable
+    el.addEventListener('click', crumbs[i].onClick);
+  });
+}
 
+function render() {
+  const user = getCurrentUser();
+  renderBreadcrumb();
+  document.getElementById('newFolderBtn').style.display = (files !== null && isOwnSpace()) ? '' : 'none';
+  document.getElementById('uploadInput').closest('.upload-btn').style.display = (files !== null && isOwnSpace()) ? '' : 'none';
+
+  const list = document.getElementById('fileList');
   const empty = document.getElementById('emptyState');
-  empty.style.display = filtered.length === 0 ? 'block' : 'none';
-  if (filtered.length === 0) {
+
+  if (scope === 'all' && currentOwnerEmail === null) {
+    renderUserList();
+    return;
+  }
+
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const space = spaceEmail();
+  const folderChildren = q ? [] : folders.filter(f => {
+    if (f.email !== space) return false;
+    const parent = f.path.includes('/') ? f.path.slice(0, f.path.lastIndexOf('/')) : '';
+    return parent === currentFolder;
+  });
+  const filesHere = (files || []).filter(f => {
+    if (f.email !== space) return false;
+    if (!q && (f.folder || '') !== currentFolder) return false;
+    return !q || f.name.toLowerCase().includes(q);
+  });
+
+  list.innerHTML = '';
+  folderChildren.forEach(fo => list.appendChild(buildFolderCard(fo)));
+  filesHere.forEach(f => list.appendChild(buildCard(f)));
+  document.getElementById('visibleCount').textContent = folderChildren.length + filesHere.length;
+
+  const totalEmpty = folderChildren.length === 0 && filesHere.length === 0;
+  empty.style.display = totalEmpty ? 'block' : 'none';
+  if (totalEmpty) {
     const [icon, text] = !user
       ? ['login', 'Sign in to view and upload your files.']
       : files === null
         ? ['cloud_off', "Files aren't set up yet."]
         : q
           ? ['search_off', 'No files match your search.']
-          : ['upload_file', "You haven't uploaded anything yet."];
+          : ['folder_open', "Nothing here yet."];
     document.getElementById('emptyIcon').textContent = icon;
     document.getElementById('emptyText').textContent = text;
   }
+}
+
+// Owner-only "Everyone's" top level: one row per user who has files or
+// folders, instead of one giant flat list — this is the "per-user" sorting
+// itself, since each user's own folder tree lives one level below their row.
+function renderUserList() {
+  const list = document.getElementById('fileList');
+  const empty = document.getElementById('emptyState');
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+
+  const emails = new Set([...(files || []).map(f => f.email), ...folders.map(f => f.email)].filter(Boolean));
+  const rows = [...emails].map(email => {
+    const count = (files || []).filter(f => f.email === email).length;
+    return { email, count };
+  }).filter(r => !q || r.email.toLowerCase().includes(q));
+  rows.sort((a, b) => a.email.localeCompare(b.email));
+
+  list.innerHTML = '';
+  rows.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'folder-card';
+    card.innerHTML = `
+      <div class="folder-icon-box"><span class="material-symbols-rounded">person</span></div>
+      <div class="folder-main">
+        <div class="folder-name">${escHtml(r.email)}</div>
+        <div class="folder-meta">${r.count} file${r.count === 1 ? '' : 's'}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => { currentOwnerEmail = r.email; currentFolder = ''; render(); });
+    list.appendChild(card);
+  });
+  document.getElementById('visibleCount').textContent = rows.length;
+
+  empty.style.display = rows.length === 0 ? 'block' : 'none';
+  if (rows.length === 0) {
+    document.getElementById('emptyIcon').textContent = q ? 'search_off' : 'groups';
+    document.getElementById('emptyText').textContent = q ? 'No users match your search.' : 'No files uploaded yet.';
+  }
+}
+
+function buildFolderCard(fo) {
+  const card = document.createElement('div');
+  card.className = 'folder-card';
+  const fileCount = (files || []).filter(f => f.email === fo.email && f.folder === fo.path).length;
+  const subCount = folders.filter(f => f.email === fo.email && f.path !== fo.path && f.path.startsWith(fo.path + '/')).length;
+  const name = fo.path.split('/').pop();
+  card.innerHTML = `
+    <div class="folder-icon-box"><span class="material-symbols-rounded">folder</span></div>
+    <div class="folder-main">
+      <div class="folder-name">${escHtml(name)}</div>
+      <div class="folder-meta">${fileCount + subCount} item${(fileCount + subCount) === 1 ? '' : 's'}</div>
+    </div>
+  `;
+  card.addEventListener('click', () => { currentFolder = fo.path; render(); });
+  if (isOwnSpace()) {
+    card.appendChild(buildKebabMenu([
+      { label: 'Delete folder', icon: 'delete', dangerous: true, onClick: () => deleteFolder(fo.path) },
+    ]));
+    card.querySelector('.kebab-wrap').addEventListener('click', e => e.stopPropagation());
+  }
+  return card;
 }
 
 function buildCard(f) {
@@ -337,7 +717,6 @@ function buildCard(f) {
   card.className = 'file-card';
   const user = getCurrentUser();
   const mineOrOwner = user && (f.email === user.email || currentIsOwner());
-  const showUploader = scope === 'all' && user && f.email !== user.email;
 
   let thumbHtml;
   if (isImage(f.name)) thumbHtml = `<img class="file-thumb" src="${f.url}" alt="" loading="lazy">`;
@@ -349,22 +728,25 @@ function buildCard(f) {
     ${thumbHtml}
     <div class="file-main">
       <div class="file-name">${escHtml(f.name)}</div>
-      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${showUploader ? ' · ' + escHtml(f.untracked ? 'Unknown owner' : (f.email || 'Anonymous')) : ''}</div>
+      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.untracked ? ' · Unknown owner' : ''}</div>
       ${isAudio(f.name) ? `<audio class="file-audio-player" controls preload="metadata" src="${f.url}"></audio>` : ''}
     </div>
     <div class="file-actions">
       <button class="icon-btn" data-copy title="Copy link"><span class="material-symbols-rounded">link</span></button>
       <a class="icon-btn" href="${f.url}" target="_blank" rel="noopener" download title="Download"><span class="material-symbols-rounded">download</span></a>
-      <button class="icon-btn danger" data-delete title="Delete" style="display:none;"><span class="material-symbols-rounded">delete</span></button>
     </div>
   `;
 
   card.querySelector('[data-copy]').addEventListener('click', () => copyToClipboard(f.url));
 
   if (mineOrOwner) {
-    const delBtn = card.querySelector('[data-delete]');
-    delBtn.style.display = '';
-    delBtn.addEventListener('click', () => deleteFile(f.filename));
+    const menuItems = [
+      { label: 'Rename', icon: 'edit', onClick: () => openRenameModal(f) },
+    ];
+    if (!f.untracked) menuItems.push({ label: 'Move to folder', icon: 'drive_file_move', onClick: () => openMoveModal(f) });
+    menuItems.push({ label: 'Delete', icon: 'delete', dangerous: true, onClick: () => deleteFile(f.filename) });
+    const kebab = buildKebabMenu(menuItems);
+    card.querySelector('.file-actions').appendChild(kebab);
   }
   return card;
 }
@@ -395,26 +777,28 @@ document.querySelectorAll('#scopePills .pill').forEach(pill => {
   pill.addEventListener('click', () => {
     document.querySelectorAll('#scopePills .pill').forEach(p => p.classList.toggle('active', p === pill));
     scope = pill.dataset.scope;
+    currentFolder = '';
+    currentOwnerEmail = null;
     render();
   });
 });
 
 document.getElementById('uploadInput').addEventListener('change', async e => {
-  const files = Array.from(e.target.files);
+  const picked = Array.from(e.target.files);
   e.target.value = '';
-  if (!files.length) return;
+  if (!picked.length) return;
   const user = getCurrentUser();
   if (!user) { showToast('Sign in to upload'); return; }
 
   let uploaded = 0;
   let firstError = null;
-  for (const file of files) {
+  for (const file of picked) {
     if (file.size > SIGNED_IN_MAX_BYTES) {
       firstError = firstError || `${file.name}: must be under ${Math.round(SIGNED_IN_MAX_BYTES/1024/1024)}MB`;
       continue;
     }
     try {
-      await uploadFile(file, '/upload-file');
+      await uploadFile(file, '/upload-file', currentFolder ? { folder: currentFolder } : undefined);
       uploaded++;
     } catch (err) {
       firstError = firstError || `${file.name}: ${err.message}`;
@@ -422,10 +806,10 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
   }
 
   if (uploaded) loadList();
-  if (uploaded === files.length) {
+  if (uploaded === picked.length) {
     showToast(uploaded === 1 ? 'Uploaded!' : `Uploaded ${uploaded} files!`);
   } else if (uploaded > 0) {
-    showToast(`Uploaded ${uploaded} of ${files.length} — ${firstError}`);
+    showToast(`Uploaded ${uploaded} of ${picked.length} — ${firstError}`);
   } else {
     showToast('Could not upload: ' + firstError);
   }

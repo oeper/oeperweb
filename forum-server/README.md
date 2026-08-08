@@ -17,11 +17,32 @@ everyone's for moderation) and the forum:
   IP address (tracked in `anon-uploads.json`, also gitignored). Anonymous
   uploads aren't tied to any account, so they never show up in
   `/my-files` — the URL returned at upload time is the only way to reach
-  the file again.
+  the file again. Signed-in uploads accept an optional `folder` form field
+  (see Folders below); it's stored as a `folder` field on the file's
+  `file-owners.json` entry.
 - **`/my-files`** — requires sign-in. Returns the requesting account's own
-  uploads; owners get everyone's.
+  uploads (each with a `folder` field, `''` for root); owners get
+  everyone's. Also returns `folders`: every folder the requester owns
+  (just their own, unless they're an owner — then everyone's).
 - **`DELETE /docs/:name`** — requires sign-in; only the file's own uploader
   or an owner can delete it.
+- **Folders** — a pure metadata concept, not real directories: every
+  uploaded file still lands flat in `USER_FILES_DIR` under its generated
+  filename, and a folder is just a path string (e.g. `Vacation/Beach`)
+  attached to files and tracked separately so empty folders can exist.
+  Stored in `user-folders.json` (gitignored, same pattern as
+  `file-owners.json`). Path segments are limited to 1–40 chars each,
+  `[A-Za-z0-9 _-()]` only, max 5 levels deep.
+  - **`POST /folders`** — body `{ path }`. Creates the folder and any
+    missing ancestor folders for the signed-in user.
+  - **`DELETE /folders`** — body `{ path, email? }`. Deletes an empty
+    folder (no subfolders, no files pointing at it) for the signed-in
+    user; owners may pass `email` to delete another user's folder.
+  - **`POST /move-file`** — body `{ filename, folder }`. Moves a file
+    (your own, or anyone's if you're an owner) into a different folder —
+    `folder: ''` moves it back to root. Target folder must already exist.
+  - **`POST /rename-file`** — body `{ filename, name }`. Renames a file's
+    display name (your own, or anyone's if you're an owner).
 - **`/report`** — relays the forum's Report button to a Discord webhook,
   kept server-side so the webhook URL is never exposed in the site's public
   source (anyone who got hold of it could post arbitrary spam to your

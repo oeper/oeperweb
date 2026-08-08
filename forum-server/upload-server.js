@@ -74,6 +74,13 @@ const USER_FILES_DIR = process.env.USER_FILES_DIR || '/storage/emulated/0/Docume
 // /my-files can filter to just the requesting account's own uploads.
 const META_FILE = process.env.META_FILE || path.join(__dirname, 'file-owners.json');
 
+// Per-user folder trees for files.html — { [email]: ["Docs", "Docs/2024", ...] }.
+// Folders are a pure metadata concept (no matching directory on disk — every
+// uploaded file still lands flat in USER_FILES_DIR under a random generated
+// name; "folder" is just a label on that file's entry in file-owners.json).
+// This list is what lets an *empty* folder exist and show up in navigation.
+const FOLDERS_FILE = process.env.FOLDERS_FILE || path.join(__dirname, 'user-folders.json');
+
 // Tracks anonymous uploads per IP address (their one free upload).
 const ANON_FILE = process.env.ANON_FILE || path.join(__dirname, 'anon-uploads.json');
 
@@ -109,6 +116,29 @@ const saveMeta = meta => saveJson(META_FILE, meta);
 const loadAnon = () => loadJson(ANON_FILE);
 const saveAnon = data => saveJson(ANON_FILE, data);
 function isOwner(email) { return OWNER_EMAILS.includes(email); }
+
+// { [email]: [path, ...] } — loadJson/saveJson default to {} objects, which
+// is also the right empty-state shape here (no keys = no one has folders yet).
+const loadFolders = () => loadJson(FOLDERS_FILE);
+const saveFolders = data => saveJson(FOLDERS_FILE, data);
+
+// Folder paths are "/"-joined segments (e.g. "Docs/2024"). Each segment:
+// letters/numbers/spaces/-_() only, 1-40 chars; max 5 levels deep. Returns
+// null for anything invalid rather than trying to guess a "fixed" version.
+function sanitizeFolderPath(raw) {
+  if (typeof raw !== 'string') return null;
+  const segments = raw.split('/').map(s => s.trim()).filter(Boolean);
+  if (segments.length === 0 || segments.length > 5) return null;
+  for (const seg of segments) {
+    if (seg.length > 40 || !/^[A-Za-z0-9 _\-()]+$/.test(seg)) return null;
+  }
+  return segments.join('/');
+}
+// Every ancestor of a path, root-to-leaf: "Docs/2024/Q1" -> ["Docs", "Docs/2024", "Docs/2024/Q1"].
+function folderAncestors(p) {
+  const segments = p.split('/');
+  return segments.map((_, i) => segments.slice(0, i + 1).join('/'));
+}
 
 const app = express();
 app.set('trust proxy', true); // needed so req.ip reflects the real visitor through the Cloudflare Tunnel, not the local tunnel connection
@@ -252,12 +282,27 @@ app.post('/upload-file', optionalAuth, (req, res) => {
     uploadUserFile.single('file')(req, res, err => {
       if (err) return res.status(400).json({ error: err.message });
       if (!req.file) return res.status(400).json({ error: 'No file received' });
+      // Folder is optional (root upload if omitted) and only meaningful for
+      // signed-in uploads — validated the same way /folders validates a new
+      // folder, but an upload into a not-yet-created folder implicitly
+      // creates it (and its ancestors), same as most file managers do.
+      let folder = '';
+      if (req.body.folder) {
+        const clean = sanitizeFolderPath(req.body.folder);
+        if (clean === null) return res.status(400).json({ error: 'Invalid folder' });
+        folder = clean;
+        const folders = loadFolders();
+        const mine = folders[req.user.email] || [];
+        const toAdd = folderAncestors(folder).filter(p => !mine.includes(p));
+        if (toAdd.length) { folders[req.user.email] = [...mine, ...toAdd]; saveFolders(folders); }
+      }
       const meta = loadMeta();
       meta[req.file.filename] = {
         email: req.user.email,
         name: req.file.originalname,
         size: req.file.size,
         mtime: Date.now(),
+        folder,
       };
       saveMeta(meta);
       res.json({ url: `${PUBLIC_BASE_URL}/docs/${req.file.filename}` });
@@ -304,6 +349,7 @@ app.get('/my-files', verifyFirebaseToken, (req, res) => {
         size: m.size || 0,
         mtime: m.mtime || 0,
         email: m.email,
+        folder: m.folder || '',
         url: `${PUBLIC_BASE_URL}/docs/${encodeURIComponent(filename)}`,
       };
     });
@@ -327,6 +373,7 @@ app.get('/my-files', verifyFirebaseToken, (req, res) => {
           size: stat.size,
           mtime: stat.mtimeMs,
           email: null,
+          folder: '',
           url: `${PUBLIC_BASE_URL}/docs/${encodeURIComponent(filename)}`,
           untracked: true,
         });
@@ -335,7 +382,90 @@ app.get('/my-files', verifyFirebaseToken, (req, res) => {
   }
 
   entries.sort((a, b) => b.mtime - a.mtime);
-  res.json({ files: entries });
+
+  // Folders: { email, path } pairs — just your own unless you're an owner
+  // looking at everyone's, in which case every user's folder tree comes
+  // back tagged with whose it is, so the client can group per-user.
+  const allFolders = loadFolders();
+  const folders = mine
+    ? Object.entries(allFolders).flatMap(([email, paths]) => paths.map(path => ({ email, path })))
+    : (allFolders[req.user.email] || []).map(path => ({ email: req.user.email, path }));
+
+  res.json({ files: entries, folders });
+});
+
+// Create a folder (and any missing ancestors) for the requesting account.
+app.post('/folders', verifyFirebaseToken, (req, res) => {
+  const clean = sanitizeFolderPath(req.body && req.body.path);
+  if (clean === null) return res.status(400).json({ error: 'Invalid folder name — letters, numbers, spaces, -_() only, up to 5 levels deep.' });
+  const folders = loadFolders();
+  const mine = folders[req.user.email] || [];
+  const toAdd = folderAncestors(clean).filter(p => !mine.includes(p));
+  if (toAdd.length) { folders[req.user.email] = [...mine, ...toAdd]; saveFolders(folders); }
+  res.json({ ok: true, path: clean });
+});
+
+// Delete a folder — requester's own, or an owner's on anyone's behalf.
+// Only succeeds if empty: no files filed under it and no subfolders. This
+// matches ordinary file-manager behavior (empty the folder first) instead
+// of silently cascading a delete or orphaning files into root.
+app.delete('/folders', verifyFirebaseToken, (req, res) => {
+  const clean = sanitizeFolderPath(req.body && req.body.path);
+  if (clean === null) return res.status(400).json({ error: 'Invalid folder' });
+  const targetEmail = (isOwner(req.user.email) && req.body.email) ? req.body.email : req.user.email;
+  const folders = loadFolders();
+  const mine = folders[targetEmail] || [];
+  if (!mine.includes(clean)) return res.status(404).json({ error: 'Folder not found' });
+
+  const hasSubfolder = mine.some(p => p !== clean && p.startsWith(clean + '/'));
+  const meta = loadMeta();
+  const hasFiles = Object.values(meta).some(m => m.email === targetEmail && m.folder === clean);
+  if (hasSubfolder || hasFiles) return res.status(409).json({ error: 'Folder is not empty — move or delete its contents first.' });
+
+  folders[targetEmail] = mine.filter(p => p !== clean);
+  saveFolders(folders);
+  res.json({ ok: true });
+});
+
+// Move a file into a different folder (or back to root with folder: "").
+// Own file, or an owner's on anyone's behalf.
+app.post('/move-file', verifyFirebaseToken, (req, res) => {
+  const filename = path.basename(String(req.body && req.body.filename || ''));
+  const meta = loadMeta();
+  const entry = meta[filename];
+  if (!entry) return res.status(404).json({ error: 'File not found' });
+  if (entry.email !== req.user.email && !isOwner(req.user.email)) {
+    return res.status(403).json({ error: 'You can only move your own files' });
+  }
+  const rawTarget = req.body && req.body.folder;
+  let target = '';
+  if (rawTarget) {
+    target = sanitizeFolderPath(rawTarget);
+    if (target === null) return res.status(400).json({ error: 'Invalid folder' });
+    const folders = loadFolders();
+    const owned = folders[entry.email] || [];
+    if (!owned.includes(target)) return res.status(404).json({ error: 'Target folder does not exist' });
+  }
+  entry.folder = target;
+  saveMeta(meta);
+  res.json({ ok: true });
+});
+
+// Rename a file's display name (the random generated filename on disk, and
+// its URL, never change — only the human-readable name shown in the UI).
+app.post('/rename-file', verifyFirebaseToken, (req, res) => {
+  const filename = path.basename(String(req.body && req.body.filename || ''));
+  const name = String(req.body && req.body.name || '').trim();
+  if (!name || name.length > 200) return res.status(400).json({ error: 'Invalid name' });
+  const meta = loadMeta();
+  const entry = meta[filename];
+  if (!entry) return res.status(404).json({ error: 'File not found' });
+  if (entry.email !== req.user.email && !isOwner(req.user.email)) {
+    return res.status(403).json({ error: 'You can only rename your own files' });
+  }
+  entry.name = name;
+  saveMeta(meta);
+  res.json({ ok: true });
 });
 
 // Delete: the file's own uploader, or an owner.
