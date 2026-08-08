@@ -347,6 +347,9 @@ const userFileStorage = multer.diskStorage({
 });
 const uploadUserFile = multer({ storage: userFileStorage, limits: { fileSize: MAX_UPLOAD_BYTES } });
 const uploadAnonFile = multer({ storage: userFileStorage, limits: { fileSize: MAX_UPLOAD_BYTES } });
+// No fileSize limit at all — owners (OWNER_EMAILS) get truly unlimited
+// upload size on files.html, not just the 1GB cap everyone else gets.
+const uploadOwnerFile = multer({ storage: userFileStorage });
 
 function expiryFor(size, permanentBytes) {
   return size > permanentBytes ? Date.now() + TEMP_FILE_LIFETIME_MS : null;
@@ -354,7 +357,9 @@ function expiryFor(size, permanentBytes) {
 
 app.post('/upload-file', optionalAuth, (req, res) => {
   if (req.user) {
-    uploadUserFile.single('file')(req, res, err => {
+    const owner = isOwner(req.user.email);
+    const uploader = owner ? uploadOwnerFile : uploadUserFile;
+    uploader.single('file')(req, res, err => {
       if (err) return res.status(400).json({ error: err.message });
       if (!req.file) return res.status(400).json({ error: 'No file received' });
       // Folder is optional (root upload if omitted) and only meaningful for
@@ -371,7 +376,9 @@ app.post('/upload-file', optionalAuth, (req, res) => {
         const toAdd = folderAncestors(folder).filter(p => !mine.includes(p));
         if (toAdd.length) { folders[req.user.email] = [...mine, ...toAdd]; saveFolders(folders); }
       }
-      const expiresAt = expiryFor(req.file.size, SIGNED_IN_PERMANENT_BYTES);
+      // Owners' own uploads are also exempt from the temporary-file expiry —
+      // "unlimited" means unlimited, not "unlimited but still gets deleted".
+      const expiresAt = owner ? null : expiryFor(req.file.size, SIGNED_IN_PERMANENT_BYTES);
       const meta = loadMeta();
       meta[req.file.filename] = {
         email: req.user.email,

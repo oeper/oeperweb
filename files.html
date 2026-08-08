@@ -837,12 +837,17 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
   const user = getCurrentUser();
   if (!user) { showToast('Sign in to upload'); return; }
 
+  // Owners have no size cap and no temporary-file expiry on files.html —
+  // both enforced server-side too, this just keeps the client's own
+  // pre-check and "will be temporary" notice from misfiring for them.
+  const owner = currentIsOwner();
+
   let uploaded = 0;
   let temporaryCount = 0;
   let firstError = null;
   for (let i = 0; i < picked.length; i++) {
     const file = picked[i];
-    if (file.size > MAX_UPLOAD_BYTES) {
+    if (!owner && file.size > MAX_UPLOAD_BYTES) {
       firstError = firstError || `${file.name}: must be under ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024 / 1024)}GB`;
       continue;
     }
@@ -850,7 +855,7 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
     try {
       await uploadFile(file, '/upload-file', currentFolder ? { folder: currentFolder } : undefined, frac => updateUploadProgress('upload', frac));
       uploaded++;
-      if (file.size > SIGNED_IN_PERMANENT_BYTES) temporaryCount++;
+      if (!owner && file.size > SIGNED_IN_PERMANENT_BYTES) temporaryCount++;
     } catch (err) {
       firstError = firstError || `${file.name}: ${err.message}`;
     }
