@@ -165,6 +165,13 @@
   .ig-likes { padding: 4px 14px 0; font-size: 13px; font-weight: 600; }
   .ig-caption { padding: 6px 14px 0; font-size: 13px; line-height: 1.4; font-weight: 500; }
   .ig-description { padding: 4px 14px 0; font-size: 13px; line-height: 1.4; color: var(--md-sys-color-on-surface-variant); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .ig-description a { color: var(--md-sys-color-primary); }
+  .ig-description a.md-btn {
+    display: inline-flex; align-items: center; gap: 4px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
+    font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 100px; background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary); text-decoration: none; vertical-align: middle;
+  }
+  .ig-description a.md-btn .material-symbols-rounded { font-size: 13px; }
   .ig-timestamp { padding: 6px 14px 14px; font-size: 11px; color: var(--md-sys-color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.3px; }
   .poll-block { margin: 8px 14px 0; }
   .poll-option-btn {
@@ -226,34 +233,6 @@ document.addEventListener('click', () => {
 });
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-// Plain-text excerpt for a post's markdown body — same rules as index.html's
-// home-feed excerpts, since a compact row has no room for real markdown.
-function stripMarkdown(text, maxLen) {
-  if (!text) return '';
-  let s = text
-    .replace(/\r\n/g, '\n')
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/^#{1,6}[ \t]+/gm, '')
-    .replace(/^>[ \t]?/gm, '')
-    .replace(/^[ \t]*\|.*\|[ \t]*$/gm, '')
-    .replace(/^[ \t]*(-{3,}|\*{3,}|_{3,})[ \t]*$/gm, '')
-    .replace(/^[ \t]*[-*+][ \t]+/gm, '• ')
-    .replace(/^[ \t]*\d+\.[ \t]+/gm, '')
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
-    .replace(/\[\[([^\]]+)\]\]\([^)]+\)/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/__(.+?)__/g, '$1')
-    .replace(/\*(.+?)\*/g, '$1')
-    .replace(/(?<!\w)_([^_\s][^_]*)_(?!\w)/g, '$1')
-    .split('\n').map(l => l.trim()).filter(Boolean).join(' ')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim();
-  if (maxLen && s.length > maxLen) s = s.slice(0, maxLen).replace(/\s+\S*$/, '') + '…';
-  return s;
-}
 // Posts can carry a single legacy `imageUrl` or a newer `imageUrls: []` —
 // either way, grab the first one that's actually an image (not some other
 // attachment type) for the row thumbnail.
@@ -289,6 +268,42 @@ function expandShortcodes(text) {
 function expandIconShorthand(html) {
   return html.replace(/\{([a-z_]{2,40})\}/g, (m, name) =>
     `<span class="material-symbols-rounded" style="font-size:1.1em;vertical-align:-0.22em;">${name}</span>`);
+}
+// Truncated, inline-only markdown for post-card excerpts — same rules as
+// index.html's home-feed cards (bold/italic/links/[[Button]](url)/emoji+
+// icon shorthand render for real; block-level constructs get stripped
+// since a clamped excerpt has no room for real block layout).
+function renderExcerptMarkdown(text, maxLen) {
+  if (!text) return '';
+  let t = text
+    .replace(/\r\n/g, '\n')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^#{1,6}[ \t]+/gm, '')
+    .replace(/^>[ \t]?/gm, '')
+    .replace(/^[ \t]*\|.*\|[ \t]*$/gm, '')
+    .replace(/^[ \t]*(-{3,}|\*{3,}|_{3,})[ \t]*$/gm, '')
+    .replace(/^[ \t]*[-*+][ \t]+/gm, '• ')
+    .replace(/^[ \t]*\d+\.[ \t]+/gm, '')
+    .split('\n').map(l => l.trim()).filter(Boolean).join(' ')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+  if (maxLen && t.length > maxLen) {
+    t = t.slice(0, maxLen).replace(/\s+\S*$/, '');
+    // Back up before any [...]/[[...]] construct the cutoff landed inside —
+    // otherwise a link/button split mid-syntax leaks as raw bracket text
+    // instead of just not appearing in the excerpt at all.
+    const lastBracket = t.lastIndexOf('[');
+    if (lastBracket !== -1 && !t.slice(lastBracket).includes(')')) t = t.slice(0, lastBracket).trim();
+    t += '…';
+  }
+  const html = expandShortcodes(escHtml(t))
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\[\[([^\]]+)\]\]\((https?:\/\/[^)]+)\)/g, '<a class="md-btn" href="$2" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-rounded">arrow_forward</span>$1</a>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" onclick="event.stopPropagation()">$1</a>')
+    .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${url}</a>`);
+  return expandIconShorthand(html);
 }
 // Small markdown renderer for bios (bold/italic/links only — a bio is a
 // few lines, not a document) — gated behind bioMarkdownAllowed below.
@@ -480,7 +495,7 @@ async function init() {
         </div>
         <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
         ${item.title ? `<div class="ig-caption">${escHtml(item.title)}</div>` : ''}
-        ${bodyText ? `<div class="ig-description">${escHtml(stripMarkdown(bodyText, 220))}</div>` : ''}
+        ${bodyText ? `<div class="ig-description">${renderExcerptMarkdown(bodyText, 220)}</div>` : ''}
         ${pollHtml(item)}
         <div class="ig-timestamp">${timeAgo(item._date)}</div>
       </div>
