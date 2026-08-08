@@ -570,10 +570,8 @@ export function mountAccountBar(container) {
           ${handle
             ? `<a href="/profile?u=${encodeURIComponent(handle)}" class="oe-acct-profile-link" title="View profile">${profileInner}</a>`
             : `<span class="oe-acct-profile-link">${profileInner}</span>`}
-          <button class="oe-acct-icon-btn" id="oeAcctEditBtn" title="Edit profile"><span class="material-symbols-rounded">edit</span></button>
         </div>
       `;
-      container.querySelector('#oeAcctEditBtn').addEventListener('click', openEditProfileModal);
     } else {
       container.innerHTML = `<button class="oe-acct-signin" id="oeAcctSignInBtn"><span class="material-symbols-rounded" style="font-size:18px;">login</span> Sign in</button>`;
       container.querySelector('#oeAcctSignInBtn').addEventListener('click', () => {

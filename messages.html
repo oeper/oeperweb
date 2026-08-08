@@ -165,7 +165,11 @@
      compute overflow-y as auto too (not visible) — which clips the
      note-bubble tooltip that sits *above* the row via position:absolute,
      since it counts as vertical overflow of this scroll container. */
-  .notes-bar { display: flex; gap: 16px; overflow-x: auto; overflow-y: visible; padding: 36px 2px 20px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  /* padding-left leaves room for the first note's speech bubble, which is
+     centered on its avatar via left:50%/translateX(-50%) — for the very
+     first (leftmost) item that centering pushes the bubble's left half
+     past the row's own edge, with nowhere to scroll left to reveal it. */
+  .notes-bar { display: flex; gap: 16px; overflow-x: auto; overflow-y: visible; padding: 36px 2px 20px 44px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .notes-bar::-webkit-scrollbar { display: none; }
   .note-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; width: 62px; cursor: pointer; }
   .note-avatar-wrap { position: relative; }
@@ -217,7 +221,7 @@
 import { mountTopNav } from './shared/topnav.js?v=10';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
-} from './shared/account.js?v=15';
+} from './shared/account.js?v=16';
 import { mountFooter } from './shared/footer.js?v=4';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,

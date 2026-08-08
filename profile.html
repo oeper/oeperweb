@@ -146,22 +146,26 @@
 
   .section-heading { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 18px; font-weight: 500; margin-bottom: 14px; }
 
-  .post-list { display: flex; flex-direction: column; gap: 10px; }
-  .post-row {
-    display: flex; align-items: flex-start; gap: 14px; background: var(--md-sys-color-surface); border-radius: 18px; padding: 16px 20px;
-    text-decoration: none; color: inherit; transition: background-color 0.2s;
-  }
-  .post-row:hover { background-color: var(--md-sys-color-hover-surface); }
-  .post-row-thumb { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; flex-shrink: 0; background: var(--md-sys-color-surface-variant); }
-  .post-row-main { flex: 1; min-width: 0; }
-  .post-row-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
-  .post-row-excerpt {
-    font-size: 13px; color: var(--md-sys-color-on-surface-variant); line-height: 1.4; margin-bottom: 8px;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  }
-  .post-row-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: flex; gap: 12px; flex-wrap: wrap; }
-  .post-row-meta span { display: inline-flex; align-items: center; gap: 4px; }
-  .post-row-meta .material-symbols-rounded { font-size: 14px; }
+  /* Same card treatment as index.html's home feed — just without the
+     author header row, since we're already on their profile. */
+  .post-list { display: flex; flex-direction: column; gap: 24px; max-width: 470px; margin: 0 auto; }
+  .ig-card { background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline-variant); border-radius: 12px; overflow: hidden; cursor: pointer; }
+  .ig-media { width: 100%; aspect-ratio: 4/5; background: #000; position: relative; }
+  .ig-media img, .ig-media video { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .ig-play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.15); pointer-events: none; }
+  .ig-play-overlay .material-symbols-rounded { font-size: 30px; color: #fff; background: rgba(0,0,0,0.45); border-radius: 50%; padding: 14px; }
+  .ig-actions { display: flex; align-items: center; gap: 4px; padding: 10px 14px 4px; }
+  .ig-actions .material-symbols-rounded { font-size: 24px; color: var(--md-sys-color-on-surface); }
+  .ig-action-count { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
+  .ig-vote-btn { background: none; border: none; padding: 4px; margin: 0; cursor: pointer; display: flex; align-items: center; color: var(--md-sys-color-on-surface); border-radius: 50%; }
+  .ig-vote-btn:hover { background: var(--md-sys-state-hover); }
+  .ig-vote-btn.upvoted .material-symbols-rounded { color: #ff5c7a; font-variation-settings: 'FILL' 1; }
+  .ig-vote-btn.downvoted .material-symbols-rounded { color: var(--md-sys-color-error); }
+  .ig-vote-score { font-size: 13px; font-weight: 600; min-width: 16px; text-align: center; margin: 0 2px; }
+  .ig-likes { padding: 4px 14px 0; font-size: 13px; font-weight: 600; }
+  .ig-caption { padding: 6px 14px 0; font-size: 13px; line-height: 1.4; font-weight: 500; }
+  .ig-description { padding: 4px 14px 0; font-size: 13px; line-height: 1.4; color: var(--md-sys-color-on-surface-variant); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .ig-timestamp { padding: 6px 14px 14px; font-size: 11px; color: var(--md-sys-color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.3px; }
 
   .empty-note { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 0; text-align: center; }
   .loading-note { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 60px 0; text-align: center; }
@@ -189,10 +193,11 @@ import { mountTopNav } from './shared/topnav.js?v=10';
 import {
   getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
   openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setUserBadge, sendNotification,
-} from './shared/account.js?v=15';
+} from './shared/account.js?v=16';
 import { mountFooter } from './shared/footer.js?v=4';
 import {
-  collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, deleteDoc, serverTimestamp,
+  collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
+  arrayUnion, arrayRemove,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 function followId(followerEmail, followeeEmail) { return followerEmail + '__' + followeeEmail; }
@@ -391,6 +396,7 @@ async function init() {
   let bio = '';
   let bioMarkdownAllowed = false;
   let posts = [];
+  let videos = [];
   let commentKarma = 0;
   let followerCount = 0, followingCount = 0;
   let followState = { following: false, followedBy: false };
@@ -428,12 +434,84 @@ async function init() {
     }
   }
 
+  // Same card treatment as index.html's home feed, minus the author
+  // header row (redundant here — we're already on their profile).
+  function itemCardHtml(item) {
+    const isVideo = item._kind === 'video';
+    const score = (item.upvoters || []).length - (item.downvoters || []).length;
+    const user = getCurrentUser();
+    const up = user && (item.upvoters || []).includes(user.uid);
+    const down = user && (item.downvoters || []).includes(user.uid);
+    const img = isVideo ? null : firstImageUrl(item);
+    const mediaHtml = isVideo
+      ? `<div class="ig-media"><video src="${item.url}" muted preload="metadata"></video><div class="ig-play-overlay"><span class="material-symbols-rounded">play_arrow</span></div></div>`
+      : (img ? `<div class="ig-media"><img src="${img}" alt="" loading="lazy"></div>` : '');
+    const href = isVideo ? `/videos?video=${item.id}` : `/feed?post=${item.id}`;
+    const bodyText = isVideo ? item.description : item.body;
+    return `
+      <div class="ig-card" data-kind="${isVideo ? 'video' : 'post'}" data-id="${item.id}" data-href="${href}">
+        ${mediaHtml}
+        <div class="ig-actions">
+          <button type="button" class="ig-vote-btn ${up ? 'upvoted' : ''}" data-vote-up data-kind="${isVideo ? 'video' : 'post'}" data-id="${item.id}" title="Like">
+            <span class="material-symbols-rounded">${up ? 'favorite' : 'favorite_border'}</span>
+          </button>
+          <span class="ig-vote-score">${score}</span>
+          <button type="button" class="ig-vote-btn ${down ? 'downvoted' : ''}" data-vote-down data-kind="${isVideo ? 'video' : 'post'}" data-id="${item.id}" title="Dislike">
+            <span class="material-symbols-rounded">heart_broken</span>
+          </button>
+          <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
+          <span class="ig-action-count">${item.views || 0}</span>
+        </div>
+        <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
+        ${item.title ? `<div class="ig-caption">${escHtml(item.title)}</div>` : ''}
+        ${bodyText ? `<div class="ig-description">${escHtml(stripMarkdown(bodyText, 220))}</div>` : ''}
+        <div class="ig-timestamp">${timeAgo(item._date)}</div>
+      </div>
+    `;
+  }
+
+  async function toggleItemVote(kind, id, direction) {
+    const user = getCurrentUser();
+    if (!user) { showToast('Sign in to vote'); return; }
+    const list = kind === 'video' ? videos : posts;
+    const item = list.find(x => x.id === id);
+    if (!item) return;
+    const uid = user.uid;
+    const up = (item.upvoters || []).includes(uid);
+    const down = (item.downvoters || []).includes(uid);
+    const patch = {};
+    if (direction === 'up') {
+      patch.upvoters = up ? arrayRemove(uid) : arrayUnion(uid);
+      if (down) patch.downvoters = arrayRemove(uid);
+    } else {
+      patch.downvoters = down ? arrayRemove(uid) : arrayUnion(uid);
+      if (up) patch.upvoters = arrayRemove(uid);
+    }
+    try {
+      await updateDoc(doc(db, kind === 'video' ? 'videos' : 'posts', id), patch);
+      if (direction === 'up') {
+        item.upvoters = up ? (item.upvoters || []).filter(x => x !== uid) : [...(item.upvoters || []), uid];
+        if (down) item.downvoters = (item.downvoters || []).filter(x => x !== uid);
+      } else {
+        item.downvoters = down ? (item.downvoters || []).filter(x => x !== uid) : [...(item.downvoters || []), uid];
+        if (up) item.upvoters = (item.upvoters || []).filter(x => x !== uid);
+      }
+      render();
+      if (direction === 'up' && !up) {
+        sendNotification({ recipientEmail: item.authorEmail, type: 'upvote', targetKind: kind, targetId: id, preview: item.title });
+      }
+    } catch (err) {
+      showToast('Could not vote: ' + err.message);
+    }
+  }
+
   function render() {
     const user = getCurrentUser();
     const isOwn = user && user.email === viewedEmail;
     const { following, followedBy } = followState;
     const areFriends = following && followedBy;
-    const karma = posts.reduce((sum, p) => sum + (p.upvoters || []).length - (p.downvoters || []).length, 0) + commentKarma;
+    const items = [...posts, ...videos].sort((a, b) => b._date - a._date);
+    const karma = items.reduce((sum, p) => sum + (p.upvoters || []).length - (p.downvoters || []).length, 0) + commentKarma;
 
     content.innerHTML = `
       <div class="profile-card">
@@ -455,7 +533,7 @@ async function init() {
           </div>
         </div>
         <div class="stats-row">
-          <div class="stat"><div class="stat-value">${posts.length}</div><div class="stat-label">Posts</div></div>
+          <div class="stat"><div class="stat-value">${items.length}</div><div class="stat-label">Posts</div></div>
           <div class="stat"><div class="stat-value">${karma}</div><div class="stat-label">Karma</div></div>
           <div class="stat clickable" id="followersStat"><div class="stat-value">${followerCount}</div><div class="stat-label">Followers</div></div>
           <div class="stat clickable" id="followingStat"><div class="stat-value">${followingCount}</div><div class="stat-label">Following</div></div>
@@ -463,22 +541,8 @@ async function init() {
       </div>
 
       <div class="section-heading">Posts</div>
-      <div class="post-list">
-        ${posts.length === 0 ? '<div class="empty-note">No posts yet.</div>' : posts.map(p => `
-          <a class="post-row" href="/feed?post=${p.id}">
-            ${firstImageUrl(p) ? `<img class="post-row-thumb" src="${firstImageUrl(p)}" alt="">` : ''}
-            <div class="post-row-main">
-              <div class="post-row-title">${escHtml(p.title)}</div>
-              ${p.body ? `<div class="post-row-excerpt">${escHtml(stripMarkdown(p.body, 160))}</div>` : ''}
-              <div class="post-row-meta">
-                <span><span class="material-symbols-rounded">favorite</span>${(p.upvoters||[]).length - (p.downvoters||[]).length}</span>
-                <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount||0}</span>
-                <span><span class="material-symbols-rounded">visibility</span>${p.views||0}</span>
-                <span>${timeAgo(p._date)}</span>
-              </div>
-            </div>
-          </a>
-        `).join('')}
+      <div class="post-list" id="profilePostList">
+        ${items.length === 0 ? '<div class="empty-note">No posts yet.</div>' : items.map(itemCardHtml).join('')}
       </div>
     `;
 
@@ -486,6 +550,15 @@ async function init() {
     if (editBtn) editBtn.addEventListener('click', openEditProfileModal);
     const followBtn = document.getElementById('followBtn');
     if (followBtn) followBtn.addEventListener('click', () => toggleFollow(following));
+
+    document.getElementById('profilePostList').addEventListener('click', e => {
+      const voteUpBtn = e.target.closest('[data-vote-up]');
+      const voteDownBtn = e.target.closest('[data-vote-down]');
+      if (voteUpBtn) { e.preventDefault(); toggleItemVote(voteUpBtn.dataset.kind, voteUpBtn.dataset.id, 'up'); return; }
+      if (voteDownBtn) { e.preventDefault(); toggleItemVote(voteDownBtn.dataset.kind, voteDownBtn.dataset.id, 'down'); return; }
+      const card = e.target.closest('.ig-card');
+      if (card && card.dataset.href) window.location.href = card.dataset.href;
+    });
 
     const isOwnerViewer = user && isOwnerEmail(user.email);
     const menuItems = [
@@ -624,9 +697,15 @@ async function init() {
     getDocs(query(collection(db, 'posts'), where('authorEmail', '==', viewedEmail))).then(snap => {
       posts = snap.docs.map(d => {
         const data = d.data();
-        return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
-      }).sort((a, b) => b._date - a._date);
+        return { _kind: 'post', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+      });
     }).catch(err => console.warn('Could not load posts for profile:', err.message)),
+    getDocs(query(collection(db, 'videos'), where('authorEmail', '==', viewedEmail))).then(snap => {
+      videos = snap.docs.map(d => {
+        const data = d.data();
+        return { _kind: 'video', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+      });
+    }).catch(err => console.warn('Could not load videos for profile:', err.message)),
     getDocs(query(collectionGroup(db, 'comments'), where('authorEmail', '==', viewedEmail))).then(snap => {
       snap.docs.forEach(d => {
         const c = d.data();

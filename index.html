@@ -412,7 +412,11 @@
   .story-icon-btn:hover { background: rgba(255,255,255,0.25); }
 
   /* Notes */
-  .notes-bar { display: flex; gap: 16px; overflow-x: auto; overflow-y: visible; padding: 36px 2px 20px; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 470px; margin: 0 auto; }
+  /* padding-left leaves room for the first note's speech bubble, which is
+     centered on its avatar via left:50%/translateX(-50%) — for the very
+     first (leftmost) item that centering pushes the bubble's left half
+     past the row's own edge, with nowhere to scroll left to reveal it. */
+  .notes-bar { display: flex; gap: 16px; overflow-x: auto; overflow-y: visible; padding: 36px 2px 20px 44px; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 470px; margin: 0 auto; }
   .notes-bar::-webkit-scrollbar { display: none; }
   .note-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; width: 62px; cursor: pointer; }
   .note-avatar-wrap { position: relative; }
@@ -667,7 +671,7 @@
   import {
     db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser, sendNotification,
     onAccountChange, SERVER_ENDPOINT, MAX_IMAGE_BYTES, uploadFile,
-  } from './shared/account.js?v=15';
+  } from './shared/account.js?v=16';
   import { mountTopNav } from './shared/topnav.js?v=10';
   import { mountFooter } from './shared/footer.js?v=4';
   import {
