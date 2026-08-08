@@ -3,3 +3,5 @@ uploads/*
 !uploads/.gitkeep
 file-owners.json
 anon-uploads.json
+user-folders.json
+.env

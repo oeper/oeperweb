@@ -6,6 +6,31 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
 
+// Loads a .env file sitting next to this script (gitignored, never
+// committed) into process.env, so config like PUBLIC_BASE_URL and any
+// directory overrides live in one persistent place instead of being typed
+// by hand on the command line every restart — easy to forget, easy to
+// fat-finger, and impossible to verify after the fact. Real shell env vars
+// still win over anything in .env (checked before assigning, never
+// overwritten). No dependency needed for something this small.
+function loadDotEnv() {
+  const envPath = path.join(__dirname, '.env');
+  if (!fs.existsSync(envPath)) return;
+  for (const rawLine of fs.readFileSync(envPath, 'utf8').split('\n')) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (!(key in process.env)) process.env[key] = value;
+  }
+}
+loadDotEnv();
+
 // ── Configuration — edit these ──────────────────────────────────
 const PORT = process.env.PORT || 8787;
 
@@ -113,10 +138,27 @@ const MAX_MESSAGE_BYTES = Number(process.env.MAX_MESSAGE_BYTES) || 20 * 1024 * 1
 });
 
 function loadJson(file) {
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return {}; }
+  let raw;
+  try { raw = fs.readFileSync(file, 'utf8'); } catch { return {}; }
+  try { return JSON.parse(raw); } catch {
+    // The file exists but isn't valid JSON — likely a torn write from a
+    // crash mid-save (shouldn't happen now that saveJson writes atomically,
+    // but better safe). Move it aside instead of silently treating it as
+    // empty, so the next save can't clobber data that might be recoverable.
+    const backupPath = `${file}.corrupted-${Date.now()}`;
+    try { fs.renameSync(file, backupPath); console.error(`${file} was corrupted — moved to ${backupPath}`); } catch {}
+    return {};
+  }
 }
 function saveJson(file, data) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+  // Atomic write: write to a temp file, then rename over the target. A
+  // crash or an overlapping write mid-save can then never leave a
+  // truncated/corrupt JSON file behind — the rename is atomic at the
+  // filesystem level, so readers always see either the old or new content,
+  // never a half-written mix of both.
+  const tmp = `${file}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+  fs.renameSync(tmp, file);
 }
 const loadMeta = () => loadJson(META_FILE);
 const saveMeta = meta => saveJson(META_FILE, meta);
@@ -587,11 +629,16 @@ app.get('/', (req, res) => res.send('oeperweb forum upload server is running.'))
 
 cleanupExpiredFiles(); // catch up on anything that expired while the server was off
 
+// Resolved (absolute) paths and current record counts, printed on every
+// boot — a wrong USER_FILES_DIR or a metadata file that's pointing at the
+// wrong directory (e.g. because the server was started from a different
+// checkout of this repo) shows up immediately here instead of silently
+// causing files to go "missing" from the site.
 app.listen(PORT, () => console.log(
   `Upload server listening on port ${PORT} (public base: ${PUBLIC_BASE_URL})\n` +
-  `  forum attachments -> ${UPLOAD_DIR}\n` +
-  `  personal files     -> ${USER_FILES_DIR}\n` +
-  `  videos             -> ${VIDEO_DIR}\n` +
-  `  projects           -> ${PROJECT_DIR}\n` +
-  `  chat attachments   -> ${MESSAGE_DIR}`
+  `  forum attachments -> ${path.resolve(UPLOAD_DIR)}\n` +
+  `  personal files     -> ${path.resolve(USER_FILES_DIR)} (${Object.keys(loadMeta()).length} tracked files, from ${path.resolve(META_FILE)})\n` +
+  `  videos             -> ${path.resolve(VIDEO_DIR)}\n` +
+  `  projects           -> ${path.resolve(PROJECT_DIR)}\n` +
+  `  chat attachments   -> ${path.resolve(MESSAGE_DIR)}`
 ));

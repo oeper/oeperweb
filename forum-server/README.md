@@ -146,15 +146,54 @@ ask if you want to set that up later.
 
 ## 5. Start the server
 
-In a second Termux session (swipe from the left edge → New session, so the
-tunnel keeps running):
+Recommended: create a `.env` file in `forum-server/` (gitignored, never
+committed) instead of typing config on the command line every time — see
+"Persistent config with .env" below. With that in place, starting the
+server is always just:
+
+```sh
+cd oeperweb/forum-server
+node upload-server.js
+```
+
+Or, without a `.env` file, pass it inline for that one run:
 
 ```sh
 cd oeperweb/forum-server
 PUBLIC_BASE_URL=https://random-words-here.trycloudflare.com node upload-server.js
 ```
 
-Replace the URL with whatever `cloudflared` printed in step 4.
+Replace the URL with whatever `cloudflared` printed in step 4. The startup
+log prints every resolved directory path and how many files are tracked in
+`file-owners.json` — check it after every restart; if a number looks
+wrong (e.g. 0 tracked files when you know you've uploaded plenty), the
+server is very likely reading config or metadata from the wrong place
+(e.g. a stray second clone of this repo) rather than actually missing data.
+
+## Persistent config with .env
+
+Typing `PUBLIC_BASE_URL=...` (and any other overrides) by hand on every
+restart is easy to forget, easy to fat-finger, and impossible to verify
+after the fact — this bit us once already (a restart that omitted
+`USER_FILES_DIR` would have silently pointed at the default folder instead
+of a customized one). Instead, create `forum-server/.env` (gitignored) with
+whatever of these you actually need:
+
+```sh
+PUBLIC_BASE_URL=https://fs.oeper.dev
+# USER_FILES_DIR=/storage/emulated/0/Documents
+# UPLOAD_DIR=/storage/emulated/0/Download/forum
+# VIDEO_DIR=/storage/emulated/0/Download/forum
+# PROJECT_DIR=/storage/emulated/0/Download/projects
+# MESSAGE_DIR=/storage/emulated/0/Download/messages
+# OWNER_EMAILS=you@gmail.com,other@gmail.com
+# DISCORD_REPORT_WEBHOOK=https://discord.com/api/webhooks/...
+```
+
+`upload-server.js` loads this file automatically on startup (no `dotenv`
+package needed — it's a ~15-line loader built into the script). Real shell
+env vars always take priority over `.env`, so `FOO=bar node upload-server.js`
+still overrides whatever `.env` says for that one run.
 
 ## 6. Wire it into the site
 
