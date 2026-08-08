@@ -135,8 +135,9 @@
 
   .anon-panel { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; background-color: var(--md-sys-color-surface); border-radius: 20px; padding: 24px; }
   .anon-hint { font-size: 14px; color: var(--md-sys-color-on-surface-variant); line-height: 1.5; }
-  .anon-result { display: flex; align-items: center; gap: 8px; }
-  .anon-result .search-input { border-radius: 100px; }
+  .anon-result-list { display: flex; flex-direction: column; gap: 8px; }
+  .anon-result-row { display: flex; align-items: center; gap: 8px; }
+  .anon-result-row .search-input { border-radius: 100px; }
 
   .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
   .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
@@ -163,17 +164,12 @@
   </header>
 
   <div class="anon-panel" id="anonPanel" style="display:none;">
-    <p class="anon-hint">Upload without signing in — limited to 1 file, up to 50MB. The link below is the only way to get back to it afterward, so save it somewhere.</p>
+    <p class="anon-hint">Upload without signing in — up to 10 files, up to 25MB each. Each link below is the only way to get back to that file afterward, so save them somewhere.</p>
     <label class="upload-btn" style="align-self:flex-start;">
-      <span class="material-symbols-rounded">upload</span> Upload a file
-      <input type="file" id="anonUploadInput">
+      <span class="material-symbols-rounded">upload</span> Upload files
+      <input type="file" id="anonUploadInput" multiple>
     </label>
-    <div class="anon-result" id="anonResult" style="display:none;">
-      <div class="search-wrap" style="flex:1;">
-        <input class="search-input" id="anonResultUrl" readonly>
-      </div>
-      <button class="icon-btn" id="anonCopyBtn" title="Copy link"><span class="material-symbols-rounded">content_copy</span></button>
-    </div>
+    <div class="anon-result-list" id="anonResultList"></div>
   </div>
 
   <div class="toolbar" id="toolbar" style="display:none;">
@@ -212,14 +208,19 @@
 <script type="module">
 import { mountTopNav } from './shared/topnav.js?v=10';
 import {
-  SERVER_ENDPOINT, MAX_IMAGE_BYTES, getCurrentUser, onAccountChange, isOwnerEmail, uploadFile,
+  SERVER_ENDPOINT, getCurrentUser, onAccountChange, isOwnerEmail, uploadFile,
 } from './shared/account.js?v=16';
 import { mountFooter } from './shared/footer.js?v=4';
 
 mountTopNav();
 mountFooter();
 
-const ANON_MAX_BYTES = 50 * 1024 * 1024;
+// files.html's own caps — deliberately separate from account.js's shared
+// MAX_IMAGE_BYTES (10MB), which is for post/story/comment image attachments
+// elsewhere on the site, not this page's general file storage.
+const SIGNED_IN_MAX_BYTES = 50 * 1024 * 1024; // 50MB, unlimited file count
+const ANON_MAX_BYTES = 25 * 1024 * 1024; // 25MB
+const ANON_MAX_FILES = 10; // also enforced server-side, per IP, forever
 
 let files = [];
 let scope = 'mine'; // 'mine' | 'all' (owners only)
@@ -408,8 +409,8 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
   let uploaded = 0;
   let firstError = null;
   for (const file of files) {
-    if (file.size > MAX_IMAGE_BYTES) {
-      firstError = firstError || `${file.name}: must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`;
+    if (file.size > SIGNED_IN_MAX_BYTES) {
+      firstError = firstError || `${file.name}: must be under ${Math.round(SIGNED_IN_MAX_BYTES/1024/1024)}MB`;
       continue;
     }
     try {
@@ -444,25 +445,54 @@ async function uploadAnon(file) {
   return data.url;
 }
 
-document.getElementById('anonUploadInput').addEventListener('change', async e => {
-  const file = e.target.files[0];
-  e.target.value = '';
-  if (!file) return;
-  if (file.size > ANON_MAX_BYTES) { showToast(`File must be under ${Math.round(ANON_MAX_BYTES/1024/1024)}MB`); return; }
-  try {
-    const url = await uploadAnon(file);
-    document.getElementById('anonResultUrl').value = url;
-    document.getElementById('anonResult').style.display = 'flex';
-    showToast('Uploaded!');
-  } catch (err) {
-    showToast('Could not upload: ' + err.message);
-  }
-});
+let anonUploadedCount = 0;
+function addAnonResultRow(url) {
+  const list = document.getElementById('anonResultList');
+  const row = document.createElement('div');
+  row.className = 'anon-result-row';
+  row.innerHTML = `
+    <div class="search-wrap" style="flex:1;">
+      <input class="search-input" value="${escHtml(url)}" readonly>
+    </div>
+    <button class="icon-btn" title="Copy link"><span class="material-symbols-rounded">content_copy</span></button>
+  `;
+  row.querySelector('.icon-btn').addEventListener('click', () => copyToClipboard(url));
+  list.appendChild(row);
+}
 
-document.getElementById('anonCopyBtn').addEventListener('click', () => {
-  const input = document.getElementById('anonResultUrl');
-  input.select();
-  copyToClipboard(input.value);
+document.getElementById('anonUploadInput').addEventListener('change', async e => {
+  const picked = Array.from(e.target.files);
+  e.target.value = '';
+  if (!picked.length) return;
+  const remaining = ANON_MAX_FILES - anonUploadedCount;
+  if (remaining <= 0) { showToast(`Anonymous uploads are limited to ${ANON_MAX_FILES} files per person — sign in to upload more.`); return; }
+  const files = picked.slice(0, remaining);
+  if (picked.length > files.length) showToast(`Only uploading ${files.length} of ${picked.length} — that's the anonymous limit.`);
+
+  let uploaded = 0;
+  let firstError = null;
+  for (const file of files) {
+    if (file.size > ANON_MAX_BYTES) {
+      firstError = firstError || `${file.name}: must be under ${Math.round(ANON_MAX_BYTES/1024/1024)}MB`;
+      continue;
+    }
+    try {
+      const url = await uploadAnon(file);
+      addAnonResultRow(url);
+      uploaded++;
+      anonUploadedCount++;
+    } catch (err) {
+      firstError = firstError || `${file.name}: ${err.message}`;
+    }
+  }
+
+  if (uploaded === files.length) {
+    showToast(uploaded === 1 ? 'Uploaded!' : `Uploaded ${uploaded} files!`);
+  } else if (uploaded > 0) {
+    showToast(`Uploaded ${uploaded} of ${files.length} — ${firstError}`);
+  } else {
+    showToast('Could not upload: ' + firstError);
+  }
 });
 
 document.getElementById('searchInput').addEventListener('input', render);

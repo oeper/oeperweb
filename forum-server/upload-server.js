@@ -18,15 +18,18 @@ const FIREBASE_PROJECT_ID = 'oepernet-1683535959256';
 const OWNER_EMAILS = (process.env.OWNER_EMAILS || 'sanhackerman@gmail.com,taejiding@gmail.com')
   .split(',').map(s => s.trim()).filter(Boolean);
 
-// Max upload size for signed-in accounts. Change this number any time and
-// restart the server — also update MAX_IMAGE_BYTES in forum.html/files.html
-// to match so the browser rejects oversized files before even trying.
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
+// Max upload size for signed-in accounts (files.html's general file
+// storage only — forum/video/project/message attachments have their own
+// caps below). Change this number any time and restart the server — also
+// update SIGNED_IN_MAX_BYTES in files.html to match so the browser rejects
+// oversized files before even trying.
+const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB
 
 // Anonymous (not signed in) uploads to files.html are allowed, but capped
-// much harder: one file total per IP address, up to this size.
-const ANON_MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB
-const ANON_UPLOAD_LIMIT = 1;
+// harder: up to ANON_UPLOAD_LIMIT files total per IP address (tracked
+// forever in anon-uploads.json, not per-session), each up to this size.
+const ANON_MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB
+const ANON_UPLOAD_LIMIT = 10;
 
 // Origins allowed to call this server. Add more if you test from elsewhere.
 const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765'];
@@ -233,9 +236,10 @@ app.post('/upload-message', verifyFirebaseToken, (req, res) => {
   });
 });
 
-// ── Personal file storage (files.html) — signed-in users get MAX_FILE_BYTES
-// and unlimited uploads; anonymous visitors get one upload, up to
-// ANON_MAX_FILE_BYTES, tracked per IP in anon-uploads.json. ─────────────
+// ── Personal file storage (files.html) — signed-in users get unlimited
+// uploads up to MAX_FILE_BYTES each; anonymous visitors get up to
+// ANON_UPLOAD_LIMIT uploads (per IP, tracked forever in anon-uploads.json),
+// each up to ANON_MAX_FILE_BYTES. ───────────────────────────────────────
 const userFileStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, USER_FILES_DIR),
   filename: (req, file, cb) => cb(null, makeFilename(file.originalname)),
@@ -261,11 +265,11 @@ app.post('/upload-file', optionalAuth, (req, res) => {
     return;
   }
 
-  // Anonymous: one upload per IP, ever.
+  // Anonymous: up to ANON_UPLOAD_LIMIT uploads per IP, ever.
   const ip = req.ip;
   const anon = loadAnon();
   if ((anon[ip] || 0) >= ANON_UPLOAD_LIMIT) {
-    return res.status(403).json({ error: 'Sign in to upload more — anonymous uploads are limited to one file per person.' });
+    return res.status(403).json({ error: `Sign in to upload more — anonymous uploads are limited to ${ANON_UPLOAD_LIMIT} files per person.` });
   }
   uploadAnonFile.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
