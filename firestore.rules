@@ -38,7 +38,14 @@ service cloud.firestore {
         && request.resource.data.body is string
         && request.resource.data.body.size() <= 8000
         && request.resource.data.tags is list
-        && (!('imageUrls' in request.resource.data) || (request.resource.data.imageUrls is list && request.resource.data.imageUrls.size() <= 8));
+        && (!('imageUrls' in request.resource.data) || (request.resource.data.imageUrls is list && request.resource.data.imageUrls.size() <= 8))
+        && (!('poll' in request.resource.data) || (
+          request.resource.data.poll.options is list
+          && request.resource.data.poll.options.size() >= 2
+          && request.resource.data.poll.options.size() <= 10
+          && request.resource.data.poll.optionVotes is list
+          && request.resource.data.poll.optionVotes.size() == request.resource.data.poll.options.size()
+        ));
 
       // Author/owner can edit or delete their own post outright.
       // Anyone signed in (and not banned) may toggle their own up/downvote.
@@ -46,11 +53,18 @@ service cloud.firestore {
       // Any signed-in viewer may bump views by exactly 1 per request (client
       // dedupes per-browser via localStorage so opening a thread twice in the
       // same browser doesn't double count — not spoof-proof, just cosmetic).
+      // Poll voting is its own branch: any signed-in non-banned user may
+      // update the poll field as long as the option list itself stays
+      // identical (only the per-option vote arrays move) — this is what
+      // lets someone who isn't the post author cast/change a vote.
       allow update: if isAuthor(resource.data) || isOwner()
         || (isSignedIn() && !isBanned() && onlyChanged(['upvoters', 'downvoters']))
         || (isSignedIn() && onlyChanged(['commentCount']))
         || (isSignedIn() && onlyChanged(['views'])
-            && request.resource.data.views == (('views' in resource.data) ? resource.data.views : 0) + 1);
+            && request.resource.data.views == (('views' in resource.data) ? resource.data.views : 0) + 1)
+        || (isSignedIn() && !isBanned() && onlyChanged(['poll'])
+            && resource.data.poll.options is list
+            && request.resource.data.poll.options == resource.data.poll.options);
 
       allow delete: if isAuthor(resource.data) || isOwner();
 

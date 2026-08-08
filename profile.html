@@ -166,6 +166,22 @@
   .ig-caption { padding: 6px 14px 0; font-size: 13px; line-height: 1.4; font-weight: 500; }
   .ig-description { padding: 4px 14px 0; font-size: 13px; line-height: 1.4; color: var(--md-sys-color-on-surface-variant); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .ig-timestamp { padding: 6px 14px 14px; font-size: 11px; color: var(--md-sys-color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.3px; }
+  .poll-block { margin: 8px 14px 0; }
+  .poll-option-btn {
+    display: block; width: 100%; text-align: left; background: var(--md-sys-color-surface-variant); border: 1px solid transparent;
+    border-radius: 12px; padding: 12px 16px; margin-bottom: 8px; color: var(--md-sys-color-on-surface); font-size: 14px;
+    font-family: inherit; cursor: pointer; transition: background-color 0.15s;
+  }
+  .poll-option-btn:hover { background: var(--md-sys-color-hover-surface); }
+  .poll-result-row {
+    position: relative; margin-bottom: 8px; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-variant);
+    padding: 12px 16px; cursor: pointer;
+  }
+  .poll-result-row.voted { border: 1px solid var(--md-sys-color-primary); }
+  .poll-result-fill { position: absolute; inset: 0; width: 0%; background: var(--md-sys-color-secondary-container); z-index: 0; transition: width 0.4s cubic-bezier(0.2,0,0,1); }
+  .poll-result-text { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+  .poll-result-text .pct { font-weight: 600; color: var(--md-sys-color-on-surface-variant); flex-shrink: 0; }
+  .poll-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 4px; }
 
   .empty-note { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 0; text-align: center; }
   .loading-note { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 60px 0; text-align: center; }
@@ -465,9 +481,67 @@ async function init() {
         <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
         ${item.title ? `<div class="ig-caption">${escHtml(item.title)}</div>` : ''}
         ${bodyText ? `<div class="ig-description">${escHtml(stripMarkdown(bodyText, 220))}</div>` : ''}
+        ${pollHtml(item)}
         <div class="ig-timestamp">${timeAgo(item._date)}</div>
       </div>
     `;
+  }
+
+  // Polls are posts-only, so item.poll only ever exists on posts — safe to
+  // call this unconditionally for videos too, it just returns ''.
+  function pollHtml(item) {
+    if (!item.poll) return '';
+    const { options, optionVotes } = item.poll;
+    const user = getCurrentUser();
+    const uid = user && user.uid;
+    const totalVotes = optionVotes.reduce((s, arr) => s + arr.length, 0);
+    const myIdx = uid ? optionVotes.findIndex(arr => arr.includes(uid)) : -1;
+    const voted = myIdx !== -1;
+    const meta = `${totalVotes} vote${totalVotes === 1 ? '' : 's'}${voted ? ' · tap another option to change your vote' : ''}`;
+    if (!voted) {
+      return `
+        <div class="poll-block" data-poll-postid="${item.id}">
+          ${options.map((opt, i) => `<button type="button" class="poll-option-btn" data-poll-vote="${i}">${escHtml(opt)}</button>`).join('')}
+          <div class="poll-meta">${meta}</div>
+        </div>
+      `;
+    }
+    return `
+      <div class="poll-block" data-poll-postid="${item.id}">
+        ${options.map((opt, i) => {
+          const count = optionVotes[i].length;
+          const pct = totalVotes ? Math.round((count / totalVotes) * 100) : 0;
+          return `
+            <div class="poll-result-row ${i === myIdx ? 'voted' : ''}" data-poll-vote="${i}">
+              <div class="poll-result-fill" style="width:${pct}%"></div>
+              <div class="poll-result-text"><span>${escHtml(opt)}</span><span class="pct">${pct}%</span></div>
+            </div>
+          `;
+        }).join('')}
+        <div class="poll-meta">${meta}</div>
+      </div>
+    `;
+  }
+  async function togglePollVote(id, newIdx) {
+    const user = getCurrentUser();
+    if (!user) { showToast('Sign in to vote'); return; }
+    const item = posts.find(x => x.id === id);
+    if (!item || !item.poll) return;
+    const uid = user.uid;
+    const optionVotes = item.poll.optionVotes;
+    const oldIdx = optionVotes.findIndex(arr => arr.includes(uid));
+    if (oldIdx === newIdx) return;
+    const patch = {};
+    if (oldIdx !== -1) patch[`poll.optionVotes.${oldIdx}`] = arrayRemove(uid);
+    patch[`poll.optionVotes.${newIdx}`] = arrayUnion(uid);
+    try {
+      await updateDoc(doc(db, 'posts', id), patch);
+      if (oldIdx !== -1) optionVotes[oldIdx] = optionVotes[oldIdx].filter(x => x !== uid);
+      optionVotes[newIdx] = [...optionVotes[newIdx], uid];
+      render();
+    } catch (err) {
+      showToast('Could not vote: ' + err.message);
+    }
   }
 
   async function toggleItemVote(kind, id, direction) {
@@ -552,6 +626,8 @@ async function init() {
     if (followBtn) followBtn.addEventListener('click', () => toggleFollow(following));
 
     document.getElementById('profilePostList').addEventListener('click', e => {
+      const pollBtn = e.target.closest('[data-poll-vote]');
+      if (pollBtn) { e.preventDefault(); togglePollVote(pollBtn.closest('[data-poll-postid]').dataset.pollPostid, Number(pollBtn.dataset.pollVote)); return; }
       const voteUpBtn = e.target.closest('[data-vote-up]');
       const voteDownBtn = e.target.closest('[data-vote-down]');
       if (voteUpBtn) { e.preventDefault(); toggleItemVote(voteUpBtn.dataset.kind, voteUpBtn.dataset.id, 'up'); return; }

@@ -343,6 +343,40 @@
   .btn.danger { color: var(--md-sys-color-error); border-color: var(--md-sys-color-error); }
   .modal-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; gap: 12px; }
 
+  .poll-toggle-row { display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 0; }
+  .poll-toggle-row input { accent-color: var(--md-sys-color-primary); }
+  .poll-builder { margin-top: 12px; }
+  .poll-option-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .poll-option-row input[type="text"] { flex: 1; min-width: 0; }
+  .poll-option-remove {
+    width: 32px; height: 32px; border-radius: 50%; border: none; background: transparent; color: var(--md-sys-color-error);
+    cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .poll-option-remove:hover { background: var(--md-sys-state-hover); }
+
+  /* Poll display + voting (thread panel) */
+  .poll-block { margin: 16px 0; }
+  .poll-option-btn {
+    display: block; width: 100%; text-align: left; background: var(--md-sys-color-surface-variant); border: 1px solid transparent;
+    border-radius: 12px; padding: 12px 16px; margin-bottom: 8px; color: var(--md-sys-color-on-surface); font-size: 14px;
+    font-family: inherit; cursor: pointer; transition: background-color 0.15s;
+  }
+  .poll-option-btn:hover { background: var(--md-sys-color-hover-surface); }
+  .poll-result-row {
+    position: relative; margin-bottom: 8px; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-variant);
+    padding: 12px 16px; cursor: pointer;
+  }
+  .poll-result-row.voted { border: 1px solid var(--md-sys-color-primary); }
+  .poll-result-fill { position: absolute; inset: 0; width: 0%; background: var(--md-sys-color-secondary-container); z-index: 0; transition: width 0.4s cubic-bezier(0.2,0,0,1); }
+  .poll-result-text { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+  .poll-result-text .pct { font-weight: 600; color: var(--md-sys-color-on-surface-variant); flex-shrink: 0; }
+  .poll-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 4px; }
+  .poll-badge {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--md-sys-color-on-surface-variant);
+    margin-top: 6px;
+  }
+  .poll-badge .material-symbols-rounded { font-size: 15px; }
+
   a.md-btn {
     display: inline-flex; align-items: center; gap: 8px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; font-weight: 500;
     padding: 10px 18px; border-radius: 100px; background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
@@ -467,6 +501,13 @@
       <div class="add-tag-row">
         <input type="text" id="newTagInput" placeholder="new tag (e.g. showcase)">
         <button type="button" class="btn small" id="addTagBtn">Add</button>
+      </div>
+    </div>
+    <div class="field">
+      <label class="poll-toggle-row"><input type="checkbox" id="pollToggle"> Add a poll (up to 10 options)</label>
+      <div class="poll-builder" id="pollBuilder" style="display:none;">
+        <div id="pollOptionsList"></div>
+        <button type="button" class="btn small" id="addPollOptionBtn">+ Add option</button>
       </div>
     </div>
     <div class="modal-actions">
@@ -1272,6 +1313,7 @@ function runForum() {
         <div class="post-footer">
           <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount||0} comments</span>
           <span><span class="material-symbols-rounded">visibility</span>${p.views||0} views</span>
+          ${p.poll ? `<span><span class="material-symbols-rounded">bar_chart</span>Poll · ${p.poll.options.length} options</span>` : ''}
         </div>
       </div>
       <div class="kebab-slot" data-kebab></div>
@@ -1291,6 +1333,61 @@ function runForum() {
   }
 
   function postRef(id) { return doc(db, 'posts', id); }
+
+  // ── Polls ────────────────────────────────────────────────────
+  function pollHtml(item) {
+    if (!item.poll) return '';
+    const { options, optionVotes } = item.poll;
+    const u = currentUser();
+    const uid = u && u.uid;
+    const totalVotes = optionVotes.reduce((s, arr) => s + arr.length, 0);
+    const myIdx = uid ? optionVotes.findIndex(arr => arr.includes(uid)) : -1;
+    const voted = myIdx !== -1;
+    const meta = `${totalVotes} vote${totalVotes === 1 ? '' : 's'}${voted ? ' · tap another option to change your vote' : ''}`;
+    if (!voted) {
+      return `
+        <div class="poll-block" data-poll-postid="${item.id}">
+          ${options.map((opt, i) => `<button type="button" class="poll-option-btn" data-poll-vote="${i}">${escHtml(opt)}</button>`).join('')}
+          <div class="poll-meta">${meta}</div>
+        </div>
+      `;
+    }
+    return `
+      <div class="poll-block" data-poll-postid="${item.id}">
+        ${options.map((opt, i) => {
+          const count = optionVotes[i].length;
+          const pct = totalVotes ? Math.round((count / totalVotes) * 100) : 0;
+          return `
+            <div class="poll-result-row ${i === myIdx ? 'voted' : ''}" data-poll-vote="${i}">
+              <div class="poll-result-fill" style="width:${pct}%"></div>
+              <div class="poll-result-text"><span>${escHtml(opt)}</span><span class="pct">${pct}%</span></div>
+            </div>
+          `;
+        }).join('')}
+        <div class="poll-meta">${meta}</div>
+      </div>
+    `;
+  }
+  function wirePollButtons(item) {
+    threadContent.querySelectorAll('[data-poll-vote]').forEach(el => {
+      el.addEventListener('click', () => togglePollVote(item, Number(el.dataset.pollVote)));
+    });
+  }
+  async function togglePollVote(item, newIdx) {
+    const u = currentUser();
+    if (!u) { showToast('Sign in to vote'); return; }
+    if (isBanned()) { showToast("You've been banned"); return; }
+    const uid = u.uid;
+    const optionVotes = item.poll.optionVotes;
+    const oldIdx = optionVotes.findIndex(arr => arr.includes(uid));
+    if (oldIdx === newIdx) return;
+    const patch = {};
+    if (oldIdx !== -1) patch[`poll.optionVotes.${oldIdx}`] = arrayRemove(uid);
+    patch[`poll.optionVotes.${newIdx}`] = arrayUnion(uid);
+    try {
+      await updateDoc(postRef(item.id), patch);
+    } catch (err) { showToast('Could not vote: ' + err.message); }
+  }
 
   async function toggleVote(ref, item, direction, notifyMeta) {
     const u = currentUser();
@@ -1360,6 +1457,39 @@ function runForum() {
   let selectedTags = [];
   let postImageAttach = createMultiImageAttach(document.getElementById('postImageAttach'), MAX_POST_IMAGES);
 
+  // ── Poll builder ────────────────────────────────────────────
+  const MAX_POLL_OPTIONS = 10;
+  const pollToggle = document.getElementById('pollToggle');
+  const pollBuilder = document.getElementById('pollBuilder');
+  const pollOptionsList = document.getElementById('pollOptionsList');
+  const addPollOptionBtn = document.getElementById('addPollOptionBtn');
+  let pollOptions = [];
+
+  function renderPollOptions() {
+    pollOptionsList.innerHTML = pollOptions.map((val, i) => `
+      <div class="poll-option-row">
+        <input type="text" data-poll-idx="${i}" value="${val.replace(/"/g, '&quot;')}" maxlength="80" placeholder="Option ${i + 1}">
+        ${pollOptions.length > 2 ? `<button type="button" class="poll-option-remove" data-remove-idx="${i}"><span class="material-symbols-rounded">close</span></button>` : ''}
+      </div>
+    `).join('');
+    pollOptionsList.querySelectorAll('[data-poll-idx]').forEach(input => {
+      input.addEventListener('input', () => { pollOptions[Number(input.dataset.pollIdx)] = input.value; });
+    });
+    pollOptionsList.querySelectorAll('[data-remove-idx]').forEach(btn => {
+      btn.addEventListener('click', () => { pollOptions.splice(Number(btn.dataset.removeIdx), 1); renderPollOptions(); });
+    });
+    addPollOptionBtn.style.display = pollOptions.length >= MAX_POLL_OPTIONS ? 'none' : '';
+  }
+  pollToggle.addEventListener('change', () => {
+    pollBuilder.style.display = pollToggle.checked ? 'block' : 'none';
+    if (pollToggle.checked && pollOptions.length === 0) { pollOptions = ['', '']; renderPollOptions(); }
+  });
+  addPollOptionBtn.addEventListener('click', () => {
+    if (pollOptions.length >= MAX_POLL_OPTIONS) return;
+    pollOptions.push('');
+    renderPollOptions();
+  });
+
   function renderTagSelect() {
     const wrap = document.getElementById('tagSelect');
     wrap.innerHTML = knownTags.map(t => `
@@ -1376,6 +1506,7 @@ function runForum() {
   }
 
   let editingPostId = null;
+  let editingPostPoll = null; // carried through unchanged if the post being edited already has one — changing options after votes exist would invalidate them
 
   function openPostModal(post) {
     if (!currentUser()) { showToast('Sign in to post'); return; }
@@ -1383,6 +1514,7 @@ function runForum() {
     postForm.reset();
     postImageAttach.reset();
     editingPostId = post ? post.id : null;
+    editingPostPoll = post && post.poll ? post.poll : null;
     document.getElementById('modalTitle').textContent = post ? 'Edit post' : 'New post';
     document.getElementById('submitPostIcon').textContent = post ? 'save' : 'send';
     document.getElementById('submitPostLabel').textContent = post ? 'Save' : 'Post';
@@ -1394,6 +1526,13 @@ function runForum() {
     } else {
       selectedTags = [];
     }
+    // Existing polls can't be edited (their vote arrays would go stale the
+    // moment options change) — lock the toggle and hide the builder,
+    // carrying editingPostPoll through untouched on save instead.
+    pollToggle.checked = !!editingPostPoll;
+    pollToggle.disabled = !!editingPostPoll;
+    pollBuilder.style.display = 'none';
+    pollOptions = [];
     renderTagSelect();
     overlay.classList.add('open');
     modal.classList.add('open');
@@ -1421,6 +1560,16 @@ function runForum() {
     const fd = new FormData(postForm);
     const title = fd.get('title').trim();
     if (!title) return;
+    // Only build a poll payload when adding a NEW one — an existing poll
+    // (editingPostPoll set) is left out of the update entirely so it's
+    // never touched, since changing its options would orphan any votes
+    // already cast against the old option list.
+    let pollPayload = null;
+    if (pollToggle.checked && !editingPostPoll) {
+      const cleanOptions = pollOptions.map(o => o.trim()).filter(Boolean);
+      if (cleanOptions.length < 2) { showToast('Add at least 2 poll options'); return; }
+      pollPayload = { options: cleanOptions, optionVotes: cleanOptions.map(() => []) };
+    }
     const submitBtn = document.getElementById('submitPostBtn');
     submitBtn.disabled = true;
     try {
@@ -1433,6 +1582,7 @@ function runForum() {
           tags: selectedTags,
           imageUrls,
           editedAt: serverTimestamp(),
+          ...(pollPayload ? { poll: pollPayload } : {}),
         });
         showToast('Post updated');
       } else {
@@ -1448,6 +1598,7 @@ function runForum() {
           downvoters: [],
           commentCount: 0,
           createdAt: serverTimestamp(),
+          ...(pollPayload ? { poll: pollPayload } : {}),
         });
         showToast('Posted!');
       }
@@ -1473,6 +1624,11 @@ function runForum() {
     if (voteCol) {
       voteCol.outerHTML = voteColHtml(p, 'thread');
       wireThreadVoteButtons(p);
+    }
+    const pollBlock = threadContent.querySelector('.poll-block');
+    if (pollBlock && p.poll) {
+      pollBlock.outerHTML = pollHtml(p);
+      wirePollButtons(p);
     }
   }
 
@@ -1514,6 +1670,7 @@ function runForum() {
         </div>
       ` : ''}
       <div class="thread-body">${parseMarkdown(p.body)}</div>
+      ${pollHtml(p)}
       <div class="thread-actions">
         ${voteColHtml(p, 'thread')}
       </div>
@@ -1523,6 +1680,7 @@ function runForum() {
     `;
 
     wireThreadVoteButtons(p);
+    wirePollButtons(p);
     threadContent.querySelector('[data-kebab]').appendChild(buildKebabMenu(menuItemsForPost(p)));
     flushTextPreviews();
     bumpViews(postId);

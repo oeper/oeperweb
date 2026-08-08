@@ -412,12 +412,11 @@
   .story-icon-btn:hover { background: rgba(255,255,255,0.25); }
 
   /* Notes */
-  /* padding-left leaves room for the first note's speech bubble, which is
-     centered on its avatar via left:50%/translateX(-50%) — for the very
-     first (leftmost) item that centering pushes the bubble's left half
-     past the row's own edge, with nowhere to scroll left to reveal it. */
-  .notes-bar { display: flex; gap: 16px; overflow-x: auto; overflow-y: visible; padding: 36px 2px 20px 44px; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 470px; margin: 0 auto; }
-  .notes-bar::-webkit-scrollbar { display: none; }
+  /* Notes render as direct children of .stories-bar (see #notesSlot,
+     display:contents) so they sit right after the "Your story" button in
+     the same scrollable row — no dedicated bar/scroll container of their
+     own needed here (unlike messages.html, which has notes without a
+     stories bar to share). */
   .note-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0; width: 62px; cursor: pointer; }
   .note-avatar-wrap { position: relative; }
   .note-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); }
@@ -524,6 +523,22 @@
   .ig-modal-full-body th, .ig-modal-full-body td { border: 1px solid var(--md-sys-color-outline-variant); padding: 6px 10px; text-align: left; }
   .ig-modal-full-body th { background: var(--md-sys-color-surface-variant); }
   .ig-modal-divider { height: 1px; background: var(--md-sys-color-outline-variant); margin: 12px 20px; }
+  .poll-block { margin: 8px 14px 0; }
+  .poll-option-btn {
+    display: block; width: 100%; text-align: left; background: var(--md-sys-color-surface-variant); border: 1px solid transparent;
+    border-radius: 12px; padding: 12px 16px; margin-bottom: 8px; color: var(--md-sys-color-on-surface); font-size: 14px;
+    font-family: inherit; cursor: pointer; transition: background-color 0.15s;
+  }
+  .poll-option-btn:hover { background: var(--md-sys-color-hover-surface); }
+  .poll-result-row {
+    position: relative; margin-bottom: 8px; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-variant);
+    padding: 12px 16px; cursor: pointer;
+  }
+  .poll-result-row.voted { border: 1px solid var(--md-sys-color-primary); }
+  .poll-result-fill { position: absolute; inset: 0; width: 0%; background: var(--md-sys-color-secondary-container); z-index: 0; transition: width 0.4s cubic-bezier(0.2,0,0,1); }
+  .poll-result-text { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+  .poll-result-text .pct { font-weight: 600; color: var(--md-sys-color-on-surface-variant); flex-shrink: 0; }
+  .poll-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 4px; }
   .ig-modal-full-body a.md-btn {
     display: inline-flex; align-items: center; gap: 8px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 13px; font-weight: 500;
     padding: 8px 16px; border-radius: 100px; background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
@@ -739,7 +754,15 @@
         .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
       await Promise.all([...new Set(allStories.map(s => s.authorEmail))].map(ensureProfileLoaded));
       renderStoriesBar();
-    }, () => { bar.innerHTML = ''; });
+    }, () => {
+      // Clear only this function's own slots, not the whole bar — #notesSlot
+      // is independently owned by initNotes() and would otherwise get
+      // wiped out (along with the container itself) by a stories-only error.
+      const addSlot = document.getElementById('storyAddSlot');
+      const ringsSlot = document.getElementById('storyRingsSlot');
+      if (addSlot) addSlot.innerHTML = '';
+      if (ringsSlot) ringsSlot.innerHTML = '';
+    });
 
     function seenIds() {
       try { return new Set(JSON.parse(localStorage.getItem(STORY_SEEN_KEY) || '[]')); } catch { return new Set(); }
@@ -759,15 +782,18 @@
       });
       const seen = seenIds();
 
+      // Rendered into separate slots (rather than replacing the whole bar)
+      // so notes — rendered independently by initNotes() into #notesSlot —
+      // can sit between the add button and everyone else's story rings.
+      const addSlot = document.getElementById('storyAddSlot');
+      const ringsSlot = document.getElementById('storyRingsSlot');
+      addSlot.innerHTML = user ? `
+        <div class="story-item story-add" id="storyAddBtn">
+          <div class="story-ring"><span class="material-symbols-rounded">add</span></div>
+          <div class="story-label">Your story</div>
+        </div>
+      ` : '';
       let html = '';
-      if (user) {
-        html += `
-          <div class="story-item story-add" id="storyAddBtn">
-            <div class="story-ring"><span class="material-symbols-rounded">add</span></div>
-            <div class="story-label">Your story</div>
-          </div>
-        `;
-      }
       for (const [email, stories] of byAuthor) {
         const profile = getProfile(email, stories[0].authorName, stories[0].authorPhoto);
         const allSeen = stories.every(s => seen.has(s.id));
@@ -778,11 +804,11 @@
           </div>
         `;
       }
-      bar.innerHTML = html;
+      ringsSlot.innerHTML = html;
 
       const addBtn = document.getElementById('storyAddBtn');
       if (addBtn) addBtn.addEventListener('click', () => fileInput.click());
-      bar.querySelectorAll('.story-item[data-author]').forEach(el => {
+      ringsSlot.querySelectorAll('.story-item[data-author]').forEach(el => {
         el.addEventListener('click', () => openStoryViewer(byAuthor.get(el.dataset.author)));
       });
     }
@@ -898,7 +924,7 @@
   // ── Notes ────────────────────────────────────────────────────
   const NOTE_LIFETIME_MS = 24 * 60 * 60 * 1000;
   function initNotes() {
-    const bar = document.getElementById('notesBar');
+    const bar = document.getElementById('notesSlot');
     if (!bar) return;
     const overlay = document.getElementById('noteOverlay');
     const modal = document.getElementById('noteModal');
@@ -1309,9 +1335,62 @@
         <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
         <div class="ig-caption"><strong>${authorNameHtml(item.authorEmail, profile)}</strong>${linkify(item.title)}</div>
         ${body ? `<div class="ig-modal-full-body">${parseMarkdown(body)}</div>` : ''}
+        ${pollHtml(item)}
         <div class="ig-timestamp">${timeAgo(item._date)}</div>
         <div class="ig-modal-divider"></div>
       `;
+    }
+
+    // ── Polls (posts only) ──────────────────────────────────────
+    function pollHtml(item) {
+      if (!item.poll) return '';
+      const { options, optionVotes } = item.poll;
+      const user = getCurrentUser();
+      const uid = user && user.uid;
+      const totalVotes = optionVotes.reduce((s, arr) => s + arr.length, 0);
+      const myIdx = uid ? optionVotes.findIndex(arr => arr.includes(uid)) : -1;
+      const voted = myIdx !== -1;
+      const meta = `${totalVotes} vote${totalVotes === 1 ? '' : 's'}${voted ? ' · tap another option to change your vote' : ''}`;
+      if (!voted) {
+        return `
+          <div class="poll-block" data-poll-postid="${item.id}">
+            ${options.map((opt, i) => `<button type="button" class="poll-option-btn" data-poll-vote="${i}">${escHtml(opt)}</button>`).join('')}
+            <div class="poll-meta">${meta}</div>
+          </div>
+        `;
+      }
+      return `
+        <div class="poll-block" data-poll-postid="${item.id}">
+          ${options.map((opt, i) => {
+            const count = optionVotes[i].length;
+            const pct = totalVotes ? Math.round((count / totalVotes) * 100) : 0;
+            return `
+              <div class="poll-result-row ${i === myIdx ? 'voted' : ''}" data-poll-vote="${i}">
+                <div class="poll-result-fill" style="width:${pct}%"></div>
+                <div class="poll-result-text"><span>${escHtml(opt)}</span><span class="pct">${pct}%</span></div>
+              </div>
+            `;
+          }).join('')}
+          <div class="poll-meta">${meta}</div>
+        </div>
+      `;
+    }
+    async function togglePollVote(item, newIdx) {
+      const user = getCurrentUser();
+      if (!user) { alert('Sign in to vote'); return; }
+      const uid = user.uid;
+      const optionVotes = item.poll.optionVotes;
+      const oldIdx = optionVotes.findIndex(arr => arr.includes(uid));
+      if (oldIdx === newIdx) return;
+      const patch = {};
+      if (oldIdx !== -1) patch[`poll.optionVotes.${oldIdx}`] = arrayRemove(uid);
+      patch[`poll.optionVotes.${newIdx}`] = arrayUnion(uid);
+      try {
+        await updateDoc(doc(db, 'posts', item.id), patch);
+        renderModalPostContent();
+      } catch (err) {
+        alert('Could not vote: ' + err.message);
+      }
     }
 
     function renderComments(comments) {
@@ -1340,6 +1419,12 @@
       postContentEl.innerHTML = item ? postContentHtml(item, openItemKind) : '';
     }
     postContentEl.addEventListener('click', e => {
+      const pollBtn = e.target.closest('[data-poll-vote]');
+      if (pollBtn) {
+        const item = latestPosts.find(x => x.id === openItemId);
+        if (item) togglePollVote(item, Number(pollBtn.dataset.pollVote));
+        return;
+      }
       const upBtn = e.target.closest('[data-modal-vote-up]');
       const downBtn = e.target.closest('[data-modal-vote-down]');
       if (!upBtn && !downBtn) return;
@@ -1746,9 +1831,12 @@ PAGES.forEach((page, index) => {
       ` : ''}
     </div>
     ${isFirst ? `
-      <div class="stories-bar" id="storiesBar"></div>
+      <div class="stories-bar" id="storiesBar">
+        <div id="storyAddSlot" style="display:contents"></div>
+        <div id="notesSlot" style="display:contents"></div>
+        <div id="storyRingsSlot" style="display:contents"></div>
+      </div>
       <input type="file" id="storyFileInput" accept="image/*,video/*" style="display:none;">
-      <div class="notes-bar" id="notesBar"></div>
       <div class="home-feed-section">
         <div class="home-feed-heading">
           <h2>Feed</h2>
