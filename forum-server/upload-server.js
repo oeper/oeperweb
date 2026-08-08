@@ -20,10 +20,9 @@ const OWNER_EMAILS = (process.env.OWNER_EMAILS || 'sanhackerman@gmail.com,taejid
 
 // Max upload size for signed-in accounts (files.html's general file
 // storage only — forum/video/project/message attachments have their own
-// caps below). Change this number any time and restart the server — also
-// update SIGNED_IN_MAX_BYTES in files.html to match so the browser rejects
-// oversized files before even trying.
-const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50MB
+// caps below). No cap — limited only by your phone's storage and upload
+// bandwidth through the Cloudflare Tunnel.
+const MAX_FILE_BYTES = Infinity;
 
 // Anonymous (not signed in) uploads to files.html are allowed, but capped
 // harder: up to ANON_UPLOAD_LIMIT files total per IP address (tracked

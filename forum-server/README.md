@@ -196,8 +196,8 @@ Uploads without signing in are capped by two constants in
 `upload-server.js`: `ANON_MAX_FILE_BYTES` (default 25MB) and
 `ANON_UPLOAD_LIMIT` (default 10 files per IP address, tracked forever in
 `anon-uploads.json`). There's no env var for these — edit the constants
-directly if you want different limits. Signed-in uploads are separately
-capped by `MAX_FILE_BYTES` (50MB, unlimited count, see below).
+directly if you want different limits. Signed-in uploads have no size or
+count cap (`MAX_FILE_BYTES` is `Infinity`, see below).
 
 ## Changing the Discord report webhook
 
@@ -283,11 +283,8 @@ Android will kill background apps to save battery. To reduce that:
 
 ## Changing the size limit later
 
-Two places, must match:
-- `MAX_FILE_BYTES` in `upload-server.js` (server-side enforcement)
-- `SIGNED_IN_MAX_BYTES` in `files.html` (so the browser rejects oversized
-  files before even trying to upload them)
-
-Change both, restart the server, and you're done — no redeploy needed for
-the server-side change, but `files.html` needs to be pushed since it's part
-of the static site.
+Signed-in uploads are currently uncapped (`MAX_FILE_BYTES = Infinity` in
+`upload-server.js`). To reintroduce a cap, set `MAX_FILE_BYTES` to a byte
+count there and restart the server — no client-side change needed,
+`files.html` no longer enforces its own cap and just relies on the
+server's 413 response for oversized files.

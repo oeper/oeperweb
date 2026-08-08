@@ -312,8 +312,9 @@ mountFooter();
 
 // files.html's own caps — deliberately separate from account.js's shared
 // MAX_IMAGE_BYTES (10MB), which is for post/story/comment image attachments
-// elsewhere on the site, not this page's general file storage.
-const SIGNED_IN_MAX_BYTES = 50 * 1024 * 1024; // 50MB, unlimited file count
+// elsewhere on the site, not this page's general file storage. Signed-in
+// uploads have no size cap (server-enforced too, see upload-server.js);
+// only anonymous uploads are capped, as abuse protection.
 const ANON_MAX_BYTES = 25 * 1024 * 1024; // 25MB
 const ANON_MAX_FILES = 10; // also enforced server-side, per IP, forever
 
@@ -793,10 +794,6 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
   let uploaded = 0;
   let firstError = null;
   for (const file of picked) {
-    if (file.size > SIGNED_IN_MAX_BYTES) {
-      firstError = firstError || `${file.name}: must be under ${Math.round(SIGNED_IN_MAX_BYTES/1024/1024)}MB`;
-      continue;
-    }
     try {
       await uploadFile(file, '/upload-file', currentFolder ? { folder: currentFolder } : undefined);
       uploaded++;
