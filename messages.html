@@ -73,11 +73,19 @@
     font-family: inherit; color: inherit; transition: background-color 0.2s;
   }
   .convo-row:hover { background-color: var(--md-sys-color-hover-surface); }
+  .convo-row.unread {
+    background-color: var(--md-sys-color-secondary-container);
+    box-shadow: 0 0 0 1.5px var(--md-sys-color-primary), 0 0 16px 0 var(--md-sys-color-primary);
+  }
+  .convo-row.unread:hover { background-color: var(--md-sys-color-secondary-container); filter: brightness(1.06); }
   .convo-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
   .convo-main { flex: 1; min-width: 0; }
-  .convo-name { font-size: 15px; font-weight: 500; }
+  .convo-name { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .convo-row.unread .convo-name, .convo-row.unread .convo-preview { color: var(--md-sys-color-on-secondary-container); font-weight: 600; }
+  .convo-unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--md-sys-color-primary); flex-shrink: 0; }
   .convo-preview { font-size: 13px; color: var(--md-sys-color-on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .convo-time { font-size: 12px; color: var(--md-sys-color-on-surface-variant); flex-shrink: 0; }
+  .convo-row.unread .convo-time { color: var(--md-sys-color-on-secondary-container); font-weight: 600; }
 
   .empty-note { text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 60px 24px; }
 
@@ -462,6 +470,17 @@ function showInbox(user) {
         return;
       }
 
+      // A conversation "glows" when the other person's message is newer
+      // than the last time this browser opened that thread — same
+      // localStorage-timestamp approach topnav.js uses for the chat icon,
+      // just rendered per-row here instead of as a single site-wide flag.
+      function isUnread(c) {
+        if (!c.lastMessageSenderEmail || c.lastMessageSenderEmail === user.email) return false;
+        const lastMs = c.updatedAt && c.updatedAt.toMillis ? c.updatedAt.toMillis() : 0;
+        const readMs = Number(localStorage.getItem('oe-chat-read-' + c.id) || 0);
+        return lastMs > readMs;
+      }
+
       // Render right away with whatever's already cached (falls back to
       // "User" for names we haven't seen this session) rather than blocking
       // the whole list behind a profile fetch per conversation — then patch
@@ -470,11 +489,12 @@ function showInbox(user) {
         content.innerHTML = `<div class="convo-list">${convos.map(c => {
           const otherEmail = c.participants.find(p => p !== user.email);
           const profile = getProfile(otherEmail, null, null);
+          const unread = isUnread(c);
           return `
-            <button class="convo-row" data-email="${escHtml(otherEmail)}">
+            <button class="convo-row${unread ? ' unread' : ''}" data-email="${escHtml(otherEmail)}">
               <img class="convo-avatar" src="${profile.photo || ''}" alt="">
               <div class="convo-main">
-                <div class="convo-name">${escHtml(profile.name)}${officialBadgeHtml(otherEmail)}</div>
+                <div class="convo-name">${unread ? '<span class="convo-unread-dot"></span>' : ''}${escHtml(profile.name)}${officialBadgeHtml(otherEmail)}</div>
                 <div class="convo-preview">${escHtml(c.lastMessage || '')}</div>
               </div>
               <div class="convo-time">${c.updatedAt?.toDate ? timeAgo(c.updatedAt.toDate()) : ''}</div>
