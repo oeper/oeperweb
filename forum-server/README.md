@@ -7,23 +7,39 @@ everyone's for moderation) and the forum:
 - **`/upload`** — forum post/comment attachments (any signed-in user, any
   file type, not just images) for `feed.html`. Not part of the per-account
   system below and never listed as a directory — only reachable via the
-  exact URL a specific post/comment embeds.
+  exact URL a specific post/comment embeds. Capped by `MAX_ATTACHMENT_BYTES`
+  (50MB).
 - **`/upload-file`** — personal file uploads, saved into `USER_FILES_DIR`.
-  Signed-in users get a 50MB per-file limit and unlimited uploads; who
+  Both signed-in and anonymous uploads accept files up to `MAX_UPLOAD_BYTES`
+  (1GB). Files at or under each group's "permanent" threshold
+  (`SIGNED_IN_PERMANENT_BYTES`, 50MB; `ANON_PERMANENT_BYTES`, 25MB) are kept
+  forever; anything larger is still accepted but gets an `expiresAt`
+  (upload time + `TEMP_FILE_LIFETIME_MS`, 2 hours) and is auto-deleted by
+  `cleanupExpiredFiles` once it passes — see Temporary files below. Who
   uploaded each file is recorded in `file-owners.json` (a small local JSON
   "database" next to the script — gitignored, never committed, since it
   holds real users' emails). You don't have to sign in to use it —
-  anonymous uploads are allowed too, capped at 10 files up to 25MB each per
-  IP address (tracked in `anon-uploads.json`, also gitignored). Anonymous
+  anonymous uploads are additionally capped at 10 files total per IP
+  address, ever (tracked in `anon-uploads.json`, also gitignored). Anonymous
   uploads aren't tied to any account, so they never show up in
   `/my-files` — the URL returned at upload time is the only way to reach
   the file again. Signed-in uploads accept an optional `folder` form field
   (see Folders below); it's stored as a `folder` field on the file's
   `file-owners.json` entry.
 - **`/my-files`** — requires sign-in. Returns the requesting account's own
-  uploads (each with a `folder` field, `''` for root); owners get
-  everyone's. Also returns `folders`: every folder the requester owns
-  (just their own, unless they're an owner — then everyone's).
+  uploads (each with a `folder` field, `''` for root, and an `expiresAt`
+  timestamp or `null` if permanent); owners get everyone's. Also returns
+  `folders`: every folder the requester owns (just their own, unless
+  they're an owner — then everyone's).
+- **Temporary files** — any `/upload-file` upload over its group's
+  permanent threshold gets deleted automatically 2 hours after upload, both
+  the file on disk and its `file-owners.json` entry. `cleanupExpiredFiles()`
+  runs on a 5-minute timer and once at server startup (to catch up on
+  anything that expired while the server was off). There's no warning
+  before deletion beyond what `files.html` shows up front at upload time
+  (an "expires in Xh Ym" tag on the file card, or a "2h" badge next to an
+  anonymous upload's link) — if you need a file kept, keep it under the
+  permanent threshold or move/re-upload it before it expires.
 - **`DELETE /docs/:name`** — requires sign-in; only the file's own uploader
   or an owner can delete it.
 - **Folders** — a pure metadata concept, not real directories: every
@@ -51,7 +67,7 @@ everyone's for moderation) and the forum:
   signed-in user. Saved into `VIDEO_DIR` (default
   `/storage/emulated/0/Download/forum` — same folder as forum attachments)
   and capped by `MAX_VIDEO_BYTES` (default 300MB — much higher than
-  `MAX_FILE_BYTES` since actual video blows past 10MB immediately).
+  `MAX_ATTACHMENT_BYTES` since actual video blows past 10MB immediately).
   Title/description/votes live in Firestore (`videos` collection); this
   endpoint only stores the raw file and hands back a URL. Uploads run over
   your home connection's upload speed through the Cloudflare Tunnel, so a
@@ -192,12 +208,13 @@ USER_FILES_DIR=~/storage/downloads/files PUBLIC_BASE_URL=https://your-tunnel-url
 
 ## Anonymous upload limits
 
-Uploads without signing in are capped by two constants in
-`upload-server.js`: `ANON_MAX_FILE_BYTES` (default 25MB) and
-`ANON_UPLOAD_LIMIT` (default 10 files per IP address, tracked forever in
-`anon-uploads.json`). There's no env var for these — edit the constants
-directly if you want different limits. Signed-in uploads have no size or
-count cap (`MAX_FILE_BYTES` is `Infinity`, see below).
+Anonymous `/upload-file` uploads are capped by `ANON_UPLOAD_LIMIT` in
+`upload-server.js` (default 10 files per IP address, tracked forever in
+`anon-uploads.json`) — there's no separate file-size cap for anonymous vs.
+signed-in; both share `MAX_UPLOAD_BYTES` (1GB) and `ANON_PERMANENT_BYTES`
+/`SIGNED_IN_PERMANENT_BYTES` decide what's temporary (see Temporary files
+above). There's no env var for any of these — edit the constants directly
+if you want different limits.
 
 ## Changing the Discord report webhook
 
@@ -281,10 +298,17 @@ Android will kill background apps to save battery. To reduce that:
 - Keep Termux's notification visible (don't swipe it away)
 - Disable battery optimization for Termux in Android settings
 
-## Changing the size limit later
+## Changing the size limits later
 
-Signed-in uploads are currently uncapped (`MAX_FILE_BYTES = Infinity` in
-`upload-server.js`). To reintroduce a cap, set `MAX_FILE_BYTES` to a byte
-count there and restart the server — no client-side change needed,
-`files.html` no longer enforces its own cap and just relies on the
-server's 413 response for oversized files.
+Four constants in `upload-server.js` control files.html's upload limits:
+`MAX_UPLOAD_BYTES` (1GB, hard cap for both signed-in and anonymous),
+`SIGNED_IN_PERMANENT_BYTES` (50MB) and `ANON_PERMANENT_BYTES` (25MB, the
+"kept forever" thresholds — see Temporary files above), and
+`TEMP_FILE_LIFETIME_MS` (2 hours). `files.html` has matching client-side
+copies (`MAX_UPLOAD_BYTES`, `SIGNED_IN_PERMANENT_BYTES`,
+`ANON_PERMANENT_BYTES`) purely so it can show accurate "this file will be
+temporary" notices before uploading — the server enforces the real limits
+regardless, so if these drift out of sync the site will just show a
+slightly wrong notice, not actually let anything oversized through. Update
+both sides to keep the notices accurate, restart the server, and push
+`files.html`.

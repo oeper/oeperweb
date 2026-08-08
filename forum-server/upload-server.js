@@ -18,16 +18,24 @@ const FIREBASE_PROJECT_ID = 'oepernet-1683535959256';
 const OWNER_EMAILS = (process.env.OWNER_EMAILS || 'sanhackerman@gmail.com,taejiding@gmail.com')
   .split(',').map(s => s.trim()).filter(Boolean);
 
-// Max upload size for signed-in accounts (files.html's general file
-// storage only — forum/video/project/message attachments have their own
-// caps below). No cap — limited only by your phone's storage and upload
-// bandwidth through the Cloudflare Tunnel.
-const MAX_FILE_BYTES = Infinity;
+// Hard upload size cap for files.html's general file storage (both signed-in
+// and anonymous) — forum/video/project/message attachments have their own
+// caps below. Files up to each group's "permanent" threshold below are kept
+// forever; anything larger, up to this hard cap, is accepted but auto-deleted
+// after TEMP_FILE_LIFETIME_MS (see cleanupExpiredFiles below) since large
+// files eat into the phone's storage fast.
+const MAX_UPLOAD_BYTES = 1024 * 1024 * 1024; // 1GB
+
+// Signed-in uploads at or under this size are kept forever; anonymous
+// uploads use the smaller ANON_PERMANENT_BYTES instead. Either way, files
+// above their group's threshold (but under MAX_UPLOAD_BYTES) are temporary.
+const SIGNED_IN_PERMANENT_BYTES = 50 * 1024 * 1024; // 50MB
+const ANON_PERMANENT_BYTES = 25 * 1024 * 1024; // 25MB
+const TEMP_FILE_LIFETIME_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 // Anonymous (not signed in) uploads to files.html are allowed, but capped
 // harder: up to ANON_UPLOAD_LIMIT files total per IP address (tracked
-// forever in anon-uploads.json, not per-session), each up to this size.
-const ANON_MAX_FILE_BYTES = 25 * 1024 * 1024; // 25MB
+// forever in anon-uploads.json, not per-session).
 const ANON_UPLOAD_LIMIT = 10;
 
 // Origins allowed to call this server. Add more if you test from elsewhere.
@@ -84,9 +92,9 @@ const FOLDERS_FILE = process.env.FOLDERS_FILE || path.join(__dirname, 'user-fold
 const ANON_FILE = process.env.ANON_FILE || path.join(__dirname, 'anon-uploads.json');
 
 // Long-form video uploads (videos.html) — its own much higher size cap,
-// since actual video files blow past MAX_FILE_BYTES fast. Shares a folder
-// with forum attachments by default. Metadata (title/description/votes)
-// lives in Firestore; this only stores the raw file and hands back a URL.
+// since actual video files blow past MAX_ATTACHMENT_BYTES fast. Shares a
+// folder with forum attachments by default. Metadata (title/description/
+// votes) lives in Firestore; this only stores the raw file and hands back a URL.
 const VIDEO_DIR = process.env.VIDEO_DIR || '/storage/emulated/0/Download/forum';
 const MAX_VIDEO_BYTES = Number(process.env.MAX_VIDEO_BYTES) || 300 * 1024 * 1024; // 300MB
 
@@ -115,6 +123,25 @@ const saveMeta = meta => saveJson(META_FILE, meta);
 const loadAnon = () => loadJson(ANON_FILE);
 const saveAnon = data => saveJson(ANON_FILE, data);
 function isOwner(email) { return OWNER_EMAILS.includes(email); }
+
+// Deletes files.html uploads past their expiresAt (files over their group's
+// "permanent" size threshold — see SIGNED_IN_PERMANENT_BYTES/ANON_PERMANENT_BYTES
+// above). Runs on a timer and once at startup, since the server may have been
+// off past some files' expiry.
+function cleanupExpiredFiles() {
+  const meta = loadMeta();
+  const now = Date.now();
+  const resolvedDir = path.resolve(USER_FILES_DIR);
+  let changed = false;
+  for (const [filename, m] of Object.entries(meta)) {
+    if (!m.expiresAt || m.expiresAt > now) continue;
+    try { fs.unlinkSync(path.join(resolvedDir, filename)); } catch {}
+    delete meta[filename];
+    changed = true;
+  }
+  if (changed) saveMeta(meta);
+}
+setInterval(cleanupExpiredFiles, 5 * 60 * 1000); // every 5 minutes
 
 // { [email]: [path, ...] } — loadJson/saveJson default to {} objects, which
 // is also the right empty-state shape here (no keys = no one has folders yet).
@@ -197,12 +224,13 @@ function makeFilename(originalname) {
 // ── Forum post/comment attachments — any signed-in user, any file type. ──
 // Not part of the file-owners.json metadata system and never listed
 // publicly — only reachable via the specific URL a post/comment embeds.
+const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024; // 50MB
 const uploadAttachment = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOAD_DIR),
     filename: (req, file, cb) => cb(null, makeFilename(file.originalname)),
   }),
-  limits: { fileSize: MAX_FILE_BYTES },
+  limits: { fileSize: MAX_ATTACHMENT_BYTES },
 });
 
 app.post('/upload', verifyFirebaseToken, (req, res) => {
@@ -265,16 +293,22 @@ app.post('/upload-message', verifyFirebaseToken, (req, res) => {
   });
 });
 
-// ── Personal file storage (files.html) — signed-in users get unlimited
-// uploads up to MAX_FILE_BYTES each; anonymous visitors get up to
-// ANON_UPLOAD_LIMIT uploads (per IP, tracked forever in anon-uploads.json),
-// each up to ANON_MAX_FILE_BYTES. ───────────────────────────────────────
+// ── Personal file storage (files.html) — both signed-in and anonymous
+// uploads accept files up to MAX_UPLOAD_BYTES (1GB); anything over each
+// group's "permanent" threshold gets an expiresAt and is purged by
+// cleanupExpiredFiles below. Anonymous visitors are additionally capped
+// at ANON_UPLOAD_LIMIT uploads total (per IP, tracked forever in
+// anon-uploads.json). ─────────────────────────────────────────────────
 const userFileStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, USER_FILES_DIR),
   filename: (req, file, cb) => cb(null, makeFilename(file.originalname)),
 });
-const uploadUserFile = multer({ storage: userFileStorage, limits: { fileSize: MAX_FILE_BYTES } });
-const uploadAnonFile = multer({ storage: userFileStorage, limits: { fileSize: ANON_MAX_FILE_BYTES } });
+const uploadUserFile = multer({ storage: userFileStorage, limits: { fileSize: MAX_UPLOAD_BYTES } });
+const uploadAnonFile = multer({ storage: userFileStorage, limits: { fileSize: MAX_UPLOAD_BYTES } });
+
+function expiryFor(size, permanentBytes) {
+  return size > permanentBytes ? Date.now() + TEMP_FILE_LIFETIME_MS : null;
+}
 
 app.post('/upload-file', optionalAuth, (req, res) => {
   if (req.user) {
@@ -295,6 +329,7 @@ app.post('/upload-file', optionalAuth, (req, res) => {
         const toAdd = folderAncestors(folder).filter(p => !mine.includes(p));
         if (toAdd.length) { folders[req.user.email] = [...mine, ...toAdd]; saveFolders(folders); }
       }
+      const expiresAt = expiryFor(req.file.size, SIGNED_IN_PERMANENT_BYTES);
       const meta = loadMeta();
       meta[req.file.filename] = {
         email: req.user.email,
@@ -302,9 +337,10 @@ app.post('/upload-file', optionalAuth, (req, res) => {
         size: req.file.size,
         mtime: Date.now(),
         folder,
+        expiresAt,
       };
       saveMeta(meta);
-      res.json({ url: `${PUBLIC_BASE_URL}/docs/${req.file.filename}` });
+      res.json({ url: `${PUBLIC_BASE_URL}/docs/${req.file.filename}`, expiresAt });
     });
     return;
   }
@@ -320,15 +356,17 @@ app.post('/upload-file', optionalAuth, (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file received' });
     anon[ip] = (anon[ip] || 0) + 1;
     saveAnon(anon);
+    const expiresAt = expiryFor(req.file.size, ANON_PERMANENT_BYTES);
     const meta = loadMeta();
     meta[req.file.filename] = {
       email: null,
       name: req.file.originalname,
       size: req.file.size,
       mtime: Date.now(),
+      expiresAt,
     };
     saveMeta(meta);
-    res.json({ url: `${PUBLIC_BASE_URL}/docs/${req.file.filename}` });
+    res.json({ url: `${PUBLIC_BASE_URL}/docs/${req.file.filename}`, expiresAt });
   });
 });
 
@@ -349,6 +387,7 @@ app.get('/my-files', verifyFirebaseToken, (req, res) => {
         mtime: m.mtime || 0,
         email: m.email,
         folder: m.folder || '',
+        expiresAt: m.expiresAt || null,
         url: `${PUBLIC_BASE_URL}/docs/${encodeURIComponent(filename)}`,
       };
     });
@@ -545,6 +584,8 @@ app.use('/projects', express.static(PROJECT_DIR, { maxAge: '30d' }));
 app.use('/messages-media', express.static(MESSAGE_DIR, { maxAge: '30d' }));
 
 app.get('/', (req, res) => res.send('oeperweb forum upload server is running.'));
+
+cleanupExpiredFiles(); // catch up on anything that expired while the server was off
 
 app.listen(PORT, () => console.log(
   `Upload server listening on port ${PORT} (public base: ${PUBLIC_BASE_URL})\n` +

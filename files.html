@@ -198,6 +198,20 @@
   .anon-result-list { display: flex; flex-direction: column; gap: 8px; }
   .anon-result-row { display: flex; align-items: center; gap: 8px; }
   .anon-result-row .search-input { border-radius: 100px; }
+  .temp-badge {
+    flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--md-sys-color-error);
+    border: 1px solid var(--md-sys-color-error); border-radius: 100px; padding: 3px 9px;
+  }
+
+  .upload-progress { background-color: var(--md-sys-color-surface); border-radius: 16px; padding: 14px 18px; margin-bottom: 16px; }
+  .upload-progress-label {
+    font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .upload-progress-track { height: 6px; border-radius: 3px; background: var(--md-sys-color-surface-variant); overflow: hidden; }
+  .upload-progress-fill { height: 100%; width: 0%; border-radius: 3px; background: var(--md-sys-color-primary); transition: width 0.15s ease; }
+
+  .temp-tag { color: var(--md-sys-color-error); font-weight: 500; }
 
   .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
   .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
@@ -224,11 +238,15 @@
   </header>
 
   <div class="anon-panel" id="anonPanel" style="display:none;">
-    <p class="anon-hint">Upload without signing in — up to 10 files, up to 25MB each. Each link below is the only way to get back to that file afterward, so save them somewhere.</p>
+    <p class="anon-hint">Upload without signing in — up to 10 files, up to 1GB each. Files over 25MB are temporary and get deleted 2 hours after upload. Each link below is the only way to get back to that file afterward, so save them somewhere.</p>
     <label class="upload-btn" style="align-self:flex-start;">
       <span class="material-symbols-rounded">upload</span> Upload files
       <input type="file" id="anonUploadInput" multiple>
     </label>
+    <div class="upload-progress" id="anonUploadProgress" style="display:none;">
+      <div class="upload-progress-label" id="anonUploadProgressLabel"></div>
+      <div class="upload-progress-track"><div class="upload-progress-fill" id="anonUploadProgressFill"></div></div>
+    </div>
     <div class="anon-result-list" id="anonResultList"></div>
   </div>
 
@@ -253,6 +271,10 @@
         <span class="material-symbols-rounded">upload</span> Upload
         <input type="file" id="uploadInput" multiple>
       </label>
+    </div>
+    <div class="upload-progress" id="uploadProgress" style="display:none;">
+      <div class="upload-progress-label" id="uploadProgressLabel"></div>
+      <div class="upload-progress-track"><div class="upload-progress-fill" id="uploadProgressFill"></div></div>
     </div>
   </div>
 
@@ -304,7 +326,7 @@
 import { mountTopNav } from './shared/topnav.js?v=10';
 import {
   SERVER_ENDPOINT, getCurrentUser, onAccountChange, isOwnerEmail, uploadFile,
-} from './shared/account.js?v=17';
+} from './shared/account.js?v=18';
 import { mountFooter } from './shared/footer.js?v=4';
 
 mountTopNav();
@@ -312,10 +334,15 @@ mountFooter();
 
 // files.html's own caps — deliberately separate from account.js's shared
 // MAX_IMAGE_BYTES (10MB), which is for post/story/comment image attachments
-// elsewhere on the site, not this page's general file storage. Signed-in
-// uploads have no size cap (server-enforced too, see upload-server.js);
-// only anonymous uploads are capped, as abuse protection.
-const ANON_MAX_BYTES = 25 * 1024 * 1024; // 25MB
+// elsewhere on the site, not this page's general file storage. Both signed-in
+// and anonymous uploads accept files up to MAX_UPLOAD_BYTES (also enforced
+// server-side, see upload-server.js) — anything over each group's
+// "permanent" threshold is still accepted, but gets auto-deleted 2 hours
+// after upload (server-enforced; these numbers just drive the client's
+// "will be temporary" notice).
+const MAX_UPLOAD_BYTES = 1024 * 1024 * 1024; // 1GB
+const SIGNED_IN_PERMANENT_BYTES = 50 * 1024 * 1024; // 50MB
+const ANON_PERMANENT_BYTES = 25 * 1024 * 1024; // 25MB
 const ANON_MAX_FILES = 10; // also enforced server-side, per IP, forever
 
 let files = [];
@@ -351,6 +378,25 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2800);
+}
+function expiryLabel(expiresAt) {
+  if (!expiresAt) return '';
+  const ms = expiresAt - Date.now();
+  if (ms <= 0) return 'expiring…';
+  const mins = Math.ceil(ms / 60000);
+  if (mins < 60) return `expires in ${mins}m`;
+  return `expires in ${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
+function showUploadProgress(prefix, label) {
+  document.getElementById(prefix + 'Progress').style.display = '';
+  document.getElementById(prefix + 'ProgressLabel').textContent = label;
+  document.getElementById(prefix + 'ProgressFill').style.width = '0%';
+}
+function updateUploadProgress(prefix, frac) {
+  document.getElementById(prefix + 'ProgressFill').style.width = Math.round(frac * 100) + '%';
+}
+function hideUploadProgress(prefix) {
+  document.getElementById(prefix + 'Progress').style.display = 'none';
 }
 function copyToClipboard(text) {
   if (navigator.clipboard) {
@@ -729,7 +775,7 @@ function buildCard(f) {
     ${thumbHtml}
     <div class="file-main">
       <div class="file-name">${escHtml(f.name)}</div>
-      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.untracked ? ' · Unknown owner' : ''}</div>
+      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.untracked ? ' · Unknown owner' : ''}${f.expiresAt ? ` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
       ${isAudio(f.name) ? `<audio class="file-audio-player" controls preload="metadata" src="${f.url}"></audio>` : ''}
     </div>
     <div class="file-actions">
@@ -792,42 +838,57 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
   if (!user) { showToast('Sign in to upload'); return; }
 
   let uploaded = 0;
+  let temporaryCount = 0;
   let firstError = null;
-  for (const file of picked) {
+  for (let i = 0; i < picked.length; i++) {
+    const file = picked[i];
+    if (file.size > MAX_UPLOAD_BYTES) {
+      firstError = firstError || `${file.name}: must be under ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024 / 1024)}GB`;
+      continue;
+    }
+    showUploadProgress('upload', picked.length > 1 ? `Uploading ${file.name} (${i + 1}/${picked.length})…` : `Uploading ${file.name}…`);
     try {
-      await uploadFile(file, '/upload-file', currentFolder ? { folder: currentFolder } : undefined);
+      await uploadFile(file, '/upload-file', currentFolder ? { folder: currentFolder } : undefined, frac => updateUploadProgress('upload', frac));
       uploaded++;
+      if (file.size > SIGNED_IN_PERMANENT_BYTES) temporaryCount++;
     } catch (err) {
       firstError = firstError || `${file.name}: ${err.message}`;
     }
   }
+  hideUploadProgress('upload');
 
   if (uploaded) loadList();
+  const tempNote = temporaryCount ? ` ${temporaryCount === uploaded ? 'Over 50MB' : `${temporaryCount} over 50MB`} — auto-deletes in 2 hours.` : '';
   if (uploaded === picked.length) {
-    showToast(uploaded === 1 ? 'Uploaded!' : `Uploaded ${uploaded} files!`);
+    showToast((uploaded === 1 ? 'Uploaded!' : `Uploaded ${uploaded} files!`) + tempNote);
   } else if (uploaded > 0) {
-    showToast(`Uploaded ${uploaded} of ${picked.length} — ${firstError}`);
+    showToast(`Uploaded ${uploaded} of ${picked.length} — ${firstError}` + tempNote);
   } else {
     showToast('Could not upload: ' + firstError);
   }
 });
 
-async function uploadAnon(file) {
-  if (!SERVER_ENDPOINT) throw new Error('Server not configured');
-  const fd = new FormData();
-  fd.append('file', file);
-  const res = await fetch(SERVER_ENDPOINT + '/upload-file', { method: 'POST', body: fd });
-  if (!res.ok) {
-    let msg = `HTTP ${res.status}`;
-    try { msg = (await res.json()).error || msg; } catch {}
-    throw new Error(msg);
-  }
-  const data = await res.json();
-  return data.url;
+function uploadAnon(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    if (!SERVER_ENDPOINT) { reject(new Error('Server not configured')); return; }
+    const fd = new FormData();
+    fd.append('file', file);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', SERVER_ENDPOINT + '/upload-file');
+    if (onProgress) xhr.upload.addEventListener('progress', e => { if (e.lengthComputable) onProgress(e.loaded / e.total); });
+    xhr.onload = () => {
+      let data = {};
+      try { data = JSON.parse(xhr.responseText); } catch {}
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      else reject(new Error(data.error || `HTTP ${xhr.status}`));
+    };
+    xhr.onerror = () => reject(new Error('Upload failed — network error'));
+    xhr.send(fd);
+  });
 }
 
 let anonUploadedCount = 0;
-function addAnonResultRow(url) {
+function addAnonResultRow(url, temporary) {
   const list = document.getElementById('anonResultList');
   const row = document.createElement('div');
   row.className = 'anon-result-row';
@@ -836,6 +897,7 @@ function addAnonResultRow(url) {
       <input class="search-input" value="${escHtml(url)}" readonly>
     </div>
     <button class="icon-btn" title="Copy link"><span class="material-symbols-rounded">content_copy</span></button>
+    ${temporary ? '<span class="temp-badge" title="Over 25MB — deletes automatically 2 hours after upload">2h</span>' : ''}
   `;
   row.querySelector('.icon-btn').addEventListener('click', () => copyToClipboard(url));
   list.appendChild(row);
@@ -851,26 +913,32 @@ document.getElementById('anonUploadInput').addEventListener('change', async e =>
   if (picked.length > files.length) showToast(`Only uploading ${files.length} of ${picked.length} — that's the anonymous limit.`);
 
   let uploaded = 0;
+  let temporaryCount = 0;
   let firstError = null;
-  for (const file of files) {
-    if (file.size > ANON_MAX_BYTES) {
-      firstError = firstError || `${file.name}: must be under ${Math.round(ANON_MAX_BYTES/1024/1024)}MB`;
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (file.size > MAX_UPLOAD_BYTES) {
+      firstError = firstError || `${file.name}: must be under ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024 / 1024)}GB`;
       continue;
     }
+    showUploadProgress('anonUpload', files.length > 1 ? `Uploading ${file.name} (${i + 1}/${files.length})…` : `Uploading ${file.name}…`);
     try {
-      const url = await uploadAnon(file);
-      addAnonResultRow(url);
+      const data = await uploadAnon(file, frac => updateUploadProgress('anonUpload', frac));
+      addAnonResultRow(data.url, !!data.expiresAt);
       uploaded++;
       anonUploadedCount++;
+      if (file.size > ANON_PERMANENT_BYTES) temporaryCount++;
     } catch (err) {
       firstError = firstError || `${file.name}: ${err.message}`;
     }
   }
+  hideUploadProgress('anonUpload');
 
+  const tempNote = temporaryCount ? ` ${temporaryCount === uploaded ? 'Over 25MB' : `${temporaryCount} over 25MB`} — auto-deletes in 2 hours.` : '';
   if (uploaded === files.length) {
-    showToast(uploaded === 1 ? 'Uploaded!' : `Uploaded ${uploaded} files!`);
+    showToast((uploaded === 1 ? 'Uploaded!' : `Uploaded ${uploaded} files!`) + tempNote);
   } else if (uploaded > 0) {
-    showToast(`Uploaded ${uploaded} of ${files.length} — ${firstError}`);
+    showToast(`Uploaded ${uploaded} of ${files.length} — ${firstError}` + tempNote);
   } else {
     showToast('Could not upload: ' + firstError);
   }

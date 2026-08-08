@@ -262,7 +262,9 @@ export function signOutUser() {
   return signOut(auth);
 }
 
-export async function uploadFile(file, endpointPath, extraFields) {
+// onProgress (optional): called with a 0-1 fraction as the upload streams,
+// via XMLHttpRequest since fetch has no cross-browser upload-progress event.
+export async function uploadFile(file, endpointPath, extraFields, onProgress) {
   if (!file) return null;
   if (!SERVER_ENDPOINT) throw new Error('Image uploads are not set up yet');
   if (!currentUser) throw new Error('Sign in first');
@@ -274,17 +276,23 @@ export async function uploadFile(file, endpointPath, extraFields) {
   // req.body by the time the server's upload callback runs.
   if (extraFields) for (const key in extraFields) fd.append(key, extraFields[key]);
   fd.append('file', file);
-  const res = await fetch(SERVER_ENDPOINT + (endpointPath || '/upload'), {
-    method: 'POST',
-    headers: { Authorization: 'Bearer ' + idToken },
-    body: fd,
-  });
-  if (!res.ok) {
-    let message = `Upload failed (${res.status})`;
-    try { message = (await res.json()).error || message; } catch {}
-    throw new Error(message);
-  }
-  return (await res.json()).url;
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', SERVER_ENDPOINT + (endpointPath || '/upload'));
+    xhr.setRequestHeader('Authorization', 'Bearer ' + idToken);
+    if (onProgress) {
+      xhr.upload.addEventListener('progress', e => { if (e.lengthComputable) onProgress(e.loaded / e.total); });
+    }
+    xhr.onload = () => {
+      let data = {};
+      try { data = JSON.parse(xhr.responseText); } catch {}
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      else reject(new Error(data.error || `Upload failed (${xhr.status})`));
+    };
+    xhr.onerror = () => reject(new Error('Upload failed — network error'));
+    xhr.send(fd);
+  }).then(data => data.url);
 }
 
 export async function updateProfile({ displayName, photoFile, bio }) {
