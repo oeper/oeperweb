@@ -5,18 +5,19 @@ signed in can upload; each account only sees its own files; owners see
 everyone's for moderation) and the forum:
 
 - **`/upload`** — forum post/comment attachments (any signed-in user, any
-  file type, not just images) for `forum.html`. Not part of the per-account
+  file type, not just images) for `feed.html`. Not part of the per-account
   system below and never listed as a directory — only reachable via the
   exact URL a specific post/comment embeds.
 - **`/upload-file`** — personal file uploads, saved into `USER_FILES_DIR`.
-  Signed-in users get a 10MB limit and unlimited uploads; who uploaded each
-  file is recorded in `file-owners.json` (a small local JSON "database" next
-  to the script — gitignored, never committed, since it holds real users'
-  emails). You don't have to sign in to use it — anonymous uploads are
-  allowed too, capped at 1 file up to 50MB per IP address (tracked in
-  `anon-uploads.json`, also gitignored). Anonymous uploads aren't tied to any
-  account, so they never show up in `/my-files` — the URL returned at upload
-  time is the only way to reach the file again.
+  Signed-in users get a 50MB per-file limit and unlimited uploads; who
+  uploaded each file is recorded in `file-owners.json` (a small local JSON
+  "database" next to the script — gitignored, never committed, since it
+  holds real users' emails). You don't have to sign in to use it —
+  anonymous uploads are allowed too, capped at 10 files up to 25MB each per
+  IP address (tracked in `anon-uploads.json`, also gitignored). Anonymous
+  uploads aren't tied to any account, so they never show up in
+  `/my-files` — the URL returned at upload time is the only way to reach
+  the file again.
 - **`/my-files`** — requires sign-in. Returns the requesting account's own
   uploads; owners get everyone's.
 - **`DELETE /docs/:name`** — requires sign-in; only the file's own uploader
@@ -171,11 +172,11 @@ USER_FILES_DIR=~/storage/downloads/files PUBLIC_BASE_URL=https://your-tunnel-url
 ## Anonymous upload limits
 
 Uploads without signing in are capped by two constants in
-`upload-server.js`: `ANON_MAX_FILE_BYTES` (default 50MB) and
-`ANON_UPLOAD_LIMIT` (default 1 file per IP address, tracked forever in
+`upload-server.js`: `ANON_MAX_FILE_BYTES` (default 25MB) and
+`ANON_UPLOAD_LIMIT` (default 10 files per IP address, tracked forever in
 `anon-uploads.json`). There's no env var for these — edit the constants
 directly if you want different limits. Signed-in uploads are separately
-capped by `MAX_FILE_BYTES` (10MB, unlimited count, see below).
+capped by `MAX_FILE_BYTES` (50MB, unlimited count, see below).
 
 ## Changing the Discord report webhook
 
@@ -263,9 +264,9 @@ Android will kill background apps to save battery. To reduce that:
 
 Two places, must match:
 - `MAX_FILE_BYTES` in `upload-server.js` (server-side enforcement)
-- `MAX_IMAGE_BYTES` in `forum.html` (so the browser rejects oversized files
-  before even trying to upload them)
+- `SIGNED_IN_MAX_BYTES` in `files.html` (so the browser rejects oversized
+  files before even trying to upload them)
 
 Change both, restart the server, and you're done — no redeploy needed for
-the server-side change, but `forum.html` needs to be pushed since it's part
+the server-side change, but `files.html` needs to be pushed since it's part
 of the static site.
