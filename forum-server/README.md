@@ -322,8 +322,20 @@ override those) there once instead of retyping it on every restart:
 
 ```sh
 # forum-server/.env
-AI_UPSTREAM=https://ai.oeper.dev
+AI_UPSTREAM=http://localhost:6691
+AI_UPSTREAM_API_KEY=whatever-lm-studio-shows-you
 ```
+
+`AI_UPSTREAM` can be a `localhost` URL if this script runs on the *same*
+machine as the model server (simplest — no tunnel hop for that internal
+call), or a public tunnel URL if it runs elsewhere, same idea as
+`upload-server.js`'s `USER_FILES_DIR`. `AI_UPSTREAM_API_KEY` is optional —
+only needed if the model server has its own API-key requirement turned on
+(LM Studio: Developer tab → Server Settings). Worth keeping that on if
+`AI_UPSTREAM` is itself a public tunnel URL, since it stops anyone who
+finds *that* URL from hitting the model directly and bypassing every limit
+this proxy enforces. Sent as `Authorization: Bearer <key>`; omitted
+entirely when blank.
 
 ```sh
 cd oeperweb/forum-server
@@ -333,7 +345,7 @@ node ai-proxy.js
 Or without `.env`, inline for a single run:
 
 ```sh
-AI_UPSTREAM=https://ai.oeper.dev node ai-proxy.js
+AI_UPSTREAM=http://localhost:6691 AI_UPSTREAM_API_KEY=... node ai-proxy.js
 ```
 
 It listens on `PORT` (default `8788`) locally. `AI_UPSTREAM` just needs to
