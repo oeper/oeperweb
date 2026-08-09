@@ -41,6 +41,14 @@ const PORT = process.env.PORT || 8788;
 // necessarily on the same network anymore.
 const AI_UPSTREAM = process.env.AI_UPSTREAM || 'https://ai.oeper.dev';
 
+// LM Studio's server has its own "Require API Key" setting, worth keeping
+// on since AI_UPSTREAM may be a publicly-tunneled address — leaving it off
+// would let anyone who finds that URL hit the model directly, unthrottled,
+// bypassing every limit this proxy enforces. Set this to whatever key LM
+// Studio's Developer → Server Settings shows/lets you set; left blank, no
+// Authorization header is sent (fine if the upstream doesn't require one).
+const AI_UPSTREAM_API_KEY = process.env.AI_UPSTREAM_API_KEY || '';
+
 // Default/fallback model when a request doesn't specify one — ai.html's
 // dropdown (sourced from the config/aiModels Firestore doc) can override
 // this per-request via the `model` field, see /api/chat below.
@@ -125,7 +133,10 @@ app.post('/api/chat', async (req, res) => {
   try {
     upstream = await fetch(`${AI_UPSTREAM}/v1/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(AI_UPSTREAM_API_KEY ? { Authorization: `Bearer ${AI_UPSTREAM_API_KEY}` } : {}),
+      },
       body: JSON.stringify({
         model,
         messages,
