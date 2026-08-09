@@ -304,15 +304,22 @@ These are constants at the top of `ai-proxy.js`, not env vars — edit them
 directly if you want different limits.
 
 `AI_MODEL` is still the default/fallback model, used whenever a request
-doesn't specify one. `ai.html` additionally shows a dropdown of models
-sourced from the `config/aiModels` Firestore doc (`{ models: [{id, label},
-...] }`), editable in real time from `admin.html`'s "AI Models" section —
-no restart needed, changes reach any open `/ai` tab instantly via
-`onSnapshot`. The selected model id is sent as `model` in the `/api/chat`
-request body and forwarded to `AI_UPSTREAM` as-is; `ai-proxy.js` has no
-Firebase access, so it can't validate that id against the Firestore list —
-an unrecognized model just gets whatever error the upstream returns for a
-model it doesn't have loaded.
+doesn't specify one. `ai.html`'s dropdown leads with **`GET /api/models`**
+— models actually loaded into memory right now, via LM Studio's own
+extended API (`AI_UPSTREAM/api/v0/models`, not the plain OpenAI-compatible
+`/v1/models`, which lists the whole downloaded inventory regardless of
+what's using RAM). This proxy never causes anything to load — it only
+reports LM Studio's own `"state": "loaded"` field, so you stay in full
+control of what's active and how much RAM is in use. The
+`config/aiModels` Firestore doc (`{ models: [{id, label}, ...] }`,
+editable in real time from `admin.html`'s "AI Models" section — no
+restart needed, reaches any open `/ai` tab instantly via `onSnapshot`)
+merges in afterward as extra entries, for models worth offering even when
+not currently loaded. The selected model id is sent as `model` in the
+`/api/chat` request body and forwarded to `AI_UPSTREAM` as-is;
+`ai-proxy.js` has no Firebase access, so it can't validate a
+Firestore-sourced id — picking one that isn't loaded just gets whatever
+error the upstream returns.
 
 `ai.html` (branded "epic AI" in the UI) also has: multiple chats
 (localStorage only, since this page has no sign-in — nothing here is

@@ -92,22 +92,29 @@ app.get('/', (req, res) => res.send('oeperweb AI proxy is running.'));
 
 app.get('/api/model', (req, res) => res.json({ model: AI_MODEL }));
 
-// Real, currently-loaded models from the upstream server (LM Studio's
-// OpenAI-compatible /v1/models) — what ai.html's dropdown actually shows,
-// since a hand-maintained list (config/aiModels in Firestore) drifts out
-// of sync with whatever's actually loaded. That Firestore list still gets
-// merged in client-side as extra entries, for models you want offered
-// even when not currently loaded.
+// Only models actually loaded into memory right now — NOT the OpenAI-
+// compatible /v1/models, which lists the whole downloaded inventory
+// regardless of what's using RAM. LM Studio's own extended API
+// (/api/v0/models) reports a per-model "state": "loaded" | "not-loaded",
+// which is what lets us filter down to just what you've deliberately
+// loaded — this proxy never causes a model to load, it only reports
+// what's already running. Also drops "embeddings"-type entries, which
+// can't serve chat completions even if loaded. config/aiModels
+// (Firestore, admin.html-editable) still merges in afterward client-side
+// as extra entries, for models worth offering even when not loaded.
 app.get('/api/models', async (req, res) => {
   try {
-    const upstream = await fetch(`${AI_UPSTREAM}/v1/models`, {
+    const upstream = await fetch(`${AI_UPSTREAM}/api/v0/models`, {
       headers: AI_UPSTREAM_API_KEY ? { Authorization: `Bearer ${AI_UPSTREAM_API_KEY}` } : {},
     });
     if (!upstream.ok) {
       return res.status(502).json({ error: `Model server responded ${upstream.status}` });
     }
     const data = await upstream.json();
-    const models = Array.isArray(data.data) ? data.data.map(m => ({ id: m.id, label: m.id })) : [];
+    const list = Array.isArray(data.data) ? data.data : [];
+    const models = list
+      .filter(m => m.state === 'loaded' && m.type !== 'embeddings')
+      .map(m => ({ id: m.id, label: m.id }));
     res.json({ models });
   } catch (err) {
     res.status(502).json({ error: 'Could not reach the model server: ' + err.message });
