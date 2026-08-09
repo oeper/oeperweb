@@ -1,24 +1,49 @@
-// Public proxy in front of a small local model (InferrLM, running on a phone
-// on the home LAN) so oeper.dev/ai can reach it from the internet. Separate
-// process/port from upload-server.js on purpose — this one has no auth at
-// all (by design, see README), so keeping it isolated means a problem here
-// can't affect file uploads or the forum, and either can be restarted
-// independently.
+// Public proxy in front of a small local model (LM Studio, running on a PC,
+// exposed at ai.oeper.dev via its own Cloudflare Tunnel) so oeper.dev/ai can
+// reach it from the internet. Separate process/port from upload-server.js on
+// purpose — this one has no auth at all (by design, see README), so keeping
+// it isolated means a problem here can't affect file uploads or the forum,
+// and either can be restarted independently.
 const express = require('express');
 const cors = require('cors');
 const { Readable } = require('stream');
+const fs = require('fs');
+const path = require('path');
+
+// Same .env loader as upload-server.js — see that file for why (config
+// living in one persistent file beats retyping env vars on every restart,
+// which is how AI_UPSTREAM ended up stale after moving the model to a new
+// host). Real shell env vars still win over anything in .env.
+function loadDotEnv() {
+  const envPath = path.join(__dirname, '.env');
+  if (!fs.existsSync(envPath)) return;
+  for (const rawLine of fs.readFileSync(envPath, 'utf8').split('\n')) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq === -1) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (!(key in process.env)) process.env[key] = value;
+  }
+}
+loadDotEnv();
 
 const PORT = process.env.PORT || 8788;
 
-// Where InferrLM's OpenAI-compatible server is listening. Must be reachable
-// from whatever machine runs this proxy — same LAN as the phone running
-// InferrLM (in practice, this runs on the same Termux setup as
-// upload-server.js, so as long as that phone and the InferrLM device share
-// a Wi-Fi network, this works regardless of which device is which).
-const AI_UPSTREAM = process.env.AI_UPSTREAM || 'http://192.168.88.56:8889';
+// Where the OpenAI-compatible model server is listening. Must be reachable
+// from whatever machine runs this proxy — currently a public URL
+// (ai.oeper.dev, the PC's own Cloudflare Tunnel to its LM Studio server)
+// rather than a LAN IP, since this proxy and the model host aren't
+// necessarily on the same network anymore.
+const AI_UPSTREAM = process.env.AI_UPSTREAM || 'https://ai.oeper.dev';
 
-// Forced server-side so the public client never has to know/guess the
-// exact model id — whatever the client sends in its request is ignored.
+// Default/fallback model when a request doesn't specify one — ai.html's
+// dropdown (sourced from the config/aiModels Firestore doc) can override
+// this per-request via the `model` field, see /api/chat below.
 const AI_MODEL = process.env.AI_MODEL || 'ggml-org_gemma-3-1b-it-GGUF_gemma-3-1b-it-Q4_K_M';
 
 const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765'];

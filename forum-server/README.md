@@ -280,14 +280,16 @@ PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
 
 `ai-proxy.js` is a **separate script and process** from `upload-server.js` —
 run it alongside, not instead of, the upload server. It backs `ai.html`, a
-small chat UI that talks to [InferrLM](https://github.com/loomax-labs/InferrLM)
-running on a phone on your home network (`AI_UPSTREAM`, default
-`http://192.168.88.56:8889`), exposed publicly at `ai2.oeper.dev`.
+small chat UI that talks to an OpenAI-compatible model server (`AI_UPSTREAM`,
+default `https://ai.oeper.dev` — LM Studio running on a PC, exposed publicly
+via its own Cloudflare Tunnel), itself exposed publicly at `ai2.oeper.dev`.
+Two separate public hostnames: `ai2.oeper.dev` is this proxy (what `ai.html`
+actually calls), `ai.oeper.dev` is the model host it forwards to.
 
 **This endpoint has no sign-in and no API key, by design** — anyone with the
 URL can chat with the model, no account required. That's a deliberate
-trade-off, not an oversight. Since the model is small and phone-hosted, the
-proxy protects it with a few limits instead of authentication:
+trade-off, not an oversight. Since the model is small and modestly hosted,
+the proxy protects it with a few limits instead of authentication:
 
 - Only one generation in flight at a time — a second request while one is
   running gets a `429` asking it to retry shortly, rather than both crawling
@@ -314,16 +316,30 @@ model it doesn't have loaded.
 
 ### Running it
 
+Like `upload-server.js`, this loads a `.env` file next to it (gitignored)
+if one exists — put `AI_UPSTREAM` (and `AI_MODEL`/`PORT` if you want to
+override those) there once instead of retyping it on every restart:
+
 ```sh
-cd oeperweb/forum-server
-AI_UPSTREAM=http://192.168.88.56:8889 node ai-proxy.js
+# forum-server/.env
+AI_UPSTREAM=https://ai.oeper.dev
 ```
 
-It listens on `PORT` (default `8788`) locally. To reach it from
-`AI_UPSTREAM`, the machine running this script needs to be on the same
-Wi-Fi network as whatever's running InferrLM — in practice this is easiest
-if it's the *same* phone as your upload server, just a different app and
-port.
+```sh
+cd oeperweb/forum-server
+node ai-proxy.js
+```
+
+Or without `.env`, inline for a single run:
+
+```sh
+AI_UPSTREAM=https://ai.oeper.dev node ai-proxy.js
+```
+
+It listens on `PORT` (default `8788`) locally. `AI_UPSTREAM` just needs to
+be *reachable* from wherever this script runs — it doesn't need to be on
+the same device or network as the model host, since it's now a public
+tunnel URL rather than a LAN IP.
 
 ### Exposing it at ai2.oeper.dev
 
