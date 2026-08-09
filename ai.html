@@ -594,13 +594,43 @@ const attachPreview = document.getElementById('attachPreview');
 const attachPreviewImg = document.getElementById('attachPreviewImg');
 let pendingImageFile = null;
 
-attachInput.addEventListener('change', () => {
+// Downscales to at most maxDim on the longest side and re-encodes as JPEG
+// — keeps the uploaded file (and later, the base64 payload sent to the
+// model) reasonably sized regardless of how large the original photo is;
+// phone camera photos routinely run 5-10MB+ before this.
+async function resizeImage(file, maxDim = 1024, quality = 0.85) {
+  const img = await new Promise((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error('Could not read image'));
+    el.src = URL.createObjectURL(file);
+  });
+  let { width, height } = img;
+  if (width > maxDim || height > maxDim) {
+    const scale = maxDim / Math.max(width, height);
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+  URL.revokeObjectURL(img.src);
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+  return new File([blob], 'image.jpg', { type: 'image/jpeg' });
+}
+
+attachInput.addEventListener('change', async () => {
   const file = attachInput.files[0];
   attachInput.value = '';
   if (!file) return;
   if (!file.type.startsWith('image/')) { alert('Only images are supported right now'); return; }
-  pendingImageFile = file;
-  attachPreviewImg.src = URL.createObjectURL(file);
+  try {
+    pendingImageFile = await resizeImage(file);
+  } catch {
+    pendingImageFile = file;
+  }
+  attachPreviewImg.src = URL.createObjectURL(pendingImageFile);
   attachPreview.style.display = 'flex';
 });
 document.getElementById('attachRemoveBtn').addEventListener('click', () => {
@@ -619,6 +649,22 @@ async function uploadAnonImage(file) {
     throw new Error(msg);
   }
   return (await res.json()).url;
+}
+
+// LM Studio's vision support needs an actual base64 data URI in
+// image_url.url — unlike OpenAI's real API, it won't fetch a remote URL
+// itself. Images are still stored/persisted as short URLs (uploaded via
+// uploadAnonImage), so localStorage stays lean; this is only used right
+// before a message carrying an image is actually sent.
+async function urlToDataUrl(url) {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Could not read image'));
+    reader.readAsDataURL(blob);
+  });
 }
 
 function autoGrow() {
@@ -641,18 +687,25 @@ function setSending(sending) {
 }
 
 // Converts this chat's stored {role, content, imageUrl} messages into the
-// OpenAI wire format (multi-part content for anything with an image),
-// with the system prompt always prepended.
-function toWireMessages(msgs) {
-  const wire = msgs.map(m => {
+// OpenAI wire format (multi-part content for anything with an image, as a
+// base64 data URI — see urlToDataUrl), with the system prompt always
+// prepended. Async because fetching+encoding each image happens here.
+async function toWireMessages(msgs) {
+  const wire = await Promise.all(msgs.map(async m => {
     if (m.imageUrl) {
+      let dataUrl;
+      try {
+        dataUrl = await urlToDataUrl(m.imageUrl);
+      } catch {
+        dataUrl = m.imageUrl; // fall back to the plain URL; upstream will just error on it
+      }
       return { role: m.role, content: [
         { type: 'text', text: m.content || '' },
-        { type: 'image_url', image_url: { url: m.imageUrl } },
+        { type: 'image_url', image_url: { url: dataUrl } },
       ] };
     }
     return { role: m.role, content: m.content };
-  });
+  }));
   return [{ role: 'system', content: SYSTEM_PROMPT }, ...wire];
 }
 
@@ -705,10 +758,11 @@ async function sendMessage() {
   let reasoningBuf = '';
   let contentBuf = '';
   try {
+    const wireMessages = await toWireMessages(chat.messages);
     const res = await fetch(AI_ENDPOINT + '/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: toWireMessages(chat.messages), model: modelSelect.value || undefined }),
+      body: JSON.stringify({ messages: wireMessages, model: modelSelect.value || undefined }),
       signal: controller.signal,
     });
     if (!res.ok || !res.body) {

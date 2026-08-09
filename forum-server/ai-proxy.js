@@ -61,6 +61,10 @@ const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765'];
 // being hammered, not to gate who can use it.
 const MAX_MESSAGES = 40;
 const MAX_MESSAGE_CHARS = 4000;
+// Vision messages (ai.html's image attach) carry a base64 data URI instead
+// of plain text — sized for one resized image with comfortable margin, not
+// a whole conversation's worth (see express.json's limit above).
+const MAX_IMAGE_CONTENT_CHARS = 6 * 1024 * 1024;
 const MAX_TOKENS = 1024;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const RATE_LIMIT_MAX = 20; // requests per IP per window
@@ -68,7 +72,11 @@ const RATE_LIMIT_MAX = 20; // requests per IP per window
 const app = express();
 app.set('trust proxy', true); // req.ip reflects the real visitor through the Cloudflare Tunnel
 app.use(cors({ origin: ALLOWED_ORIGINS }));
-app.use(express.json({ limit: '200kb' }));
+// 200kb was fine for plain text chat, but LM Studio's vision support only
+// accepts base64-encoded images (not remote URLs, unlike OpenAI's actual
+// API) — ai.html sends those inline in the message body, so this needs
+// enough headroom for a resized-but-still-substantial image.
+app.use(express.json({ limit: '8mb' }));
 
 const rateLimitMap = new Map(); // ip -> { count, windowStart }
 function checkRateLimit(ip) {
@@ -140,10 +148,11 @@ app.post('/api/chat', async (req, res) => {
     } else if (Array.isArray(m.content)) {
       // Vision-style multi-part content ([{type:'text',...}, {type:'image_url',...}])
       // — ai.html's image-attach feature. Loosely shape-checked; the
-      // upstream model server is what actually interprets these, and
-      // ai.html only ever sends an image URL (not base64), so this stays
-      // small regardless.
-      if (m.content.length > 4 || JSON.stringify(m.content).length > MAX_MESSAGE_CHARS * 2) {
+      // upstream model server is what actually interprets these. Sized for
+      // a base64 data URI (LM Studio's vision support needs one, not a
+      // remote URL like OpenAI's actual API accepts), not just a short URL
+      // string — a resized-on-the-client image comfortably fits under this.
+      if (m.content.length > 4 || JSON.stringify(m.content).length > MAX_IMAGE_CONTENT_CHARS) {
         return res.status(400).json({ error: 'Message content is too large' });
       }
     } else {
