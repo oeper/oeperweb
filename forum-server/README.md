@@ -314,6 +314,19 @@ Firebase access, so it can't validate that id against the Firestore list —
 an unrecognized model just gets whatever error the upstream returns for a
 model it doesn't have loaded.
 
+`ai.html` (branded "epic AI" in the UI) also has: multiple chats
+(localStorage only, since this page has no sign-in — nothing here is
+synced across devices), a `[[Button label]](url)` markdown flavor
+matching feed.html/messages.html plus real fenced ``` code-block
+rendering, a collapsible "Show thinking" block for reasoning-model output
+(either a separate `reasoning_content` stream field or an inline
+`<think>` tag — both are supported), and image attachments. Attachments
+upload through the same unauthenticated `/upload-file` path files.html's
+anonymous flow uses (25MB permanent / up to 1GB temporary, same limits —
+see the Personal file storage section above), then get sent to the model
+as an image URL in OpenAI's vision message format — `/api/chat` accepts
+array-shaped `content` for this now, not just plain strings.
+
 ### Running it
 
 Like `upload-server.js`, this loads a `.env` file next to it (gitignored)

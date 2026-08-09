@@ -3,19 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI — oeper.dev</title>
-<meta name="description" content="Chat with a small AI model, self-hosted on oeper.dev">
-<meta property="og:title" content="AI — oeper.dev">
-<meta property="og:description" content="Chat with a small AI model, self-hosted on oeper.dev">
+<title>epic AI — oeper.dev</title>
+<meta name="description" content="Chat with epic AI, self-hosted on oeper.dev">
+<meta property="og:title" content="epic AI — oeper.dev">
+<meta property="og:description" content="Chat with epic AI, self-hosted on oeper.dev">
 <meta property="og:url" content="https://oeper.dev/ai">
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
+<script src="./shared/theme-boot.js?v=5"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://fonts.cdnfonts.com">
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
 
 <style>
@@ -24,52 +25,46 @@
   :focus { outline: none; }
   :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
 
-  /* Fixed violet identity for this page — intentionally not wired into the
-     site-wide theme picker (shared/theme-boot.js is not loaded here), same
-     way Gemini's own palette doesn't follow whatever theme the rest of a
-     Google product is in. */
   :root {
-    --md-sys-color-background: #14111c;
-    --md-sys-color-surface: #1e1a2b;
-    --md-sys-color-surface-variant: #342b49;
-    --md-sys-color-primary: #c9a4ff;
-    --md-sys-color-on-primary: #3a1e6b;
-    --md-sys-color-secondary-container: #4a3a6e;
-    --md-sys-color-on-secondary-container: #ecdcff;
-    --md-sys-color-on-surface: #ebe4f7;
-    --md-sys-color-on-surface-variant: #cbbfe0;
-    --md-sys-color-outline: #4d4360;
-    --md-sys-color-outline-variant: #8f7fae;
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
     --md-sys-color-error: #ffb4ab;
   }
 
   body {
     min-height: 100vh;
-    background: radial-gradient(ellipse 900px 500px at 50% -10%, #2a1f45 0%, var(--md-sys-color-background) 60%);
-    font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    background: radial-gradient(ellipse 900px 500px at 50% -10%, var(--md-sys-color-secondary-container) 0%, var(--md-sys-color-background) 60%);
+    background-color: var(--md-sys-color-background);
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
     color: var(--md-sys-color-on-surface);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
   }
 
-  .page { position: relative; max-width: 760px; margin: 0 auto; padding: 40px 24px 32px; min-height: 100vh; display: flex; flex-direction: column; }
+  .page { position: relative; max-width: 760px; margin: 0 auto; padding: 40px 24px 24px; min-height: 100vh; display: flex; flex-direction: column; }
 
-  .header { margin-bottom: 24px; }
-  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 16px; flex-wrap: wrap; }
-  .header-link {
-    display: inline-flex; align-items: center; gap: 8px;
-    color: var(--md-sys-color-primary); text-decoration: none;
-    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: 14px; font-weight: 500; transition: opacity 0.2s;
-  }
-  .header-link:hover { opacity: 0.8; }
-  .header-link:visited { color: var(--md-sys-color-primary); }
+  .header { margin-bottom: 20px; }
+  .header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .header h1 {
-    font-family: 'Google Sans', 'Product Sans', sans-serif; font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400;
-    margin-bottom: 8px; letter-spacing: -0.5px;
-    background: linear-gradient(90deg, #c9a4ff, #f0c8ff);
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 400;
+    letter-spacing: -0.5px;
+    background: linear-gradient(90deg, var(--md-sys-color-primary), var(--md-sys-color-on-secondary-container));
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
   }
-  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 14px; max-width: 520px; line-height: 1.5; }
+  .header-icon-btn {
+    width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--md-sys-color-outline); background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .header-icon-btn:hover { background-color: var(--md-sys-state-hover); }
 
   .chat-shell { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .chat-messages { flex: 1; display: flex; flex-direction: column; padding-bottom: 16px; }
@@ -87,9 +82,12 @@
     background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);
   }
   .msg-avatar .material-symbols-rounded { font-size: 18px; }
+  .msg-col { display: flex; flex-direction: column; max-width: 78%; }
+  .msg.user .msg-col { align-items: flex-end; }
+  .msg-attach-img { max-width: 220px; max-height: 220px; border-radius: 14px; object-fit: cover; margin-bottom: 6px; display: block; }
   .msg-bubble {
-    max-width: 78%; padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.55;
-    white-space: pre-wrap; word-wrap: break-word; background: var(--md-sys-color-surface);
+    padding: 12px 16px; border-radius: 18px; font-size: 15px; line-height: 1.55;
+    white-space: pre-wrap; word-wrap: break-word; background: var(--md-sys-color-surface); max-width: 100%;
   }
   .msg.user .msg-bubble { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-bottom-right-radius: 4px; }
   .msg.assistant .msg-bubble { border-bottom-left-radius: 4px; }
@@ -100,14 +98,73 @@
   }
   @keyframes pulse { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
 
-  .chat-inputbar {
-    position: sticky; bottom: 16px; display: flex; align-items: flex-end; gap: 10px;
-    background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
-    border-radius: 26px; padding: 8px 8px 8px 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  /* Markdown rendering inside assistant bubbles */
+  .msg-bubble a { color: inherit; text-decoration: underline; }
+  .msg-bubble h1, .msg-bubble h2, .msg-bubble h3 { font-size: 1.1em; font-weight: 600; margin: 6px 0 4px; }
+  .msg-bubble ul { margin: 4px 0; padding-left: 20px; }
+  .msg-bubble li { margin-bottom: 3px; }
+  .msg-bubble code { background: rgba(127,127,127,0.2); border-radius: 4px; padding: 1px 5px; font-size: 0.9em; }
+  .msg-bubble pre.code-block {
+    background: rgba(0,0,0,0.25); border-radius: 10px; padding: 12px 14px; margin: 8px 0;
+    overflow-x: auto; font-size: 13px; line-height: 1.5;
   }
+  .msg-bubble pre.code-block code { background: none; padding: 0; }
+  .msg-bubble a.md-btn {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500;
+    padding: 6px 12px; border-radius: 100px; background: rgba(127,127,127,0.2);
+    color: inherit; text-decoration: none; margin: 4px 6px 4px 0; vertical-align: middle;
+  }
+  .msg-bubble a.md-btn:hover { background: rgba(127,127,127,0.32); }
+  .msg-bubble a.md-btn .material-symbols-rounded { font-size: 14px; }
+  .msg-bubble .md-table { border-collapse: collapse; margin: 8px 0; font-size: 0.9em; max-width: 100%; display: block; overflow-x: auto; }
+  .msg-bubble .md-table th, .msg-bubble .md-table td { border: 1px solid rgba(127,127,127,0.35); padding: 5px 9px; text-align: left; }
+  .msg-bubble .md-table th { background: rgba(127,127,127,0.15); font-weight: 600; }
+
+  .thinking-block { margin-bottom: 8px; font-size: 13px; }
+  .thinking-block summary {
+    cursor: pointer; color: var(--md-sys-color-on-surface-variant); font-weight: 500; list-style: none;
+    display: inline-flex; align-items: center; gap: 4px; user-select: none;
+  }
+  .thinking-block summary::-webkit-details-marker { display: none; }
+  .thinking-block summary::before {
+    content: 'expand_more'; font-family: 'Material Symbols Rounded'; font-size: 18px;
+    transition: transform 0.15s; display: inline-flex;
+  }
+  .thinking-block[open] summary::before { transform: rotate(180deg); }
+  .thinking-content {
+    margin-top: 6px; padding: 8px 12px; border-left: 2px solid var(--md-sys-color-outline);
+    color: var(--md-sys-color-on-surface-variant); white-space: pre-wrap; line-height: 1.5;
+  }
+
+  .attach-preview { display: flex; padding: 0 4px 10px; }
+  .attach-preview-item { position: relative; width: 64px; height: 64px; }
+  .attach-preview-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: block; }
+  .attach-remove-btn {
+    position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--md-sys-color-background);
+    background: var(--md-sys-color-error); color: #410002; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .attach-remove-btn .material-symbols-rounded { font-size: 14px; }
+
+  .model-bar { display: flex; justify-content: flex-end; margin-bottom: 8px; padding: 0 4px; }
+  .model-select {
+    background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface-variant); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 100px; padding: 5px 12px; font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; max-width: 100%;
+  }
+
+  .chat-inputbar {
+    position: sticky; bottom: 16px; display: flex; align-items: flex-end; gap: 4px;
+    background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 26px; padding: 8px 8px 8px 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  .attach-btn {
+    width: 38px; height: 38px; border-radius: 50%; border: none; flex-shrink: 0; background: transparent;
+    color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .attach-btn:hover { color: var(--md-sys-color-on-surface); background: var(--md-sys-state-hover); }
+  .attach-btn input { display: none; }
   #chatInput {
     flex: 1; background: transparent; border: none; outline: none; resize: none;
-    color: var(--md-sys-color-on-surface); font-family: 'Google Sans', 'Roboto Flex', sans-serif;
+    color: var(--md-sys-color-on-surface); font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
     font-size: 15px; line-height: 1.5; max-height: 160px; padding: 8px 0;
   }
   #chatInput::placeholder { color: var(--md-sys-color-on-surface-variant); }
@@ -128,28 +185,75 @@
     background: none; border: none; color: var(--md-sys-color-primary); font-size: 12px;
     font-family: inherit; cursor: pointer; text-decoration: underline; padding: 0;
   }
-  .model-select {
-    background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-primary); border: none;
-    border-radius: 8px; padding: 3px 6px; font: inherit; font-weight: 700; cursor: pointer; max-width: 260px;
+
+  /* Chats panel */
+  .chats-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .chats-overlay.open { opacity: 1; pointer-events: all; }
+  .chats-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(340px, 88vw); background: var(--md-sys-color-background);
+    border-left: 1px solid var(--md-sys-color-outline-variant); z-index: 201; transform: translateX(100%);
+    transition: transform 0.25s; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px;
   }
+  .chats-panel.open { transform: translateX(0); }
+  .chats-panel-header { display: flex; align-items: center; justify-content: space-between; }
+  .chats-panel-header h3 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 18px; font-weight: 500; }
+  .new-chat-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
+    border: none; border-radius: 100px; padding: 10px 16px; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+  }
+  .new-chat-btn:hover { opacity: 0.9; }
+  .chats-list { display: flex; flex-direction: column; gap: 4px; }
+  .chats-empty { color: var(--md-sys-color-on-surface-variant); font-size: 13px; text-align: center; padding: 20px 0; }
+  .chat-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+  .chat-row:hover { background: var(--md-sys-state-hover); }
+  .chat-row.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+  .chat-row .material-symbols-rounded:first-child { font-size: 18px; flex-shrink: 0; }
+  .chat-row-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+  .chat-row-delete {
+    width: 28px; height: 28px; border-radius: 50%; border: none; background: none; color: inherit; opacity: 0.6;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  }
+  .chat-row-delete:hover { opacity: 1; background: rgba(0,0,0,0.15); }
+  .chat-row-delete .material-symbols-rounded { font-size: 16px; }
 </style>
 </head>
 <body>
 
 <div class="page">
   <header class="header">
-    <h1>AI</h1>
-    <p>Chat with <select id="modelSelect" class="model-select"><option value="">a small local model</option></select>, running on my own hardware over a home connection. No sign-in needed.</p>
+    <div class="header-row">
+      <h1>epic AI</h1>
+      <button id="chatsBtn" class="header-icon-btn" title="Chats"><span class="material-symbols-rounded">forum</span></button>
+    </div>
   </header>
 
   <div class="chat-shell">
     <div class="chat-messages" id="chatMessages">
       <div class="chat-empty" id="chatEmpty">
         <span class="material-symbols-rounded">auto_awesome</span>
-        <p>Ask me anything.</p>
+        <p>Ask epic AI anything.</p>
       </div>
     </div>
+
+    <div class="attach-preview" id="attachPreview" style="display:none;">
+      <div class="attach-preview-item">
+        <img id="attachPreviewImg" src="" alt="">
+        <button id="attachRemoveBtn" class="attach-remove-btn" title="Remove"><span class="material-symbols-rounded">close</span></button>
+      </div>
+    </div>
+
+    <div class="model-bar">
+      <select id="modelSelect" class="model-select"><option value="">a small local model</option></select>
+    </div>
+
     <div class="chat-inputbar">
+      <label class="attach-btn" title="Attach an image">
+        <span class="material-symbols-rounded">add_photo_alternate</span>
+        <input type="file" id="attachInput" accept="image/*">
+      </label>
       <textarea id="chatInput" placeholder="Message…" rows="1"></textarea>
       <button id="sendBtn" class="send-btn" title="Send"><span class="material-symbols-rounded">arrow_upward</span></button>
     </div>
@@ -160,8 +264,18 @@
   </div>
 </div>
 
+<div class="chats-overlay" id="chatsOverlay"></div>
+<div class="chats-panel" id="chatsPanel">
+  <div class="chats-panel-header">
+    <h3>Chats</h3>
+    <button id="chatsCloseBtn" class="header-icon-btn" title="Close" style="width:36px;height:36px;"><span class="material-symbols-rounded">close</span></button>
+  </div>
+  <button id="newChatBtn" class="new-chat-btn"><span class="material-symbols-rounded">add</span> New chat</button>
+  <div class="chats-list" id="chatsList"></div>
+</div>
+
 <script type="module">
-import { db } from './shared/account.js?v=19';
+import { db, SERVER_ENDPOINT } from './shared/account.js?v=19';
 import { mountTopNav } from './shared/topnav.js?v=10';
 import { mountFooter } from './shared/footer.js?v=4';
 import { doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -170,16 +284,94 @@ mountFooter();
 
 const AI_ENDPOINT = 'https://ai2.oeper.dev';
 
-let controller = null;
-let history = [];
+// Sent as the first message on every request, never shown in the UI or
+// persisted as a visible chat message — just steers tone/formatting.
+const SYSTEM_PROMPT = "You are a helpful, friendly AI assistant embedded on a personal website (oeper.dev). Be concise but thorough when it actually helps. Format responses using Markdown — headings, **bold**, *italic*, bullet lists, tables, and fenced ``` code blocks — whenever it improves readability, especially for code, structured data, or step-by-step instructions.";
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-// The model dropdown: an empty-string option always means "use whatever
-// the proxy defaults to" (AI_MODEL in ai-proxy.js) — configuredModels
-// below comes from Firestore (config/aiModels), editable in admin.html
-// and live-synced here via onSnapshot, so the list updates without a
-// page reload if it's changed while this tab is open.
+const EMOJI_SHORTCODES = {
+  smile: '😄', laugh: '😂', wink: '😉', heart: '❤️', fire: '🔥', thumbsup: '👍',
+  thumbsdown: '👎', clap: '👏', wave: '👋', thinking: '🤔', eyes: '👀', tada: '🎉',
+  rocket: '🚀', check: '✅', x: '❌', star: '⭐', warning: '⚠️', 100: '💯',
+};
+function expandShortcodes(text) {
+  return text.replace(/:([a-z0-9_+-]+):/g, (m, name) => EMOJI_SHORTCODES[name] || m);
+}
+
+// Markdown for assistant replies — headings/tables/lists/bold/italic/links/
+// the [[Button]](url) styled-link syntax/emoji shortcodes, plus (unlike
+// feed.html/messages.html) real fenced ``` code-block support, since AI
+// output is far more likely to contain multi-line code than a forum post
+// or chat message. Code blocks are pulled out before any other pass runs
+// so bold/italic/table syntax inside them is never touched. Relies on
+// .msg-bubble's white-space: pre-wrap for line breaks, so plain \n is
+// left alone — only the multi-line constructs become real elements.
+function parseAiMarkdown(text) {
+  const codeBlocks = [];
+  const withPlaceholders = String(text || '').replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(`<pre class="code-block"><code>${escHtml(code.replace(/\n$/, ''))}</code></pre>`);
+    return `OEPERAICODEBLOCK${idx}ENDBLOCK`;
+  });
+
+  let html = expandShortcodes(escHtml(withPlaceholders))
+    .replace(/\r\n/g, '\n')
+    .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
+    .replace(/^##\s+(.+)$/gm,  '<h2>$1</h2>')
+    .replace(/^#\s+(.+)$/gm,   '<h1>$1</h1>')
+    .replace(/^(\|.+\|)\n(\|[ \t]*:?-{2,}:?[ \t]*(?:\|[ \t]*:?-{2,}:?[ \t]*)*\|?)\n((?:\|.*\|\n?)+)/gm, (m, headerLine, sepLine, bodyLines) => {
+      const splitRow = row => row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const headers = splitRow(headerLine);
+      const rows = bodyLines.trim().split('\n').filter(Boolean).map(splitRow);
+      const thead = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+      const tbody = rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
+      return `<table class="md-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+    })
+    .replace(/^(?:[ \t]*[-*+][ \t]+.+\n?)+/gm, match =>
+      `<ul>${match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*[-*+][ \t]+/, '')}</li>`).join('')}</ul>`)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[\[([^\]]+)\]\]\((https?:\/\/[^)]+)\)/g, '<a class="md-btn" href="$2" target="_blank" rel="noopener"><span class="material-symbols-rounded">arrow_forward</span>$1</a>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
+
+  return html.replace(/OEPERAICODEBLOCK(\d+)ENDBLOCK/g, (m, i) => codeBlocks[Number(i)]);
+}
+
+// Splits a raw assistant reply into "thinking" (reasoning-model output,
+// either a separate reasoning_content stream field or an inline <think>
+// tag) and the real answer, so the UI can show reasoning as a collapsible
+// "Show thinking" block instead of dumping it inline with the answer.
+function splitThinking(reasoningBuf, contentBuf) {
+  if (reasoningBuf) {
+    return { thinking: reasoningBuf, answer: contentBuf, stillThinking: contentBuf.length === 0 };
+  }
+  const openIdx = contentBuf.indexOf('<think>');
+  if (openIdx === -1) return { thinking: '', answer: contentBuf, stillThinking: false };
+  const closeIdx = contentBuf.indexOf('</think>', openIdx);
+  if (closeIdx === -1) {
+    return { thinking: contentBuf.slice(openIdx + 7), answer: contentBuf.slice(0, openIdx), stillThinking: true };
+  }
+  return {
+    thinking: contentBuf.slice(openIdx + 7, closeIdx).trim(),
+    answer: (contentBuf.slice(0, openIdx) + contentBuf.slice(closeIdx + 8)).trim(),
+    stillThinking: false,
+  };
+}
+
+function renderAssistantContent(bubble, reasoningBuf, contentBuf) {
+  const { thinking, answer, stillThinking } = splitThinking(reasoningBuf, contentBuf);
+  let html = '';
+  if (thinking) {
+    html += `<details class="thinking-block"${stillThinking ? ' open' : ''}><summary>${stillThinking ? 'Thinking…' : 'Show thinking'}</summary><div class="thinking-content">${escHtml(thinking)}</div></details>`;
+  }
+  if (answer) html += `<div class="answer-content">${parseAiMarkdown(answer)}</div>`;
+  bubble.innerHTML = html;
+}
+
+// ── Model dropdown ───────────────────────────────────────────
 const modelSelect = document.getElementById('modelSelect');
 let defaultModelName = 'a small local model';
 let configuredModels = [];
@@ -209,22 +401,159 @@ async function loadModelName() {
 }
 loadModelName();
 
+// ── Multiple chats (localStorage — this page has no sign-in) ──────────
+const CHATS_KEY = 'oe-ai-chats';
+const CURRENT_CHAT_KEY = 'oe-ai-current-chat';
+
+function loadChats() {
+  try { return JSON.parse(localStorage.getItem(CHATS_KEY)) || []; } catch { return []; }
+}
+function saveChats() { localStorage.setItem(CHATS_KEY, JSON.stringify(chats)); }
+function newChatId() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function makeChat() { return { id: newChatId(), title: 'New chat', messages: [], updatedAt: Date.now() }; }
+
+let chats = loadChats();
+let currentChatId = localStorage.getItem(CURRENT_CHAT_KEY);
+if (!chats.some(c => c.id === currentChatId)) {
+  const chat = chats[0] || makeChat();
+  if (!chats.length) chats.push(chat);
+  currentChatId = chat.id;
+}
+localStorage.setItem(CURRENT_CHAT_KEY, currentChatId);
+
+function getCurrentChat() { return chats.find(c => c.id === currentChatId); }
+
 const messagesEl = document.getElementById('chatMessages');
 const inputEl = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 
-function addMessage(role, content) {
+function addMessageEl(role, content, imageUrl) {
   document.getElementById('chatEmpty')?.remove();
   const wrap = document.createElement('div');
   wrap.className = 'msg ' + role;
   wrap.innerHTML = `
     <div class="msg-avatar"><span class="material-symbols-rounded">${role === 'user' ? 'person' : 'auto_awesome'}</span></div>
-    <div class="msg-bubble"></div>
+    <div class="msg-col">
+      ${imageUrl ? `<img class="msg-attach-img" src="${escHtml(imageUrl)}" alt="">` : ''}
+      <div class="msg-bubble"></div>
+    </div>
   `;
-  wrap.querySelector('.msg-bubble').textContent = content;
   messagesEl.appendChild(wrap);
+  const bubble = wrap.querySelector('.msg-bubble');
+  if (role === 'user') bubble.textContent = content;
+  else if (content) renderAssistantContent(bubble, '', content);
   wrap.scrollIntoView({ block: 'end', behavior: 'smooth' });
-  return wrap.querySelector('.msg-bubble');
+  return bubble;
+}
+
+function renderChatFromHistory() {
+  const chat = getCurrentChat();
+  messagesEl.innerHTML = '';
+  if (!chat.messages.length) {
+    messagesEl.innerHTML = `<div class="chat-empty" id="chatEmpty"><span class="material-symbols-rounded">auto_awesome</span><p>Ask epic AI anything.</p></div>`;
+    return;
+  }
+  for (const m of chat.messages) addMessageEl(m.role, m.content, m.imageUrl);
+}
+renderChatFromHistory();
+
+function renderChatsList() {
+  const list = document.getElementById('chatsList');
+  if (!chats.length) { list.innerHTML = '<p class="chats-empty">No chats yet.</p>'; return; }
+  const sorted = [...chats].sort((a, b) => b.updatedAt - a.updatedAt);
+  list.innerHTML = sorted.map(c => `
+    <div class="chat-row ${c.id === currentChatId ? 'active' : ''}" data-id="${c.id}">
+      <span class="material-symbols-rounded">chat_bubble</span>
+      <span class="chat-row-title">${escHtml(c.title)}</span>
+      <button class="chat-row-delete" data-id="${c.id}" title="Delete"><span class="material-symbols-rounded">delete</span></button>
+    </div>
+  `).join('');
+  list.querySelectorAll('.chat-row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('.chat-row-delete')) return;
+      switchChat(row.dataset.id);
+    });
+  });
+  list.querySelectorAll('.chat-row-delete').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); deleteChat(btn.dataset.id); });
+  });
+}
+
+function switchChat(id) {
+  if (id === currentChatId) { closeChatsPanel(); return; }
+  if (controller) controller.abort();
+  currentChatId = id;
+  localStorage.setItem(CURRENT_CHAT_KEY, id);
+  renderChatFromHistory();
+  renderChatsList();
+  closeChatsPanel();
+}
+function startNewChat() {
+  if (controller) controller.abort();
+  const chat = makeChat();
+  chats.unshift(chat);
+  currentChatId = chat.id;
+  localStorage.setItem(CURRENT_CHAT_KEY, currentChatId);
+  saveChats();
+  renderChatFromHistory();
+  renderChatsList();
+  closeChatsPanel();
+}
+function deleteChat(id) {
+  chats = chats.filter(c => c.id !== id);
+  saveChats();
+  if (id === currentChatId) {
+    if (!chats.length) { chats.push(makeChat()); saveChats(); }
+    currentChatId = chats[0].id;
+    localStorage.setItem(CURRENT_CHAT_KEY, currentChatId);
+    renderChatFromHistory();
+  }
+  renderChatsList();
+}
+
+const chatsOverlay = document.getElementById('chatsOverlay');
+const chatsPanel = document.getElementById('chatsPanel');
+function openChatsPanel() { renderChatsList(); chatsOverlay.classList.add('open'); chatsPanel.classList.add('open'); }
+function closeChatsPanel() { chatsOverlay.classList.remove('open'); chatsPanel.classList.remove('open'); }
+document.getElementById('chatsBtn').addEventListener('click', openChatsPanel);
+document.getElementById('chatsCloseBtn').addEventListener('click', closeChatsPanel);
+chatsOverlay.addEventListener('click', closeChatsPanel);
+document.getElementById('newChatBtn').addEventListener('click', startNewChat);
+
+// ── Image attachment (anonymous upload — this page needs no sign-in, so
+// it uses the same unauthenticated /upload-file path files.html's
+// anonymous flow uses, rather than account.js's uploadFile() which
+// requires being signed in). ────────────────────────────────────────
+const attachInput = document.getElementById('attachInput');
+const attachPreview = document.getElementById('attachPreview');
+const attachPreviewImg = document.getElementById('attachPreviewImg');
+let pendingImageFile = null;
+
+attachInput.addEventListener('change', () => {
+  const file = attachInput.files[0];
+  attachInput.value = '';
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { alert('Only images are supported right now'); return; }
+  pendingImageFile = file;
+  attachPreviewImg.src = URL.createObjectURL(file);
+  attachPreview.style.display = 'flex';
+});
+document.getElementById('attachRemoveBtn').addEventListener('click', () => {
+  pendingImageFile = null;
+  attachPreview.style.display = 'none';
+  attachPreviewImg.src = '';
+});
+
+async function uploadAnonImage(file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(SERVER_ENDPOINT + '/upload-file', { method: 'POST', body: fd });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { msg = (await res.json()).error || msg; } catch {}
+    throw new Error(msg);
+  }
+  return (await res.json()).url;
 }
 
 function autoGrow() {
@@ -246,25 +575,75 @@ function setSending(sending) {
   }
 }
 
+// Converts this chat's stored {role, content, imageUrl} messages into the
+// OpenAI wire format (multi-part content for anything with an image),
+// with the system prompt always prepended.
+function toWireMessages(msgs) {
+  const wire = msgs.map(m => {
+    if (m.imageUrl) {
+      return { role: m.role, content: [
+        { type: 'text', text: m.content || '' },
+        { type: 'image_url', image_url: { url: m.imageUrl } },
+      ] };
+    }
+    return { role: m.role, content: m.content };
+  });
+  return [{ role: 'system', content: SYSTEM_PROMPT }, ...wire];
+}
+
+let controller = null;
+
 async function sendMessage() {
   const text = inputEl.value.trim();
-  if (!text || controller) return;
+  if ((!text && !pendingImageFile) || controller) return;
+  const chat = getCurrentChat();
+
+  let imageUrl = null;
+  const fileToUpload = pendingImageFile;
+  pendingImageFile = null;
+  attachPreview.style.display = 'none';
+  attachPreviewImg.src = '';
+
   inputEl.value = '';
   autoGrow();
-  addMessage('user', text);
-  history.push({ role: 'user', content: text });
-
-  const bubble = addMessage('assistant', '');
-  bubble.classList.add('thinking');
   setSending(true);
 
+  if (fileToUpload) {
+    const uploadingBubble = addMessageEl('user', text || '(image)');
+    uploadingBubble.closest('.msg-col').querySelector('.msg-attach-img')?.remove();
+    const placeholderImg = document.createElement('img');
+    placeholderImg.className = 'msg-attach-img';
+    placeholderImg.src = URL.createObjectURL(fileToUpload);
+    uploadingBubble.parentElement.insertBefore(placeholderImg, uploadingBubble);
+    try {
+      imageUrl = await uploadAnonImage(fileToUpload);
+    } catch (err) {
+      uploadingBubble.textContent = 'Could not upload image: ' + err.message;
+      uploadingBubble.classList.add('error');
+      setSending(false);
+      return;
+    }
+  } else {
+    addMessageEl('user', text);
+  }
+
+  const userMsg = { role: 'user', content: text, imageUrl: imageUrl || undefined };
+  chat.messages.push(userMsg);
+  if (chat.title === 'New chat' && text) chat.title = text.slice(0, 40) + (text.length > 40 ? '…' : '');
+  chat.updatedAt = Date.now();
+  saveChats();
+
+  const bubble = addMessageEl('assistant', '');
+  bubble.classList.add('thinking');
+
   controller = new AbortController();
-  let full = '';
+  let reasoningBuf = '';
+  let contentBuf = '';
   try {
     const res = await fetch(AI_ENDPOINT + '/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: history, model: modelSelect.value || undefined }),
+      body: JSON.stringify({ messages: toWireMessages(chat.messages), model: modelSelect.value || undefined }),
       signal: controller.signal,
     });
     if (!res.ok || !res.body) {
@@ -290,29 +669,39 @@ async function sendMessage() {
         if (!payload || payload === '[DONE]') continue;
         try {
           const json = JSON.parse(payload);
-          const delta = json.choices?.[0]?.delta?.content || '';
-          if (delta) {
+          const delta = json.choices?.[0]?.delta || {};
+          if (delta.reasoning_content) reasoningBuf += delta.reasoning_content;
+          if (delta.content) contentBuf += delta.content;
+          if (delta.reasoning_content || delta.content) {
             if (first) { bubble.classList.remove('thinking'); first = false; }
-            full += delta;
-            bubble.textContent = full;
+            renderAssistantContent(bubble, reasoningBuf, contentBuf);
             bubble.scrollIntoView({ block: 'end' });
           }
         } catch {}
       }
     }
-    if (!full) bubble.classList.remove('thinking');
+    if (!reasoningBuf && !contentBuf) bubble.classList.remove('thinking');
   } catch (err) {
     bubble.classList.remove('thinking');
     if (err.name === 'AbortError') {
-      if (!full) bubble.textContent = '(stopped)';
+      if (!contentBuf) bubble.textContent = '(stopped)';
     } else {
-      bubble.textContent = full || ('Could not reach the model: ' + err.message);
+      bubble.textContent = contentBuf || ('Could not reach the model: ' + err.message);
       bubble.classList.add('error');
     }
   } finally {
     controller = null;
     setSending(false);
-    if (full) history.push({ role: 'assistant', content: full });
+    // The final <think> tag (if inline, not a separate reasoning_content
+    // field) is stripped from what gets persisted/re-sent, so reloading
+    // history never re-shows old reasoning as if it were the answer.
+    const { answer } = splitThinking(reasoningBuf, contentBuf);
+    if (answer || reasoningBuf) {
+      chat.messages.push({ role: 'assistant', content: answer || contentBuf });
+      chat.updatedAt = Date.now();
+      saveChats();
+    }
+    renderChatsList();
   }
 }
 
@@ -330,13 +719,12 @@ inputEl.addEventListener('keydown', e => {
 
 document.getElementById('clearBtn').addEventListener('click', () => {
   if (controller) controller.abort();
-  history = [];
-  messagesEl.innerHTML = `
-    <div class="chat-empty" id="chatEmpty">
-      <span class="material-symbols-rounded">auto_awesome</span>
-      <p>Ask me anything.</p>
-    </div>
-  `;
+  const chat = getCurrentChat();
+  chat.messages = [];
+  chat.title = 'New chat';
+  saveChats();
+  renderChatFromHistory();
+  renderChatsList();
 });
 </script>
 </body>

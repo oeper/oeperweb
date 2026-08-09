@@ -101,11 +101,24 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: `Too many messages (max ${MAX_MESSAGES})` });
   }
   for (const m of messages) {
-    if (!m || typeof m.content !== 'string' || !['user', 'assistant', 'system'].includes(m.role)) {
+    if (!m || !['user', 'assistant', 'system'].includes(m.role)) {
       return res.status(400).json({ error: 'Invalid message shape' });
     }
-    if (m.content.length > MAX_MESSAGE_CHARS) {
-      return res.status(400).json({ error: `A message is too long (max ${MAX_MESSAGE_CHARS} characters)` });
+    if (typeof m.content === 'string') {
+      if (m.content.length > MAX_MESSAGE_CHARS) {
+        return res.status(400).json({ error: `A message is too long (max ${MAX_MESSAGE_CHARS} characters)` });
+      }
+    } else if (Array.isArray(m.content)) {
+      // Vision-style multi-part content ([{type:'text',...}, {type:'image_url',...}])
+      // — ai.html's image-attach feature. Loosely shape-checked; the
+      // upstream model server is what actually interprets these, and
+      // ai.html only ever sends an image URL (not base64), so this stays
+      // small regardless.
+      if (m.content.length > 4 || JSON.stringify(m.content).length > MAX_MESSAGE_CHARS * 2) {
+        return res.status(400).json({ error: 'Message content is too large' });
+      }
+    } else {
+      return res.status(400).json({ error: 'Invalid message shape' });
     }
   }
 

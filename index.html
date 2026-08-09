@@ -333,6 +333,19 @@
   .home-search-engine:hover { background: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
   .home-search-engine.active { background: var(--md-sys-color-secondary-container); border-color: transparent; color: var(--md-sys-color-on-secondary-container); }
 
+  .home-ai-btn {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 14px;
+    background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 100px; padding: 8px 16px; font-size: 13px; font-weight: 500;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
+    color: var(--md-sys-color-on-surface); text-decoration: none; transition: background-color 0.2s;
+  }
+  .home-ai-btn:hover { background: var(--md-sys-state-hover); }
+  .home-ai-btn .material-symbols-rounded { font-size: 16px; color: var(--md-sys-color-primary); }
+  .home-ai-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--md-sys-color-outline); flex-shrink: 0; }
+  .home-ai-status-dot.online { background: var(--md-sys-color-success, #4caf50); }
+  .home-ai-status-dot.offline { background: var(--md-sys-color-error); }
+
   .home-search-dropdown {
     position: absolute; top: 100%; margin-top: 8px; left: 0; right: 0;
     background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
@@ -1844,6 +1857,11 @@ PAGES.forEach((page, index) => {
             <button type="button" class="home-search-engine" data-engine="oeper">oeper.dev</button>
           </div>
         </form>
+        <a href="/ai" class="home-ai-btn">
+          <span class="material-symbols-rounded">auto_awesome</span>
+          Ask epic AI
+          <span class="home-ai-status-dot" id="homeAiStatusDot" title="Checking status…"></span>
+        </a>
       ` : ''}
     </div>
     ${isFirst ? `
@@ -1866,6 +1884,30 @@ PAGES.forEach((page, index) => {
 
   pageContainer.appendChild(pageSection);
 });
+
+// Lightweight online/offline check for the "Ask epic AI" button's status
+// dot — a short-timeout fetch against the AI proxy's /api/model, since a
+// dead upstream (home PC offline, tunnel down) shouldn't hang forever.
+(async function checkAiStatus() {
+  const dot = document.getElementById('homeAiStatusDot');
+  if (!dot) return;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch('https://ai2.oeper.dev/api/model', { signal: controller.signal });
+    clearTimeout(timer);
+    if (res.ok) {
+      dot.classList.add('online');
+      dot.title = 'epic AI is online';
+    } else {
+      dot.classList.add('offline');
+      dot.title = 'epic AI seems to be offline';
+    }
+  } catch {
+    dot.classList.add('offline');
+    dot.title = 'epic AI seems to be offline';
+  }
+})();
 </script>
 </body>
 </html>
