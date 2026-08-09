@@ -419,6 +419,182 @@
         '--md-sys-color-hover-surface': '#f0e6cf',
       },
     },
+    // Glassmorphism / "liquid glass": translucent (rgba) surfaces over a
+    // soft blurred-blob background image, plus backdrop-filter blur via
+    // --oe-glass-blur (applied sitewide, see GLASS_SELECTORS below) so the
+    // background actually shows through blurred, not just tinted.
+    'light-glass': {
+      name: 'Light Glass',
+      swatch: '#4c7bf0',
+      dark: false,
+      glassBlur: 'blur(24px) saturate(1.6)',
+      bgImage: 'radial-gradient(circle at 15% 20%, rgba(140,180,255,0.35) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(255,170,210,0.3) 0%, transparent 45%), radial-gradient(circle at 50% 90%, rgba(160,230,210,0.3) 0%, transparent 50%)',
+      vars: {
+        '--md-sys-color-background': '#f4f6f9',
+        '--md-sys-color-background-rgb': '244, 246, 249',
+        '--md-sys-color-surface': 'rgba(255,255,255,0.55)',
+        '--md-sys-color-surface-variant': 'rgba(255,255,255,0.35)',
+        '--md-sys-color-primary': '#4c7bf0',
+        '--md-sys-color-on-primary': '#ffffff',
+        '--md-sys-color-secondary-container': 'rgba(76,123,240,0.18)',
+        '--md-sys-color-on-secondary-container': '#2a4ba8',
+        '--md-sys-color-on-surface': '#1c1f26',
+        '--md-sys-color-on-surface-variant': '#5a6270',
+        '--md-sys-color-outline': 'rgba(28,31,38,0.18)',
+        '--md-sys-color-outline-rgb': '28, 31, 38',
+        '--md-sys-color-outline-variant': 'rgba(28,31,38,0.1)',
+        '--md-sys-color-error': '#ba1a1a',
+        '--md-sys-color-success': '#2e7d32',
+        '--md-sys-state-hover': 'rgba(0,0,0,0.06)',
+        '--md-sys-color-hover-surface': 'rgba(255,255,255,0.7)',
+      },
+    },
+    'dark-glass': {
+      name: 'Dark Glass',
+      swatch: '#9fc1ff',
+      dark: true,
+      glassBlur: 'blur(24px) saturate(1.6)',
+      bgImage: 'radial-gradient(circle at 15% 20%, rgba(80,110,200,0.3) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(200,90,150,0.25) 0%, transparent 45%), radial-gradient(circle at 50% 90%, rgba(80,180,160,0.22) 0%, transparent 50%)',
+      vars: {
+        '--md-sys-color-background': '#17181c',
+        '--md-sys-color-background-rgb': '23, 24, 28',
+        '--md-sys-color-surface': 'rgba(35,37,43,0.55)',
+        '--md-sys-color-surface-variant': 'rgba(50,53,60,0.4)',
+        '--md-sys-color-primary': '#9fc1ff',
+        '--md-sys-color-on-primary': '#062e6f',
+        '--md-sys-color-secondary-container': 'rgba(159,193,255,0.18)',
+        '--md-sys-color-on-secondary-container': '#d3e4ff',
+        '--md-sys-color-on-surface': '#eef0f4',
+        '--md-sys-color-on-surface-variant': '#b7bcc6',
+        '--md-sys-color-outline': 'rgba(255,255,255,0.14)',
+        '--md-sys-color-outline-rgb': '255, 255, 255',
+        '--md-sys-color-outline-variant': 'rgba(255,255,255,0.08)',
+        '--md-sys-color-error': '#ffb4ab',
+        '--md-sys-color-success': '#a6d9a8',
+        '--md-sys-state-hover': 'rgba(255,255,255,0.08)',
+        '--md-sys-color-hover-surface': 'rgba(45,47,54,0.65)',
+      },
+    },
+    'boreal': {
+      name: 'Boreal',
+      swatch: '#B2D5E5',
+      dark: true,
+      vars: {
+        '--md-sys-color-background': '#020202',
+        '--md-sys-color-background-rgb': '2, 2, 2',
+        '--md-sys-color-surface': '#0d1113',
+        '--md-sys-color-surface-variant': '#161b1e',
+        '--md-sys-color-primary': '#B2D5E5',
+        '--md-sys-color-on-primary': '#062633',
+        '--md-sys-color-secondary-container': '#24333a',
+        '--md-sys-color-on-secondary-container': '#cfe7f2',
+        '--md-sys-color-on-surface': '#e6eef2',
+        '--md-sys-color-on-surface-variant': '#9db3bc',
+        '--md-sys-color-outline': '#2c3a40',
+        '--md-sys-color-outline-rgb': '44, 58, 64',
+        '--md-sys-color-outline-variant': '#5c7078',
+        '--md-sys-color-error': '#ffb4ab',
+        '--md-sys-color-success': '#a6d9a8',
+        '--md-sys-state-hover': 'rgba(255,255,255,0.06)',
+        '--md-sys-color-hover-surface': '#12171a',
+      },
+    },
+    'pumpkin': {
+      name: 'Pumpkin',
+      swatch: '#FC7D14',
+      dark: true,
+      vars: {
+        '--md-sys-color-background': '#012F25',
+        '--md-sys-color-background-rgb': '1, 47, 37',
+        '--md-sys-color-surface': '#073d31',
+        '--md-sys-color-surface-variant': '#0f4a3c',
+        '--md-sys-color-primary': '#FC7D14',
+        '--md-sys-color-on-primary': '#3a1a00',
+        '--md-sys-color-secondary-container': '#4a3a10',
+        '--md-sys-color-on-secondary-container': '#FAF2A0',
+        '--md-sys-color-on-surface': '#eef5f0',
+        '--md-sys-color-on-surface-variant': '#a8c2b8',
+        '--md-sys-color-outline': '#1a5142',
+        '--md-sys-color-outline-rgb': '26, 81, 66',
+        '--md-sys-color-outline-variant': '#3d7362',
+        '--md-sys-color-error': '#ffb4ab',
+        '--md-sys-color-success': '#a6d9a8',
+        '--md-sys-state-hover': 'rgba(255,255,255,0.06)',
+        '--md-sys-color-hover-surface': '#0a4536',
+      },
+    },
+    'summer': {
+      name: 'Summer',
+      swatch: '#F59E71',
+      dark: true,
+      vars: {
+        '--md-sys-color-background': '#002B4C',
+        '--md-sys-color-background-rgb': '0, 43, 76',
+        '--md-sys-color-surface': '#0a3a5e',
+        '--md-sys-color-surface-variant': '#14496e',
+        '--md-sys-color-primary': '#C0EBFF',
+        '--md-sys-color-on-primary': '#003049',
+        '--md-sys-color-secondary-container': '#5a3826',
+        '--md-sys-color-on-secondary-container': '#F59E71',
+        '--md-sys-color-on-surface': '#eaf6ff',
+        '--md-sys-color-on-surface-variant': '#9fc2d9',
+        '--md-sys-color-outline': '#1c5478',
+        '--md-sys-color-outline-rgb': '28, 84, 120',
+        '--md-sys-color-outline-variant': '#4380a8',
+        '--md-sys-color-error': '#ffb4ab',
+        '--md-sys-color-success': '#a6d9a8',
+        '--md-sys-state-hover': 'rgba(255,255,255,0.06)',
+        '--md-sys-color-hover-surface': '#0d426a',
+      },
+    },
+    'cherry': {
+      name: 'Cherry',
+      swatch: '#BE2C55',
+      dark: true,
+      vars: {
+        '--md-sys-color-background': '#2A0C1B',
+        '--md-sys-color-background-rgb': '42, 12, 27',
+        '--md-sys-color-surface': '#391324',
+        '--md-sys-color-surface-variant': '#481a2f',
+        '--md-sys-color-primary': '#BE2C55',
+        '--md-sys-color-on-primary': '#ffffff',
+        '--md-sys-color-secondary-container': '#5c2438',
+        '--md-sys-color-on-secondary-container': '#FFE0EB',
+        '--md-sys-color-on-surface': '#f7e8ee',
+        '--md-sys-color-on-surface-variant': '#c9a0b0',
+        '--md-sys-color-outline': '#5c2438',
+        '--md-sys-color-outline-rgb': '92, 36, 56',
+        '--md-sys-color-outline-variant': '#8a4d63',
+        '--md-sys-color-error': '#ffb4ab',
+        '--md-sys-color-success': '#a6d9a8',
+        '--md-sys-state-hover': 'rgba(255,255,255,0.06)',
+        '--md-sys-color-hover-surface': '#401729',
+      },
+    },
+    'grayscale': {
+      name: 'Grayscale',
+      swatch: '#9e9e9e',
+      dark: true,
+      vars: {
+        '--md-sys-color-background': '#121212',
+        '--md-sys-color-background-rgb': '18, 18, 18',
+        '--md-sys-color-surface': '#1e1e1e',
+        '--md-sys-color-surface-variant': '#2c2c2c',
+        '--md-sys-color-primary': '#c9c9c9',
+        '--md-sys-color-on-primary': '#1a1a1a',
+        '--md-sys-color-secondary-container': '#3a3a3a',
+        '--md-sys-color-on-secondary-container': '#e0e0e0',
+        '--md-sys-color-on-surface': '#e8e8e8',
+        '--md-sys-color-on-surface-variant': '#b0b0b0',
+        '--md-sys-color-outline': '#444444',
+        '--md-sys-color-outline-rgb': '68, 68, 68',
+        '--md-sys-color-outline-variant': '#6e6e6e',
+        '--md-sys-color-error': '#ffb4ab',
+        '--md-sys-color-success': '#a6d9a8',
+        '--md-sys-state-hover': 'rgba(255,255,255,0.06)',
+        '--md-sys-color-hover-surface': '#242424',
+      },
+    },
   };
 
   // ── Color flip ──────────────────────────────────────────────
@@ -500,9 +676,37 @@
     var root = document.documentElement.style;
     root.setProperty('--oe-font-override', theme.fontOverride || '');
     root.setProperty('--oe-bg-image', theme.bgImage || 'none');
+    root.setProperty('--oe-glass-blur', theme.glassBlur || 'none');
     for (var k in vars) root.setProperty(k, vars[k]);
     document.documentElement.style.colorScheme = (flipped ? !theme.dark : theme.dark) ? 'dark' : 'light';
   };
+
+  // Applies the frosted-glass effect (backdrop-filter) to every "surface"
+  // element site-wide, for the two glassmorphism themes below — --oe-glass-
+  // blur is 'none' for every other theme, so this rule is a visual no-op
+  // everywhere except light-glass/dark-glass. One shared stylesheet here
+  // instead of editing backdrop-filter into 45+ individual page selectors:
+  // this list was generated by scanning every page's CSS for anything using
+  // var(--md-sys-color-surface) as its background, so it's the full set of
+  // "card-like" surfaces across the site, not a guess. If a new page adds
+  // another surface-colored component, add its selector here too.
+  var GLASS_SELECTORS = [
+    '.anon-panel', '.article-card', '.card', '.chat-inputbar', '.comment',
+    '.comment-form textarea', '.comment-form-locked', '.convo-row', '.file-card',
+    '.filebar', '.folder-card', '.follow-list-modal', '.grid-wrap', '.group',
+    '.header-icon-btn', '.home-ai-btn', '.home-search-dropdown', '.home-search-input',
+    '.ig-card', '.ig-comment-modal', '.interactive-card', '.item-card', '.kebab-menu',
+    '.modal', '.modal-box', '.model-select', '.msg-bubble', '.nav-links', '.note-modal',
+    '.post-card', '.profile-card', '.project-card', '.reader-body blockquote',
+    '.reader-close-btn', '.search-input', '.sort-dropdown', '.status-card',
+    '.thread-actions .vote-col', '.thread-close-btn', '.thread-inputbar', '.tool-card',
+    '.toolbar', '.upload-progress', '.video-card', '.vote-col', '.watch-close',
+    '.watch-comment-row', '.watch-icon-btn',
+  ];
+  var glassStyle = document.createElement('style');
+  glassStyle.textContent = GLASS_SELECTORS.join(',\n') +
+    ' {\n  backdrop-filter: var(--oe-glass-blur, none);\n  -webkit-backdrop-filter: var(--oe-glass-blur, none);\n}';
+  document.head.appendChild(glassStyle);
 
   var saved = localStorage.getItem(window.OE_THEME_KEY) || 'material-dark';
   var savedFlip = localStorage.getItem(window.OE_THEME_FLIP_KEY) === '1';
