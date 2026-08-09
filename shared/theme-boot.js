@@ -425,24 +425,24 @@
     // background actually shows through blurred, not just tinted.
     'light-glass': {
       name: 'Light Glass',
-      swatch: '#4c7bf0',
+      swatch: '#1c1f26',
       dark: false,
-      glassBlur: 'blur(24px) saturate(1.6)',
-      bgImage: 'radial-gradient(circle at 15% 20%, rgba(140,180,255,0.35) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(255,170,210,0.3) 0%, transparent 45%), radial-gradient(circle at 50% 90%, rgba(160,230,210,0.3) 0%, transparent 50%)',
+      glassBlur: 'blur(24px) saturate(1.2)',
+      bgImage: 'radial-gradient(circle at 15% 20%, rgba(255,255,255,0.7) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(0,0,0,0.05) 0%, transparent 45%), radial-gradient(circle at 50% 90%, rgba(255,255,255,0.5) 0%, transparent 50%)',
       vars: {
-        '--md-sys-color-background': '#f4f6f9',
-        '--md-sys-color-background-rgb': '244, 246, 249',
+        '--md-sys-color-background': '#f2f2f2',
+        '--md-sys-color-background-rgb': '242, 242, 242',
         '--md-sys-color-surface': 'rgba(255,255,255,0.55)',
         '--md-sys-color-surface-variant': 'rgba(255,255,255,0.35)',
-        '--md-sys-color-primary': '#4c7bf0',
+        '--md-sys-color-primary': '#1c1f26',
         '--md-sys-color-on-primary': '#ffffff',
-        '--md-sys-color-secondary-container': 'rgba(76,123,240,0.18)',
-        '--md-sys-color-on-secondary-container': '#2a4ba8',
+        '--md-sys-color-secondary-container': 'rgba(0,0,0,0.08)',
+        '--md-sys-color-on-secondary-container': '#1c1f26',
         '--md-sys-color-on-surface': '#1c1f26',
-        '--md-sys-color-on-surface-variant': '#5a6270',
-        '--md-sys-color-outline': 'rgba(28,31,38,0.18)',
-        '--md-sys-color-outline-rgb': '28, 31, 38',
-        '--md-sys-color-outline-variant': 'rgba(28,31,38,0.1)',
+        '--md-sys-color-on-surface-variant': '#5f5f5f',
+        '--md-sys-color-outline': 'rgba(28,28,28,0.18)',
+        '--md-sys-color-outline-rgb': '28, 28, 28',
+        '--md-sys-color-outline-variant': 'rgba(28,28,28,0.1)',
         '--md-sys-color-error': '#ba1a1a',
         '--md-sys-color-success': '#2e7d32',
         '--md-sys-state-hover': 'rgba(0,0,0,0.06)',
@@ -451,28 +451,28 @@
     },
     'dark-glass': {
       name: 'Dark Glass',
-      swatch: '#9fc1ff',
+      swatch: '#f0f0f0',
       dark: true,
-      glassBlur: 'blur(24px) saturate(1.6)',
-      bgImage: 'radial-gradient(circle at 15% 20%, rgba(80,110,200,0.3) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(200,90,150,0.25) 0%, transparent 45%), radial-gradient(circle at 50% 90%, rgba(80,180,160,0.22) 0%, transparent 50%)',
+      glassBlur: 'blur(24px) saturate(1.2)',
+      bgImage: 'radial-gradient(circle at 15% 20%, rgba(255,255,255,0.09) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(255,255,255,0.05) 0%, transparent 45%), radial-gradient(circle at 50% 90%, rgba(0,0,0,0.3) 0%, transparent 50%)',
       vars: {
-        '--md-sys-color-background': '#17181c',
-        '--md-sys-color-background-rgb': '23, 24, 28',
-        '--md-sys-color-surface': 'rgba(35,37,43,0.55)',
-        '--md-sys-color-surface-variant': 'rgba(50,53,60,0.4)',
-        '--md-sys-color-primary': '#9fc1ff',
-        '--md-sys-color-on-primary': '#062e6f',
-        '--md-sys-color-secondary-container': 'rgba(159,193,255,0.18)',
-        '--md-sys-color-on-secondary-container': '#d3e4ff',
-        '--md-sys-color-on-surface': '#eef0f4',
-        '--md-sys-color-on-surface-variant': '#b7bcc6',
+        '--md-sys-color-background': '#161616',
+        '--md-sys-color-background-rgb': '22, 22, 22',
+        '--md-sys-color-surface': 'rgba(38,38,38,0.55)',
+        '--md-sys-color-surface-variant': 'rgba(50,50,50,0.4)',
+        '--md-sys-color-primary': '#f0f0f0',
+        '--md-sys-color-on-primary': '#161616',
+        '--md-sys-color-secondary-container': 'rgba(255,255,255,0.12)',
+        '--md-sys-color-on-secondary-container': '#f0f0f0',
+        '--md-sys-color-on-surface': '#f0f0f0',
+        '--md-sys-color-on-surface-variant': '#b5b5b5',
         '--md-sys-color-outline': 'rgba(255,255,255,0.14)',
         '--md-sys-color-outline-rgb': '255, 255, 255',
         '--md-sys-color-outline-variant': 'rgba(255,255,255,0.08)',
         '--md-sys-color-error': '#ffb4ab',
         '--md-sys-color-success': '#a6d9a8',
         '--md-sys-state-hover': 'rgba(255,255,255,0.08)',
-        '--md-sys-color-hover-surface': 'rgba(45,47,54,0.65)',
+        '--md-sys-color-hover-surface': 'rgba(45,45,45,0.65)',
       },
     },
     'boreal': {
@@ -653,19 +653,52 @@
     hex = hex.replace('#', '');
     return [0, 2, 4].map(function (i) { return parseInt(hex.substr(i, 2), 16); }).join(', ');
   }
+  // Same lightness-inversion as invertLightness, but for an rgba(...)
+  // string (the glass themes' translucent surfaces/outlines, which aren't
+  // plain hex) — converts to hex, inverts, converts back, keeping the
+  // original alpha untouched. Without this, flipping colors on a glass
+  // theme only inverted its hex-based vars (background, primary, text)
+  // and silently left every rgba-based one (surface, outline, secondary
+  // container) exactly as-is.
+  function invertRgba(rgba) {
+    var m = rgba.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?\s*\)$/);
+    if (!m) return rgba;
+    var hex = '#' + [m[1], m[2], m[3]].map(function (n) {
+      var s = (+n).toString(16);
+      return s.length === 1 ? '0' + s : s;
+    }).join('');
+    var inv = invertLightness(hex).replace('#', '');
+    var r = parseInt(inv.substr(0, 2), 16), g = parseInt(inv.substr(2, 2), 16), b = parseInt(inv.substr(4, 2), 16);
+    var a = m[4] !== undefined ? m[4] : 1;
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+  }
+  function rgbaToTriplet(rgba) {
+    var m = rgba.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    return m ? (m[1] + ', ' + m[2] + ', ' + m[3]) : null;
+  }
   function invertThemeVars(vars) {
     var out = {};
     for (var k in vars) {
       var v = vars[k];
-      if (/-rgb$/.test(k)) continue; // recomputed below from the flipped hex
+      if (/-rgb$/.test(k)) continue; // recomputed below from the flipped color
       if (k === '--md-sys-state-hover') {
         out[k] = v.indexOf('255,255,255') !== -1 ? v.replace('255,255,255', '0,0,0') : v.replace('0,0,0', '255,255,255');
         continue;
       }
-      out[k] = /^#[0-9a-fA-F]{6}$/.test(v) ? invertLightness(v) : v;
+      if (/^#[0-9a-fA-F]{6}$/.test(v)) out[k] = invertLightness(v);
+      else if (/^rgba?\(/.test(v)) out[k] = invertRgba(v);
+      else out[k] = v;
     }
-    if (out['--md-sys-color-background']) out['--md-sys-color-background-rgb'] = hexToRgbTriplet(out['--md-sys-color-background']);
-    if (out['--md-sys-color-outline']) out['--md-sys-color-outline-rgb'] = hexToRgbTriplet(out['--md-sys-color-outline']);
+    if (out['--md-sys-color-background']) {
+      out['--md-sys-color-background-rgb'] = /^#/.test(out['--md-sys-color-background'])
+        ? hexToRgbTriplet(out['--md-sys-color-background'])
+        : rgbaToTriplet(out['--md-sys-color-background']);
+    }
+    if (out['--md-sys-color-outline']) {
+      out['--md-sys-color-outline-rgb'] = /^#/.test(out['--md-sys-color-outline'])
+        ? hexToRgbTriplet(out['--md-sys-color-outline'])
+        : rgbaToTriplet(out['--md-sys-color-outline']);
+    }
     return out;
   }
 
