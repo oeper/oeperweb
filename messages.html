@@ -427,7 +427,7 @@ function initNotes() {
       });
       closeNoteModal();
     } catch (err) {
-      alert('Could not share note: ' + err.message);
+      showToast('Could not share note: ' + err.message);
     }
   });
   input.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('noteShareBtn').click(); });
@@ -562,7 +562,7 @@ async function openThread(otherEmail, user) {
           <label class="attach-btn" title="Send an image"><span class="material-symbols-rounded">image</span><input type="file" id="imageInput" accept="image/*"></label>
           <textarea id="msgInput" placeholder="Message…" rows="1"></textarea>
           <button class="mic-btn" id="micBtn" title="Record voice message"><span class="material-symbols-rounded">mic</span></button>
-          <button class="send-btn" id="sendMsgBtn"><span class="material-symbols-rounded" id="sendMsgIcon">arrow_upward</span></button>
+          <button class="send-btn" id="sendMsgBtn" title="Send"><span class="material-symbols-rounded" id="sendMsgIcon">arrow_upward</span></button>
         </div>
         <div class="recording-bar" id="recordingBar" style="display:none;">
           <div class="recording-dot"></div>
@@ -633,7 +633,7 @@ async function openThread(otherEmail, user) {
     try {
       await deleteDoc(doc(db, 'conversations', convoId, 'messages', m.id));
     } catch (err) {
-      alert('Could not delete message: ' + err.message);
+      showToast('Could not delete message: ' + err.message);
     }
   }
 
@@ -697,7 +697,7 @@ async function openThread(otherEmail, user) {
   function audioBubbleHtml(m) {
     return `
       <div class="msg-audio" data-src="${escHtml(m.audioUrl)}" data-duration="${m.audioDuration || 0}">
-        <button class="audio-play-btn"><span class="material-symbols-rounded">play_arrow</span></button>
+        <button class="audio-play-btn" title="Play"><span class="material-symbols-rounded">play_arrow</span></button>
         <div class="audio-track"><div class="audio-progress"></div></div>
         <span class="audio-time">${formatDuration(m.audioDuration)}</span>
       </div>
@@ -783,7 +783,7 @@ async function openThread(otherEmail, user) {
         });
       }
     } catch (err) {
-      alert('Could not send: ' + err.message);
+      showToast('Could not send: ' + err.message);
     } finally {
       sendBtn.disabled = false;
     }
@@ -809,7 +809,7 @@ async function openThread(otherEmail, user) {
         createdAt: serverTimestamp(),
       });
     } catch (err) {
-      alert('Could not send image: ' + err.message);
+      showToast('Could not send image: ' + err.message);
     } finally {
       hideUploadToast();
       sendBtn.disabled = false;
@@ -841,13 +841,13 @@ async function openThread(otherEmail, user) {
 
   async function startRecording() {
     if (!navigator.mediaDevices || !window.MediaRecorder) {
-      alert('Voice messages are not supported in this browser.');
+      showToast('Voice messages are not supported in this browser.');
       return;
     }
     try {
       recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
-      alert('Microphone access is required to record a voice message.');
+      showToast('Microphone access is required to record a voice message.');
       return;
     }
     recordedChunks = [];
@@ -900,7 +900,7 @@ async function openThread(otherEmail, user) {
         createdAt: serverTimestamp(),
       });
     } catch (err) {
-      alert('Could not send voice message: ' + err.message);
+      showToast('Could not send voice message: ' + err.message);
     } finally {
       hideUploadToast();
     }

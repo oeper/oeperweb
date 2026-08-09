@@ -648,7 +648,7 @@
   <div class="ig-comment-modal" id="igCommentModal">
     <div class="ig-comment-modal-header">
       <h3 id="igModalTitle">Post</h3>
-      <button class="ig-comment-close-btn" id="igCommentCloseBtn"><span class="material-symbols-rounded">close</span></button>
+      <button class="ig-comment-close-btn" id="igCommentCloseBtn" title="Close"><span class="material-symbols-rounded">close</span></button>
     </div>
     <div class="ig-modal-scroll" id="igModalScroll">
       <div id="igPostContent"></div>
@@ -670,8 +670,8 @@
       <img id="storyViewerAvatar" src="" alt="">
       <span id="storyViewerName" style="font-size:14px; font-weight:500;"></span>
     </div>
-    <button class="story-viewer-close" id="storyViewerClose"><span class="material-symbols-rounded">close</span></button>
-    <img class="story-viewer-media" id="storyViewerImg" style="display:none;">
+    <button class="story-viewer-close" id="storyViewerClose" title="Close"><span class="material-symbols-rounded">close</span></button>
+    <img class="story-viewer-media" id="storyViewerImg" alt="" style="display:none;">
     <video class="story-viewer-media" id="storyViewerVideo" style="display:none;" autoplay muted></video>
     <div class="story-bottom-actions">
       <button class="story-icon-btn" id="storyShareBtn" title="Share"><span class="material-symbols-rounded">link</span></button>
@@ -1018,7 +1018,7 @@
         });
         closeNoteModal();
       } catch (err) {
-        alert('Could not share note: ' + err.message);
+        showToast('Could not share note: ' + err.message);
       }
     });
     input.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('noteShareBtn').click(); });
@@ -1275,7 +1275,7 @@
 
     async function toggleVote(kind, id, direction) {
       const user = getCurrentUser();
-      if (!user) { alert('Sign in to vote'); return; }
+      if (!user) { showToast('Sign in to vote'); return; }
       const list = kind === 'video' ? latestVideos : latestPosts;
       const item = list.find(x => x.id === id);
       if (!item) return;
@@ -1296,7 +1296,7 @@
           sendNotification({ recipientEmail: item.authorEmail, type: 'upvote', targetKind: kind, targetId: id, preview: item.title });
         }
       } catch (err) {
-        alert('Could not vote: ' + err.message);
+        showToast('Could not vote: ' + err.message);
       }
     }
 
@@ -1393,7 +1393,7 @@
     }
     async function togglePollVote(item, newIdx) {
       const user = getCurrentUser();
-      if (!user) { alert('Sign in to vote'); return; }
+      if (!user) { showToast('Sign in to vote'); return; }
       const uid = user.uid;
       const optionVotes = item.poll.optionVotes;
       const oldIdx = optionVotes.findIndex(arr => arr.includes(uid));
@@ -1405,7 +1405,7 @@
         await updateDoc(doc(db, 'posts', item.id), patch);
         renderModalPostContent();
       } catch (err) {
-        alert('Could not vote: ' + err.message);
+        showToast('Could not vote: ' + err.message);
       }
     }
 
@@ -1490,7 +1490,7 @@
       const user = getCurrentUser();
       const body = commentInput.value.trim();
       if (!openItemId || !body) return;
-      if (!user) { alert('Sign in to comment'); return; }
+      if (!user) { showToast('Sign in to comment'); return; }
       commentSendBtn.disabled = true;
       try {
         const collectionName = openItemKind === 'video' ? 'videos' : 'posts';
@@ -1510,7 +1510,7 @@
         if (item) sendNotification({ recipientEmail: item.authorEmail, type: 'comment', targetKind: openItemKind, targetId: openItemId, preview: body.slice(0, 120) });
         commentInput.value = '';
       } catch (err) {
-        alert('Could not comment: ' + err.message);
+        showToast('Could not comment: ' + err.message);
       } finally {
         commentSendBtn.disabled = false;
       }

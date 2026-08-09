@@ -341,14 +341,14 @@ function openDetail(p) {
   const down = user && (p.downvoters || []).includes(user.uid);
 
   panel.innerHTML = `
-    <button class="watch-close" id="watchCloseBtn"><span class="material-symbols-rounded">close</span></button>
+    <button class="watch-close" id="watchCloseBtn" title="Close"><span class="material-symbols-rounded">close</span></button>
     <div class="project-thumb">${thumbHtml(p)}</div>
     <div class="watch-title">${escHtml(p.title)}</div>
     <div class="watch-actions">
       <div class="vote-col">
-        <button class="vote-btn ${up ? 'upvoted' : ''}" id="upBtn"><span class="material-symbols-rounded">arrow_upward</span></button>
+        <button class="vote-btn ${up ? 'upvoted' : ''}" id="upBtn" title="Like"><span class="material-symbols-rounded">arrow_upward</span></button>
         <span class="vote-count">${score(p)}</span>
-        <button class="vote-btn ${down ? 'downvoted' : ''}" id="downBtn"><span class="material-symbols-rounded">arrow_downward</span></button>
+        <button class="vote-btn ${down ? 'downvoted' : ''}" id="downBtn" title="Dislike"><span class="material-symbols-rounded">arrow_downward</span></button>
       </div>
       ${authorLinkHtml(p, `${profile.photo ? `<img src="${profile.photo}" alt="">` : ''}${escHtml(profile.name)}`)}
       <span style="color:var(--md-sys-color-on-surface-variant); font-size:13px;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:middle;">visibility</span> ${p.views||0} views</span>

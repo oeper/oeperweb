@@ -356,7 +356,7 @@ function openWatch(v) {
   const down = user && (v.downvoters || []).includes(user.uid);
 
   panel.innerHTML = `
-    <button class="watch-close" id="watchCloseBtn"><span class="material-symbols-rounded">close</span></button>
+    <button class="watch-close" id="watchCloseBtn" title="Close"><span class="material-symbols-rounded">close</span></button>
     <video src="${v.url}" controls autoplay></video>
     <div class="watch-title">${escHtml(v.title)}</div>
     <div class="watch-actions">

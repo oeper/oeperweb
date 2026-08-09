@@ -206,7 +206,7 @@
 <div class="follow-list-modal" id="followListModal">
   <div class="follow-list-header">
     <h3 id="followListTitle">Followers</h3>
-    <button class="follow-list-close-btn" id="followListCloseBtn"><span class="material-symbols-rounded">close</span></button>
+    <button class="follow-list-close-btn" id="followListCloseBtn" title="Close"><span class="material-symbols-rounded">close</span></button>
   </div>
   <div class="follow-list-body" id="followListBody"></div>
 </div>
@@ -461,7 +461,7 @@ async function init() {
       followState = await loadFollowState(user);
       render();
     } catch (err) {
-      alert('Could not update follow: ' + err.message);
+      showToast('Could not update follow: ' + err.message);
     }
   }
 
