@@ -295,14 +295,14 @@ export async function uploadFile(file, endpointPath, extraFields, onProgress) {
   }).then(data => data.url);
 }
 
-export async function updateProfile({ displayName, photoFile, bio }) {
+export async function updateProfile({ displayName, photoFile, bio, onProgress }) {
   if (!currentUser) throw new Error('Sign in first');
   const patch = { updatedAt: serverTimestamp() };
   const trimmedName = (displayName || '').trim().slice(0, 40);
   patch.displayName = trimmedName || currentUser.displayName || currentUser.email;
   if (bio !== undefined) patch.bio = (bio || '').trim().slice(0, 200);
   if (photoFile) {
-    patch.photoURL = await uploadFile(photoFile);
+    patch.photoURL = await uploadFile(photoFile, undefined, undefined, onProgress);
   }
   await setDoc(doc(db, 'users', currentUser.email), patch, { merge: true });
   profileCache[currentUser.email] = { ...(profileCache[currentUser.email] || {}), ...patch };
@@ -549,8 +549,12 @@ export function openEditProfileModal() {
       return;
     }
     saveBtn.disabled = true;
+    const saveBtnLabel = saveBtn.textContent;
     try {
-      await updateProfile({ displayName: nameInput.value, photoFile: pendingFile, bio: bioInput.value });
+      await updateProfile({
+        displayName: nameInput.value, photoFile: pendingFile, bio: bioInput.value,
+        onProgress: pendingFile ? frac => { saveBtn.textContent = `Uploading… ${Math.round(frac * 100)}%`; } : undefined,
+      });
       if (newHandle && newHandle !== currentHandle) {
         try { await changeHandle(newHandle); }
         catch (err) { showToast('Profile saved, but username change failed: ' + err.message); saveBtn.disabled = false; return; }
@@ -561,6 +565,7 @@ export function openEditProfileModal() {
       showToast('Could not update profile: ' + err.message);
     } finally {
       saveBtn.disabled = false;
+      saveBtn.textContent = saveBtnLabel;
     }
   };
 
