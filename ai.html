@@ -67,7 +67,7 @@
   .header-icon-btn:hover { background-color: var(--md-sys-state-hover); }
 
   .chat-shell { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-  .chat-messages { flex: 1; display: flex; flex-direction: column; padding-bottom: 16px; }
+  .chat-messages { flex: 1; display: flex; flex-direction: column; padding-bottom: 16px; transition: opacity 0.15s ease; }
 
   .chat-empty {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -75,8 +75,9 @@
   }
   .chat-empty .material-symbols-rounded { font-size: 40px; color: var(--md-sys-color-primary); }
 
-  .msg { display: flex; gap: 12px; margin-bottom: 20px; align-items: flex-start; }
+  .msg { display: flex; gap: 12px; margin-bottom: 20px; align-items: flex-start; animation: msgIn 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
   .msg.user { flex-direction: row-reverse; }
+  @keyframes msgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   .msg-avatar {
     width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
     background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);
@@ -121,28 +122,38 @@
   .msg-bubble .md-table th { background: rgba(127,127,127,0.15); font-weight: 600; }
 
   .thinking-block { margin-bottom: 8px; font-size: 13px; }
-  .thinking-block summary {
-    cursor: pointer; color: var(--md-sys-color-on-surface-variant); font-weight: 500; list-style: none;
+  .thinking-summary {
+    cursor: pointer; color: var(--md-sys-color-on-surface-variant); font-weight: 500;
     display: inline-flex; align-items: center; gap: 4px; user-select: none;
   }
-  .thinking-block summary::-webkit-details-marker { display: none; }
-  .thinking-block summary::before {
-    content: 'expand_more'; font-family: 'Material Symbols Rounded'; font-size: 18px;
-    transition: transform 0.15s; display: inline-flex;
+  .thinking-summary:hover { color: var(--md-sys-color-on-surface); }
+  .thinking-caret { font-size: 18px; transition: transform 0.2s ease; }
+  .thinking-block.open .thinking-caret { transform: rotate(180deg); }
+  /* Animated height via the CSS grid 0fr->1fr trick — plain max-height
+     transitions either jump (fixed px) or don't animate at all (auto), and
+     <details>'s native open/close has no animation hook in any browser. */
+  .thinking-content-wrap {
+    display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.25s ease;
   }
-  .thinking-block[open] summary::before { transform: rotate(180deg); }
+  .thinking-block.open .thinking-content-wrap { grid-template-rows: 1fr; }
   .thinking-content {
-    margin-top: 6px; padding: 8px 12px; border-left: 2px solid var(--md-sys-color-outline);
+    overflow: hidden; min-height: 0;
     color: var(--md-sys-color-on-surface-variant); white-space: pre-wrap; line-height: 1.5;
+  }
+  .thinking-content-inner {
+    margin-top: 6px; padding: 8px 12px; border-left: 2px solid var(--md-sys-color-outline);
   }
 
   .attach-preview { display: flex; padding: 0 4px 10px; }
-  .attach-preview-item { position: relative; width: 64px; height: 64px; }
+  .attach-preview-item { position: relative; width: 64px; height: 64px; animation: popIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
   .attach-preview-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: block; }
+  @keyframes popIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
   .attach-remove-btn {
     position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--md-sys-color-background);
     background: var(--md-sys-color-error); color: #410002; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+    transition: transform 0.15s;
   }
+  .attach-remove-btn:hover { transform: scale(1.1); }
   .attach-remove-btn .material-symbols-rounded { font-size: 14px; }
 
   .model-bar { display: flex; justify-content: flex-end; margin-bottom: 8px; padding: 0 4px; }
@@ -172,9 +183,12 @@
   .send-btn {
     width: 40px; height: 40px; border-radius: 50%; border: none; flex-shrink: 0;
     background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
-    display: flex; align-items: center; justify-content: center; cursor: pointer; transition: opacity 0.2s;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: opacity 0.2s, background-color 0.2s, transform 0.12s;
   }
+  .send-btn:active:not(:disabled) { transform: scale(0.9); }
   .send-btn:disabled { opacity: 0.4; cursor: default; }
+  .send-btn .material-symbols-rounded { transition: transform 0.2s ease; }
   .send-btn.stop { background: var(--md-sys-color-error); color: #410002; }
 
   .chat-footnote {
@@ -361,27 +375,54 @@ function splitThinking(reasoningBuf, contentBuf) {
   };
 }
 
+// Custom-animated collapse (see .thinking-content-wrap's grid-rows trick in
+// the CSS) instead of native <details>, which has no animation hook in any
+// browser. Open state is tracked via a class we control, so it can be
+// forced open while actively streaming reasoning, default to collapsed
+// once the answer starts, and still respect a manual click in between —
+// re-rendering the bubble's innerHTML on every streamed chunk would
+// otherwise reset a native <details>'s open attribute every time too.
 function renderAssistantContent(bubble, reasoningBuf, contentBuf) {
   const { thinking, answer, stillThinking } = splitThinking(reasoningBuf, contentBuf);
   let html = '';
   if (thinking) {
-    html += `<details class="thinking-block"${stillThinking ? ' open' : ''}><summary>${stillThinking ? 'Thinking…' : 'Show thinking'}</summary><div class="thinking-content">${escHtml(thinking)}</div></details>`;
+    const existing = bubble.querySelector('.thinking-block');
+    const userToggled = existing && existing.dataset.userToggled === '1';
+    const wasOpen = existing ? existing.classList.contains('open') : false;
+    const isOpen = stillThinking || (userToggled && wasOpen);
+    html += `
+      <div class="thinking-block${isOpen ? ' open' : ''}" data-user-toggled="${userToggled ? '1' : '0'}">
+        <div class="thinking-summary"><span class="material-symbols-rounded thinking-caret">expand_more</span>${stillThinking ? 'Thinking…' : 'Show thinking'}</div>
+        <div class="thinking-content-wrap"><div class="thinking-content"><div class="thinking-content-inner">${escHtml(thinking)}</div></div></div>
+      </div>
+    `;
   }
   if (answer) html += `<div class="answer-content">${parseAiMarkdown(answer)}</div>`;
   bubble.innerHTML = html;
 }
 
 // ── Model dropdown ───────────────────────────────────────────
+// Real, currently-loaded models (ai-proxy.js's /api/models, which asks
+// LM Studio directly) come first — this is what "the list is wrong"
+// actually needed: a hand-maintained list drifts from reality the moment
+// a model gets swapped. config/aiModels (admin.html-editable) still
+// merges in afterward as extra entries, for models worth offering even
+// when not currently loaded.
 const modelSelect = document.getElementById('modelSelect');
 let defaultModelName = 'a small local model';
+let liveModels = [];
 let configuredModels = [];
 
 function renderModelSelect() {
   const prevValue = modelSelect.value;
-  modelSelect.innerHTML = [
-    `<option value="">${escHtml(defaultModelName)} (default)</option>`,
-    ...configuredModels.map(m => `<option value="${escHtml(m.id)}">${escHtml(m.label)}</option>`),
-  ].join('');
+  const seen = new Set();
+  const options = [`<option value="">${escHtml(defaultModelName)} (default)</option>`];
+  for (const m of [...liveModels, ...configuredModels]) {
+    if (!m || !m.id || seen.has(m.id)) continue;
+    seen.add(m.id);
+    options.push(`<option value="${escHtml(m.id)}">${escHtml(m.label || m.id)}</option>`);
+  }
+  modelSelect.innerHTML = options.join('');
   if ([...modelSelect.options].some(o => o.value === prevValue)) modelSelect.value = prevValue;
 }
 
@@ -400,6 +441,17 @@ async function loadModelName() {
   renderModelSelect();
 }
 loadModelName();
+
+async function loadLiveModels() {
+  try {
+    const res = await fetch(AI_ENDPOINT + '/api/models');
+    if (!res.ok) return;
+    const data = await res.json();
+    liveModels = data.models || [];
+  } catch {}
+  renderModelSelect();
+}
+loadLiveModels();
 
 // ── Multiple chats (localStorage — this page has no sign-in) ──────────
 const CHATS_KEY = 'oe-ai-chats';
@@ -427,6 +479,17 @@ const messagesEl = document.getElementById('chatMessages');
 const inputEl = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 
+// Delegated once (not per-render) since bubbles get their innerHTML
+// replaced on every streamed chunk, which would drop a directly-attached
+// listener each time.
+messagesEl.addEventListener('click', e => {
+  const summary = e.target.closest('.thinking-summary');
+  if (!summary) return;
+  const block = summary.closest('.thinking-block');
+  block.classList.toggle('open');
+  block.dataset.userToggled = '1';
+});
+
 function addMessageEl(role, content, imageUrl) {
   document.getElementById('chatEmpty')?.remove();
   const wrap = document.createElement('div');
@@ -448,12 +511,14 @@ function addMessageEl(role, content, imageUrl) {
 
 function renderChatFromHistory() {
   const chat = getCurrentChat();
+  messagesEl.style.opacity = '0';
   messagesEl.innerHTML = '';
   if (!chat.messages.length) {
     messagesEl.innerHTML = `<div class="chat-empty" id="chatEmpty"><span class="material-symbols-rounded">auto_awesome</span><p>Ask epic AI anything.</p></div>`;
-    return;
+  } else {
+    for (const m of chat.messages) addMessageEl(m.role, m.content, m.imageUrl);
   }
-  for (const m of chat.messages) addMessageEl(m.role, m.content, m.imageUrl);
+  requestAnimationFrame(() => { messagesEl.style.opacity = '1'; });
 }
 renderChatFromHistory();
 

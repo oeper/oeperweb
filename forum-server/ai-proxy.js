@@ -92,6 +92,28 @@ app.get('/', (req, res) => res.send('oeperweb AI proxy is running.'));
 
 app.get('/api/model', (req, res) => res.json({ model: AI_MODEL }));
 
+// Real, currently-loaded models from the upstream server (LM Studio's
+// OpenAI-compatible /v1/models) — what ai.html's dropdown actually shows,
+// since a hand-maintained list (config/aiModels in Firestore) drifts out
+// of sync with whatever's actually loaded. That Firestore list still gets
+// merged in client-side as extra entries, for models you want offered
+// even when not currently loaded.
+app.get('/api/models', async (req, res) => {
+  try {
+    const upstream = await fetch(`${AI_UPSTREAM}/v1/models`, {
+      headers: AI_UPSTREAM_API_KEY ? { Authorization: `Bearer ${AI_UPSTREAM_API_KEY}` } : {},
+    });
+    if (!upstream.ok) {
+      return res.status(502).json({ error: `Model server responded ${upstream.status}` });
+    }
+    const data = await upstream.json();
+    const models = Array.isArray(data.data) ? data.data.map(m => ({ id: m.id, label: m.id })) : [];
+    res.json({ models });
+  } catch (err) {
+    res.status(502).json({ error: 'Could not reach the model server: ' + err.message });
+  }
+});
+
 app.post('/api/chat', async (req, res) => {
   const messages = req.body && req.body.messages;
   if (!Array.isArray(messages) || messages.length === 0) {
