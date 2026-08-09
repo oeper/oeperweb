@@ -193,6 +193,12 @@ app.post('/api/chat', async (req, res) => {
         messages,
         stream: true,
         max_tokens: MAX_TOKENS,
+        // Small local models occasionally repeat a whole sentence
+        // verbatim, especially on short answers — these discourage
+        // reusing the same tokens without changing behavior much
+        // otherwise. Not a guaranteed fix, just a mitigation.
+        frequency_penalty: 0.3,
+        presence_penalty: 0.1,
       }),
     });
   } catch (err) {
