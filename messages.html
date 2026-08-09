@@ -109,6 +109,28 @@
   .msg.mine .msg-bubble { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
   .msg-bubble a { color: inherit; text-decoration: underline; }
   .msg-bubble code { background: rgba(0,0,0,0.18); border-radius: 4px; padding: 1px 5px; font-size: 0.9em; }
+  .msg-bubble h1, .msg-bubble h2, .msg-bubble h3 { font-size: 1.05em; font-weight: 600; margin: 2px 0; }
+  .msg-bubble ul { margin: 4px 0; padding-left: 18px; }
+  .msg-bubble li { margin-bottom: 2px; }
+  .msg-bubble a.md-btn {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500;
+    padding: 6px 12px; border-radius: 100px; background: rgba(127,127,127,0.2);
+    color: inherit; text-decoration: none; margin: 2px 4px 2px 0; vertical-align: middle;
+  }
+  .msg-bubble a.md-btn:hover { background: rgba(127,127,127,0.32); }
+  .msg-bubble a.md-btn .material-symbols-rounded { font-size: 14px; }
+  .msg-bubble .md-table { border-collapse: collapse; margin: 4px 0; font-size: 0.9em; max-width: 100%; display: block; overflow-x: auto; }
+  .msg-bubble .md-table th, .msg-bubble .md-table td { border: 1px solid rgba(127,127,127,0.35); padding: 5px 9px; text-align: left; }
+  .msg-bubble .md-table th { background: rgba(127,127,127,0.15); font-weight: 600; }
+
+  .img-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 300; display: none; align-items: center; justify-content: center; }
+  .img-lightbox.open { display: flex; }
+  .img-lightbox img { max-width: 92vw; max-height: 92vh; object-fit: contain; }
+  .img-lightbox-close {
+    position: absolute; top: 20px; right: 20px; width: 44px; height: 44px; border-radius: 50%; border: none;
+    background: rgba(255,255,255,0.12); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 2;
+  }
+  .img-lightbox-close:hover { background: rgba(255,255,255,0.22); }
   .msg-col { display: flex; flex-direction: column; max-width: 75%; }
   .msg.mine .msg-col { align-items: flex-end; }
   .msg-col .msg-bubble { max-width: none; }
@@ -225,6 +247,11 @@
   </div>
 </div>
 
+<div class="img-lightbox" id="imgLightbox">
+  <button class="img-lightbox-close" id="imgLightboxClose" title="Close"><span class="material-symbols-rounded">close</span></button>
+  <img id="imgLightboxImg" src="" alt="">
+</div>
+
 <script type="module">
 import { mountTopNav } from './shared/topnav.js?v=10';
 import {
@@ -276,18 +303,56 @@ function expandIconShorthand(html) {
   return html.replace(/\{([a-z_]{2,40})\}/g, (m, name) =>
     `<span class="material-symbols-rounded" style="font-size:1.1em;vertical-align:-0.22em;">${name}</span>`);
 }
-// Lightweight markdown for chat bubbles — bold/italic/code/links only, no
-// block-level syntax (headings, tables, bullets) since a message is one
-// short line, not a document.
+// Markdown for chat bubbles — same feature set as feed.html's parseMarkdown
+// (headings, tables, bullet lists, bold/italic/code, the [[Button]](url)
+// styled-link syntax, plain/auto links, emoji shortcodes, {icon} shorthand).
+// Relies on .msg-bubble's white-space: pre-wrap for line breaks, so unlike
+// feed.html this never converts \n to <br> — only the multi-line block
+// constructs (tables/lists) get wrapped in real elements.
 function parseMsgMarkdown(text) {
   const html = expandShortcodes(escHtml(text))
+    .replace(/\r\n/g, '\n')
+    .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
+    .replace(/^##\s+(.+)$/gm,  '<h2>$1</h2>')
+    .replace(/^#\s+(.+)$/gm,   '<h1>$1</h1>')
+    // Tables: a header row, a |---|---| separator row, then one or more data rows.
+    .replace(/^(\|.+\|)\n(\|[ \t]*:?-{2,}:?[ \t]*(?:\|[ \t]*:?-{2,}:?[ \t]*)*\|?)\n((?:\|.*\|\n?)+)/gm, (m, headerLine, sepLine, bodyLines) => {
+      const splitRow = row => row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      const headers = splitRow(headerLine);
+      const rows = bodyLines.trim().split('\n').filter(Boolean).map(splitRow);
+      const thead = `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+      const tbody = rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('');
+      return `<table class="md-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+    })
+    // Bullet lists: consecutive "- item" / "* item" lines.
+    .replace(/^(?:[ \t]*[-*+][ \t]+.+\n?)+/gm, match =>
+      `<ul>${match.trim().split('\n').map(l => `<li>${l.replace(/^[ \t]*[-*+][ \t]+/, '')}</li>`).join('')}</ul>`)
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // [[Button label]](url) renders as a filled button instead of a plain link.
+    .replace(/\[\[([^\]]+)\]\]\((https?:\/\/[^)]+)\)/g, '<a class="md-btn" href="$2" target="_blank" rel="noopener"><span class="material-symbols-rounded">arrow_forward</span>$1</a>')
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
   return expandIconShorthand(html);
 }
+
+// Image lightbox — clicking an image message opens it in-page instead of a
+// new tab. Exposed on window since it's called from HTML built via
+// template strings (inline onclick=""), which can't see this module's
+// top-level scope.
+function openImageLightbox(url) {
+  document.getElementById('imgLightboxImg').src = url;
+  document.getElementById('imgLightbox').classList.add('open');
+}
+function closeImageLightbox() {
+  document.getElementById('imgLightbox').classList.remove('open');
+  document.getElementById('imgLightboxImg').src = '';
+}
+window.openImageLightbox = openImageLightbox;
+document.getElementById('imgLightboxClose').addEventListener('click', closeImageLightbox);
+document.getElementById('imgLightbox').addEventListener('click', e => { if (e.target.id === 'imgLightbox') closeImageLightbox(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeImageLightbox(); });
 
 async function reportItem(type, itemId, contentPreview, aboutHandleOrEmail) {
   const user = getCurrentUser();
@@ -609,7 +674,7 @@ async function openThread(otherEmail, user) {
 
   function bubbleInnerHtml(m) {
     if (m.audioUrl) return audioBubbleHtml(m);
-    if (m.imageUrl) return `<img class="msg-image" src="${escHtml(m.imageUrl)}" alt="" onclick="window.open('${escHtml(m.imageUrl)}','_blank')">`;
+    if (m.imageUrl) return `<img class="msg-image" src="${escHtml(m.imageUrl)}" alt="" onclick="openImageLightbox('${escHtml(m.imageUrl)}')">`;
     return parseMsgMarkdown(m.text || '');
   }
 
