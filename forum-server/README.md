@@ -301,9 +301,16 @@ proxy protects it with a few limits instead of authentication:
 These are constants at the top of `ai-proxy.js`, not env vars — edit them
 directly if you want different limits.
 
-The model name shown in `ai.html` and sent to InferrLM is forced
-server-side via `AI_MODEL` (defaults to the Gemma model already loaded on
-the phone) — the client never has to know or guess the exact model id.
+`AI_MODEL` is still the default/fallback model, used whenever a request
+doesn't specify one. `ai.html` additionally shows a dropdown of models
+sourced from the `config/aiModels` Firestore doc (`{ models: [{id, label},
+...] }`), editable in real time from `admin.html`'s "AI Models" section —
+no restart needed, changes reach any open `/ai` tab instantly via
+`onSnapshot`. The selected model id is sent as `model` in the `/api/chat`
+request body and forwarded to `AI_UPSTREAM` as-is; `ai-proxy.js` has no
+Firebase access, so it can't validate that id against the Firestore list —
+an unrecognized model just gets whatever error the upstream returns for a
+model it doesn't have loaded.
 
 ### Running it
 

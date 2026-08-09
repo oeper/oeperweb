@@ -300,5 +300,13 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if isSignedIn() && resource.data.followerEmail == request.auth.token.email;
     }
+
+    // Site-wide config documents editable by owners only, e.g. config/aiModels
+    // (the model picker list on ai.html) — publicly readable since ai.html's
+    // chat works without sign-in, but only owners can change what's offered.
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if isOwner();
+    }
   }
 }

@@ -128,6 +128,10 @@
     background: none; border: none; color: var(--md-sys-color-primary); font-size: 12px;
     font-family: inherit; cursor: pointer; text-decoration: underline; padding: 0;
   }
+  .model-select {
+    background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-primary); border: none;
+    border-radius: 8px; padding: 3px 6px; font: inherit; font-weight: 700; cursor: pointer; max-width: 260px;
+  }
 </style>
 </head>
 <body>
@@ -135,7 +139,7 @@
 <div class="page">
   <header class="header">
     <h1>AI</h1>
-    <p>Chat with <strong id="modelName">a small local model</strong>, running on my own hardware over a home connection. No sign-in needed.</p>
+    <p>Chat with <select id="modelSelect" class="model-select"><option value="">a small local model</option></select>, running on my own hardware over a home connection. No sign-in needed.</p>
   </header>
 
   <div class="chat-shell">
@@ -157,8 +161,10 @@
 </div>
 
 <script type="module">
+import { db } from './shared/account.js?v=19';
 import { mountTopNav } from './shared/topnav.js?v=10';
 import { mountFooter } from './shared/footer.js?v=4';
+import { doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 mountFooter();
 
@@ -167,13 +173,39 @@ const AI_ENDPOINT = 'https://ai2.oeper.dev';
 let controller = null;
 let history = [];
 
+function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// The model dropdown: an empty-string option always means "use whatever
+// the proxy defaults to" (AI_MODEL in ai-proxy.js) — configuredModels
+// below comes from Firestore (config/aiModels), editable in admin.html
+// and live-synced here via onSnapshot, so the list updates without a
+// page reload if it's changed while this tab is open.
+const modelSelect = document.getElementById('modelSelect');
+let defaultModelName = 'a small local model';
+let configuredModels = [];
+
+function renderModelSelect() {
+  const prevValue = modelSelect.value;
+  modelSelect.innerHTML = [
+    `<option value="">${escHtml(defaultModelName)} (default)</option>`,
+    ...configuredModels.map(m => `<option value="${escHtml(m.id)}">${escHtml(m.label)}</option>`),
+  ].join('');
+  if ([...modelSelect.options].some(o => o.value === prevValue)) modelSelect.value = prevValue;
+}
+
+onSnapshot(doc(db, 'config', 'aiModels'), snap => {
+  configuredModels = (snap.exists() && snap.data().models) || [];
+  renderModelSelect();
+});
+
 async function loadModelName() {
   try {
     const res = await fetch(AI_ENDPOINT + '/api/model');
     if (!res.ok) return;
     const data = await res.json();
-    if (data.model) document.getElementById('modelName').textContent = data.model;
+    if (data.model) defaultModelName = data.model;
   } catch {}
+  renderModelSelect();
 }
 loadModelName();
 
@@ -232,7 +264,7 @@ async function sendMessage() {
     const res = await fetch(AI_ENDPOINT + '/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: history }),
+      body: JSON.stringify({ messages: history, model: modelSelect.value || undefined }),
       signal: controller.signal,
     });
     if (!res.ok || !res.body) {

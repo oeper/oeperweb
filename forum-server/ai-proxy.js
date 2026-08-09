@@ -76,6 +76,18 @@ app.post('/api/chat', async (req, res) => {
     }
   }
 
+  // Optional client-picked model (ai.html's dropdown, sourced from the
+  // config/aiModels Firestore doc — not validated against that list here,
+  // since this proxy has no Firebase access; if the upstream doesn't have
+  // the requested model loaded, it just errors, same as any other bad
+  // request. Falls back to AI_MODEL when omitted, matching the old
+  // single-model behavior.
+  const clientModel = typeof req.body.model === 'string' ? req.body.model.trim() : '';
+  if (clientModel.length > 200) {
+    return res.status(400).json({ error: 'Model id is too long' });
+  }
+  const model = clientModel || AI_MODEL;
+
   if (!checkRateLimit(req.ip)) {
     return res.status(429).json({ error: 'Too many requests — please slow down and try again in a few minutes.' });
   }
@@ -90,7 +102,7 @@ app.post('/api/chat', async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: AI_MODEL,
+        model,
         messages,
         stream: true,
         max_tokens: MAX_TOKENS,

@@ -296,6 +296,19 @@
     <span class="material-symbols-rounded">description</span>
     <p>Open <code id="expectedFileName">data/articles.json</code> to start editing.</p>
   </div>
+
+  <div class="toolrow" style="margin-top:40px;">
+    <h2>AI Models</h2>
+  </div>
+  <p style="color:var(--md-sys-color-on-surface-variant); font-size:14px; margin-bottom:16px;">
+    Models visitors can pick from on <a href="/ai" class="header-link" style="display:inline-flex;">/ai</a> — stored in Firestore, so changes apply instantly to anyone with the page open, no restart needed.
+  </p>
+  <div class="item-list" id="aiModelList"></div>
+  <form id="aiModelAddForm" style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+    <input type="text" id="aiModelIdInput" placeholder="Model id (e.g. google/gemma-4-e2b)" required style="flex:1; min-width:220px; background-color:var(--md-sys-color-background); border:1px solid var(--md-sys-color-outline); border-radius:12px; padding:12px 14px; color:var(--md-sys-color-on-surface); font-size:14px; font-family:inherit; outline:none;">
+    <input type="text" id="aiModelLabelInput" placeholder="Display label (e.g. Gemma 4 E2B)" required style="flex:1; min-width:180px; background-color:var(--md-sys-color-background); border:1px solid var(--md-sys-color-outline); border-radius:12px; padding:12px 14px; color:var(--md-sys-color-on-surface); font-size:14px; font-family:inherit; outline:none;">
+    <button type="submit" class="btn primary"><span class="material-symbols-rounded">add</span> Add</button>
+  </form>
 </div>
 
 <div class="overlay" id="overlay"></div>
@@ -314,7 +327,7 @@ import {
 import { mountTopNav } from './shared/topnav.js?v=10';
 import { mountFooter } from './shared/footer.js?v=4';
 import {
-  collection, addDoc, serverTimestamp, Timestamp,
+  collection, addDoc, serverTimestamp, Timestamp, doc, onSnapshot, setDoc,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 // ── Auth (shared Google Sign-In, gated to OWNER_EMAILS) ────────────
@@ -391,6 +404,63 @@ document.getElementById('migrateBtn').addEventListener('click', async () => {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<span class="material-symbols-rounded">move_up</span> Migrate to Feed';
+  }
+});
+
+// ── AI Models (config/aiModels: { models: [{id, label}, ...] }) — the
+// picker list on ai.html. A single shared Firestore doc, live-synced via
+// onSnapshot, so an edit here shows up on ai.html (and any other open
+// admin tab) instantly with no server restart or redeploy. ───────────
+const AI_MODELS_DOC = doc(db, 'config', 'aiModels');
+let aiModels = [];
+onSnapshot(AI_MODELS_DOC, snap => {
+  aiModels = (snap.exists() && snap.data().models) || [];
+  renderAiModelList();
+});
+
+function renderAiModelList() {
+  const list = document.getElementById('aiModelList');
+  if (!aiModels.length) {
+    list.innerHTML = '<p style="color:var(--md-sys-color-on-surface-variant); font-size:14px;">No models yet — add one below.</p>';
+    return;
+  }
+  list.innerHTML = aiModels.map((m, i) => `
+    <div class="item-card">
+      <div class="item-main">
+        <div class="item-title">${escHtml(m.label)}</div>
+        <div class="item-sub">${escHtml(m.id)}</div>
+      </div>
+      <div class="item-actions">
+        <button class="icon-btn danger" data-idx="${i}" title="Remove"><span class="material-symbols-rounded">delete</span></button>
+      </div>
+    </div>
+  `).join('');
+  list.querySelectorAll('[data-idx]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = Number(btn.dataset.idx);
+      try {
+        await setDoc(AI_MODELS_DOC, { models: aiModels.filter((_, i) => i !== idx) });
+      } catch (err) {
+        showToast('Could not remove model: ' + err.message);
+      }
+    });
+  });
+}
+
+document.getElementById('aiModelAddForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const idInput = document.getElementById('aiModelIdInput');
+  const labelInput = document.getElementById('aiModelLabelInput');
+  const id = idInput.value.trim();
+  const label = labelInput.value.trim();
+  if (!id || !label) return;
+  if (aiModels.some(m => m.id === id)) { showToast('That model id is already in the list'); return; }
+  try {
+    await setDoc(AI_MODELS_DOC, { models: [...aiModels, { id, label }] });
+    idInput.value = '';
+    labelInput.value = '';
+  } catch (err) {
+    showToast('Could not add model: ' + err.message);
   }
 });
 
