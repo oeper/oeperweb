@@ -11,7 +11,7 @@
 
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
   getFirestore, doc, getDoc, getDocs, setDoc, serverTimestamp, deleteField, collection, addDoc,
@@ -322,6 +322,16 @@ onAuthStateChanged(auth, async user => {
   notify();
 });
 
+// Completes a signInWithRedirect() flow (see signIn()'s popup-blocked
+// fallback below) — the page fully navigates away to Google and back, so
+// this needs to run on every load to pick up the result. onAuthStateChanged
+// above already fires with the signed-in user once this resolves; this is
+// just here to catch and surface an actual failure (declined consent, a
+// genuine auth error) instead of it silently vanishing.
+getRedirectResult(auth).catch(err => {
+  console.error('Redirect sign-in failed:', err);
+});
+
 const uidEmailCache = {}; // uid -> email | null
 // Resolves Firebase Auth uids (as stored in upvoters/downvoters arrays) to
 // emails, so callers can then use the normal getProfile(email)/
@@ -347,7 +357,17 @@ export async function resolveUidsToEmails(uids) {
 }
 
 export function signIn() {
-  return signInWithPopup(auth, provider);
+  return signInWithPopup(auth, provider).catch(err => {
+    // Popup-based sign-in is unreliable on a lot of mobile browsers — either
+    // blocked outright, or the popup opens but Chrome-on-Android's window
+    // handling loses track of it. Only fall back for errors that actually
+    // mean "a popup couldn't happen here", not e.g. the user closing it on
+    // purpose (auth/popup-closed-by-user) or a genuine account-picker error.
+    if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/cancelled-popup-request'].includes(err.code)) {
+      return signInWithRedirect(auth, provider);
+    }
+    throw err;
+  });
 }
 export function signOutUser() {
   return signOut(auth);
