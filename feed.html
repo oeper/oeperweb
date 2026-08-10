@@ -557,7 +557,7 @@ import {
   getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded, handleOf,
   uploadFile, sendNotification,
 } from './shared/account.js?v=20';
-import { mountTopNav } from './shared/topnav.js?v=11';
+import { mountTopNav } from './shared/topnav.js?v=12';
 import { mountFooter } from './shared/footer.js?v=4';
 import { createDropdown } from './shared/dropdown.js?v=1';
 import {
@@ -1310,7 +1310,7 @@ function runForum() {
   const sortSelect = createDropdown([
     { value: 'newest', label: 'Newest' },
     { value: 'relevance', label: 'Relevance' },
-    { value: 'top', label: 'Top voted' },
+    { value: 'top', label: 'Most liked' },
     { value: 'comments', label: 'Most discussed' },
   ], { value: 'relevance', onChange: () => renderList() });
   document.getElementById('sortSelectSlot').appendChild(sortSelect.el);

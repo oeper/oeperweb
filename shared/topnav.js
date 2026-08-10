@@ -515,7 +515,7 @@ function notifTimeAgo(date) {
 function notifText(n) {
   const name = `<strong>${escHtml(n.actorName || 'Someone')}</strong>`;
   const target = escHtml(n.targetKind || 'post');
-  if (n.type === 'upvote') return `${name} upvoted your ${target}${n.preview ? ': ' + escHtml(n.preview) : ''}`;
+  if (n.type === 'upvote') return `${name} liked your ${target}${n.preview ? ': ' + escHtml(n.preview) : ''}`;
   if (n.type === 'comment') return `${name} commented on your ${target}${n.preview ? ': ' + escHtml(n.preview) : ''}`;
   if (n.type === 'follow') return `${name} started following you`;
   if (n.type === 'badge') return `You were given a badge${n.preview ? ': ' + escHtml(n.preview) : ''}`;
