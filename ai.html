@@ -476,7 +476,18 @@ function loadChats() {
   try { return JSON.parse(localStorage.getItem(CHATS_KEY)) || []; } catch { return []; }
 }
 function saveChats() {
-  localStorage.setItem(CHATS_KEY, JSON.stringify(chats));
+  // localStorage.setItem can throw (quota exceeded — chat history with a
+  // lot of long AI replies adds up) and this gets called mid-way through
+  // sendMessage(), before the assistant bubble even exists. An uncaught
+  // throw here used to abort the whole send silently: setSending(true) had
+  // already fired (button stuck on "stop"), but the code never reached the
+  // try/finally further down that resets it, and no assistant bubble was
+  // ever created — a permanently stuck send with no visible reply.
+  try {
+    localStorage.setItem(CHATS_KEY, JSON.stringify(chats));
+  } catch (err) {
+    console.error('Could not save chats to localStorage:', err);
+  }
   pushChatsToCloud();
 }
 function newChatId() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -792,31 +803,44 @@ async function sendMessage() {
   autoGrow();
   setSending(true);
 
-  if (fileToUpload) {
-    const uploadingBubble = addMessageEl('user', text || '(image)');
-    uploadingBubble.closest('.msg-col').querySelector('.msg-attach-img')?.remove();
-    const placeholderImg = document.createElement('img');
-    placeholderImg.className = 'msg-attach-img';
-    placeholderImg.src = URL.createObjectURL(fileToUpload);
-    uploadingBubble.parentElement.insertBefore(placeholderImg, uploadingBubble);
-    try {
-      imageUrl = await uploadAnonImage(fileToUpload);
-    } catch (err) {
-      uploadingBubble.textContent = 'Could not upload image: ' + err.message;
-      uploadingBubble.classList.add('error');
-      setSending(false);
-      return;
+  // Everything from here on used to run outside any try/finally — if
+  // anything threw (saveChats() hitting a localStorage quota error, say)
+  // before reaching the fetch's own try block below, setSending(true) had
+  // already fired but nothing ever set it back: a permanently stuck send
+  // button with no assistant bubble ever created. This outer finally is a
+  // safety net for that whole gap, not just the network call.
+  try {
+    if (fileToUpload) {
+      const uploadingBubble = addMessageEl('user', text || '(image)');
+      uploadingBubble.closest('.msg-col').querySelector('.msg-attach-img')?.remove();
+      const placeholderImg = document.createElement('img');
+      placeholderImg.className = 'msg-attach-img';
+      placeholderImg.src = URL.createObjectURL(fileToUpload);
+      uploadingBubble.parentElement.insertBefore(placeholderImg, uploadingBubble);
+      try {
+        imageUrl = await uploadAnonImage(fileToUpload);
+      } catch (err) {
+        uploadingBubble.textContent = 'Could not upload image: ' + err.message;
+        uploadingBubble.classList.add('error');
+        return;
+      }
+    } else {
+      addMessageEl('user', text);
     }
-  } else {
-    addMessageEl('user', text);
+
+    const userMsg = { role: 'user', content: text, imageUrl: imageUrl || undefined };
+    chat.messages.push(userMsg);
+    if (chat.title === 'New chat' && text) chat.title = text.slice(0, 40) + (text.length > 40 ? '…' : '');
+    chat.updatedAt = Date.now();
+    saveChats();
+
+    await sendToModel(chat);
+  } finally {
+    setSending(false);
   }
+}
 
-  const userMsg = { role: 'user', content: text, imageUrl: imageUrl || undefined };
-  chat.messages.push(userMsg);
-  if (chat.title === 'New chat' && text) chat.title = text.slice(0, 40) + (text.length > 40 ? '…' : '');
-  chat.updatedAt = Date.now();
-  saveChats();
-
+async function sendToModel(chat) {
   const bubble = addMessageEl('assistant', '');
   bubble.classList.add('thinking');
 
