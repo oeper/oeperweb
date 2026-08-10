@@ -6,7 +6,6 @@
 // and either can be restarted independently.
 const express = require('express');
 const cors = require('cors');
-const { Readable } = require('stream');
 const fs = require('fs');
 const path = require('path');
 
@@ -129,6 +128,164 @@ app.get('/api/models', async (req, res) => {
   }
 });
 
+// ── Tool use ─────────────────────────────────────────────────────────
+// Small local models have no real sense of "now" and are unreliable at
+// arithmetic — these two tools cover the most common cases where that
+// actually matters, without giving the model any access to the network,
+// filesystem, or anything else on this machine. Whether a given model
+// actually calls them depends on its chat template supporting OpenAI-style
+// tool calling at all; models that don't support it just ignore the `tools`
+// field and answer normally, so this is safe to always send.
+const TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'get_current_datetime',
+      description: "Get the current real-world date and time. Use this whenever the user asks what day, date, or time it is, or needs today's date for something — your training data has no reliable sense of \"now\".",
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'calculate',
+      description: 'Evaluate a basic arithmetic expression (+ - * / % and parentheses) and return the numeric result. Use this for any nontrivial math instead of computing it yourself.',
+      parameters: {
+        type: 'object',
+        properties: { expression: { type: 'string', description: "e.g. '(3 + 4) * 2 / 7'" } },
+        required: ['expression'],
+      },
+    },
+  },
+];
+const MAX_TOOL_ROUNDS = 3;
+
+function runTool(name, argsJson) {
+  let args;
+  try { args = JSON.parse(argsJson || '{}'); } catch { args = {}; }
+  if (name === 'get_current_datetime') {
+    return { iso: new Date().toISOString() };
+  }
+  if (name === 'calculate') {
+    const expr = String(args.expression || '');
+    // Digits/operators/parens/whitespace only — nothing that could reach a
+    // global or call another function, so this is safe to hand to Function().
+    if (!expr || expr.length > 200 || !/^[0-9+\-*/().%\s]+$/.test(expr)) {
+      return { error: 'Invalid expression — only numbers, + - * / % and parentheses are allowed.' };
+    }
+    try {
+      const value = Function('"use strict"; return (' + expr + ')')();
+      if (typeof value !== 'number' || !isFinite(value)) return { error: 'Expression did not evaluate to a finite number.' };
+      return { result: value };
+    } catch {
+      return { error: 'Could not evaluate that expression.' };
+    }
+  }
+  return { error: `Unknown tool: ${name}` };
+}
+
+// Streams one round of a chat completion to the client, transparently
+// looping in further upstream round-trips when the model asks to call a
+// tool — the client only ever sees one continuous SSE stream of the kind it
+// already knows how to parse (delta.content / delta.reasoning_content).
+// Tool-call deltas themselves are never forwarded; the client has no idea
+// tool use is even happening.
+async function streamChatWithTools(res, messages, model, roundsLeft) {
+  let upstream;
+  try {
+    upstream = await fetch(`${AI_UPSTREAM}/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(AI_UPSTREAM_API_KEY ? { Authorization: `Bearer ${AI_UPSTREAM_API_KEY}` } : {}),
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        stream: true,
+        max_tokens: MAX_TOKENS,
+        frequency_penalty: 0.3,
+        presence_penalty: 0.1,
+        ...(roundsLeft > 0 ? { tools: TOOLS } : {}),
+      }),
+    });
+  } catch (err) {
+    if (!res.headersSent) return res.status(502).json({ error: 'Could not reach the model server: ' + err.message });
+    return res.end();
+  }
+
+  if (!upstream.ok || !upstream.body) {
+    if (!res.headersSent) {
+      let msg = `Model server responded ${upstream.status}`;
+      try { msg = (await upstream.text()).slice(0, 300) || msg; } catch {}
+      return res.status(502).json({ error: msg });
+    }
+    return res.end();
+  }
+
+  if (!res.headersSent) {
+    res.status(200);
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+  }
+
+  const toolCalls = new Map(); // index -> { id, name, arguments }
+  let finishReason = null;
+  let buf = '';
+  const decoder = new TextDecoder();
+
+  for await (const chunk of upstream.body) {
+    buf += decoder.decode(chunk, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+      const payload = trimmed.slice(5).trim();
+      if (!payload || payload === '[DONE]') continue;
+      let json;
+      try { json = JSON.parse(payload); } catch { continue; }
+      const choice = json.choices && json.choices[0];
+      const delta = (choice && choice.delta) || {};
+      if (choice && choice.finish_reason) finishReason = choice.finish_reason;
+
+      if (Array.isArray(delta.tool_calls)) {
+        for (const tc of delta.tool_calls) {
+          const idx = tc.index || 0;
+          const entry = toolCalls.get(idx) || { id: tc.id || `call_${idx}`, name: '', arguments: '' };
+          if (tc.id) entry.id = tc.id;
+          if (tc.function && tc.function.name) entry.name += tc.function.name;
+          if (tc.function && tc.function.arguments) entry.arguments += tc.function.arguments;
+          toolCalls.set(idx, entry);
+        }
+        continue; // never forwarded to the client — not a shape it parses
+      }
+      if (delta.content || delta.reasoning_content) {
+        res.write(`data: ${JSON.stringify(json)}\n\n`);
+      }
+    }
+  }
+
+  if (finishReason === 'tool_calls' && toolCalls.size > 0 && roundsLeft > 0) {
+    const calls = [...toolCalls.values()];
+    const assistantMsg = {
+      role: 'assistant',
+      content: null,
+      tool_calls: calls.map(c => ({ id: c.id, type: 'function', function: { name: c.name, arguments: c.arguments } })),
+    };
+    const toolResultMsgs = calls.map(c => ({
+      role: 'tool',
+      tool_call_id: c.id,
+      content: JSON.stringify(runTool(c.name, c.arguments)),
+    }));
+    return streamChatWithTools(res, [...messages, assistantMsg, ...toolResultMsgs], model, roundsLeft - 1);
+  }
+
+  res.write('data: [DONE]\n\n');
+  res.end();
+}
+
 app.post('/api/chat', async (req, res) => {
   const messages = req.body && req.body.messages;
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -180,51 +337,17 @@ app.post('/api/chat', async (req, res) => {
   }
   busy = true;
 
-  let upstream;
-  try {
-    upstream = await fetch(`${AI_UPSTREAM}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(AI_UPSTREAM_API_KEY ? { Authorization: `Bearer ${AI_UPSTREAM_API_KEY}` } : {}),
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        stream: true,
-        max_tokens: MAX_TOKENS,
-        // Small local models occasionally repeat a whole sentence
-        // verbatim, especially on short answers — these discourage
-        // reusing the same tokens without changing behavior much
-        // otherwise. Not a guaranteed fix, just a mitigation.
-        frequency_penalty: 0.3,
-        presence_penalty: 0.1,
-      }),
-    });
-  } catch (err) {
-    busy = false;
-    return res.status(502).json({ error: 'Could not reach the model server: ' + err.message });
-  }
-
-  if (!upstream.ok || !upstream.body) {
-    busy = false;
-    let msg = `Model server responded ${upstream.status}`;
-    try { msg = (await upstream.text()).slice(0, 300) || msg; } catch {}
-    return res.status(502).json({ error: msg });
-  }
-
-  res.status(200);
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-
-  const nodeStream = Readable.fromWeb(upstream.body);
   let released = false;
   const release = () => { if (!released) { released = true; busy = false; } };
-  nodeStream.on('end', release);
-  nodeStream.on('error', release);
   res.on('close', release);
-  nodeStream.pipe(res);
+  try {
+    await streamChatWithTools(res, messages, model, MAX_TOOL_ROUNDS);
+  } catch (err) {
+    if (!res.headersSent) res.status(502).json({ error: 'Could not reach the model server: ' + err.message });
+    else res.end();
+  } finally {
+    release();
+  }
 });
 
 app.listen(PORT, () => console.log(
