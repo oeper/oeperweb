@@ -183,6 +183,25 @@ export async function setOwnBadgeOverride(override) {
   notify();
 }
 
+// Who you follow / who follows you, as email sets — used anywhere that
+// needs a candidate pool of "people you actually know" without a full
+// user-search feature (e.g. picking group chat members).
+export async function loadFollowRelationships(email) {
+  if (!email) return { following: new Set(), followers: new Set() };
+  try {
+    const [followingSnap, followersSnap] = await Promise.all([
+      getDocs(query(collection(db, 'follows'), where('followerEmail', '==', email))),
+      getDocs(query(collection(db, 'follows'), where('followeeEmail', '==', email))),
+    ]);
+    return {
+      following: new Set(followingSnap.docs.map(d => d.data().followeeEmail)),
+      followers: new Set(followersSnap.docs.map(d => d.data().followerEmail)),
+    };
+  } catch {
+    return { following: new Set(), followers: new Set() };
+  }
+}
+
 // Writes a notification doc for the bell icon in topnav.js. Called from
 // every place across the site that does something notification-worthy
 // (upvote, comment, follow, badge grant) — silently skips signed-out

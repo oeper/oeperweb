@@ -89,11 +89,57 @@
 
   .empty-note { text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 60px 24px; }
 
+  .inbox-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+  .new-group-btn {
+    display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid var(--md-sys-color-outline);
+    color: var(--md-sys-color-on-surface); border-radius: 100px; padding: 9px 16px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+  }
+  .new-group-btn:hover { background: var(--md-sys-color-hover-surface); }
+  .group-icon-fallback {
+    width: 44px; height: 44px; border-radius: 50%; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .convo-row .group-icon-fallback { width: 44px; height: 44px; }
+  .thread-header .group-icon-fallback { width: 36px; height: 36px; }
+  .thread-header-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .thread-header .sub { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
+  .thread-header-info-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: none; background: transparent; color: var(--md-sys-color-on-surface-variant);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  }
+  .thread-header-info-btn:hover { background: var(--md-sys-color-hover-surface); }
+  .msg-sender-name { font-size: 11px; font-weight: 600; color: var(--md-sys-color-primary); margin: 0 0 3px 2px; }
+
   /* Thread */
   .thread-shell { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .thread-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
   .thread-header img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); }
   .thread-header .name { font-size: 16px; font-weight: 500; }
+
+  /* Group creation / info modals — reuse .note-overlay/.note-modal's look
+     via shared classes rather than a whole second modal system. */
+  .member-picker { display: flex; flex-direction: column; gap: 2px; max-height: 240px; overflow-y: auto; margin-bottom: 16px; }
+  .member-picker label {
+    display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; cursor: pointer; font-size: 14px;
+  }
+  .member-picker label:hover { background: var(--md-sys-color-hover-surface); }
+  .member-picker img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); }
+  .member-picker input[type="checkbox"] { accent-color: var(--md-sys-color-primary); }
+  .group-icon-picker { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+  .group-icon-picker img, .group-icon-picker .group-icon-fallback { width: 56px; height: 56px; }
+  .member-row {
+    display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; font-size: 14px;
+  }
+  .member-row img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
+  .member-row .member-name { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+  .member-admin-tag { font-size: 10px; font-weight: 600; color: var(--md-sys-color-primary); text-transform: uppercase; letter-spacing: 0.4px; }
+  .member-row-actions { display: flex; gap: 2px; }
+  .member-action-btn {
+    width: 26px; height: 26px; border-radius: 50%; border: none; background: none; color: var(--md-sys-color-on-surface-variant);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .member-action-btn:hover { background: var(--md-sys-color-hover-surface); color: var(--md-sys-color-on-surface); }
+  .member-action-btn .material-symbols-rounded { font-size: 16px; }
 
   .msg-list { flex: 1; display: flex; flex-direction: column; padding-bottom: 16px; }
   .msg { display: flex; margin-bottom: 10px; align-items: flex-end; gap: 4px; }
@@ -257,6 +303,35 @@
   </div>
 </div>
 
+<div class="note-overlay" id="newGroupOverlay"></div>
+<div class="note-modal" id="newGroupModal" style="width:min(400px,90vw);">
+  <h3 style="font-size:16px;font-weight:500;margin-bottom:14px;">New group</h3>
+  <input type="text" id="newGroupNameInput" maxlength="60" placeholder="Group name">
+  <div id="newGroupMemberPicker" class="member-picker"></div>
+  <div class="note-modal-actions">
+    <button id="newGroupCancelBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;border:1px solid var(--md-sys-color-error);background:transparent;color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">Cancel</button>
+    <button class="send-btn" id="newGroupCreateBtn" style="width:auto;border-radius:100px;padding:10px 20px;">Create</button>
+  </div>
+</div>
+
+<div class="note-overlay" id="groupInfoOverlay"></div>
+<div class="note-modal" id="groupInfoModal" style="width:min(420px,90vw);">
+  <h3 style="font-size:16px;font-weight:500;margin-bottom:14px;">Group info</h3>
+  <div class="group-icon-picker">
+    <div id="groupInfoIconSlot"></div>
+    <button type="button" id="groupInfoIconBtn" style="display:none;background:transparent;border:1px solid var(--md-sys-color-outline);color:var(--md-sys-color-on-surface);border-radius:100px;padding:8px 14px;font-family:inherit;font-size:13px;cursor:pointer;">Change icon</button>
+    <input type="file" id="groupIconInput" accept="image/*" style="display:none;">
+  </div>
+  <input type="text" id="groupInfoNameInput" maxlength="60" placeholder="Group name">
+  <div id="groupInfoMembersHeading" style="font-size:12px;color:var(--md-sys-color-on-surface-variant);margin-bottom:8px;">Members</div>
+  <div id="groupInfoMemberList" class="member-picker" style="max-height:200px;"></div>
+  <div id="groupInfoAddSlot"></div>
+  <div class="note-modal-actions">
+    <button id="groupInfoLeaveBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;border:1px solid var(--md-sys-color-error);background:transparent;color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">Leave group</button>
+    <button class="send-btn" id="groupInfoSaveBtn" style="width:auto;border-radius:100px;padding:10px 20px;">Save</button>
+  </div>
+</div>
+
 <div class="img-lightbox" id="imgLightbox">
   <button class="img-lightbox-close" id="imgLightboxClose" title="Close"><span class="material-symbols-rounded">close</span></button>
   <img id="imgLightboxImg" src="" alt="">
@@ -266,10 +341,12 @@
 import { mountTopNav } from './shared/topnav.js?v=12';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
-} from './shared/account.js?v=21';
+  loadFollowRelationships, MAX_IMAGE_BYTES,
+} from './shared/account.js?v=22';
 import { mountFooter } from './shared/footer.js?v=4';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
+  arrayUnion, arrayRemove,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 mountTopNav();
@@ -510,11 +587,13 @@ function initNotes() {
 
 const content = document.getElementById('content');
 let unsubConvos = null;
+let unsubGroups = null;
 let unsubMessages = null;
 let unsubReads = null;
 
 onAccountChange(user => {
   if (unsubConvos) { unsubConvos(); unsubConvos = null; }
+  if (unsubGroups) { unsubGroups(); unsubGroups = null; }
   if (unsubMessages) { unsubMessages(); unsubMessages = null; }
   if (unsubReads) { unsubReads(); unsubReads = null; }
   if (!user) {
@@ -560,39 +639,53 @@ function showInbox(user) {
   document.getElementById('notesBar').style.display = '';
   content.innerHTML = '<div class="empty-note">Loading…</div>';
 
-  unsubConvos = onSnapshot(
-    query(collection(db, 'conversations'), where('participants', 'array-contains', user.email)),
-    snap => {
-      const convos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      convos.sort((a, b) => (b.updatedAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || 0));
+  let lastConvos = null;
+  let lastGroups = null;
 
-      if (convos.length === 0) {
-        content.innerHTML = '<div class="empty-note">No chats yet. Start one from someone\'s profile page.</div>';
-        return;
-      }
+  // A row "glows" when the other side's/group's latest message is newer
+  // than the last time this browser opened that thread — same
+  // localStorage-timestamp approach topnav.js uses for the chat icon, just
+  // rendered per-row here instead of as a single site-wide flag.
+  function isUnreadConvo(c) {
+    if (!c.lastMessageSenderEmail || c.lastMessageSenderEmail === user.email) return false;
+    const lastMs = c.updatedAt && c.updatedAt.toMillis ? c.updatedAt.toMillis() : 0;
+    const readMs = Number(localStorage.getItem('oe-chat-read-' + c.id) || 0);
+    return lastMs > readMs;
+  }
+  function isUnreadGroup(g) {
+    if (!g.lastMessageSenderEmail || g.lastMessageSenderEmail === user.email) return false;
+    const lastMs = g.updatedAt && g.updatedAt.toMillis ? g.updatedAt.toMillis() : 0;
+    const readMs = Number(localStorage.getItem('oe-group-read-' + g.id) || 0);
+    return lastMs > readMs;
+  }
+  function newGroupBtnHtml() {
+    return `<div class="inbox-toolbar"><button class="new-group-btn" id="newGroupBtn"><span class="material-symbols-rounded" style="font-size:18px;">group_add</span> New group</button></div>`;
+  }
 
-      // A conversation "glows" when the other person's message is newer
-      // than the last time this browser opened that thread — same
-      // localStorage-timestamp approach topnav.js uses for the chat icon,
-      // just rendered per-row here instead of as a single site-wide flag.
-      function isUnread(c) {
-        if (!c.lastMessageSenderEmail || c.lastMessageSenderEmail === user.email) return false;
-        const lastMs = c.updatedAt && c.updatedAt.toMillis ? c.updatedAt.toMillis() : 0;
-        const readMs = Number(localStorage.getItem('oe-chat-read-' + c.id) || 0);
-        return lastMs > readMs;
-      }
+  // Render right away with whatever's already cached (falls back to "User"
+  // for names we haven't seen this session) rather than blocking the whole
+  // list behind a profile fetch per conversation — then patch names/photos
+  // in place as ensureProfileLoaded resolves for each. Waits for both
+  // subscriptions' first snapshot before rendering anything, since a DM-only
+  // or group-only inbox is a normal state, not a loading state.
+  function renderRows() {
+    if (lastConvos === null || lastGroups === null) return;
+    const rows = [
+      ...lastConvos.map(c => ({ kind: 'dm', data: c, ms: c.updatedAt?.toMillis?.() || 0 })),
+      ...lastGroups.map(g => ({ kind: 'group', data: g, ms: g.updatedAt?.toMillis?.() || 0 })),
+    ].sort((a, b) => b.ms - a.ms);
 
-      // Render right away with whatever's already cached (falls back to
-      // "User" for names we haven't seen this session) rather than blocking
-      // the whole list behind a profile fetch per conversation — then patch
-      // names/photos in place as ensureProfileLoaded resolves for each.
-      function renderRows() {
-        content.innerHTML = `<div class="convo-list">${convos.map(c => {
+    if (rows.length === 0) {
+      content.innerHTML = `${newGroupBtnHtml()}<div class="empty-note">No chats yet. Start one from someone's profile page, or create a group.</div>`;
+    } else {
+      const rowsHtml = rows.map(r => {
+        if (r.kind === 'dm') {
+          const c = r.data;
           const otherEmail = c.participants.find(p => p !== user.email);
           const profile = getProfile(otherEmail, null, null);
-          const unread = isUnread(c);
+          const unread = isUnreadConvo(c);
           return `
-            <button class="convo-row${unread ? ' unread' : ''}" data-email="${escHtml(otherEmail)}">
+            <button class="convo-row${unread ? ' unread' : ''}" data-kind="dm" data-email="${escHtml(otherEmail)}">
               <img class="convo-avatar" src="${profile.photo || ''}" alt="">
               <div class="convo-main">
                 <div class="convo-name">${unread ? '<span class="convo-unread-dot"></span>' : ''}${escHtml(profile.name)}${officialBadgeHtml(otherEmail)}</div>
@@ -601,22 +694,452 @@ function showInbox(user) {
               <div class="convo-time">${c.updatedAt?.toDate ? timeAgo(c.updatedAt.toDate()) : ''}</div>
             </button>
           `;
-        }).join('')}</div>`;
-        content.querySelectorAll('.convo-row').forEach(btn => {
-          btn.addEventListener('click', () => openThread(btn.dataset.email, user));
+        }
+        const g = r.data;
+        const unread = isUnreadGroup(g);
+        const preview = g.lastMessage ? `${g.lastMessageSenderEmail === user.email ? 'You: ' : ''}${escHtml(g.lastMessage)}` : 'No messages yet';
+        return `
+          <button class="convo-row${unread ? ' unread' : ''}" data-kind="group" data-id="${escHtml(g.id)}">
+            ${g.icon ? `<img class="convo-avatar" src="${escHtml(g.icon)}" alt="">` : `<div class="group-icon-fallback"><span class="material-symbols-rounded">groups</span></div>`}
+            <div class="convo-main">
+              <div class="convo-name">${unread ? '<span class="convo-unread-dot"></span>' : ''}${escHtml(g.name)}</div>
+              <div class="convo-preview">${preview}</div>
+            </div>
+            <div class="convo-time">${g.updatedAt?.toDate ? timeAgo(g.updatedAt.toDate()) : ''}</div>
+          </button>
+        `;
+      }).join('');
+      content.innerHTML = `${newGroupBtnHtml()}<div class="convo-list">${rowsHtml}</div>`;
+      content.querySelectorAll('.convo-row').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.kind === 'group') openGroupThread(btn.dataset.id, user);
+          else openThread(btn.dataset.email, user);
         });
-      }
+      });
+    }
+    document.getElementById('newGroupBtn').addEventListener('click', () => openNewGroupModal(user));
+  }
 
+  unsubConvos = onSnapshot(
+    query(collection(db, 'conversations'), where('participants', 'array-contains', user.email)),
+    snap => {
+      lastConvos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderRows();
-      const otherEmails = [...new Set(convos.map(c => c.participants.find(p => p !== user.email)))];
+      const otherEmails = [...new Set(lastConvos.map(c => c.participants.find(p => p !== user.email)))];
       Promise.all(otherEmails.map(e => ensureProfileLoaded(e))).then(renderRows);
     },
-    err => { content.innerHTML = `<div class="empty-note">Could not load chats: ${escHtml(err.message)}</div>`; }
+    () => { lastConvos = []; renderRows(); }
   );
+
+  unsubGroups = onSnapshot(
+    query(collection(db, 'groups'), where('members', 'array-contains', user.email)),
+    snap => {
+      lastGroups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderRows();
+    },
+    () => { lastGroups = []; renderRows(); }
+  );
+}
+
+// ── New group ────────────────────────────────────────────────────────
+const newGroupOverlay = document.getElementById('newGroupOverlay');
+const newGroupModal = document.getElementById('newGroupModal');
+const newGroupNameInput = document.getElementById('newGroupNameInput');
+const newGroupMemberPicker = document.getElementById('newGroupMemberPicker');
+
+async function openNewGroupModal(user) {
+  resetNewGroupModalChrome();
+  newGroupNameInput.value = '';
+  newGroupMemberPicker.innerHTML = '<div class="empty-note" style="padding:12px;">Loading contacts…</div>';
+  newGroupOverlay.classList.add('open');
+  newGroupModal.classList.add('open');
+
+  const { following, followers } = await loadFollowRelationships(user.email);
+  const candidates = [...new Set([...following, ...followers])];
+  await Promise.all(candidates.map(e => ensureProfileLoaded(e)));
+  newGroupMemberPicker.innerHTML = candidates.length
+    ? candidates.map(email => {
+        const p = getProfile(email, null, null);
+        return `<label><input type="checkbox" value="${escHtml(email)}"><img src="${escHtml(p.photo || '')}" alt="">${escHtml(p.name)}</label>`;
+      }).join('')
+    : '<div class="empty-note" style="padding:12px;">Follow people (or get followed) to have someone to add.</div>';
+}
+function closeNewGroupModal() {
+  newGroupOverlay.classList.remove('open');
+  newGroupModal.classList.remove('open');
+}
+newGroupOverlay.addEventListener('click', closeNewGroupModal);
+document.getElementById('newGroupCancelBtn').addEventListener('click', closeNewGroupModal);
+// This button is reused for "Add members" (openAddMembersModal below), so
+// its click handler lives on .onclick (a single reassignable slot) instead
+// of addEventListener — otherwise both handlers would fire at once whenever
+// the modal gets reused.
+async function defaultCreateGroupHandler() {
+  const user = getCurrentUser();
+  if (!user) return;
+  const name = newGroupNameInput.value.trim();
+  if (!name) { showToast('Enter a group name'); return; }
+  const selected = [...newGroupMemberPicker.querySelectorAll('input:checked')].map(el => el.value);
+  if (selected.length === 0) { showToast('Pick at least one member'); return; }
+  try {
+    const ref = await addDoc(collection(db, 'groups'), {
+      name,
+      icon: '',
+      createdBy: user.email,
+      members: [user.email, ...selected],
+      admins: [user.email],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      lastMessage: '',
+      lastMessageSenderEmail: '',
+      lastMessageAt: serverTimestamp(),
+    });
+    closeNewGroupModal();
+    showToast('Group created');
+    openGroupThread(ref.id, user);
+  } catch (err) {
+    showToast('Could not create group: ' + err.message);
+  }
+}
+document.getElementById('newGroupCreateBtn').onclick = defaultCreateGroupHandler;
+
+// ── Group info / admin panel ────────────────────────────────────────
+const groupInfoOverlay = document.getElementById('groupInfoOverlay');
+const groupInfoModal = document.getElementById('groupInfoModal');
+let groupInfoGroupId = null;
+let groupInfoUnsub = null;
+
+function groupIconHtml(icon, sizeClass) {
+  return icon
+    ? `<img src="${escHtml(icon)}" alt="" style="border-radius:50%;object-fit:cover;background:var(--md-sys-color-surface-variant);${sizeClass || 'width:56px;height:56px;'}">`
+    : `<div class="group-icon-fallback" style="${sizeClass || 'width:56px;height:56px;'}"><span class="material-symbols-rounded">groups</span></div>`;
+}
+
+async function openGroupInfoModal(groupId) {
+  groupInfoGroupId = groupId;
+  if (groupInfoUnsub) { groupInfoUnsub(); groupInfoUnsub = null; }
+  groupInfoOverlay.classList.add('open');
+  groupInfoModal.classList.add('open');
+  groupInfoUnsub = onSnapshot(doc(db, 'groups', groupId), async snap => {
+    if (!snap.exists()) { closeGroupInfoModal(); return; }
+    const g = { id: snap.id, ...snap.data() };
+    const user = getCurrentUser();
+    const iAmAdmin = user && (g.admins || []).includes(user.email);
+
+    document.getElementById('groupInfoIconSlot').innerHTML = groupIconHtml(g.icon);
+    const iconBtn = document.getElementById('groupInfoIconBtn');
+    iconBtn.style.display = iAmAdmin ? '' : 'none';
+    iconBtn.onclick = () => document.getElementById('groupIconInput').click();
+
+    const nameInput = document.getElementById('groupInfoNameInput');
+    nameInput.value = g.name;
+    nameInput.disabled = !iAmAdmin;
+
+    await Promise.all(g.members.map(e => ensureProfileLoaded(e)));
+    document.getElementById('groupInfoMemberList').innerHTML = g.members.map(email => {
+      const p = getProfile(email, null, null);
+      const isAdmin = (g.admins || []).includes(email);
+      const isMe = user && email === user.email;
+      const actions = (iAmAdmin && !isMe) ? `
+        <div class="member-row-actions">
+          <button type="button" class="member-action-btn" data-toggle-admin="${escHtml(email)}" title="${isAdmin ? 'Remove as admin' : 'Make admin'}">
+            <span class="material-symbols-rounded">${isAdmin ? 'shield' : 'add_moderator'}</span>
+          </button>
+          <button type="button" class="member-action-btn" data-remove-member="${escHtml(email)}" title="Remove from group">
+            <span class="material-symbols-rounded">person_remove</span>
+          </button>
+        </div>
+      ` : '';
+      return `
+        <div class="member-row">
+          <img src="${escHtml(p.photo || '')}" alt="">
+          <div class="member-name">${escHtml(p.name)}${officialBadgeHtml(email)}${isAdmin ? '<span class="member-admin-tag">Admin</span>' : ''}</div>
+          ${actions}
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('groupInfoAddSlot').innerHTML = iAmAdmin
+      ? `<button type="button" id="groupInfoAddMembersBtn" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;border:1px dashed var(--md-sys-color-outline);color:var(--md-sys-color-on-surface-variant);border-radius:12px;padding:10px;font-family:inherit;font-size:13px;cursor:pointer;margin-bottom:16px;"><span class="material-symbols-rounded" style="font-size:16px;">person_add</span> Add members</button>`
+      : '';
+
+    document.getElementById('groupInfoMemberList').querySelectorAll('[data-toggle-admin]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const email = btn.dataset.toggleAdmin;
+        const isAdminNow = (g.admins || []).includes(email);
+        try {
+          await updateDoc(doc(db, 'groups', groupId), { admins: isAdminNow ? arrayRemove(email) : arrayUnion(email) });
+        } catch (err) { showToast('Could not update admin status: ' + err.message); }
+      });
+    });
+    document.getElementById('groupInfoMemberList').querySelectorAll('[data-remove-member]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const email = btn.dataset.removeMember;
+        if (!confirm(`Remove ${getProfile(email, null, null).name} from the group?`)) return;
+        try {
+          await updateDoc(doc(db, 'groups', groupId), { members: arrayRemove(email), admins: arrayRemove(email) });
+        } catch (err) { showToast('Could not remove member: ' + err.message); }
+      });
+    });
+    const addBtn = document.getElementById('groupInfoAddMembersBtn');
+    if (addBtn) addBtn.addEventListener('click', () => openAddMembersModal(groupId, g.members));
+  }, () => { closeGroupInfoModal(); });
+}
+function closeGroupInfoModal() {
+  groupInfoOverlay.classList.remove('open');
+  groupInfoModal.classList.remove('open');
+  if (groupInfoUnsub) { groupInfoUnsub(); groupInfoUnsub = null; }
+  groupInfoGroupId = null;
+}
+groupInfoOverlay.addEventListener('click', closeGroupInfoModal);
+
+document.getElementById('groupInfoSaveBtn').addEventListener('click', async () => {
+  if (!groupInfoGroupId) return;
+  const name = document.getElementById('groupInfoNameInput').value.trim();
+  if (!name) { showToast('Group name can\'t be empty'); return; }
+  try {
+    await updateDoc(doc(db, 'groups', groupInfoGroupId), { name });
+    showToast('Saved');
+  } catch (err) {
+    showToast('Could not save: ' + err.message);
+  }
+});
+document.getElementById('groupInfoLeaveBtn').addEventListener('click', async () => {
+  const user = getCurrentUser();
+  if (!user || !groupInfoGroupId) return;
+  if (!confirm('Leave this group?')) return;
+  try {
+    await updateDoc(doc(db, 'groups', groupInfoGroupId), { members: arrayRemove(user.email), admins: arrayRemove(user.email) });
+    closeGroupInfoModal();
+    showInbox(user);
+  } catch (err) {
+    showToast('Could not leave group: ' + err.message);
+  }
+});
+document.getElementById('groupIconInput').addEventListener('change', async () => {
+  const file = document.getElementById('groupIconInput').files[0];
+  document.getElementById('groupIconInput').value = '';
+  if (!file || !groupInfoGroupId) return;
+  if (file.size > MAX_IMAGE_BYTES) { showToast(`File must be under ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)}MB`); return; }
+  try {
+    const url = await uploadFile(file, '/upload', undefined, frac => showUploadToast(`Uploading… ${Math.round(frac * 100)}%`));
+    await updateDoc(doc(db, 'groups', groupInfoGroupId), { icon: url });
+    showToast('Icon updated');
+  } catch (err) {
+    showToast('Could not update icon: ' + err.message);
+  } finally {
+    hideUploadToast();
+  }
+});
+
+// Reuses the same member-picker markup/pattern as new-group creation, just
+// scoped to people not already in the group and writing arrayUnion instead
+// of building a new doc.
+async function openAddMembersModal(groupId, existingMembers) {
+  const user = getCurrentUser();
+  if (!user) return;
+  newGroupNameInput.value = '';
+  newGroupNameInput.style.display = 'none';
+  document.querySelector('#newGroupModal h3').textContent = 'Add members';
+  newGroupMemberPicker.innerHTML = '<div class="empty-note" style="padding:12px;">Loading contacts…</div>';
+  newGroupOverlay.classList.add('open');
+  newGroupModal.classList.add('open');
+
+  const { following, followers } = await loadFollowRelationships(user.email);
+  const candidates = [...new Set([...following, ...followers])].filter(e => !existingMembers.includes(e));
+  await Promise.all(candidates.map(e => ensureProfileLoaded(e)));
+  newGroupMemberPicker.innerHTML = candidates.length
+    ? candidates.map(email => {
+        const p = getProfile(email, null, null);
+        return `<label><input type="checkbox" value="${escHtml(email)}"><img src="${escHtml(p.photo || '')}" alt="">${escHtml(p.name)}</label>`;
+      }).join('')
+    : '<div class="empty-note" style="padding:12px;">Everyone you know is already in this group.</div>';
+
+  const createBtn = document.getElementById('newGroupCreateBtn');
+  createBtn.textContent = 'Add';
+  createBtn.onclick = async () => {
+    const selected = [...newGroupMemberPicker.querySelectorAll('input:checked')].map(el => el.value);
+    if (selected.length === 0) { showToast('Pick at least one person'); return; }
+    try {
+      await updateDoc(doc(db, 'groups', groupId), { members: arrayUnion(...selected) });
+      closeNewGroupModal();
+      showToast('Members added');
+    } catch (err) {
+      showToast('Could not add members: ' + err.message);
+    }
+  };
+}
+// Restores the "New group" modal's default state (name field, Create
+// button + its default handler) after it's been reused for "Add members" —
+// otherwise the next New Group open would still be wearing Add Members'
+// clothes.
+function resetNewGroupModalChrome() {
+  newGroupNameInput.style.display = '';
+  document.querySelector('#newGroupModal h3').textContent = 'New group';
+  const createBtn = document.getElementById('newGroupCreateBtn');
+  createBtn.textContent = 'Create';
+  createBtn.onclick = defaultCreateGroupHandler;
+}
+newGroupOverlay.addEventListener('click', resetNewGroupModalChrome);
+document.getElementById('newGroupCancelBtn').addEventListener('click', resetNewGroupModalChrome);
+
+// Group threads are text-only for now (no voice/image attach, editing, or
+// reply-threading yet) — those are tightly coupled to openThread's DM-only
+// closures below, and duplicating that much complexity for a first pass
+// risked more bugs than it was worth. Core messaging + admin management
+// first; can layer the rest on once this is solid.
+function formatClockTimeGroup(date) {
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+async function openGroupThread(groupId, user) {
+  if (unsubConvos) { unsubConvos(); unsubConvos = null; }
+  if (unsubGroups) { unsubGroups(); unsubGroups = null; }
+  if (unsubMessages) { unsubMessages(); unsubMessages = null; }
+  if (unsubReads) { unsubReads(); unsubReads = null; }
+
+  document.getElementById('backLink').href = '#';
+  document.getElementById('backLinkText').textContent = 'back to chats';
+  document.getElementById('backLink').onclick = e => { e.preventDefault(); showInbox(user); };
+  document.getElementById('notesBar').style.display = 'none';
+
+  const groupSnap = await getDoc(doc(db, 'groups', groupId));
+  if (!groupSnap.exists() || !(groupSnap.data().members || []).includes(user.email)) {
+    content.innerHTML = '<div class="empty-note">This group no longer exists, or you\'re not in it.</div>';
+    return;
+  }
+  let group = { id: groupSnap.id, ...groupSnap.data() };
+  await Promise.all(group.members.map(e => ensureProfileLoaded(e)));
+
+  content.innerHTML = `
+    <div class="thread-shell">
+      <div class="thread-header">
+        <div class="thread-header-main" id="groupThreadHeaderMain">
+          ${groupIconHtml(group.icon, 'width:36px;height:36px;')}
+          <div>
+            <div class="name" id="groupThreadName"></div>
+            <div class="sub" id="groupThreadMemberCount"></div>
+          </div>
+        </div>
+        <button class="thread-header-info-btn" id="groupThreadInfoBtn" title="Group info"><span class="material-symbols-rounded">info</span></button>
+      </div>
+      <div class="msg-list" id="msgList"></div>
+      <div class="thread-inputbar">
+        <div class="input-normal" id="inputNormal">
+          <textarea id="msgInput" placeholder="Message…" rows="1"></textarea>
+          <button class="send-btn" id="sendMsgBtn" title="Send"><span class="material-symbols-rounded">arrow_upward</span></button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('groupThreadName').textContent = group.name;
+  document.getElementById('groupThreadMemberCount').textContent = `${group.members.length} member${group.members.length === 1 ? '' : 's'}`;
+  const openInfo = () => openGroupInfoModal(groupId);
+  document.getElementById('groupThreadHeaderMain').addEventListener('click', openInfo);
+  document.getElementById('groupThreadInfoBtn').addEventListener('click', openInfo);
+
+  const msgList = document.getElementById('msgList');
+  const msgInput = document.getElementById('msgInput');
+  function autoGrowGroupInput() {
+    msgInput.style.height = 'auto';
+    msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + 'px';
+  }
+  msgInput.addEventListener('input', autoGrowGroupInput);
+  const sendBtn = document.getElementById('sendMsgBtn');
+
+  function markGroupRead() {
+    setDoc(doc(db, 'groups', groupId, 'reads', user.email), { readAt: serverTimestamp() }).catch(() => {});
+    localStorage.setItem('oe-group-read-' + groupId, String(Date.now()));
+  }
+  markGroupRead();
+
+  async function deleteGroupMessage(m) {
+    if (!confirm('Delete this message?')) return;
+    try {
+      await deleteDoc(doc(db, 'groups', groupId, 'messages', m.id));
+    } catch (err) {
+      showToast('Could not delete message: ' + err.message);
+    }
+  }
+
+  unsubMessages = onSnapshot(
+    query(collection(db, 'groups', groupId, 'messages'), orderBy('createdAt', 'asc')),
+    snap => {
+      const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const mine = m => m.senderEmail === user.email;
+      msgList.innerHTML = msgs.map(m => {
+        const time = m.createdAt && m.createdAt.toDate ? formatClockTimeGroup(m.createdAt.toDate()) : '';
+        const senderProfile = getProfile(m.senderEmail, null, null);
+        return `
+          <div class="msg ${mine(m) ? 'mine' : ''}">
+            <div class="msg-col">
+              ${!mine(m) ? `<div class="msg-sender-name">${escHtml(senderProfile.name)}</div>` : ''}
+              <div class="msg-bubble">${parseMsgMarkdown(m.text || '')}</div>
+              <div class="msg-meta-row">
+                ${mine(m) ? `
+                  <div class="msg-actions">
+                    <button class="msg-action-btn danger" data-delete-id="${escHtml(m.id)}" title="Delete"><span class="material-symbols-rounded">delete</span></button>
+                  </div>
+                ` : ''}
+                <span class="msg-time">${time}</span>
+                ${m.edited ? '<span class="msg-edited-tag">edited</span>' : ''}
+              </div>
+            </div>
+            ${!mine(m) ? `<button class="msg-report-btn" data-id="${escHtml(m.id)}" title="Report"><span class="material-symbols-rounded">flag</span></button>` : ''}
+          </div>
+        `;
+      }).join('');
+      msgList.querySelectorAll('[data-delete-id]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const m = msgs.find(x => x.id === btn.dataset.deleteId);
+          if (m) deleteGroupMessage(m);
+        });
+      });
+      msgList.querySelectorAll('.msg-report-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const m = msgs.find(x => x.id === btn.dataset.id);
+          if (m) reportItem('message', m.id, m.text, group.name);
+        });
+      });
+      msgList.scrollIntoView({ block: 'end' });
+      markGroupRead();
+    },
+    () => { /* group doc/messages not readable — access likely just changed (removed, etc.) */ }
+  );
+
+  async function sendGroupMessage() {
+    const text = msgInput.value.trim();
+    if (!text) return;
+    sendBtn.disabled = true;
+    msgInput.value = '';
+    autoGrowGroupInput();
+    try {
+      await addDoc(collection(db, 'groups', groupId, 'messages'), {
+        senderEmail: user.email,
+        text,
+        createdAt: serverTimestamp(),
+      });
+      await updateDoc(doc(db, 'groups', groupId), {
+        lastMessage: text.slice(0, 200),
+        lastMessageSenderEmail: user.email,
+        lastMessageAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (err) {
+      showToast('Could not send: ' + err.message);
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+  sendBtn.addEventListener('click', sendGroupMessage);
+  msgInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendGroupMessage(); }
+  });
 }
 
 async function openThread(otherEmail, user) {
   if (unsubConvos) { unsubConvos(); unsubConvos = null; }
+  if (unsubGroups) { unsubGroups(); unsubGroups = null; }
   if (unsubMessages) { unsubMessages(); unsubMessages = null; }
   if (unsubReads) { unsubReads(); unsubReads = null; }
 

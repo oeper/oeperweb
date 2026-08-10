@@ -196,6 +196,68 @@ service cloud.firestore {
       }
     }
 
+    // Group chats. Unlike conversations (fixed 2-participant id), members
+    // and admins are just mutable lists that change over the group's life.
+    function isGroupAdmin() { return request.auth.token.email in resource.data.admins; }
+    // True when the ONLY thing that changed in members/admins is the
+    // requester removing themself — i.e. leaving. Members.removeAll() on a
+    // list that doesn't contain the email is a no-op, so this only passes
+    // when the resulting lists are exactly "old minus me" (not "old minus
+    // someone else", and not "old plus anyone").
+    function isSelfLeave() {
+      return request.resource.data.members == resource.data.members.removeAll([request.auth.token.email])
+        && request.resource.data.admins == resource.data.admins.removeAll([request.auth.token.email]);
+    }
+    match /groups/{groupId} {
+      allow read: if isSignedIn() && request.auth.token.email in resource.data.members;
+      allow create: if isSignedIn()
+        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60
+        && request.resource.data.members is list && request.auth.token.email in request.resource.data.members
+        && request.resource.data.admins is list && request.auth.token.email in request.resource.data.admins
+        && request.resource.data.members.hasAll(request.resource.data.admins);
+      allow update: if isSignedIn() && request.auth.token.email in resource.data.members
+        && (
+          // Admins can rename, set an icon, and change membership/admin
+          // status freely (still must keep admins a subset of members).
+          (isGroupAdmin() && onlyChanged(['name', 'icon', 'members', 'admins', 'updatedAt', 'lastMessage', 'lastMessageSenderEmail', 'lastMessageAt'])
+            && request.resource.data.members is list
+            && request.resource.data.admins is list
+            && request.resource.data.members.hasAll(request.resource.data.admins)
+            && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60)
+          // Any member can leave on their own, admin or not.
+          || (onlyChanged(['members', 'admins']) && isSelfLeave())
+          // Any member can bump lastMessage/updatedAt when sending — same
+          // as conversations' equivalent rule.
+          || onlyChanged(['lastMessage', 'lastMessageSenderEmail', 'lastMessageAt', 'updatedAt'])
+        );
+      allow delete: if isSignedIn() && isGroupAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn()
+          && request.auth.token.email in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+        allow create: if isSignedIn()
+          && request.auth.token.email == request.resource.data.senderEmail
+          && request.auth.token.email in get(/databases/$(database)/documents/groups/$(groupId)).data.members
+          && (
+            (request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000)
+            || (request.resource.data.audioUrl is string && request.resource.data.audioUrl.size() > 0 && request.resource.data.audioDuration is number)
+            || (request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() > 0)
+          );
+        allow update: if isSignedIn() && request.auth.token.email == resource.data.senderEmail
+          && onlyChanged(['text', 'edited', 'editedAt'])
+          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000;
+        allow delete: if isSignedIn() && request.auth.token.email == resource.data.senderEmail;
+      }
+
+      match /reads/{email} {
+        allow read: if isSignedIn()
+          && request.auth.token.email in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+        allow write: if isSignedIn() && request.auth.token.email == email
+          && request.auth.token.email in get(/databases/$(database)/documents/groups/$(groupId)).data.members;
+      }
+    }
+
     // Long-form video posts (videos.html). Same shape/permissions as forum
     // posts — public read, author/owner manage, anyone signed in can vote
     // or bump the view count by exactly 1.
