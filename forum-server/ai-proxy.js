@@ -50,8 +50,10 @@ const AI_UPSTREAM_API_KEY = process.env.AI_UPSTREAM_API_KEY || '';
 
 // Default/fallback model when a request doesn't specify one — ai.html's
 // dropdown (sourced from the config/aiModels Firestore doc) can override
-// this per-request via the `model` field, see /api/chat below.
-const AI_MODEL = process.env.AI_MODEL || 'ggml-org_gemma-3-1b-it-GGUF_gemma-3-1b-it-Q4_K_M';
+// this per-request via the `model` field, see /api/chat below. This drifts
+// out of date whenever the loaded model changes (it did once already) —
+// set AI_MODEL in .env instead of editing this if that happens again.
+const AI_MODEL = process.env.AI_MODEL || 'google/gemma-4-e2b';
 
 const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765'];
 
@@ -425,6 +427,16 @@ app.post('/api/chat', async (req, res) => {
   }
   const model = clientModel || AI_MODEL;
 
+  // Tools are opt-in (client must send `tools: true`), NOT on by default —
+  // just including the `tools` field in the upstream request, regardless
+  // of whether the model ever actually calls one, was enough to derail this
+  // model's <think>-tag instruction-following: it started narrating its
+  // tool-use reasoning ("No tool use is necessary...") as plain visible
+  // output instead of wrapping it, even with the system prompt explicitly
+  // asking for tags. Confirmed by comparing the same prompt with and
+  // without `tools` attached — only breaks with it present.
+  const useTools = req.body.tools === true;
+
   if (!checkRateLimit(req.ip)) {
     return res.status(429).json({ error: 'Too many requests — please slow down and try again in a few minutes.' });
   }
@@ -437,7 +449,7 @@ app.post('/api/chat', async (req, res) => {
   const release = () => { if (!released) { released = true; busy = false; } };
   res.on('close', release);
   try {
-    await streamChatWithTools(res, messages, model, MAX_TOOL_ROUNDS);
+    await streamChatWithTools(res, messages, model, useTools ? MAX_TOOL_ROUNDS : 0);
   } catch (err) {
     if (!res.headersSent) res.status(502).json({ error: 'Could not reach the model server: ' + err.message });
     else res.end();
