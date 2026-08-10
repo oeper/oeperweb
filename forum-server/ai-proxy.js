@@ -157,10 +157,103 @@ const TOOLS = [
       },
     },
   },
+  {
+    type: 'function',
+    function: {
+      name: 'search_oeper_dev',
+      description: "Search oeper.dev's own content — forum posts, projects, and articles — for a query. Use this whenever the user asks about something on the site itself (\"is there a post about...\", \"what projects has X made\", \"find the article on...\") instead of guessing from your own training data, which knows nothing about this site.",
+      parameters: {
+        type: 'object',
+        properties: { query: { type: 'string', description: 'Keywords to search for' } },
+        required: ['query'],
+      },
+    },
+  },
 ];
 const MAX_TOOL_ROUNDS = 3;
 
-function runTool(name, argsJson) {
+// Same web config already sitting in plain sight in shared/account.js on
+// every page of the site (Firebase web API keys are meant to be public —
+// access is actually governed by firestore.rules, not by keeping this
+// secret) — reused here so this proxy can read public collections without
+// needing its own Firebase Admin credentials.
+const FIREBASE_PROJECT_ID = 'oepernet-1683535959256';
+
+// Firestore REST responses wrap every field in a {typeName: value} envelope
+// — this only unwraps the handful of types posts/projects actually use.
+function unwrapFirestoreFields(fields) {
+  const out = {};
+  for (const [key, val] of Object.entries(fields || {})) {
+    if (val.stringValue !== undefined) out[key] = val.stringValue;
+    else if (val.integerValue !== undefined) out[key] = Number(val.integerValue);
+    else if (val.doubleValue !== undefined) out[key] = val.doubleValue;
+    else if (val.booleanValue !== undefined) out[key] = val.booleanValue;
+    else if (val.timestampValue !== undefined) out[key] = val.timestampValue;
+  }
+  return out;
+}
+
+async function fetchRecentDocs(collectionId, limitN) {
+  try {
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents:runQuery`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId }],
+            orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'DESCENDING' }],
+            limit: limitN,
+          },
+        }),
+      }
+    );
+    if (!res.ok) return [];
+    const rows = await res.json();
+    return rows
+      .filter(r => r.document)
+      .map(r => ({ id: r.document.name.split('/').pop(), ...unwrapFirestoreFields(r.document.fields) }));
+  } catch {
+    return [];
+  }
+}
+
+async function searchOeperDev(queryText) {
+  const terms = String(queryText || '').toLowerCase().trim().split(/\s+/).filter(Boolean);
+  if (!terms.length) return { results: [] };
+  const matches = text => {
+    const t = (text || '').toLowerCase();
+    return terms.some(term => t.includes(term));
+  };
+
+  const [posts, projects, articlesData] = await Promise.all([
+    fetchRecentDocs('posts', 60),
+    fetchRecentDocs('projects', 60),
+    fetch('https://oeper.dev/data/articles.json').then(r => r.ok ? r.json() : { articles: [] }).catch(() => ({ articles: [] })),
+  ]);
+
+  const results = [];
+  for (const p of posts) {
+    if (matches(p.title) || matches(p.body)) {
+      results.push({ type: 'forum post', title: p.title, snippet: (p.body || '').slice(0, 200), url: `https://oeper.dev/feed/${p.id}` });
+    }
+  }
+  for (const p of projects) {
+    if (matches(p.title) || matches(p.description)) {
+      results.push({ type: 'project', title: p.title, snippet: (p.description || '').slice(0, 200), url: `https://oeper.dev/projects?project=${p.id}` });
+    }
+  }
+  (articlesData.articles || []).forEach((a, i) => {
+    if (matches(a.title) || matches(a.excerpt)) {
+      results.push({ type: 'article', title: a.title, snippet: a.excerpt || '', url: `https://oeper.dev/articles?article=${i}` });
+    }
+  });
+
+  return results.length ? { results: results.slice(0, 8) } : { results: [], note: 'No matches found on oeper.dev for that query.' };
+}
+
+async function runTool(name, argsJson) {
   let args;
   try { args = JSON.parse(argsJson || '{}'); } catch { args = {}; }
   if (name === 'get_current_datetime') {
@@ -180,6 +273,9 @@ function runTool(name, argsJson) {
     } catch {
       return { error: 'Could not evaluate that expression.' };
     }
+  }
+  if (name === 'search_oeper_dev') {
+    return searchOeperDev(args.query);
   }
   return { error: `Unknown tool: ${name}` };
 }
@@ -274,11 +370,11 @@ async function streamChatWithTools(res, messages, model, roundsLeft) {
       content: null,
       tool_calls: calls.map(c => ({ id: c.id, type: 'function', function: { name: c.name, arguments: c.arguments } })),
     };
-    const toolResultMsgs = calls.map(c => ({
+    const toolResultMsgs = await Promise.all(calls.map(async c => ({
       role: 'tool',
       tool_call_id: c.id,
-      content: JSON.stringify(runTool(c.name, c.arguments)),
-    }));
+      content: JSON.stringify(await runTool(c.name, c.arguments)),
+    })));
     return streamChatWithTools(res, [...messages, assistantMsg, ...toolResultMsgs], model, roundsLeft - 1);
   }
 
