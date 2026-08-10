@@ -183,6 +183,17 @@ service cloud.firestore {
           && request.resource.data.text.size() <= 2000;
         allow delete: if isSignedIn() && request.auth.token.email == resource.data.senderEmail;
       }
+
+      // Read-receipt marker, one doc per participant (doc id = their email)
+      // — lets the OTHER participant see "Seen" on their last message.
+      // Only the participant themself can write their own marker; either
+      // participant can read both (needed to compute the other side's).
+      match /reads/{email} {
+        allow read: if isSignedIn()
+          && request.auth.token.email in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow write: if isSignedIn() && request.auth.token.email == email
+          && request.auth.token.email in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+      }
     }
 
     // Long-form video posts (videos.html). Same shape/permissions as forum
