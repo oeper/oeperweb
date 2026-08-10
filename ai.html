@@ -363,12 +363,21 @@ function splitThinking(reasoningBuf, contentBuf, done) {
   const closeIdx = contentBuf.indexOf('</think>', openIdx);
   if (closeIdx === -1) {
     // The small local model sometimes never emits a closing </think> and
-    // just runs straight into its real answer. While still streaming we
-    // can't tell the difference from a slow thinker, so keep showing it as
-    // reasoning — but once the stream is actually done, treat the whole
-    // thing as the answer instead of leaving it stuck forever inside a
-    // permanently-open "Thinking…" box with no visible reply.
-    if (done) return { thinking: '', answer: contentBuf.slice(0, openIdx) + contentBuf.slice(openIdx + 7), stillThinking: false };
+    // just rambles until it runs out of tokens without ever giving a real
+    // answer. While still streaming we can't tell the difference from a
+    // slow thinker, so keep showing it as reasoning. Once the stream is
+    // actually done, don't dump that raw rambling in as if it were the
+    // answer — it reads as broken (an earlier version of this did exactly
+    // that, and it looked like the AI wasn't responding at all). Keep it
+    // tucked behind "Show thinking" like normal, and give a plain fallback
+    // answer instead, since there's no real answer to show.
+    if (done) {
+      return {
+        thinking: contentBuf.slice(openIdx + 7).trim(),
+        answer: "(Didn't quite finish that thought — mind trying again?)",
+        stillThinking: false,
+      };
+    }
     return { thinking: contentBuf.slice(openIdx + 7), answer: contentBuf.slice(0, openIdx), stillThinking: true };
   }
   return {
