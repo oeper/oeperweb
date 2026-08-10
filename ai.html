@@ -823,6 +823,21 @@ async function sendMessage() {
   controller = new AbortController();
   let reasoningBuf = '';
   let contentBuf = '';
+  // Nothing here ever times out on its own — a fetch/ReadableStream can
+  // hang forever if the connection drops without a clean close (very
+  // plausible over a home network + Cloudflare Tunnel), leaving `controller`
+  // set and the send button stuck on "stop" indefinitely with no error ever
+  // firing. This aborts if no new bytes arrive for a while, so a dead
+  // connection always resolves into a normal, recoverable error instead.
+  const INACTIVITY_TIMEOUT_MS = 45000;
+  let lastActivity = Date.now();
+  let timedOut = false;
+  const watchdog = setInterval(() => {
+    if (Date.now() - lastActivity > INACTIVITY_TIMEOUT_MS) {
+      timedOut = true;
+      controller.abort();
+    }
+  }, 5000);
   try {
     const wireMessages = await toWireMessages(chat.messages);
     const res = await fetch(AI_ENDPOINT + '/api/chat', {
@@ -843,6 +858,7 @@ async function sendMessage() {
     let first = true;
     while (true) {
       const { done, value } = await reader.read();
+      lastActivity = Date.now();
       if (done) break;
       buf += decoder.decode(value, { stream: true });
       const lines = buf.split('\n');
@@ -869,13 +885,17 @@ async function sendMessage() {
     else renderAssistantContent(bubble, reasoningBuf, contentBuf, true);
   } catch (err) {
     bubble.classList.remove('thinking');
-    if (err.name === 'AbortError') {
+    if (timedOut) {
+      bubble.textContent = contentBuf || 'The connection stalled and never responded — try again.';
+      bubble.classList.add('error');
+    } else if (err.name === 'AbortError') {
       if (!contentBuf) bubble.textContent = '(stopped)';
     } else {
       bubble.textContent = contentBuf || ('Could not reach the model: ' + err.message);
       bubble.classList.add('error');
     }
   } finally {
+    clearInterval(watchdog);
     controller = null;
     setSending(false);
     // The final <think> tag (if inline, not a separate reasoning_content
