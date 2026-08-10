@@ -14,7 +14,8 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  getFirestore, doc, getDoc, setDoc, serverTimestamp, deleteField, collection, addDoc
+  getFirestore, doc, getDoc, getDocs, setDoc, serverTimestamp, deleteField, collection, addDoc,
+  query, where, documentId,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 export const FIREBASE_CONFIG = {
@@ -290,10 +291,41 @@ onAuthStateChanged(auth, async user => {
     // so profile seeding has to finish first.
     await ensureProfileSeeded(user);
     ensureHandle(user.email, user.displayName);
+    // Posts/videos/projects store voters as Firebase Auth uid, not email
+    // (arrayUnion(uid) on upvoters/downvoters) — this is the only place
+    // that uid gets tied back to an email, so "who liked this" can resolve
+    // a name/photo via the normal email-keyed profile system instead of
+    // adding a second, uid-keyed profile store. Best-effort, doesn't block
+    // sign-in on it.
+    setDoc(doc(db, 'uidLookup', user.uid), { email: user.email }, { merge: true }).catch(() => {});
   }
   authReady = true;
   notify();
 });
+
+const uidEmailCache = {}; // uid -> email | null
+// Resolves Firebase Auth uids (as stored in upvoters/downvoters arrays) to
+// emails, so callers can then use the normal getProfile(email)/
+// ensureProfileLoaded(email) machinery. Batches via documentId() `in`
+// queries (Firestore's cap is 30 per query) and caches everything.
+export async function resolveUidsToEmails(uids) {
+  const unique = [...new Set(uids)].filter(Boolean);
+  const uncached = unique.filter(u => !(u in uidEmailCache));
+  for (let i = 0; i < uncached.length; i += 30) {
+    const batch = uncached.slice(i, i + 30);
+    try {
+      const snap = await getDocs(query(collection(db, 'uidLookup'), where(documentId(), 'in', batch)));
+      const found = new Set();
+      snap.docs.forEach(d => { uidEmailCache[d.id] = d.data().email || null; found.add(d.id); });
+      batch.forEach(u => { if (!found.has(u)) uidEmailCache[u] = null; });
+    } catch {
+      batch.forEach(u => { uidEmailCache[u] = null; });
+    }
+  }
+  const out = {};
+  unique.forEach(u => { out[u] = uidEmailCache[u] || null; });
+  return out;
+}
 
 export function signIn() {
   return signInWithPopup(auth, provider);

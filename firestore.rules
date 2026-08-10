@@ -312,6 +312,17 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.followerEmail == request.auth.token.email;
     }
 
+    // uid -> email, so "who liked this" can resolve the Firebase Auth uids
+    // stored in upvoters/downvoters back to a real profile via the normal
+    // email-keyed users/{email} system. Public read like everything else
+    // here (emails are already public via authorEmail on every post/video/
+    // project); only the account itself can write its own mapping.
+    match /uidLookup/{uid} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.email == request.auth.token.email;
+    }
+
     // Site-wide config documents editable by owners only, e.g. config/aiModels
     // (the model picker list on ai.html) — publicly readable since ai.html's
     // chat works without sign-in, but only owners can change what's offered.
