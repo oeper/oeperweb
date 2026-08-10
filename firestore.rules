@@ -173,8 +173,11 @@ service cloud.firestore {
             ||
             (request.resource.data.imageUrl is string
               && request.resource.data.imageUrl.size() > 0)
+            ||
+            (request.resource.data.videoUrl is string
+              && request.resource.data.videoUrl.size() > 0)
           );
-        // Only the sender can edit (text messages only — voice/image
+        // Only the sender can edit (text messages only — voice/image/video
         // attachments stay immutable) or delete their own message.
         allow update: if isSignedIn() && request.auth.token.email == resource.data.senderEmail
           && onlyChanged(['text', 'edited', 'editedAt'])

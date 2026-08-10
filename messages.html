@@ -142,7 +142,8 @@
   .member-action-btn .material-symbols-rounded { font-size: 16px; }
 
   .msg-list { flex: 1; display: flex; flex-direction: column; padding-bottom: 16px; }
-  .msg { display: flex; margin-bottom: 10px; align-items: flex-end; gap: 4px; }
+  .msg { display: flex; margin-bottom: 10px; align-items: flex-end; gap: 4px; animation: msgIn 0.25s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  @keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   .msg.mine { justify-content: flex-end; }
   .msg-report-btn {
     width: 24px; height: 24px; border-radius: 50%; border: none; background: none;
@@ -194,6 +195,7 @@
   .msg-action-btn.danger:hover { color: var(--md-sys-color-error); }
   .msg-action-btn .material-symbols-rounded { font-size: 15px; }
   .msg-image { max-width: 240px; max-height: 320px; border-radius: 14px; display: block; cursor: zoom-in; }
+  .msg-video { max-width: 260px; max-height: 320px; border-radius: 14px; display: block; }
   .msg-seen { font-size: 10px; color: var(--md-sys-color-on-surface-variant); }
 
   .msg-reply-quote {
@@ -489,7 +491,20 @@ function hideUploadToast() {
   if (el) el.remove();
 }
 
+// Played only from the sender's own send action (not from the message
+// list's onSnapshot re-render, which fires on every update including
+// history just loading) — a fresh Audio() per call so rapid sends don't
+// cut each other off. Wrapped in try/catch since autoplay can still be
+// blocked in some contexts even off a real click/keydown gesture.
+function playSendSound() {
+  try { new Audio('./sounds/message-send.wav').play().catch(() => {}); } catch {}
+}
+
 const NOTE_LIFETIME_MS = 24 * 60 * 60 * 1000;
+// Matches upload-server.js's MAX_MESSAGE_BYTES for /upload-message — bigger
+// than MAX_IMAGE_BYTES (used elsewhere for plain image uploads) since video
+// files run larger.
+const MAX_MESSAGE_MEDIA_BYTES = 20 * 1024 * 1024;
 
 function initNotes() {
   const bar = document.getElementById('notesBar');
@@ -1113,6 +1128,7 @@ async function openGroupThread(groupId, user) {
     sendBtn.disabled = true;
     msgInput.value = '';
     autoGrowGroupInput();
+    playSendSound();
     try {
       await addDoc(collection(db, 'groups', groupId, 'messages'), {
         senderEmail: user.email,
@@ -1172,7 +1188,7 @@ async function openThread(otherEmail, user) {
       </div>
       <div class="thread-inputbar">
         <div class="input-normal" id="inputNormal">
-          <label class="attach-btn" title="Send an image"><span class="material-symbols-rounded">image</span><input type="file" id="imageInput" accept="image/*"></label>
+          <label class="attach-btn" title="Send a photo or video"><span class="material-symbols-rounded">image</span><input type="file" id="imageInput" accept="image/*,video/*"></label>
           <textarea id="msgInput" placeholder="Message…" rows="1"></textarea>
           <button class="mic-btn" id="micBtn" title="Record voice message"><span class="material-symbols-rounded">mic</span></button>
           <button class="send-btn" id="sendMsgBtn" title="Send"><span class="material-symbols-rounded" id="sendMsgIcon">arrow_upward</span></button>
@@ -1231,12 +1247,14 @@ async function openThread(otherEmail, user) {
 
   function bubbleInnerHtml(m) {
     if (m.audioUrl) return audioBubbleHtml(m);
+    if (m.videoUrl) return `<video class="msg-video" src="${escHtml(m.videoUrl)}" controls playsinline></video>`;
     if (m.imageUrl) return `<img class="msg-image" src="${escHtml(m.imageUrl)}" alt="" onclick="openImageLightbox('${escHtml(m.imageUrl)}')">`;
     return parseMsgMarkdown(m.text || '');
   }
 
   function replySnippet(m) {
     if (m.audioUrl) return '🎤 Voice message';
+    if (m.videoUrl) return '🎥 Video';
     if (m.imageUrl) return '📷 Photo';
     return (m.text || '').slice(0, 80);
   }
@@ -1464,6 +1482,7 @@ async function openThread(otherEmail, user) {
         autoGrowMsgInput();
         const reply = replyingTo;
         cancelReply();
+        playSendSound();
         await touchConversation(text.slice(0, 200));
         await addDoc(collection(db, 'conversations', convoId, 'messages'), {
           senderEmail: user.email,
@@ -1490,17 +1509,23 @@ async function openThread(otherEmail, user) {
     const file = imageInput.files[0];
     imageInput.value = '';
     if (!file) return;
+    const isVideo = file.type.startsWith('video/');
+    // /upload-message's own server-side cap (MAX_MESSAGE_BYTES) is 20MB —
+    // checking client-side too just gives a faster, friendlier error than
+    // waiting for the upload to fail partway through.
+    if (file.size > MAX_MESSAGE_MEDIA_BYTES) { showToast(`File must be under ${Math.round(MAX_MESSAGE_MEDIA_BYTES / 1024 / 1024)}MB`); return; }
     sendBtn.disabled = true;
     try {
-      const imageUrl = await uploadFile(file, '/upload-message', undefined, frac => showUploadToast(`Uploading image… ${Math.round(frac * 100)}%`));
-      await touchConversation('📷 Photo');
+      const url = await uploadFile(file, '/upload-message', undefined, frac => showUploadToast(`Uploading ${isVideo ? 'video' : 'image'}… ${Math.round(frac * 100)}%`));
+      await touchConversation(isVideo ? '🎥 Video' : '📷 Photo');
       await addDoc(collection(db, 'conversations', convoId, 'messages'), {
         senderEmail: user.email,
-        imageUrl,
+        ...(isVideo ? { videoUrl: url } : { imageUrl: url }),
         createdAt: serverTimestamp(),
       });
+      playSendSound();
     } catch (err) {
-      showToast('Could not send image: ' + err.message);
+      showToast(`Could not send ${isVideo ? 'video' : 'image'}: ` + err.message);
     } finally {
       hideUploadToast();
       sendBtn.disabled = false;
