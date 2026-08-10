@@ -652,7 +652,18 @@ onAccountChange(user => {
       applyingCloudSnapshot = true;
       localStorage.setItem(CHATS_KEY, JSON.stringify(chats));
       localStorage.setItem(CURRENT_CHAT_KEY, currentChatId);
-      renderChatFromHistory();
+      // Every saveChats() call (there are at least two per exchange — the
+      // user's message, then the assistant's reply) round-trips through
+      // Firestore and fires this listener again. Re-rendering unconditionally
+      // used to wipe out the actively-streaming assistant bubble mid-reply —
+      // messagesEl gets rebuilt purely from chat.messages, which doesn't
+      // contain the in-progress reply until the stream finishes — so signed-
+      // in users could send a message, watch it "complete" (button resets),
+      // and never see any reply at all. Skip the destructive re-render while
+      // a send is actually in flight; controller goes back to null before
+      // the final saveChats() of that exchange, so the next snapshot after
+      // the stream ends still catches up normally.
+      if (!controller) renderChatFromHistory();
       renderChatsList();
       applyingCloudSnapshot = false;
     }
