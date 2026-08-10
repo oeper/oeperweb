@@ -64,8 +64,22 @@ function ensureBadgeStyles() {
 }
 export function officialBadgeHtml(email) {
   if (isOwnerEmail(email)) {
+    // Owners default to the fixed "OFFICIAL" badge, but — unlike everyone
+    // else's badge, which is owner-granted — an owner can override or hide
+    // their own via badgeOverride (setOwnBadgeOverride below). Absent means
+    // "never touched, show the default"; present-but-falsy/hidden means
+    // "explicitly hidden", which deleteField() alone can't express since
+    // that's indistinguishable from "never touched".
+    const override = email && profileCache[email] && profileCache[email].badgeOverride;
+    if (override === undefined) {
+      ensureBadgeStyles();
+      return `<span class="oe-badge-official" title="Official — site owner"><span class="material-symbols-rounded">verified</span>OFFICIAL</span>`;
+    }
+    if (!override || override.hidden) return '';
     ensureBadgeStyles();
-    return `<span class="oe-badge-official" title="Official — site owner"><span class="material-symbols-rounded">verified</span>OFFICIAL</span>`;
+    const icon = override.icon || 'verified';
+    const hasLabel = !!override.label;
+    return `<span class="oe-badge-official${hasLabel ? '' : ' icon-only'}" title="${escBadgeHtml(override.label || 'Badge')}"><span class="material-symbols-rounded">${escBadgeHtml(icon)}</span>${hasLabel ? escBadgeHtml(override.label.toUpperCase()) : ''}</span>`;
   }
   const badge = email && profileCache[email] && profileCache[email].badge;
   if (!badge) return '';
@@ -73,6 +87,13 @@ export function officialBadgeHtml(email) {
   const icon = badge.icon || 'verified';
   const hasLabel = !!badge.label;
   return `<span class="oe-badge-official${hasLabel ? '' : ' icon-only'}" title="${escBadgeHtml(badge.label || 'Badge')}"><span class="material-symbols-rounded">${escBadgeHtml(icon)}</span>${hasLabel ? escBadgeHtml(badge.label.toUpperCase()) : ''}</span>`;
+}
+
+// Lets settings.html read an owner's current override (or lack of one) to
+// initialize its picker — call ensureProfileLoaded(email) first so this
+// isn't reading a still-empty cache.
+export function getBadgeOverride(email) {
+  return email && profileCache[email] && profileCache[email].badgeOverride;
 }
 
 const app = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
@@ -140,6 +161,25 @@ export async function setUserBadge(email, badge) {
   profileCache[email] = next;
   notify();
   sendNotification({ recipientEmail: email, type: 'badge', preview: badge ? badge.label : null });
+}
+
+// Self-service, owner accounts only: overrides (or hides) your own default
+// "OFFICIAL" badge — the badge everyone else has is granted by an owner via
+// setUserBadge above, but that hardcodes OFFICIAL for owners with no way to
+// touch it, which is exactly the "can't remove or rename it" complaint this
+// exists to fix. Pass { label, icon } for a custom badge, { hidden: true }
+// to show nothing, or undefined to go back to the default OFFICIAL badge.
+export async function setOwnBadgeOverride(override) {
+  if (!currentUser) throw new Error('Sign in first');
+  if (override === undefined) {
+    await setDoc(doc(db, 'users', currentUser.email), { badgeOverride: deleteField() }, { merge: true });
+  } else {
+    await setDoc(doc(db, 'users', currentUser.email), { badgeOverride: override }, { merge: true });
+  }
+  const next = { ...(profileCache[currentUser.email] || {}) };
+  if (override === undefined) delete next.badgeOverride; else next.badgeOverride = override;
+  profileCache[currentUser.email] = next;
+  notify();
 }
 
 // Writes a notification doc for the bell icon in topnav.js. Called from
