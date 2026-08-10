@@ -449,6 +449,14 @@
   .note-modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
   .note-modal input { width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none; margin-bottom: 16px; }
   .note-modal-actions { display: flex; justify-content: space-between; gap: 12px; }
+  .story-vis-people-list { display: none; max-height: 180px; overflow-y: auto; margin-bottom: 16px; flex-direction: column; gap: 4px; }
+  .story-vis-people-list.open { display: flex; }
+  .story-vis-people-list label {
+    display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 6px 8px; border-radius: 10px; cursor: pointer;
+  }
+  .story-vis-people-list label:hover { background: var(--md-sys-state-hover); }
+  .story-vis-people-list input[type="checkbox"] { accent-color: var(--md-sys-color-primary); }
+  .story-vis-empty { font-size: 12px; color: var(--md-sys-color-on-surface-variant); padding: 4px 8px 12px; }
   .home-feed { display: flex; flex-direction: column; gap: 24px; max-width: 470px; margin: 0 auto; }
   .home-feed-empty { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 0; text-align: center; }
   .home-feed-load-more {
@@ -701,6 +709,17 @@
     </div>
   </div>
 
+  <div class="note-overlay" id="storyVisOverlay"></div>
+  <div class="note-modal" id="storyVisModal" style="width:min(380px,90vw);">
+    <h3 style="font-size:16px;font-weight:500;margin-bottom:14px;">Who can see this story?</h3>
+    <div id="storyVisDropdownSlot" style="margin-bottom:14px;"></div>
+    <div class="story-vis-people-list" id="storyVisPeopleList"></div>
+    <div class="note-modal-actions">
+      <button type="button" id="storyVisCancelBtn" class="ig-comment-close-btn" style="width:auto;border-radius:100px;padding:10px 18px;border:1px solid var(--md-sys-color-error);color:var(--md-sys-color-error);">Cancel</button>
+      <button type="button" id="storyVisConfirmBtn" class="ig-comment-send-btn" style="width:auto;border-radius:100px;padding:10px 20px;">Post story</button>
+    </div>
+  </div>
+
 <script type="module">
   import {
     db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser, sendNotification,
@@ -708,6 +727,7 @@
   } from './shared/account.js?v=19';
   import { mountTopNav } from './shared/topnav.js?v=11';
   import { mountFooter } from './shared/footer.js?v=4';
+  import { createDropdown } from './shared/dropdown.js?v=1';
   import {
     collection, query, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp,
     getDocs, where, setDoc, Timestamp,
@@ -715,6 +735,55 @@
 
   mountTopNav();
   mountFooter();
+
+  // ── Follow relationships (drives story/note visibility) ─────────────
+  // Loaded once per sign-in state, not per story/note — everything that
+  // needs "do I follow them" / "are we mutual" reads these two sets rather
+  // than querying per item.
+  let myFollowing = new Set(); // emails I follow
+  let myFollowers = new Set(); // emails that follow me
+  const relationshipListeners = [];
+  function onRelationshipsChange(cb) { relationshipListeners.push(cb); }
+  async function loadRelationships(email) {
+    if (!email) {
+      myFollowing = new Set();
+      myFollowers = new Set();
+    } else {
+      try {
+        const [followingSnap, followersSnap] = await Promise.all([
+          getDocs(query(collection(db, 'follows'), where('followerEmail', '==', email))),
+          getDocs(query(collection(db, 'follows'), where('followeeEmail', '==', email))),
+        ]);
+        myFollowing = new Set(followingSnap.docs.map(d => d.data().followeeEmail));
+        myFollowers = new Set(followersSnap.docs.map(d => d.data().followerEmail));
+      } catch {
+        myFollowing = new Set();
+        myFollowers = new Set();
+      }
+    }
+    relationshipListeners.forEach(cb => cb());
+  }
+  onAccountChange(user => loadRelationships(user ? user.email : null));
+
+  // Default ('followers', when a story has no visibility field — covers
+  // stories posted before this existed) shows to people who follow the
+  // poster, same as the old fully-public behavior narrowed down one notch.
+  function canSeeStory(story, viewerEmail) {
+    if (story.authorEmail === viewerEmail) return true;
+    const mode = story.visibility || 'followers';
+    if (mode === 'public') return true;
+    if (!viewerEmail) return false;
+    if (mode === 'private') return false;
+    if (mode === 'selected') return Array.isArray(story.selectedViewers) && story.selectedViewers.includes(viewerEmail);
+    if (mode === 'friends') return myFollowing.has(story.authorEmail) && myFollowers.has(story.authorEmail);
+    return myFollowing.has(story.authorEmail);
+  }
+  // Notes have no per-note mode — always friends-only (mutual follow).
+  function canSeeNote(noteEmail, viewerEmail) {
+    if (noteEmail === viewerEmail) return true;
+    if (!viewerEmail) return false;
+    return myFollowing.has(noteEmail) && myFollowers.has(noteEmail);
+  }
 
   function showToast(msg) {
     const t = document.getElementById('toast');
@@ -792,10 +861,12 @@
       localStorage.setItem(STORY_SEEN_KEY, JSON.stringify([...set].slice(-500)));
     }
 
+    onRelationshipsChange(renderStoriesBar);
+
     function renderStoriesBar() {
       const user = getCurrentUser();
       const byAuthor = new Map();
-      allStories.forEach(s => {
+      allStories.filter(s => canSeeStory(s, user ? user.email : null)).forEach(s => {
         if (!byAuthor.has(s.authorEmail)) byAuthor.set(s.authorEmail, []);
         byAuthor.get(s.authorEmail).push(s);
       });
@@ -832,12 +903,55 @@
       });
     }
 
-    fileInput.addEventListener('change', async () => {
+    // ── Visibility picker (shown before every story post) ──────────────
+    const storyVisOverlay = document.getElementById('storyVisOverlay');
+    const storyVisModal = document.getElementById('storyVisModal');
+    const storyVisPeopleList = document.getElementById('storyVisPeopleList');
+    const storyVisDropdown = createDropdown([
+      { value: 'followers', label: 'Followers (default)' },
+      { value: 'private', label: 'Only me' },
+      { value: 'friends', label: 'Friends (mutual follows)' },
+      { value: 'public', label: 'Everyone' },
+      { value: 'selected', label: 'Selected people' },
+    ], {
+      value: 'followers',
+      block: true,
+      onChange: v => {
+        storyVisPeopleList.classList.toggle('open', v === 'selected');
+      },
+    });
+    document.getElementById('storyVisDropdownSlot').appendChild(storyVisDropdown.el);
+    let pendingStoryFile = null;
+
+    function openStoryVisModal() {
+      storyVisDropdown.setValue('followers');
+      storyVisPeopleList.classList.remove('open');
+      const followers = [...myFollowers];
+      storyVisPeopleList.innerHTML = followers.length
+        ? followers.map(email => {
+            const p = getProfile(email, null, null);
+            return `<label><input type="checkbox" value="${escHtml(email)}"> ${escHtml(p.name)}</label>`;
+          }).join('')
+        : '<div class="story-vis-empty">Nobody follows you yet, so there\'s no one to pick from.</div>';
+      storyVisOverlay.classList.add('open');
+      storyVisModal.classList.add('open');
+    }
+    function closeStoryVisModal() {
+      storyVisOverlay.classList.remove('open');
+      storyVisModal.classList.remove('open');
+      pendingStoryFile = null;
+    }
+    storyVisOverlay.addEventListener('click', closeStoryVisModal);
+    document.getElementById('storyVisCancelBtn').addEventListener('click', closeStoryVisModal);
+    document.getElementById('storyVisConfirmBtn').addEventListener('click', async () => {
       const user = getCurrentUser();
-      const file = fileInput.files[0];
-      fileInput.value = '';
+      const file = pendingStoryFile;
       if (!user || !file) return;
-      if (file.size > MAX_IMAGE_BYTES) { showToast(`File must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); return; }
+      const visibility = storyVisDropdown.getValue();
+      const selectedViewers = visibility === 'selected'
+        ? [...storyVisPeopleList.querySelectorAll('input:checked')].map(el => el.value)
+        : undefined;
+      closeStoryVisModal();
       const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
       try {
         const url = await uploadFile(file, '/upload', undefined, frac => showToast(`Uploading… ${Math.round(frac * 100)}%`));
@@ -848,6 +962,8 @@
           authorPhoto: profile.photo,
           mediaUrl: url,
           mediaType,
+          visibility,
+          ...(selectedViewers ? { selectedViewers } : {}),
           createdAt: serverTimestamp(),
           expiresAt: Timestamp.fromMillis(Date.now() + STORY_LIFETIME_MS),
         });
@@ -855,6 +971,16 @@
       } catch (err) {
         showToast('Could not post story: ' + err.message);
       }
+    });
+
+    fileInput.addEventListener('change', () => {
+      const user = getCurrentUser();
+      const file = fileInput.files[0];
+      fileInput.value = '';
+      if (!user || !file) return;
+      if (file.size > MAX_IMAGE_BYTES) { showToast(`File must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); return; }
+      pendingStoryFile = file;
+      openStoryVisModal();
     });
 
     const viewer = document.getElementById('storyViewer');
@@ -949,13 +1075,15 @@
     const modal = document.getElementById('noteModal');
     const input = document.getElementById('noteInput');
 
+    let lastNotes = [];
     onSnapshot(collection(db, 'notes'), snap => {
       const now = Date.now();
-      const notes = snap.docs
+      lastNotes = snap.docs
         .map(d => ({ email: d.id, ...d.data() }))
         .filter(n => n.expiresAt && n.expiresAt.toMillis && n.expiresAt.toMillis() > now);
-      render(notes);
+      render(lastNotes);
     }, () => { bar.innerHTML = ''; });
+    onRelationshipsChange(() => render(lastNotes));
 
     function render(notes) {
       const user = getCurrentUser();
@@ -973,7 +1101,7 @@
           </div>
         `;
       }
-      notes.filter(n => !user || n.email !== user.email).forEach(n => {
+      notes.filter(n => (!user || n.email !== user.email) && canSeeNote(n.email, user ? user.email : null)).forEach(n => {
         const profile = getProfile(n.email, n.authorName, n.authorPhoto);
         html += `
           <div class="note-item" data-handle="${escHtml(handleOf(n.email) || '')}" data-email="${escHtml(n.email)}">
