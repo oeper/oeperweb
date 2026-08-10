@@ -83,13 +83,14 @@
 
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 6px; }
-  .field input[type="text"], .field input[type="url"], .field input[type="tel"], .field input[type="email"], .field textarea, .field select {
+  .field input[type="text"], .field input[type="url"], .field input[type="tel"], .field input[type="email"], .field textarea {
     width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline);
     border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none;
     transition: border-color 0.2s;
   }
-  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--md-sys-color-primary); }
+  .field input:focus, .field textarea:focus { border-color: var(--md-sys-color-primary); }
   .field textarea { resize: vertical; min-height: 80px; }
+  .field .oe-dropdown-btn { background: var(--md-sys-color-background); border-radius: 12px; padding: 12px 14px; }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .field .hint { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 4px; }
 
@@ -151,11 +152,7 @@
         <div class="field"><label>Password</label><input type="text" id="wifiPass"></div>
         <div class="field">
           <label>Security</label>
-          <select id="wifiSecurity">
-            <option value="WPA">WPA/WPA2</option>
-            <option value="WEP">WEP</option>
-            <option value="nopass">None (open network)</option>
-          </select>
+          <div id="wifiSecuritySlot"></div>
         </div>
       </div>
 
@@ -190,21 +187,11 @@
         </div>
         <div class="field">
           <label>Error correction</label>
-          <select id="errorLevel">
-            <option value="L">Low (L)</option>
-            <option value="M" selected>Medium (M)</option>
-            <option value="Q">Quartile (Q)</option>
-            <option value="H">High (H)</option>
-          </select>
+          <div id="errorLevelSlot"></div>
         </div>
         <div class="field">
           <label>Size</label>
-          <select id="qrSize">
-            <option value="200">Small (200px)</option>
-            <option value="300" selected>Medium (300px)</option>
-            <option value="500">Large (500px)</option>
-            <option value="800">Extra large (800px)</option>
-          </select>
+          <div id="qrSizeSlot"></div>
         </div>
       </div>
 
@@ -231,15 +218,39 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=10';
+import { mountTopNav } from './shared/topnav.js?v=11';
 mountTopNav();
 </script>
-<script>
+<script type="module">
+import { createDropdown } from './shared/dropdown.js?v=1';
 let currentType = 'url';
 const qrCanvas = document.getElementById('qrCanvas');
 const qrBox = document.getElementById('qrBox');
 const qrEmptyNote = document.getElementById('qrEmptyNote');
 const actionRow = document.getElementById('actionRow');
+
+const wifiSecurityDropdown = createDropdown([
+  { value: 'WPA', label: 'WPA/WPA2' },
+  { value: 'WEP', label: 'WEP' },
+  { value: 'nopass', label: 'None (open network)' },
+], { value: 'WPA', onChange: () => updateQR() });
+document.getElementById('wifiSecuritySlot').appendChild(wifiSecurityDropdown.el);
+
+const errorLevelDropdown = createDropdown([
+  { value: 'L', label: 'Low (L)' },
+  { value: 'M', label: 'Medium (M)' },
+  { value: 'Q', label: 'Quartile (Q)' },
+  { value: 'H', label: 'High (H)' },
+], { value: 'M', onChange: () => updateQR() });
+document.getElementById('errorLevelSlot').appendChild(errorLevelDropdown.el);
+
+const qrSizeDropdown = createDropdown([
+  { value: '200', label: 'Small (200px)' },
+  { value: '300', label: 'Medium (300px)' },
+  { value: '500', label: 'Large (500px)' },
+  { value: '800', label: 'Extra large (800px)' },
+], { value: '300', onChange: () => updateQR() });
+document.getElementById('qrSizeSlot').appendChild(qrSizeDropdown.el);
 
 const FORM_TITLES = {
   url: 'Website URL', text: 'Text', wifi: 'WiFi network', contact: 'Contact card', email: 'Email', phone: 'Phone number',
@@ -268,7 +279,7 @@ function buildData() {
   if (currentType === 'wifi') {
     const ssid = document.getElementById('wifiSsid').value;
     const pass = document.getElementById('wifiPass').value;
-    const sec = document.getElementById('wifiSecurity').value;
+    const sec = wifiSecurityDropdown.getValue();
     if (!ssid) return '';
     return `WIFI:T:${sec};S:${ssid};P:${sec === 'nopass' ? '' : pass};;`;
   }
@@ -299,8 +310,8 @@ function updateQR() {
   const data = buildData();
   const fg = document.getElementById('fgColor').value;
   const bg = document.getElementById('bgColor').value;
-  const level = document.getElementById('errorLevel').value;
-  const size = Math.min(Number(document.getElementById('qrSize').value), 300); // canvas capped for on-screen preview
+  const level = errorLevelDropdown.getValue();
+  const size = Math.min(Number(qrSizeDropdown.getValue()), 300); // canvas capped for on-screen preview
 
   if (data.trim()) {
     qrEmptyNote.style.display = 'none';
@@ -318,11 +329,11 @@ function updateQR() {
   }
 }
 
-document.querySelectorAll('.input-view input, .input-view textarea, .input-view select').forEach(el => {
+document.querySelectorAll('.input-view input, .input-view textarea').forEach(el => {
   el.addEventListener('input', updateQR);
   el.addEventListener('change', updateQR);
 });
-['fgColor', 'bgColor', 'errorLevel', 'qrSize'].forEach(id => {
+['fgColor', 'bgColor'].forEach(id => {
   document.getElementById(id).addEventListener('input', updateQR);
   document.getElementById(id).addEventListener('change', updateQR);
 });
@@ -331,8 +342,8 @@ document.getElementById('downloadBtn').addEventListener('click', () => {
   const data = buildData();
   const fg = document.getElementById('fgColor').value;
   const bg = document.getElementById('bgColor').value;
-  const level = document.getElementById('errorLevel').value;
-  const size = Number(document.getElementById('qrSize').value);
+  const level = errorLevelDropdown.getValue();
+  const size = Number(qrSizeDropdown.getValue());
   const fullSizeCanvas = document.createElement('canvas');
   new QRious({ element: fullSizeCanvas, value: data, size, level, foreground: fg, background: bg });
   const link = document.createElement('a');

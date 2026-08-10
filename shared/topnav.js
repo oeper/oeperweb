@@ -233,6 +233,15 @@ function injectStyles() {
         color: var(--md-sys-color-on-surface); align-items: center; justify-content: center; cursor: pointer;
       }
 
+      /* Anchored to the viewport instead of .oe-nav-notif-wrap here — the
+         wrap sits well left of the true right edge on mobile (the chat/
+         settings/account icons come after it in .oe-nav-right), so the
+         desktop rule's right:0 + width:90vw pushed the panel off the left
+         edge of the screen. */
+      .oe-notif-dropdown {
+        position: fixed; top: 72px; left: 12px; right: 12px; width: auto; max-width: none;
+      }
+
       .oe-nav-backdrop {
         /* z-index must stay below .oe-navbar's own (100): .oe-navbar creates
            its own stacking context (position: sticky + z-index), so its

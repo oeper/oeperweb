@@ -96,10 +96,10 @@
   .pill:hover { background-color: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
   .pill.active { background-color: var(--md-sys-color-secondary-container); border-color: transparent; color: var(--md-sys-color-on-secondary-container); }
 
-  .sort-select {
-    background: transparent; border: 1px solid var(--md-sys-color-outline); border-radius: 8px; padding: 8px 14px;
-    color: var(--md-sys-color-on-surface-variant); font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; font-weight: 500;
-    cursor: pointer; flex-shrink: 0;
+  .sort-select-slot { flex-shrink: 0; }
+  .sort-select-slot .oe-dropdown-btn {
+    background: transparent; border-radius: 8px; padding: 8px 14px;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; font-weight: 500;
   }
 
   .new-post-btn {
@@ -466,12 +466,7 @@
           <span class="material-symbols-rounded">clear_all</span> All
         </button>
       </div>
-      <select class="sort-select" id="sortSelect">
-        <option value="newest">Newest</option>
-        <option value="relevance" selected>Relevance</option>
-        <option value="top">Top voted</option>
-        <option value="comments">Most discussed</option>
-      </select>
+      <div class="sort-select-slot" id="sortSelectSlot"></div>
       <button class="new-post-btn" id="newPostBtn"><span class="material-symbols-rounded">add</span> New post</button>
     </div>
   </div>
@@ -562,8 +557,9 @@ import {
   getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded, handleOf,
   uploadFile, sendNotification,
 } from './shared/account.js?v=19';
-import { mountTopNav } from './shared/topnav.js?v=10';
+import { mountTopNav } from './shared/topnav.js?v=11';
 import { mountFooter } from './shared/footer.js?v=4';
+import { createDropdown } from './shared/dropdown.js?v=1';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
   query, orderBy, serverTimestamp, arrayUnion, arrayRemove, increment, Timestamp
@@ -1311,7 +1307,13 @@ function runForum() {
   const emptyState = document.getElementById('emptyState');
   const visibleCount = document.getElementById('visibleCount');
   const searchInput = document.getElementById('searchInput');
-  const sortSelect = document.getElementById('sortSelect');
+  const sortSelect = createDropdown([
+    { value: 'newest', label: 'Newest' },
+    { value: 'relevance', label: 'Relevance' },
+    { value: 'top', label: 'Top voted' },
+    { value: 'comments', label: 'Most discussed' },
+  ], { value: 'relevance', onChange: () => renderList() });
+  document.getElementById('sortSelectSlot').appendChild(sortSelect.el);
 
   function score(item) { return (item.upvoters || []).length - (item.downvoters || []).length; }
 
@@ -1339,7 +1341,7 @@ function runForum() {
       return tagMatch && searchMatch;
     });
 
-    const sort = sortSelect.value;
+    const sort = sortSelect.getValue();
     if (sort === 'top') filtered.sort((a,b) => score(b) - score(a));
     else if (sort === 'comments') filtered.sort((a,b) => (b.commentCount||0) - (a.commentCount||0));
     else if (sort === 'relevance') filtered.sort((a,b) => {
@@ -1529,7 +1531,6 @@ function runForum() {
   }, err => showToast('Could not load posts: ' + err.message));
 
   searchInput.addEventListener('input', renderList);
-  sortSelect.addEventListener('change', renderList);
 
   // ── New post modal ────────────────────────────────────────
   const overlay = document.getElementById('overlay');

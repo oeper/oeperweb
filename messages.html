@@ -227,9 +227,9 @@
 
 <div class="page">
   <div class="header-container">
-    <a href="https://oeper.dev/feed" class="header-link" id="backLink">
+    <a href="https://oeper.dev/" class="header-link" id="backLink">
       <span class="material-symbols-rounded">arrow_back</span>
-      <span id="backLinkText">back to feed</span>
+      <span id="backLinkText">back</span>
     </a>
   </div>
 
@@ -253,7 +253,7 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=10';
+import { mountTopNav } from './shared/topnav.js?v=11';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
 } from './shared/account.js?v=19';
@@ -534,9 +534,17 @@ async function openByHandle(handle, user) {
 
 function showInbox(user) {
   const backLink = document.getElementById('backLink');
-  backLink.href = 'https://oeper.dev/feed';
-  backLink.onclick = null; // clear any handler left over from a previous openThread() — otherwise this link stops navigating
-  document.getElementById('backLinkText').textContent = 'back to feed';
+  // href is just the no-JS/new-tab fallback (home) — the click handler below
+  // prefers actual browser history so this doesn't dump people who arrived
+  // from their profile, a notification, etc. onto /feed instead of back
+  // where they came from.
+  backLink.href = 'https://oeper.dev/';
+  backLink.onclick = e => {
+    e.preventDefault();
+    if (window.history.length > 1 && document.referrer.startsWith(location.origin)) window.history.back();
+    else window.location.href = 'https://oeper.dev/';
+  };
+  document.getElementById('backLinkText').textContent = 'back';
   document.getElementById('notesBar').style.display = '';
   content.innerHTML = '<div class="empty-note">Loading…</div>';
 
@@ -653,6 +661,11 @@ async function openThread(otherEmail, user) {
 
   const msgList = document.getElementById('msgList');
   const msgInput = document.getElementById('msgInput');
+  function autoGrowMsgInput() {
+    msgInput.style.height = 'auto';
+    msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + 'px';
+  }
+  msgInput.addEventListener('input', autoGrowMsgInput);
   const sendBtn = document.getElementById('sendMsgBtn');
   const sendMsgIcon = document.getElementById('sendMsgIcon');
   const inputNormal = document.getElementById('inputNormal');
@@ -681,6 +694,7 @@ async function openThread(otherEmail, user) {
   function startEdit(m) {
     editingMessageId = m.id;
     msgInput.value = m.text || '';
+    autoGrowMsgInput();
     msgInput.focus();
     editIndicator.style.display = 'flex';
     sendMsgIcon.textContent = 'check';
@@ -688,6 +702,7 @@ async function openThread(otherEmail, user) {
   function cancelEdit() {
     editingMessageId = null;
     msgInput.value = '';
+    autoGrowMsgInput();
     editIndicator.style.display = 'none';
     sendMsgIcon.textContent = 'arrow_upward';
   }
@@ -840,6 +855,7 @@ async function openThread(otherEmail, user) {
         cancelEdit();
       } else {
         msgInput.value = '';
+        autoGrowMsgInput();
         await touchConversation(text.slice(0, 200));
         await addDoc(collection(db, 'conversations', convoId, 'messages'), {
           senderEmail: user.email,

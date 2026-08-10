@@ -157,10 +157,7 @@
   .attach-remove-btn .material-symbols-rounded { font-size: 14px; }
 
   .model-bar { display: flex; justify-content: flex-end; margin-bottom: 8px; padding: 0 4px; }
-  .model-select {
-    background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface-variant); border: 1px solid var(--md-sys-color-outline);
-    border-radius: 100px; padding: 5px 12px; font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; max-width: 100%;
-  }
+  .model-bar .oe-dropdown-btn { font-size: 12px; font-weight: 500; padding: 5px 12px; }
 
   .chat-inputbar {
     position: sticky; bottom: 16px; display: flex; align-items: flex-end; gap: 4px;
@@ -259,9 +256,7 @@
       </div>
     </div>
 
-    <div class="model-bar">
-      <select id="modelSelect" class="model-select"><option value="">a small local model</option></select>
-    </div>
+    <div class="model-bar" id="modelBar"></div>
 
     <div class="chat-inputbar">
       <label class="attach-btn" title="Attach an image">
@@ -289,10 +284,11 @@
 </div>
 
 <script type="module">
-import { db, SERVER_ENDPOINT } from './shared/account.js?v=19';
-import { mountTopNav } from './shared/topnav.js?v=10';
+import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange } from './shared/account.js?v=19';
+import { mountTopNav } from './shared/topnav.js?v=11';
 import { mountFooter } from './shared/footer.js?v=4';
-import { doc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { createDropdown } from './shared/dropdown.js?v=1';
+import { doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 mountFooter();
 
@@ -358,7 +354,7 @@ function parseAiMarkdown(text) {
 // either a separate reasoning_content stream field or an inline <think>
 // tag) and the real answer, so the UI can show reasoning as a collapsible
 // "Show thinking" block instead of dumping it inline with the answer.
-function splitThinking(reasoningBuf, contentBuf) {
+function splitThinking(reasoningBuf, contentBuf, done) {
   if (reasoningBuf) {
     return { thinking: reasoningBuf, answer: contentBuf, stillThinking: contentBuf.length === 0 };
   }
@@ -366,6 +362,13 @@ function splitThinking(reasoningBuf, contentBuf) {
   if (openIdx === -1) return { thinking: '', answer: contentBuf, stillThinking: false };
   const closeIdx = contentBuf.indexOf('</think>', openIdx);
   if (closeIdx === -1) {
+    // The small local model sometimes never emits a closing </think> and
+    // just runs straight into its real answer. While still streaming we
+    // can't tell the difference from a slow thinker, so keep showing it as
+    // reasoning — but once the stream is actually done, treat the whole
+    // thing as the answer instead of leaving it stuck forever inside a
+    // permanently-open "Thinking…" box with no visible reply.
+    if (done) return { thinking: '', answer: contentBuf.slice(0, openIdx) + contentBuf.slice(openIdx + 7), stillThinking: false };
     return { thinking: contentBuf.slice(openIdx + 7), answer: contentBuf.slice(0, openIdx), stillThinking: true };
   }
   return {
@@ -382,8 +385,8 @@ function splitThinking(reasoningBuf, contentBuf) {
 // once the answer starts, and still respect a manual click in between —
 // re-rendering the bubble's innerHTML on every streamed chunk would
 // otherwise reset a native <details>'s open attribute every time too.
-function renderAssistantContent(bubble, reasoningBuf, contentBuf) {
-  const { thinking, answer, stillThinking } = splitThinking(reasoningBuf, contentBuf);
+function renderAssistantContent(bubble, reasoningBuf, contentBuf, done) {
+  const { thinking, answer, stillThinking } = splitThinking(reasoningBuf, contentBuf, done);
   let html = '';
   if (thinking) {
     const existing = bubble.querySelector('.thinking-block');
@@ -408,22 +411,23 @@ function renderAssistantContent(bubble, reasoningBuf, contentBuf) {
 // a model gets swapped. config/aiModels (admin.html-editable) still
 // merges in afterward as extra entries, for models worth offering even
 // when not currently loaded.
-const modelSelect = document.getElementById('modelSelect');
+const modelDropdown = createDropdown([{ value: '', label: 'a small local model (default)' }], { value: '' });
+document.getElementById('modelBar').appendChild(modelDropdown.el);
 let defaultModelName = 'a small local model';
 let liveModels = [];
 let configuredModels = [];
 
 function renderModelSelect() {
-  const prevValue = modelSelect.value;
+  const prevValue = modelDropdown.getValue();
   const seen = new Set();
-  const options = [`<option value="">${escHtml(defaultModelName)} (default)</option>`];
+  const options = [{ value: '', label: `${defaultModelName} (default)` }];
   for (const m of [...liveModels, ...configuredModels]) {
     if (!m || !m.id || seen.has(m.id)) continue;
     seen.add(m.id);
-    options.push(`<option value="${escHtml(m.id)}">${escHtml(m.label || m.id)}</option>`);
+    options.push({ value: m.id, label: m.label || m.id });
   }
-  modelSelect.innerHTML = options.join('');
-  if ([...modelSelect.options].some(o => o.value === prevValue)) modelSelect.value = prevValue;
+  modelDropdown.setOptions(options, true);
+  if (!options.some(o => o.value === prevValue)) modelDropdown.setValue('');
 }
 
 onSnapshot(doc(db, 'config', 'aiModels'), snap => {
@@ -453,14 +457,19 @@ async function loadLiveModels() {
 }
 loadLiveModels();
 
-// ── Multiple chats (localStorage — this page has no sign-in) ──────────
+// ── Multiple chats (localStorage always; also synced to Firestore under
+// aiChats/{email} when signed in, so the same chats show up on another
+// device — signed-out visitors still get full local-only persistence). ──
 const CHATS_KEY = 'oe-ai-chats';
 const CURRENT_CHAT_KEY = 'oe-ai-current-chat';
 
 function loadChats() {
   try { return JSON.parse(localStorage.getItem(CHATS_KEY)) || []; } catch { return []; }
 }
-function saveChats() { localStorage.setItem(CHATS_KEY, JSON.stringify(chats)); }
+function saveChats() {
+  localStorage.setItem(CHATS_KEY, JSON.stringify(chats));
+  pushChatsToCloud();
+}
 function newChatId() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 function makeChat() { return { id: newChatId(), title: 'New chat', messages: [], updatedAt: Date.now() }; }
 
@@ -504,7 +513,7 @@ function addMessageEl(role, content, imageUrl) {
   messagesEl.appendChild(wrap);
   const bubble = wrap.querySelector('.msg-bubble');
   if (role === 'user') bubble.textContent = content;
-  else if (content) renderAssistantContent(bubble, '', content);
+  else if (content) renderAssistantContent(bubble, '', content, true);
   wrap.scrollIntoView({ block: 'end', behavior: 'smooth' });
   return bubble;
 }
@@ -584,6 +593,54 @@ document.getElementById('chatsBtn').addEventListener('click', openChatsPanel);
 document.getElementById('chatsCloseBtn').addEventListener('click', closeChatsPanel);
 chatsOverlay.addEventListener('click', closeChatsPanel);
 document.getElementById('newChatBtn').addEventListener('click', startNewChat);
+
+// ── Cross-device sync (Firestore, signed-in only) ──────────────────────
+// Last-write-wins per chat (by updatedAt), not a full CRDT merge — good
+// enough for "used it on my phone, now continuing on desktop" since
+// updatedAt is bumped on every message, so simultaneous edits on two
+// devices are the only case that can lose one side's newest message.
+let cloudUnsub = null;
+let applyingCloudSnapshot = false;
+
+function mergeChats(local, cloud) {
+  const byId = new Map();
+  for (const c of local) byId.set(c.id, c);
+  for (const c of cloud) {
+    const existing = byId.get(c.id);
+    if (!existing || (c.updatedAt || 0) > (existing.updatedAt || 0)) byId.set(c.id, c);
+  }
+  return [...byId.values()];
+}
+
+function pushChatsToCloud() {
+  if (applyingCloudSnapshot) return;
+  const user = getCurrentUser();
+  if (!user) return;
+  setDoc(doc(db, 'aiChats', user.email), { chats }).catch(() => {});
+}
+
+onAccountChange(user => {
+  if (cloudUnsub) { cloudUnsub(); cloudUnsub = null; }
+  if (!user) return;
+  cloudUnsub = onSnapshot(doc(db, 'aiChats', user.email), snap => {
+    const cloudChats = (snap.exists() && snap.data().chats) || [];
+    const merged = mergeChats(chats, cloudChats);
+    const changed = JSON.stringify(merged) !== JSON.stringify(chats);
+    chats = merged;
+    if (!chats.some(c => c.id === currentChatId) && chats.length) currentChatId = chats[0].id;
+    if (changed) {
+      applyingCloudSnapshot = true;
+      localStorage.setItem(CHATS_KEY, JSON.stringify(chats));
+      localStorage.setItem(CURRENT_CHAT_KEY, currentChatId);
+      renderChatFromHistory();
+      renderChatsList();
+      applyingCloudSnapshot = false;
+    }
+    // Push once so a brand-new device (nothing in the cloud yet, or the
+    // cloud copy was behind) ends up with the merged result on both sides.
+    setDoc(doc(db, 'aiChats', user.email), { chats }).catch(() => {});
+  });
+});
 
 // ── Image attachment (anonymous upload — this page needs no sign-in, so
 // it uses the same unauthenticated /upload-file path files.html's
@@ -762,7 +819,7 @@ async function sendMessage() {
     const res = await fetch(AI_ENDPOINT + '/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: wireMessages, model: modelSelect.value || undefined }),
+      body: JSON.stringify({ messages: wireMessages, model: modelDropdown.getValue() || undefined }),
       signal: controller.signal,
     });
     if (!res.ok || !res.body) {
@@ -800,6 +857,7 @@ async function sendMessage() {
       }
     }
     if (!reasoningBuf && !contentBuf) bubble.classList.remove('thinking');
+    else renderAssistantContent(bubble, reasoningBuf, contentBuf, true);
   } catch (err) {
     bubble.classList.remove('thinking');
     if (err.name === 'AbortError') {
@@ -813,10 +871,14 @@ async function sendMessage() {
     setSending(false);
     // The final <think> tag (if inline, not a separate reasoning_content
     // field) is stripped from what gets persisted/re-sent, so reloading
-    // history never re-shows old reasoning as if it were the answer.
-    const { answer } = splitThinking(reasoningBuf, contentBuf);
-    if (answer || reasoningBuf) {
-      chat.messages.push({ role: 'assistant', content: answer || contentBuf });
+    // history never re-shows old reasoning as if it were the answer. Pass
+    // done=true so an unclosed <think> tag (the model doesn't always close
+    // it) resolves to "show it as the answer" rather than vanishing —
+    // falling back to the raw, un-stripped contentBuf here would re-persist
+    // the literal <think> tag text into history.
+    const { answer } = splitThinking(reasoningBuf, contentBuf, true);
+    if (answer) {
+      chat.messages.push({ role: 'assistant', content: answer });
       chat.updatedAt = Date.now();
       saveChats();
     }

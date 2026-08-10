@@ -156,10 +156,12 @@
   }
   .modal-box.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
   .modal-box h3 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 18px; font-weight: 500; margin-bottom: 16px; }
-  .modal-box input, .modal-box select {
+  .modal-box input {
     width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: 12px;
     padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none; margin-bottom: 16px;
   }
+  .modal-box .oe-dropdown { margin-bottom: 16px; }
+  .modal-box .oe-dropdown-btn { background: var(--md-sys-color-background); border-radius: 12px; padding: 12px 14px; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
   .stats { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 24px; padding-left: 4px; }
@@ -315,7 +317,7 @@
 <div class="modal-overlay" id="moveModalOverlay"></div>
 <div class="modal-box" id="moveModal">
   <h3>Move to folder</h3>
-  <select id="moveFolderSelect"></select>
+  <div id="moveFolderSlot"></div>
   <div class="modal-actions">
     <button type="button" class="toolbar-btn" id="moveCancelBtn">Cancel</button>
     <button type="button" class="upload-btn" id="moveConfirmBtn" style="border-radius:100px;">Move</button>
@@ -323,11 +325,12 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=10';
+import { mountTopNav } from './shared/topnav.js?v=11';
 import {
   SERVER_ENDPOINT, getCurrentUser, onAccountChange, isOwnerEmail, uploadFile,
 } from './shared/account.js?v=19';
 import { mountFooter } from './shared/footer.js?v=4';
+import { createDropdown } from './shared/dropdown.js?v=1';
 
 mountTopNav();
 mountFooter();
@@ -556,17 +559,21 @@ document.getElementById('renameSaveBtn').addEventListener('click', async () => {
 document.getElementById('renameInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('renameSaveBtn').click(); });
 
 let movingFilename = null;
+const moveFolderDropdown = createDropdown([], { value: '', block: true });
+document.getElementById('moveFolderSlot').appendChild(moveFolderDropdown.el);
 function openMoveModal(f) {
   movingFilename = f.filename;
   const mine = folders.filter(x => x.email === spaceEmail());
-  const select = document.getElementById('moveFolderSelect');
-  select.innerHTML = `<option value="">(root — no folder)</option>` +
-    mine.map(x => `<option value="${escHtml(x.path)}" ${x.path === f.folder ? 'selected' : ''}>${escHtml(x.path)}</option>`).join('');
+  moveFolderDropdown.setOptions([
+    { value: '', label: '(root — no folder)' },
+    ...mine.map(x => ({ value: x.path, label: x.path })),
+  ]);
+  moveFolderDropdown.setValue(f.folder || '');
   openModal('moveModalOverlay', 'moveModal');
 }
 document.getElementById('moveConfirmBtn').addEventListener('click', async () => {
   if (!movingFilename) return;
-  const folder = document.getElementById('moveFolderSelect').value;
+  const folder = moveFolderDropdown.getValue();
   try {
     await apiCall('/move-file', { filename: movingFilename, folder });
     closeModal('moveModalOverlay', 'moveModal');

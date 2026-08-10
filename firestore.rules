@@ -308,5 +308,13 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isOwner();
     }
+
+    // epic AI chat history, keyed by email — lets signed-in users pick up
+    // the same chats on another device. ai.html still works fully signed
+    // out (chats just stay local to that browser in that case), so this is
+    // private to the account, never public like the collections above.
+    match /aiChats/{email} {
+      allow read, write: if isSignedIn() && request.auth.token.email == email;
+    }
   }
 }
