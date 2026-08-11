@@ -7,6 +7,7 @@
 <meta name="description" content="Projects uploaded by visitors of oeper.dev">
 <meta property="og:title" content="Projects — oeper.dev">
 <meta property="og:description" content="Projects uploaded by visitors of oeper.dev">
+<meta property="og:image" content="https://oeper.dev/icon.png">
 <meta property="og:url" content="https://oeper.dev/projects">
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
@@ -366,6 +367,12 @@ function openDetail(p) {
   const up = user && (p.upvoters || []).includes(user.uid);
   const down = user && (p.downvoters || []).includes(user.uid);
 
+  // Tab title/bookmarks and any crawler that renders JS — doesn't fix
+  // social-share unfurlers (Discord/Twitter etc.) since those don't run JS.
+  document.title = `${p.title || 'Project'} — oeper.dev`;
+  const descEl = document.querySelector('meta[name="description"]');
+  if (descEl && p.description) descEl.setAttribute('content', p.description.slice(0, 160));
+
   panel.innerHTML = `
     <button class="watch-close" id="watchCloseBtn" title="Close"><span class="material-symbols-rounded">close</span></button>
     <div class="project-thumb">${thumbHtml(p)}</div>
@@ -393,6 +400,9 @@ function openDetail(p) {
   function close() {
     overlay.classList.remove('open');
     panel.classList.remove('open');
+    document.title = 'Projects — oeper.dev';
+    const descEl = document.querySelector('meta[name="description"]');
+    if (descEl) descEl.setAttribute('content', 'Projects uploaded by visitors of oeper.dev');
     history.pushState({}, '', '/projects');
   }
   overlay.onclick = close;

@@ -7,6 +7,7 @@
 <meta name="description" content="Long-form videos on oeper.dev">
 <meta property="og:title" content="Videos — oeper.dev">
 <meta property="og:description" content="Long-form videos on oeper.dev">
+<meta property="og:image" content="https://oeper.dev/icon.png">
 <meta property="og:url" content="https://oeper.dev/videos">
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
@@ -400,6 +401,12 @@ function openWatch(v) {
   const up = user && (v.upvoters || []).includes(user.uid);
   const down = user && (v.downvoters || []).includes(user.uid);
 
+  // Tab title/bookmarks and any crawler that renders JS — doesn't fix
+  // social-share unfurlers (Discord/Twitter etc.) since those don't run JS.
+  document.title = `${v.title || 'Video'} — oeper.dev`;
+  const descEl = document.querySelector('meta[name="description"]');
+  if (descEl && v.description) descEl.setAttribute('content', v.description.slice(0, 160));
+
   panel.innerHTML = `
     <button class="watch-close" id="watchCloseBtn" title="Close"><span class="material-symbols-rounded">close</span></button>
     <video src="${v.url}" controls autoplay></video>
@@ -552,6 +559,9 @@ function openWatch(v) {
     panel.classList.remove('open');
     panel.querySelector('video')?.pause();
     if (unsubWatchComments) { unsubWatchComments(); unsubWatchComments = null; }
+    document.title = 'Videos — oeper.dev';
+    const descEl = document.querySelector('meta[name="description"]');
+    if (descEl) descEl.setAttribute('content', 'Long-form videos on oeper.dev');
     history.pushState({}, '', '/videos');
   }
   overlay.onclick = close;

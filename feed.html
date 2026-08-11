@@ -7,6 +7,7 @@
 <meta name="description" content="Talk to other visitors of oeper.dev">
 <meta property="og:title" content="Feed — oeper.dev">
 <meta property="og:description" content="Talk to other visitors of oeper.dev">
+<meta property="og:image" content="https://oeper.dev/icon.png">
 <meta property="og:url" content="https://oeper.dev/feed">
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
@@ -1853,6 +1854,12 @@ function runForum() {
     openPostId = postId;
     const p = posts.find(x => x.id === postId);
     if (!p) return;
+    // Browser tab title/bookmarks and any crawler that renders JS (Google's
+    // does; most link-preview unfurlers like Discord/Twitter don't, so this
+    // alone doesn't fix social-share previews for individual posts).
+    document.title = `${p.title || 'Post'} — oeper.dev`;
+    const descEl = document.querySelector('meta[name="description"]');
+    if (descEl && p.body) descEl.setAttribute('content', p.body.slice(0, 160));
     const atts = attachmentsOf(p);
     const mediaAtts = atts.filter(a => ['image', 'video'].includes(fileKind(a)));
     const fileAtts = atts.filter(a => !['image', 'video'].includes(fileKind(a)));
@@ -2058,6 +2065,9 @@ function runForum() {
     if (unsubComments.current) { unsubComments.current(); unsubComments.current = null; }
     openPostId = null;
     replyingToComment = null;
+    document.title = 'Feed — oeper.dev';
+    const descEl = document.querySelector('meta[name="description"]');
+    if (descEl) descEl.setAttribute('content', 'Talk to other visitors of oeper.dev');
     history.pushState({}, '', '/feed');
   }
   document.getElementById('threadCloseBtn').addEventListener('click', closeThread);
