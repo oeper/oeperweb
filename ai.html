@@ -548,7 +548,12 @@ function addMessageEl(role, content, imageUrl) {
 // sent messages never get a visible reply. Remove this whole block (and
 // the other [AI-DEBUG] lines below) once the cause is confirmed.
 function renderChatFromHistory() {
-  console.log('[AI-DEBUG] renderChatFromHistory called, controller=', !!controller, 'stack=', new Error().stack);
+  // Note: can't reference `controller` here — this function is called at
+  // page-load time (line ~563), before `let controller` further down in
+  // this same script has been declared, and reading a `let` binding before
+  // its declaration line executes throws (temporal dead zone), which killed
+  // the whole script on load in an earlier version of this debug patch.
+  console.log('[AI-DEBUG] renderChatFromHistory called, stack=', new Error().stack);
   const chat = getCurrentChat();
   console.log('[AI-DEBUG] rendering chat', chat.id, 'with', chat.messages.length, 'messages:', chat.messages.map(m => m.role + ':' + (m.content||'').slice(0,20)));
   messagesEl.style.opacity = '0';
