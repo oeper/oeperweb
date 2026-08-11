@@ -103,7 +103,7 @@ function injectStyles() {
     .oe-nsd-main { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .oe-nsd-name { font-weight: 500; }
     .oe-nsd-cat { color: var(--md-sys-color-on-surface-variant); font-weight: 400; }
-    .oe-nsd-empty, .oe-nsd-loading { padding: 18px; text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; }
+    .oe-nsd-empty { padding: 18px; text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; }
 
     .oe-nav-mobile-search-btn {
       display: none; align-items: center; justify-content: center; width: 40px; height: 40px;
@@ -457,7 +457,7 @@ function initSearch(navEl) {
   async function runSearch(qRaw) {
     const q = qRaw.trim().toLowerCase();
     if (!q) { closeDropdown(); return; }
-    dropdown.innerHTML = '<div class="oe-nsd-loading">Searching…</div>';
+    dropdown.innerHTML = '<div class="oe-spinner-row"><span class="oe-spinner small"></span>Searching…</div>';
     dropdown.classList.add('open');
 
     let corpus;
