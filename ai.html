@@ -544,8 +544,13 @@ function addMessageEl(role, content, imageUrl) {
   return bubble;
 }
 
+// TEMPORARY diagnostic logging — tracing a signed-in-only bug report where
+// sent messages never get a visible reply. Remove this whole block (and
+// the other [AI-DEBUG] lines below) once the cause is confirmed.
 function renderChatFromHistory() {
+  console.log('[AI-DEBUG] renderChatFromHistory called, controller=', !!controller, 'stack=', new Error().stack);
   const chat = getCurrentChat();
+  console.log('[AI-DEBUG] rendering chat', chat.id, 'with', chat.messages.length, 'messages:', chat.messages.map(m => m.role + ':' + (m.content||'').slice(0,20)));
   messagesEl.style.opacity = '0';
   messagesEl.innerHTML = '';
   if (!chat.messages.length) {
@@ -652,6 +657,7 @@ onAccountChange(user => {
     const cloudChats = (snap.exists() && snap.data().chats) || [];
     const merged = mergeChats(chats, cloudChats);
     const changed = JSON.stringify(merged) !== JSON.stringify(chats);
+    console.log('[AI-DEBUG] onSnapshot fired, hasPendingWrites=', snap.metadata.hasPendingWrites, 'fromCache=', snap.metadata.fromCache, 'changed=', changed, 'controller=', !!controller, 'cloudChats=', cloudChats.map(c => ({ id: c.id, n: c.messages.length, updatedAt: c.updatedAt })), 'localChats=', chats.map(c => ({ id: c.id, n: c.messages.length, updatedAt: c.updatedAt })));
     chats = merged;
     if (!chats.some(c => c.id === currentChatId) && chats.length) currentChatId = chats[0].id;
     if (changed) {
@@ -944,6 +950,7 @@ async function sendToModel(chat) {
   } finally {
     clearInterval(watchdog);
     controller = null;
+    console.log('[AI-DEBUG] stream finished, contentBuf=', JSON.stringify(contentBuf.slice(0, 60)), 'chat=', chat.id, 'is same object still in chats?', chats.some(c => c === chat));
     setSending(false);
     // The final <think> tag (if inline, not a separate reasoning_content
     // field) is stripped from what gets persisted/re-sent, so reloading
@@ -957,6 +964,9 @@ async function sendToModel(chat) {
       chat.messages.push({ role: 'assistant', content: answer });
       chat.updatedAt = Date.now();
       saveChats();
+      console.log('[AI-DEBUG] pushed assistant answer, chat now has', chat.messages.length, 'messages; currentChat has', getCurrentChat().messages.length);
+    } else {
+      console.log('[AI-DEBUG] no answer to push! reasoningBuf=', JSON.stringify(reasoningBuf.slice(0,60)), 'contentBuf=', JSON.stringify(contentBuf.slice(0,60)));
     }
     renderChatsList();
   }
