@@ -200,8 +200,8 @@
 <script type="module">
 import {
   auth, db, SERVER_ENDPOINT, isOwnerEmail, officialBadgeHtml, getCurrentUser, onAccountChange,
-  getProfile, handleOf, uploadFile, ensureProfileLoaded, sendNotification,
-} from './shared/account.js?v=23';
+  getProfile, handleOf, uploadFile, ensureProfileLoaded, sendNotification, linkifyMentions,
+} from './shared/account.js?v=24';
 import { mountTopNav } from './shared/topnav.js?v=12';
 import { mountFooter } from './shared/footer.js?v=4';
 import {
@@ -361,7 +361,7 @@ function openDetail(p) {
       ${p.fileUrl && !isImageUrl(p.fileUrl) ? `<a class="btn" href="${p.fileUrl}" target="_blank" rel="noopener" download><span class="material-symbols-rounded" style="font-size:16px;">download</span> Download file</a>` : ''}
     </div>
     ${isAudioUrl(p.fileUrl) ? `<audio class="project-audio-player" controls preload="metadata" src="${p.fileUrl}"></audio>` : ''}
-    <div class="watch-desc">${escHtml(p.description || '') || 'No description.'}</div>
+    <div class="watch-desc">${p.description ? linkifyMentions(escHtml(p.description)) : 'No description.'}</div>
   `;
 
   function close() {

@@ -723,8 +723,8 @@
 <script type="module">
   import {
     db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser, sendNotification,
-    onAccountChange, SERVER_ENDPOINT, MAX_IMAGE_BYTES, uploadFile,
-  } from './shared/account.js?v=23';
+    onAccountChange, SERVER_ENDPOINT, MAX_IMAGE_BYTES, uploadFile, linkifyMentions,
+  } from './shared/account.js?v=24';
   import { mountTopNav } from './shared/topnav.js?v=12';
   import { mountFooter } from './shared/footer.js?v=4';
   import { createDropdown } from './shared/dropdown.js?v=1';
@@ -1122,7 +1122,9 @@
       if (myItem) myItem.addEventListener('click', openNoteModal);
       bar.querySelectorAll('.note-item[data-handle]').forEach(el => {
         el.addEventListener('click', () => {
-          if (el.dataset.handle) window.location.href = '/profile?u=' + encodeURIComponent(el.dataset.handle);
+          // Instagram-style: tapping someone's note opens a reply to them,
+          // not their profile — notes exist to prompt a DM, not to browse.
+          if (el.dataset.handle) window.location.href = '/messages?to=' + encodeURIComponent(el.dataset.handle);
         });
         const reportBtn = el.querySelector('[data-report-note]');
         if (reportBtn) reportBtn.addEventListener('click', e => {
@@ -1170,7 +1172,8 @@
 
   function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function linkify(str) {
-    return escHtml(str).replace(/(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
+    const html = escHtml(str).replace(/(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
+    return linkifyMentions(html);
   }
   // Full markdown renderer for the post-detail modal — same rules as
   // feed.html's parseMarkdown (bullets, tables, [[Button]](url) links)
@@ -1238,7 +1241,7 @@
       .replace(/\[\[([^\]]+)\]\]\((https?:\/\/[^)]+)\)/g, '<a class="md-btn" href="$2" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-rounded">arrow_forward</span>$1</a>')
       .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener" onclick="event.stopPropagation()">$1</a>')
       .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${url}</a>`);
-    return expandIconShorthand(html);
+    return linkifyMentions(expandIconShorthand(html), 'onclick="event.stopPropagation()"');
   }
   function parseMarkdown(md) {
     let html = expandShortcodes(escHtml(md || ''))
@@ -1269,7 +1272,7 @@
       .replace(/<br>(\s*<(?:ul|table|\/ul|\/table))/g, '$1')
       .replace(/(<\/(?:ul|table)>)<br>/g, '$1')
       .replace(/<li><br>/g, '<li>').replace(/<br><\/li>/g, '</li>');
-    return `<p>${html}</p>`;
+    return `<p>${linkifyMentions(html)}</p>`;
   }
   function timeAgo(date) {
     const s = Math.floor((Date.now() - date.getTime()) / 1000);

@@ -343,8 +343,8 @@
 import { mountTopNav } from './shared/topnav.js?v=12';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
-  loadFollowRelationships, MAX_IMAGE_BYTES,
-} from './shared/account.js?v=23';
+  loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions,
+} from './shared/account.js?v=24';
 import { mountFooter } from './shared/footer.js?v=4';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
@@ -423,7 +423,7 @@ function parseMsgMarkdown(text) {
     .replace(/\[\[([^\]]+)\]\]\((https?:\/\/[^)]+)\)/g, '<a class="md-btn" href="$2" target="_blank" rel="noopener"><span class="material-symbols-rounded">arrow_forward</span>$1</a>')
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
-  return expandIconShorthand(html);
+  return linkifyMentions(expandIconShorthand(html));
 }
 
 // Image lightbox — clicking an image message opens it in-page instead of a
@@ -557,7 +557,12 @@ function initNotes() {
     if (myItem) myItem.addEventListener('click', openNoteModal);
     bar.querySelectorAll('.note-item[data-handle]').forEach(el => {
       el.addEventListener('click', () => {
-        if (el.dataset.handle) window.location.href = '/profile?u=' + encodeURIComponent(el.dataset.handle);
+        // Instagram-style: tapping someone's note opens a reply to them,
+        // not their profile — notes exist to prompt a DM, not to browse.
+        // Already on this page, so open the thread directly instead of a
+        // full navigation.
+        const user = getCurrentUser();
+        if (el.dataset.handle && user) openByHandle(el.dataset.handle, user);
       });
       const reportBtn = el.querySelector('[data-report-note]');
       if (reportBtn) reportBtn.addEventListener('click', e => {

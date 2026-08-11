@@ -39,13 +39,13 @@ export const OWNER_EMAILS = ['sanhackerman@gmail.com', 'taejiding@gmail.com'];
 export function isOwnerEmail(email) { return OWNER_EMAILS.includes(email); }
 
 // A small pill-shaped badge next to a name, Discord-official-message style.
-// Owner accounts (the fixed OWNER_EMAILS list) always get a hardcoded
-// "OFFICIAL" badge that can't be overridden. Any other account can be given
-// a custom badge (any label + Material Symbol icon) by an owner via the
-// profile page's overflow menu — stored at users/{email}.badge. Returns ''
-// for everyone else. Self-contained (injects its own tiny stylesheet on
-// first use) so any page can drop this inline next to a name without
-// importing extra CSS.
+// Owner accounts (the fixed OWNER_EMAILS list) default to a hardcoded
+// "OFFICIAL" badge, overridable/hideable via setOwnBadgeOverride below. Any
+// other account can be given a custom badge (any label + Material Symbol
+// icon) by an owner via the profile page's overflow menu — stored at
+// users/{email}.badge. Returns '' for everyone else. Self-contained
+// (injects its own tiny stylesheet on first use) so any page can drop this
+// inline next to a name without importing extra CSS.
 function escBadgeHtml(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 let badgeStylesInjected = false;
 function ensureBadgeStyles() {
@@ -95,6 +95,32 @@ export function officialBadgeHtml(email) {
 // isn't reading a still-empty cache.
 export function getBadgeOverride(email) {
   return email && profileCache[email] && profileCache[email].badgeOverride;
+}
+
+let mentionStylesInjected = false;
+function ensureMentionStyles() {
+  if (mentionStylesInjected) return;
+  mentionStylesInjected = true;
+  const style = document.createElement('style');
+  style.textContent = `.oe-mention { color: var(--md-sys-color-primary, #a8c7fa); font-weight: 500; text-decoration: none; }
+    .oe-mention:hover { text-decoration: underline; }`;
+  document.head.appendChild(style);
+}
+// Turns "@handle" into a link to that profile, Instagram/Twitter-style —
+// doesn't verify the handle actually exists (that'd mean a Firestore read
+// per mention on every render of every post/comment/message); a bad handle
+// just 404s on the profile page the same way a bad link anywhere else
+// would. Call on text that's ALREADY html-escaped (it emits real <a> tags,
+// so running it before escaping would double-escape or get stripped).
+// A handle must be preceded by start-of-string/whitespace/open-paren so it
+// doesn't match a real email address's @domain part. extraAttrs (e.g.
+// `onclick="event.stopPropagation()"`) lets callers embedding this inside
+// an already-clickable card stop the mention link from also triggering it.
+export function linkifyMentions(escapedHtml, extraAttrs) {
+  ensureMentionStyles();
+  const attrs = extraAttrs ? ' ' + extraAttrs : '';
+  return escapedHtml.replace(/(^|[\s(])@([a-z0-9_.]{3,20})\b/gi, (m, pre, handle) =>
+    `${pre}<a class="oe-mention" href="/profile?u=${encodeURIComponent(handle.toLowerCase())}"${attrs}>@${handle}</a>`);
 }
 
 const app = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);

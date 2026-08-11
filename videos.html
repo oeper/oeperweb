@@ -222,8 +222,8 @@
 <script type="module">
 import {
   auth, db, SERVER_ENDPOINT, isOwnerEmail, officialBadgeHtml, getCurrentUser, onAccountChange,
-  getProfile, handleOf, uploadFile, ensureProfileLoaded, sendNotification,
-} from './shared/account.js?v=23';
+  getProfile, handleOf, uploadFile, ensureProfileLoaded, sendNotification, linkifyMentions,
+} from './shared/account.js?v=24';
 import { mountTopNav } from './shared/topnav.js?v=12';
 import { mountFooter } from './shared/footer.js?v=4';
 import {
@@ -371,7 +371,7 @@ function openWatch(v) {
       <button class="watch-icon-btn" id="reportBtn" title="Report"><span class="material-symbols-rounded">flag</span></button>
       ${isMine ? `<button class="btn danger" id="deleteBtn">Delete</button>` : ''}
     </div>
-    <div class="watch-desc">${escHtml(v.description || '') || 'No description.'}</div>
+    <div class="watch-desc">${v.description ? linkifyMentions(escHtml(v.description)) : 'No description.'}</div>
     <div class="watch-comments">
       <div class="section-heading">Comments</div>
       <div class="watch-comment-list" id="watchCommentList"><div class="watch-comment-empty">Loading…</div></div>
@@ -420,7 +420,7 @@ function openWatch(v) {
             </div>
             <img class="watch-comment-avatar" src="${cp.photo || ''}" alt="">
             <div class="watch-comment-body-wrap">
-              <div><strong>${escHtml(cp.name)}${officialBadgeHtml(c.authorEmail)}</strong>${escHtml(c.body)}</div>
+              <div><strong>${escHtml(cp.name)}${officialBadgeHtml(c.authorEmail)}</strong>${linkifyMentions(escHtml(c.body))}</div>
               <div class="watch-comment-time">${timeAgo(c._date)}</div>
             </div>
           </div>
