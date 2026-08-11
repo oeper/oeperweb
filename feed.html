@@ -608,6 +608,7 @@ import { mountTopNav } from './shared/topnav.js?v=13';
 import { mountFooter } from './shared/footer.js?v=4';
 import { createDropdown } from './shared/dropdown.js?v=1';
 import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=1';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
   query, orderBy, serverTimestamp, arrayUnion, arrayRemove, increment, Timestamp
@@ -764,7 +765,7 @@ async function copyLink(url, label) {
     await navigator.clipboard.writeText(url);
     showToast((label || 'Link') + ' copied to clipboard');
   } catch {
-    window.prompt('Copy this link:', url);
+    await oePrompt('Copy this link:', { defaultValue: url });
   }
 }
 function postUrl(postId) {
@@ -777,7 +778,7 @@ async function reportItem(type, postId, commentId, itemId, url) {
   const u = getCurrentUser();
   if (!u) { showToast('Sign in to report'); return; }
   if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
-  const reason = window.prompt('Why are you reporting this?');
+  const reason = await oePrompt('Why are you reporting this?');
   if (!reason || !reason.trim()) return;
   try {
     const idToken = await u.getIdToken();
@@ -1156,7 +1157,7 @@ function runForum() {
   async function banUser(email) {
     const u = currentUser();
     if (!u || !isOwner(u.email)) return;
-    if (!confirm(`Ban ${email}? They won't be able to post, comment, or vote anymore.`)) return;
+    if (!(await oeConfirm(`Ban ${email}? They won't be able to post, comment, or vote anymore.`, { danger: true }))) return;
     try {
       await setDoc(doc(db, 'bans', email), { bannedAt: serverTimestamp(), bannedBy: u.email });
       showToast('User banned');
@@ -1165,7 +1166,7 @@ function runForum() {
 
 
   async function deletePost(postId) {
-    if (!confirm('Delete this post? This cannot be undone.')) return;
+    if (!(await oeConfirm('Delete this post? This cannot be undone.', { danger: true }))) return;
     try {
       await deleteDoc(postRef(postId));
       if (openPostId === postId) closeThread();
@@ -1174,7 +1175,7 @@ function runForum() {
   }
 
   async function deleteCommentItem(postId, commentId) {
-    if (!confirm('Delete this comment?')) return;
+    if (!(await oeConfirm('Delete this comment?', { danger: true }))) return;
     try {
       await deleteDoc(doc(db, 'posts', postId, 'comments', commentId));
       await updateDoc(postRef(postId), { commentCount: Math.max(0, (posts.find(p=>p.id===postId)?.commentCount||1) - 1) });

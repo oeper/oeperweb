@@ -288,6 +288,7 @@ import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange } from './shared/a
 import { mountTopNav } from './shared/topnav.js?v=13';
 import { mountFooter } from './shared/footer.js?v=4';
 import { createDropdown } from './shared/dropdown.js?v=1';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
 import { doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 mountFooter();
@@ -718,7 +719,7 @@ attachInput.addEventListener('change', async () => {
   const file = attachInput.files[0];
   attachInput.value = '';
   if (!file) return;
-  if (!file.type.startsWith('image/')) { alert('Only images are supported right now'); return; }
+  if (!file.type.startsWith('image/')) { await oeAlert('Only images are supported right now'); return; }
   try {
     pendingImageFile = await resizeImage(file);
   } catch {

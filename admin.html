@@ -326,6 +326,7 @@ import {
 } from './shared/account.js?v=24';
 import { mountTopNav } from './shared/topnav.js?v=13';
 import { mountFooter } from './shared/footer.js?v=4';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
 import {
   collection, addDoc, serverTimestamp, Timestamp, doc, onSnapshot, setDoc,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -344,10 +345,10 @@ function toFeedMarkdown(text) {
 document.getElementById('migrateBtn').addEventListener('click', async () => {
   const user = getCurrentUser();
   if (!user || user.email !== 'taejiding@gmail.com') {
-    alert("Sign in as taejiding@gmail.com to run this — Firestore only allows a post's authorEmail to match the account that's actually signed in, so running this as any other account would fail on every single post.");
+    await oeAlert("Sign in as taejiding@gmail.com to run this — Firestore only allows a post's authorEmail to match the account that's actually signed in, so running this as any other account would fail on every single post.");
     return;
   }
-  if (!confirm('This creates a new Feed post for every article and download. It does not delete the original JSON files. Continue?')) return;
+  if (!(await oeConfirm('This creates a new Feed post for every article and download. It does not delete the original JSON files. Continue?'))) return;
 
   const btn = document.getElementById('migrateBtn');
   btn.disabled = true;
@@ -398,9 +399,9 @@ document.getElementById('migrateBtn').addEventListener('click', async () => {
       } catch { failed++; }
     }
 
-    alert(`Migrated ${done} item${done === 1 ? '' : 's'} to the Feed.${failed ? ` ${failed} failed — check the console for details.` : ''}`);
+    await oeAlert(`Migrated ${done} item${done === 1 ? '' : 's'} to the Feed.${failed ? ` ${failed} failed — check the console for details.` : ''}`);
   } catch (err) {
-    alert('Migration failed: ' + err.message);
+    await oeAlert('Migration failed: ' + err.message);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<span class="material-symbols-rounded">move_up</span> Migrate to Feed';
@@ -688,11 +689,11 @@ function renderList() {
     btn.addEventListener('click', () => openForm(+btn.dataset.edit));
   });
   list.querySelectorAll('[data-delete]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const i = +btn.dataset.delete;
       const s = state[activeTab];
       const title = activeTab === 'articles' ? s.items[i].title : (s.items[i].label || s.items[i].url);
-      if (confirm(`Delete "${title}"? This can't be undone (until you re-open the file without saving).`)) {
+      if (await oeConfirm(`Delete "${title}"? This can't be undone (until you re-open the file without saving).`, { danger: true })) {
         s.items.splice(i, 1);
         s.dirty = true;
         renderList();

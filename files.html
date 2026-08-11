@@ -331,6 +331,7 @@ import {
 } from './shared/account.js?v=24';
 import { mountFooter } from './shared/footer.js?v=4';
 import { createDropdown } from './shared/dropdown.js?v=1';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
 
 mountTopNav();
 mountFooter();
@@ -527,7 +528,7 @@ document.getElementById('folderCreateBtn').addEventListener('click', async () =>
 document.getElementById('folderNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('folderCreateBtn').click(); });
 
 async function deleteFolder(path) {
-  if (!confirm(`Delete the folder "${path.split('/').pop()}"? It must be empty.`)) return;
+  if (!(await oeConfirm(`Delete the folder "${path.split('/').pop()}"? It must be empty.`, { danger: true }))) return;
   try {
     await apiDelete('/folders', { path, email: spaceEmail() });
     showToast('Folder deleted');
@@ -808,7 +809,7 @@ function buildCard(f) {
 async function deleteFile(filename) {
   const user = getCurrentUser();
   if (!user) return;
-  if (!confirm('Delete this file? This cannot be undone.')) return;
+  if (!(await oeConfirm('Delete this file? This cannot be undone.', { danger: true }))) return;
   try {
     const idToken = await user.getIdToken();
     const res = await fetch(SERVER_ENDPOINT + '/docs/' + encodeURIComponent(filename), {

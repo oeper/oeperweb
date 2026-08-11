@@ -737,6 +737,7 @@
   import { mountTopNav } from './shared/topnav.js?v=13';
   import { mountFooter } from './shared/footer.js?v=4';
   import { createDropdown } from './shared/dropdown.js?v=1';
+  import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
   import {
     collection, query, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp,
     getDocs, where, setDoc, Timestamp,
@@ -806,14 +807,14 @@
       await navigator.clipboard.writeText(url);
       showToast((label || 'Link') + ' copied to clipboard');
     } catch {
-      window.prompt('Copy this link:', url);
+      await oePrompt('Copy this link:', { defaultValue: url });
     }
   }
   async function reportItem(type, itemId, contentPreview, aboutHandleOrEmail, url) {
     const u = getCurrentUser();
     if (!u) { showToast('Sign in to report'); return; }
     if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
-    const reason = window.prompt('Why are you reporting this?');
+    const reason = await oePrompt('Why are you reporting this?');
     if (!reason || !reason.trim()) return;
     try {
       const idToken = await u.getIdToken();

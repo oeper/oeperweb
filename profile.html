@@ -232,6 +232,7 @@ import {
   openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setUserBadge, sendNotification, linkifyMentions,
 } from './shared/account.js?v=24';
 import { mountFooter } from './shared/footer.js?v=4';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
   arrayUnion, arrayRemove,
@@ -397,7 +398,7 @@ async function copyLink(url, label) {
     await navigator.clipboard.writeText(url);
     showToast((label || 'Link') + ' copied to clipboard');
   } catch {
-    window.prompt('Copy this link:', url);
+    await oePrompt('Copy this link:', { defaultValue: url });
   }
 }
 function timeAgo(date) {
@@ -744,7 +745,7 @@ async function init() {
     const user = getCurrentUser();
     if (!user) { showToast('Sign in to report'); return; }
     if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
-    const reason = window.prompt(`Why are you reporting @${handle}?`);
+    const reason = await oePrompt(`Why are you reporting @${handle}?`);
     if (!reason || !reason.trim()) return;
     try {
       const idToken = await user.getIdToken();
@@ -764,10 +765,10 @@ async function init() {
 
   async function editBadge() {
     const current = profile.badge || {};
-    const label = window.prompt('Badge label (e.g. Moderator, VIP, Beta Tester) — leave blank for an icon-only badge:', current.label || '');
+    const label = await oePrompt('Badge label (e.g. Moderator, VIP, Beta Tester) — leave blank for an icon-only badge:', { defaultValue: current.label || '' });
     if (label === null) return; // cancelled
     const trimmed = label.trim();
-    const icon = window.prompt('Material Symbol icon name (e.g. verified, star, shield, bolt, diamond):', current.icon || 'verified');
+    const icon = await oePrompt('Material Symbol icon name (e.g. verified, star, shield, bolt, diamond):', { defaultValue: current.icon || 'verified' });
     if (icon === null) return;
     await applyBadge({ label: trimmed.slice(0, 24), icon: (icon.trim() || 'verified').slice(0, 40) });
   }
@@ -795,11 +796,11 @@ async function init() {
   }
 
   async function editOtherProfile() {
-    const newName = window.prompt('Display name:', profile.name || '');
+    const newName = await oePrompt('Display name:', { defaultValue: profile.name || '' });
     if (newName === null) return;
     const trimmedName = newName.trim().slice(0, 40);
     if (!trimmedName) { showToast('Name cannot be empty'); return; }
-    const newBio = window.prompt('Bio:', bio || '');
+    const newBio = await oePrompt('Bio:', { defaultValue: bio || '' });
     if (newBio === null) return;
     const trimmedBio = newBio.trim().slice(0, 200);
     try {

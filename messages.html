@@ -364,6 +364,7 @@ import {
 } from './shared/account.js?v=24';
 import { mountFooter } from './shared/footer.js?v=4';
 import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=1';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
   arrayUnion, arrayRemove,
@@ -465,7 +466,7 @@ async function reportItem(type, itemId, contentPreview, aboutHandleOrEmail) {
   const user = getCurrentUser();
   if (!user) { showToast('Sign in to report'); return; }
   if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
-  const reason = window.prompt('Why are you reporting this?');
+  const reason = await oePrompt('Why are you reporting this?');
   if (!reason || !reason.trim()) return;
   try {
     const idToken = await user.getIdToken();
@@ -913,7 +914,7 @@ async function openGroupInfoModal(groupId) {
     document.getElementById('groupInfoMemberList').querySelectorAll('[data-remove-member]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const email = btn.dataset.removeMember;
-        if (!confirm(`Remove ${getProfile(email, null, null).name} from the group?`)) return;
+        if (!(await oeConfirm(`Remove ${getProfile(email, null, null).name} from the group?`))) return;
         try {
           await updateDoc(doc(db, 'groups', groupId), { members: arrayRemove(email), admins: arrayRemove(email) });
         } catch (err) { showToast('Could not remove member: ' + err.message); }
@@ -945,7 +946,7 @@ document.getElementById('groupInfoSaveBtn').addEventListener('click', async () =
 document.getElementById('groupInfoLeaveBtn').addEventListener('click', async () => {
   const user = getCurrentUser();
   if (!user || !groupInfoGroupId) return;
-  if (!confirm('Leave this group?')) return;
+  if (!(await oeConfirm('Leave this group?', { danger: true }))) return;
   try {
     await updateDoc(doc(db, 'groups', groupInfoGroupId), { members: arrayRemove(user.email), admins: arrayRemove(user.email) });
     closeGroupInfoModal();
@@ -1093,7 +1094,7 @@ async function openGroupThread(groupId, user) {
   markGroupRead();
 
   async function deleteGroupMessage(m) {
-    if (!confirm('Delete this message?')) return;
+    if (!(await oeConfirm('Delete this message?', { danger: true }))) return;
     try {
       await deleteDoc(doc(db, 'groups', groupId, 'messages', m.id));
     } catch (err) {
@@ -1316,7 +1317,7 @@ async function openThread(otherEmail, user) {
   cancelEditBtn.addEventListener('click', cancelEdit);
 
   async function deleteMessage(m) {
-    if (!confirm('Delete this message?')) return;
+    if (!(await oeConfirm('Delete this message?', { danger: true }))) return;
     try {
       await deleteDoc(doc(db, 'conversations', convoId, 'messages', m.id));
     } catch (err) {

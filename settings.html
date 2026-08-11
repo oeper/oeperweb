@@ -181,6 +181,7 @@ import {
 import { mountTopNav } from './shared/topnav.js?v=13';
 import { mountThemePicker } from './shared/theme-picker.js?v=3';
 import { mountFooter } from './shared/footer.js?v=4';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
 import { createDropdown } from './shared/dropdown.js?v=1';
 
 mountTopNav();
@@ -245,20 +246,20 @@ document.getElementById('badgeSaveBtn').addEventListener('click', async () => {
       await setOwnBadgeOverride({ hidden: true });
     } else {
       const label = document.getElementById('badgeLabelInput').value.trim();
-      if (!label) { alert('Enter a label, or switch to Hidden/Default instead.'); return; }
+      if (!label) { await oeAlert('Enter a label, or switch to Hidden/Default instead.'); return; }
       await setOwnBadgeOverride({ label });
     }
-    alert('Badge updated.');
+    await oeAlert('Badge updated.');
   } catch (err) {
-    alert('Could not update badge: ' + err.message);
+    await oeAlert('Could not update badge: ' + err.message);
   }
 });
 
 document.getElementById('switchAccountRow').addEventListener('click', () => {
-  signIn().catch(err => alert('Could not switch account: ' + err.message));
+  signIn().catch(err => oeAlert('Could not switch account: ' + err.message));
 });
-document.getElementById('signOutRow').addEventListener('click', () => {
-  if (confirm('Sign out?')) signOutUser();
+document.getElementById('signOutRow').addEventListener('click', async () => {
+  if (await oeConfirm('Sign out?')) signOutUser();
 });
 
 function updateSubtitle(id) {

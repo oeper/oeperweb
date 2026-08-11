@@ -270,6 +270,7 @@ import {
 import { mountTopNav } from './shared/topnav.js?v=13';
 import { mountFooter } from './shared/footer.js?v=4';
 import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=1';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
   arrayUnion, arrayRemove, increment, query, orderBy,
@@ -293,13 +294,13 @@ function videoUrl(id) {
 }
 async function copyLink(url, label) {
   try { await navigator.clipboard.writeText(url); showToast((label || 'Link') + ' copied to clipboard'); }
-  catch { window.prompt('Copy this link:', url); }
+  catch { await oePrompt('Copy this link:', { defaultValue: url }); }
 }
 async function reportItem(type, itemId, url) {
   const user = getCurrentUser();
   if (!user) { showToast('Sign in to report'); return; }
   if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
-  const reason = window.prompt('Why are you reporting this?');
+  const reason = await oePrompt('Why are you reporting this?');
   if (!reason || !reason.trim()) return;
   try {
     const idToken = await user.getIdToken();
@@ -563,7 +564,7 @@ function openWatch(v) {
   document.getElementById('reportBtn').addEventListener('click', () => reportItem('video', v.id, videoUrl(v.id)));
   const delBtn = document.getElementById('deleteBtn');
   if (delBtn) delBtn.addEventListener('click', async () => {
-    if (!confirm('Delete this video? This cannot be undone.')) return;
+    if (!(await oeConfirm('Delete this video? This cannot be undone.', { danger: true }))) return;
     try { await deleteDoc(doc(db, 'videos', v.id)); close(); showToast('Deleted'); }
     catch (err) { showToast('Could not delete: ' + err.message); }
   });
