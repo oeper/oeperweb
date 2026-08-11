@@ -94,6 +94,14 @@
   .msg.user .msg-bubble { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-bottom-right-radius: 4px; }
   .msg.assistant .msg-bubble { border-bottom-left-radius: 4px; }
   .msg-bubble.error { color: var(--md-sys-color-error); }
+  .msg-actions { display: flex; margin-top: 4px; }
+  .msg.user .msg-actions { justify-content: flex-end; }
+  .msg-action-btn {
+    width: 26px; height: 26px; border-radius: 50%; border: none; background: none; cursor: pointer;
+    color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; justify-content: center;
+  }
+  .msg-action-btn:hover { background: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
+  .msg-action-btn .material-symbols-rounded { font-size: 16px; }
   .msg-bubble.thinking::after {
     content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%;
     background: var(--md-sys-color-primary); animation: pulse 1s ease-in-out infinite;
@@ -558,21 +566,33 @@ messagesEl.addEventListener('click', e => {
   block.dataset.userToggled = '1';
 });
 
-function addMessageEl(role, content, imageUrl) {
+// `index` is this message's position in chat.messages — only known (and
+// only meaningful) for messages replayed from history via
+// renderChatFromHistory(); live bubbles created while a send is in flight
+// (the just-typed user message, the in-progress assistant reply) are
+// created before they're settled into history, so they render without
+// edit/regenerate controls until the next full re-render picks them up.
+function addMessageEl(role, content, imageUrl, index) {
   document.getElementById('chatEmpty')?.remove();
   const wrap = document.createElement('div');
   wrap.className = 'msg ' + role;
+  const actionsHtml = index === undefined ? '' : role === 'user'
+    ? `<div class="msg-actions"><button type="button" class="msg-action-btn" data-edit-msg="${index}" title="Edit"><span class="material-symbols-rounded">edit</span></button></div>`
+    : `<div class="msg-actions"><button type="button" class="msg-action-btn" data-regen-msg="${index}" title="Regenerate"><span class="material-symbols-rounded">refresh</span></button></div>`;
   wrap.innerHTML = `
     <div class="msg-avatar"><span class="material-symbols-rounded">${role === 'user' ? 'person' : 'auto_awesome'}</span></div>
     <div class="msg-col">
       ${imageUrl ? `<img class="msg-attach-img" src="${escHtml(imageUrl)}" alt="">` : ''}
       <div class="msg-bubble"></div>
+      ${actionsHtml}
     </div>
   `;
   messagesEl.appendChild(wrap);
   const bubble = wrap.querySelector('.msg-bubble');
   if (role === 'user') bubble.textContent = content;
   else if (content) renderAssistantContent(bubble, '', content, true);
+  wrap.querySelector('[data-edit-msg]')?.addEventListener('click', () => editMessage(index));
+  wrap.querySelector('[data-regen-msg]')?.addEventListener('click', () => regenerateResponse(index));
   wrap.scrollIntoView({ block: 'end', behavior: 'smooth' });
   return bubble;
 }
@@ -584,9 +604,56 @@ function renderChatFromHistory() {
   if (!chat.messages.length) {
     messagesEl.innerHTML = `<div class="chat-empty" id="chatEmpty"><span class="material-symbols-rounded">auto_awesome</span><p>Ask epic AI anything.</p></div>`;
   } else {
-    for (const m of chat.messages) addMessageEl(m.role, m.content, m.imageUrl);
+    chat.messages.forEach((m, i) => addMessageEl(m.role, m.content, m.imageUrl, i));
   }
   requestAnimationFrame(() => { messagesEl.style.opacity = '1'; });
+}
+
+// Loads a past user message back into the composer and drops it (and
+// everything after it) from history, so sending again continues from
+// that point instead of appending after the now-stale follow-up
+// messages — the same "edit and resend" pattern most chat apps use. Does
+// not restore an attached image (this page's image flow is anonymous
+// per-upload, not worth re-threading for an edit); text-only is the
+// common case anyway.
+function editMessage(index) {
+  if (controller) return;
+  const chat = getCurrentChat();
+  const msg = chat.messages[index];
+  if (!msg || msg.role !== 'user') return;
+  chat.messages = chat.messages.slice(0, index);
+  chat.updatedAt = Date.now();
+  saveChats();
+  renderChatFromHistory();
+  inputEl.value = msg.content;
+  autoGrow();
+  inputEl.focus();
+}
+
+// Drops this assistant reply (and anything after it) and asks again from
+// the same point in the conversation — useful when a reply was bad, cut
+// off, or you just want another take.
+async function regenerateResponse(index) {
+  if (controller) return;
+  const chat = getCurrentChat();
+  const msg = chat.messages[index];
+  if (!msg || msg.role !== 'assistant') return;
+  chat.messages = chat.messages.slice(0, index);
+  chat.updatedAt = Date.now();
+  saveChats();
+  renderChatFromHistory();
+  setSending(true);
+  try {
+    await sendToModel(chat);
+  } finally {
+    setSending(false);
+  }
+  // Only re-render on success (something was actually appended to
+  // chat.messages). A failed sendToModel() doesn't persist anything —
+  // re-rendering unconditionally here would wipe out the live error
+  // bubble it just displayed, silently reverting to no visible reply at
+  // all, which is exactly the bug this whole session has been about.
+  if (chat.messages.length > index) renderChatFromHistory();
 }
 renderChatFromHistory();
 
@@ -916,7 +983,18 @@ async function sendMessage() {
     chat.updatedAt = Date.now();
     saveChats();
 
+    const lenBeforeReply = chat.messages.length;
     await sendToModel(chat);
+    // Normalizes the live-streamed bubbles into indexed re-renders so this
+    // exchange's messages get edit/regenerate controls too, not just ones
+    // loaded from history. Safe here specifically because it's after the
+    // full exchange has settled (controller is already null, the reply is
+    // already saved) — re-rendering mid-stream is what caused the earlier
+    // "reply never appears" bug this session. Only do it on success
+    // (something actually got appended) — a failed sendToModel() doesn't
+    // persist anything, so re-rendering unconditionally would wipe out the
+    // live error bubble it just displayed instead of leaving it visible.
+    if (chat.messages.length > lenBeforeReply) renderChatFromHistory();
   } finally {
     setSending(false);
   }
