@@ -361,7 +361,7 @@ function splitThinking(reasoningBuf, contentBuf, done) {
     return { thinking: reasoningBuf, answer: contentBuf, stillThinking: contentBuf.length === 0 };
   }
   const openIdx = contentBuf.indexOf('<think>');
-  if (openIdx === -1) return { thinking: '', answer: contentBuf, stillThinking: false };
+  if (openIdx === -1) return { thinking: '', answer: contentBuf.replace(/<\/?think>/g, '').trim(), stillThinking: false };
   const closeIdx = contentBuf.indexOf('</think>', openIdx);
   if (closeIdx === -1) {
     // The small local model sometimes never emits a closing </think> and
@@ -384,7 +384,11 @@ function splitThinking(reasoningBuf, contentBuf, done) {
   }
   return {
     thinking: contentBuf.slice(openIdx + 7, closeIdx).trim(),
-    answer: (contentBuf.slice(0, openIdx) + contentBuf.slice(closeIdx + 8)).trim(),
+    // The small local model occasionally emits a stray extra </think> after
+    // the real answer (<think>...</think>Hello!</think>) — only the first
+    // </think> is the real close, so strip any leftover tag text instead of
+    // letting it leak into the visible reply.
+    answer: (contentBuf.slice(0, openIdx) + contentBuf.slice(closeIdx + 8)).replace(/<\/?think>/g, '').trim(),
     stillThinking: false,
   };
 }
