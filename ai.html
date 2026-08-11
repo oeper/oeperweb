@@ -122,7 +122,15 @@
   .msg-bubble .md-table th, .msg-bubble .md-table td { border: 1px solid rgba(127,127,127,0.35); padding: 5px 9px; text-align: left; }
   .msg-bubble .md-table th { background: rgba(127,127,127,0.15); font-weight: 600; }
 
-  .thinking-block { margin-bottom: 8px; font-size: 13px; }
+  /* white-space: normal overrides the pre-wrap inherited from .msg-bubble
+     (needed there to preserve line breaks in message text). Without this,
+     the whitespace/newlines between this block's own <div> tags in the
+     template literal render as actual blank lines instead of collapsing —
+     that was the real cause of the "show thinking area is too big" gap,
+     nothing to do with the open/collapse animation itself. .thinking-content
+     below re-enables pre-wrap specifically for the reasoning text, which
+     does need its line breaks preserved. */
+  .thinking-block { margin-bottom: 8px; font-size: 13px; white-space: normal; }
   .thinking-summary {
     cursor: pointer; color: var(--md-sys-color-on-surface-variant); font-weight: 500;
     display: inline-flex; align-items: center; gap: 4px; user-select: none;
@@ -130,15 +138,17 @@
   .thinking-summary:hover { color: var(--md-sys-color-on-surface); }
   .thinking-caret { font-size: 18px; transition: transform 0.2s ease; }
   .thinking-block.open .thinking-caret { transform: rotate(180deg); }
-  /* Animated height via the CSS grid 0fr->1fr trick — plain max-height
-     transitions either jump (fixed px) or don't animate at all (auto), and
-     <details>'s native open/close has no animation hook in any browser. */
-  .thinking-content-wrap {
-    display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.25s ease;
-  }
-  .thinking-block.open .thinking-content-wrap { grid-template-rows: 1fr; }
+  /* Used to animate open/close via the CSS grid 0fr->1fr row trick, but
+     that collapsed unreliably in practice — the wrap/content elements
+     measured 0 height on their own, yet .thinking-block (their parent)
+     still reserved ~90px of dead space below the "Show thinking" line
+     even while fully collapsed, visible as a large empty gap. Plain
+     display:none/block has no such ambiguity; a short fade-in on open
+     is enough of a transition without touching layout height at all. */
+  .thinking-content-wrap { display: none; }
+  .thinking-block.open .thinking-content-wrap { display: block; animation: thinkingFadeIn 0.2s ease; }
+  @keyframes thinkingFadeIn { from { opacity: 0; } to { opacity: 1; } }
   .thinking-content {
-    overflow: hidden; min-height: 0;
     color: var(--md-sys-color-on-surface-variant); white-space: pre-wrap; line-height: 1.5;
   }
   .thinking-content-inner {
@@ -352,6 +362,23 @@ function parseAiMarkdown(text) {
   return html.replace(/OEPERAICODEBLOCK(\d+)ENDBLOCK/g, (m, i) => codeBlocks[Number(i)]);
 }
 
+// The small local model occasionally repeats its entire answer verbatim
+// right after finishing it (e.g. "Hello! ...oeper.dev?\nHello! ...oeper.dev?")
+// instead of stopping. Collapse exact, consecutive duplicate lines in the
+// final answer rather than showing/saving the repeat — only touches lines
+// that are identical to the one directly before them, so it can't affect
+// legitimately repeated words/phrases within otherwise-different lines.
+function dedupeRepeatedLines(text) {
+  const lines = text.split('\n');
+  const out = [];
+  for (const line of lines) {
+    const t = line.trim();
+    if (t && out.length && out[out.length - 1].trim() === t) continue;
+    out.push(line);
+  }
+  return out.join('\n');
+}
+
 // Splits a raw assistant reply into "thinking" (reasoning-model output,
 // either a separate reasoning_content stream field or an inline <think>
 // tag) and the real answer, so the UI can show reasoning as a collapsible
@@ -361,7 +388,10 @@ function splitThinking(reasoningBuf, contentBuf, done) {
     return { thinking: reasoningBuf, answer: contentBuf, stillThinking: contentBuf.length === 0 };
   }
   const openIdx = contentBuf.indexOf('<think>');
-  if (openIdx === -1) return { thinking: '', answer: contentBuf.replace(/<\/?think>/g, '').trim(), stillThinking: false };
+  if (openIdx === -1) {
+    const answer = contentBuf.replace(/<\/?think>/g, '').trim();
+    return { thinking: '', answer: done ? dedupeRepeatedLines(answer) : answer, stillThinking: false };
+  }
   const closeIdx = contentBuf.indexOf('</think>', openIdx);
   if (closeIdx === -1) {
     // The small local model sometimes never emits a closing </think> and
@@ -382,13 +412,16 @@ function splitThinking(reasoningBuf, contentBuf, done) {
     }
     return { thinking: contentBuf.slice(openIdx + 7), answer: contentBuf.slice(0, openIdx), stillThinking: true };
   }
+  const rawAnswer = (contentBuf.slice(0, openIdx) + contentBuf.slice(closeIdx + 8)).replace(/<\/?think>/g, '').trim();
   return {
     thinking: contentBuf.slice(openIdx + 7, closeIdx).trim(),
     // The small local model occasionally emits a stray extra </think> after
     // the real answer (<think>...</think>Hello!</think>) — only the first
     // </think> is the real close, so strip any leftover tag text instead of
-    // letting it leak into the visible reply.
-    answer: (contentBuf.slice(0, openIdx) + contentBuf.slice(closeIdx + 8)).replace(/<\/?think>/g, '').trim(),
+    // letting it leak into the visible reply. It also sometimes repeats the
+    // whole answer verbatim right after finishing — dedupeRepeatedLines()
+    // collapses that once the stream is done.
+    answer: done ? dedupeRepeatedLines(rawAnswer) : rawAnswer,
     stillThinking: false,
   };
 }
