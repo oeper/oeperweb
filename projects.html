@@ -129,6 +129,21 @@
   }
   .modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
   .modal h3 { font-size: 20px; font-weight: 400; margin-bottom: 18px; }
+  .vote-count[data-voters-id] { cursor: pointer; }
+  .voters-modal { width: min(360px, 92vw); padding: 24px; }
+  .voters-modal h3 { font-size: 16px; font-weight: 500; margin-bottom: 14px; }
+  .voters-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  .voters-tab {
+    flex: 1; background: transparent; border: 1px solid var(--md-sys-color-outline); border-radius: 100px;
+    padding: 8px 14px; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .voters-tab.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent; }
+  .voters-list { display: flex; flex-direction: column; gap: 2px; max-height: 50vh; overflow-y: auto; }
+  .voter-row { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 12px; text-decoration: none; color: inherit; }
+  .voter-row:hover { background: var(--md-sys-state-hover); }
+  .voter-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
+  .voters-empty { color: var(--md-sys-color-on-surface-variant); font-size: 13px; text-align: center; padding: 24px 0; }
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 6px; }
   .field input[type="text"], .field textarea {
@@ -195,12 +210,22 @@
 <div class="watch-overlay" id="watchOverlay"></div>
 <div class="watch-panel" id="watchPanel"></div>
 
+<div class="overlay" id="votersOverlay"></div>
+<div class="modal voters-modal" id="votersModal">
+  <h3>Reactions</h3>
+  <div class="voters-tabs">
+    <button type="button" class="voters-tab active" id="votersLikeTab"><span class="material-symbols-rounded" style="font-size:16px;">favorite</span> <span id="votersLikeCount">0</span></button>
+    <button type="button" class="voters-tab" id="votersDislikeTab"><span class="material-symbols-rounded" style="font-size:16px;">heart_broken</span> <span id="votersDislikeCount">0</span></button>
+  </div>
+  <div class="voters-list" id="votersList"></div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script type="module">
 import {
   auth, db, SERVER_ENDPOINT, isOwnerEmail, officialBadgeHtml, getCurrentUser, onAccountChange,
-  getProfile, handleOf, uploadFile, ensureProfileLoaded, sendNotification, linkifyMentions,
+  getProfile, handleOf, uploadFile, ensureProfileLoaded, sendNotification, linkifyMentions, resolveUidsToEmails,
 } from './shared/account.js?v=24';
 import { mountTopNav } from './shared/topnav.js?v=12';
 import { mountFooter } from './shared/footer.js?v=4';
@@ -310,7 +335,7 @@ function buildCard(p) {
       <div class="project-title">${escHtml(p.title)}</div>
       <div class="project-meta">
         ${authorLinkHtml(p, escHtml(profile.name))}
-        <span><span class="material-symbols-rounded">arrow_upward</span>${score(p)}</span>
+        <span><span class="material-symbols-rounded">favorite</span>${score(p)}</span>
         <span><span class="material-symbols-rounded">visibility</span>${p.views||0}</span>
         <span>${timeAgo(p._date)}</span>
       </div>
@@ -346,9 +371,9 @@ function openDetail(p) {
     <div class="watch-title">${escHtml(p.title)}</div>
     <div class="watch-actions">
       <div class="vote-col">
-        <button class="vote-btn ${up ? 'upvoted' : ''}" id="upBtn" title="Like"><span class="material-symbols-rounded">arrow_upward</span></button>
-        <span class="vote-count">${score(p)}</span>
-        <button class="vote-btn ${down ? 'downvoted' : ''}" id="downBtn" title="Dislike"><span class="material-symbols-rounded">arrow_downward</span></button>
+        <button class="vote-btn ${up ? 'upvoted' : ''}" id="upBtn" title="Like"><span class="material-symbols-rounded">${up ? 'favorite' : 'favorite_border'}</span></button>
+        <span class="vote-count" data-voters-id="${escHtml(p.id)}" title="See who reacted">${score(p)}</span>
+        <button class="vote-btn ${down ? 'downvoted' : ''}" id="downBtn" title="Dislike"><span class="material-symbols-rounded">heart_broken</span></button>
       </div>
       ${authorLinkHtml(p, `${profile.photo ? `<img src="${profile.photo}" alt="">` : ''}${escHtml(profile.name)}`)}
       <span style="color:var(--md-sys-color-on-surface-variant); font-size:13px;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:middle;">visibility</span> ${p.views||0} views</span>
@@ -374,6 +399,7 @@ function openDetail(p) {
 
   document.getElementById('upBtn').addEventListener('click', () => toggleVote(p, 'up'));
   document.getElementById('downBtn').addEventListener('click', () => toggleVote(p, 'down'));
+  document.querySelector('[data-voters-id]')?.addEventListener('click', () => openVotersModal(p));
   document.getElementById('shareBtn').addEventListener('click', () => copyLink(projectUrl(p.id), 'Project link'));
   document.getElementById('reportBtn').addEventListener('click', () => reportItem('project', p.id, projectUrl(p.id)));
   const delBtn = document.getElementById('deleteBtn');
@@ -387,6 +413,58 @@ function openDetail(p) {
   panel.classList.add('open');
   history.pushState({ project: p.id }, '', '/projects/' + encodeURIComponent(p.id));
   bumpViews(p);
+}
+
+// ── Voters modal ("who reacted") ────────────────────────────────────
+const votersOverlay = document.getElementById('votersOverlay');
+const votersModal = document.getElementById('votersModal');
+const votersList = document.getElementById('votersList');
+const votersLikeTab = document.getElementById('votersLikeTab');
+const votersDislikeTab = document.getElementById('votersDislikeTab');
+let votersData = { likes: [], dislikes: [] };
+let votersActiveTab = 'likes';
+
+function renderVotersList() {
+  votersLikeTab.classList.toggle('active', votersActiveTab === 'likes');
+  votersDislikeTab.classList.toggle('active', votersActiveTab === 'dislikes');
+  const rows = votersData[votersActiveTab];
+  votersList.innerHTML = rows.length ? rows.map(r => {
+    const inner = `<img class="voter-avatar" src="${escHtml(r.photo || '')}" alt="">${escHtml(r.name)}${officialBadgeHtml(r.email)}`;
+    return r.handle
+      ? `<a class="voter-row" href="/profile?u=${encodeURIComponent(r.handle)}">${inner}</a>`
+      : `<div class="voter-row">${inner}</div>`;
+  }).join('') : `<div class="voters-empty">No ${votersActiveTab === 'likes' ? 'likes' : 'dislikes'} yet</div>`;
+}
+votersLikeTab.addEventListener('click', () => { votersActiveTab = 'likes'; renderVotersList(); });
+votersDislikeTab.addEventListener('click', () => { votersActiveTab = 'dislikes'; renderVotersList(); });
+function closeVotersModal() {
+  votersOverlay.classList.remove('open');
+  votersModal.classList.remove('open');
+}
+votersOverlay.addEventListener('click', closeVotersModal);
+
+async function openVotersModal(item) {
+  const upUids = item.upvoters || [];
+  const downUids = item.downvoters || [];
+  votersData = { likes: [], dislikes: [] };
+  votersActiveTab = upUids.length ? 'likes' : 'dislikes';
+  document.getElementById('votersLikeCount').textContent = upUids.length;
+  document.getElementById('votersDislikeCount').textContent = downUids.length;
+  votersList.innerHTML = '<div class="voters-empty">Loading…</div>';
+  votersOverlay.classList.add('open');
+  votersModal.classList.add('open');
+
+  const emailMap = await resolveUidsToEmails([...upUids, ...downUids]);
+  const emails = [...new Set(Object.values(emailMap).filter(Boolean))];
+  await Promise.all(emails.map(e => ensureProfileLoaded(e)));
+  const rowFor = uid => {
+    const email = emailMap[uid];
+    if (!email) return { name: 'Unknown user', photo: '', handle: null, email: null };
+    const p2 = getProfile(email, null, null);
+    return { name: p2.name, photo: p2.photo, handle: handleOf(email), email };
+  };
+  votersData = { likes: upUids.map(rowFor), dislikes: downUids.map(rowFor) };
+  renderVotersList();
 }
 
 async function toggleVote(p, dir) {

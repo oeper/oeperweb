@@ -277,7 +277,24 @@
     opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
   }
   .note-modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
-  .note-modal input { width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none; margin-bottom: 16px; }
+  .note-modal input[type="text"] { width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none; margin-bottom: 16px; }
+  /* A plain <input type="checkbox"> matched the rule above too — width:100%
+     and 12px padding turned it into a huge misplaced box instead of a
+     small checkbox. Scoping that rule to [type="text"] fixes the layout;
+     this gives the checkbox itself a proper Material look instead of the
+     bare OS default. */
+  .member-picker input[type="checkbox"] {
+    appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border-radius: 6px;
+    border: 2px solid var(--md-sys-color-outline); background: transparent; cursor: pointer; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center; margin: 0;
+  }
+  .member-picker input[type="checkbox"]:checked {
+    background: var(--md-sys-color-primary); border-color: var(--md-sys-color-primary);
+  }
+  .member-picker input[type="checkbox"]:checked::after {
+    content: ''; width: 5px; height: 9px; border: solid var(--md-sys-color-on-primary); border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-1px, -1px);
+  }
   .note-modal-actions { display: flex; justify-content: space-between; gap: 12px; }
 </style>
 </head>

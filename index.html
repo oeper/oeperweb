@@ -525,6 +525,15 @@
   .ig-description a.md-btn .material-symbols-rounded { font-size: 13px; }
   .ig-view-comments { padding: 6px 14px 0; font-size: 13px; color: var(--md-sys-color-on-surface-variant); background: none; border: none; cursor: pointer; display: block; text-align: left; font-family: inherit; }
   .ig-view-comments:hover { text-decoration: underline; }
+
+  .ig-text-post-title {
+    padding: 2px 14px 0; font-size: 16px; font-weight: 500; line-height: 1.4;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
+  }
+  .ig-card.text-only .ig-description { padding: 6px 14px 0; -webkit-line-clamp: 6; }
+  .ig-card.text-only .ig-actions {
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--md-sys-color-outline-variant);
+  }
   .ig-timestamp { padding: 6px 14px 14px; font-size: 11px; color: var(--md-sys-color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.3px; }
 
   /* Inline comment modal for the home feed */
@@ -1366,25 +1375,50 @@
       const img = firstImageUrl(p);
       const vid = !img ? firstVideoUrl(p) : null;
       const aud = !img && !vid ? firstAudioUrl(p) : null;
+      const hasMedia = !!(img || vid || aud);
       const score = (p.upvoters || []).length - (p.downvoters || []).length;
+      const actionsHtml = `
+        <div class="ig-actions">
+          ${voteActionsHtml(p, 'post')}
+          <button type="button" class="ig-comment-btn" data-open-comments data-kind="post" data-id="${p.id}" title="Comments">
+            <span class="material-symbols-rounded">mode_comment</span>
+          </button>
+          <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
+          <span class="ig-action-count">${p.views || 0}</span>
+        </div>
+      `;
+      const bodyHtml = p.body ? `<div class="ig-description">${renderExcerptMarkdown(p.body, 220)}</div>` : '';
+      const viewCommentsHtml = `<button type="button" class="ig-view-comments" data-open-comments data-kind="post" data-id="${p.id}">${p.commentCount ? `View all ${p.commentCount} comments` : 'Add a comment…'}</button>`;
+
+      if (!hasMedia) {
+        // No image/video/audio to anchor the Instagram-style card on —
+        // leading with engagement stats (especially a "0 likes" line that
+        // just repeats the vote button's own count right above it) before
+        // any actual content reads backwards for a post that IS the
+        // content. Text-first instead: the words right under the header,
+        // engagement moved below as a lighter-weight footer.
+        return `
+          <div class="ig-card text-only" data-kind="post" data-id="${p.id}" data-href="https://oeper.dev/feed?post=${p.id}">
+            ${cardHeaderHtml(p.authorEmail, profile, tag ? escHtml(TAG_LABELS[tag] || tag) : 'oeper.dev')}
+            <div class="ig-text-post-title">${linkify(p.title)}</div>
+            ${bodyHtml}
+            ${actionsHtml}
+            ${viewCommentsHtml}
+            <div class="ig-timestamp">${timeAgo(p._date)}</div>
+          </div>
+        `;
+      }
       return `
         <div class="ig-card" data-kind="post" data-id="${p.id}" data-href="https://oeper.dev/feed?post=${p.id}">
           ${cardHeaderHtml(p.authorEmail, profile, tag ? escHtml(TAG_LABELS[tag] || tag) : 'oeper.dev')}
           ${img ? `<div class="ig-media"><img src="${img}" alt="" loading="lazy"></div>` : ''}
           ${vid ? `<div class="ig-media"><video src="${vid}" muted preload="metadata"></video></div>` : ''}
           ${aud ? `<div class="ig-audio-attach" onclick="event.stopPropagation()"><span class="material-symbols-rounded">music_note</span><audio controls preload="metadata" src="${aud}"></audio></div>` : ''}
-          <div class="ig-actions">
-            ${voteActionsHtml(p, 'post')}
-            <button type="button" class="ig-comment-btn" data-open-comments data-kind="post" data-id="${p.id}" title="Comments">
-              <span class="material-symbols-rounded">mode_comment</span>
-            </button>
-            <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
-            <span class="ig-action-count">${p.views || 0}</span>
-          </div>
+          ${actionsHtml}
           <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
           <div class="ig-caption"><strong>${authorNameHtml(p.authorEmail, profile)}</strong>${linkify(p.title)}</div>
-          ${p.body ? `<div class="ig-description">${renderExcerptMarkdown(p.body, 220)}</div>` : ''}
-          <button type="button" class="ig-view-comments" data-open-comments data-kind="post" data-id="${p.id}">${p.commentCount ? `View all ${p.commentCount} comments` : 'Add a comment…'}</button>
+          ${bodyHtml}
+          ${viewCommentsHtml}
           <div class="ig-timestamp">${timeAgo(p._date)}</div>
         </div>
       `;
