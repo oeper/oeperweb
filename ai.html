@@ -666,10 +666,16 @@ onAccountChange(user => {
       if (!controller) renderChatFromHistory();
       renderChatsList();
       applyingCloudSnapshot = false;
+      // Push back so a brand-new device (nothing in the cloud yet, or the
+      // cloud copy was behind) ends up with the merged result on both sides.
+      // Only do this when the merge actually changed something — this used
+      // to run unconditionally on every snapshot, including the echo of
+      // writes this same tab just made via pushChatsToCloud(). That turned
+      // every saveChats() into a write -> snapshot -> write loop, and while
+      // the assistant's reply was still streaming, a stale echo could land
+      // right as controller cleared and wipe the just-finished reply.
+      setDoc(doc(db, 'aiChats', user.email), { chats }).catch(() => {});
     }
-    // Push once so a brand-new device (nothing in the cloud yet, or the
-    // cloud copy was behind) ends up with the merged result on both sides.
-    setDoc(doc(db, 'aiChats', user.email), { chats }).catch(() => {});
   });
 });
 
