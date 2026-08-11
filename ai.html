@@ -544,18 +544,8 @@ function addMessageEl(role, content, imageUrl) {
   return bubble;
 }
 
-// TEMPORARY diagnostic logging — tracing a signed-in-only bug report where
-// sent messages never get a visible reply. Remove this whole block (and
-// the other [AI-DEBUG] lines below) once the cause is confirmed.
 function renderChatFromHistory() {
-  // Note: can't reference `controller` here — this function is called at
-  // page-load time (line ~563), before `let controller` further down in
-  // this same script has been declared, and reading a `let` binding before
-  // its declaration line executes throws (temporal dead zone), which killed
-  // the whole script on load in an earlier version of this debug patch.
-  console.log('[AI-DEBUG] renderChatFromHistory called, stack=', new Error().stack);
   const chat = getCurrentChat();
-  console.log('[AI-DEBUG] rendering chat', chat.id, 'with', chat.messages.length, 'messages:', chat.messages.map(m => m.role + ':' + (m.content||'').slice(0,20)));
   messagesEl.style.opacity = '0';
   messagesEl.innerHTML = '';
   if (!chat.messages.length) {
@@ -652,7 +642,18 @@ function pushChatsToCloud() {
   if (applyingCloudSnapshot) return;
   const user = getCurrentUser();
   if (!user) return;
-  setDoc(doc(db, 'aiChats', user.email), { chats }).catch(() => {});
+  // Wrapped in try/catch, not just a .catch() on the returned promise —
+  // Firestore's argument validation (e.g. rejecting an undefined field
+  // buried in `chats`) can throw synchronously before setDoc() even
+  // returns a promise. An uncaught throw here has no business propagating
+  // out of a background sync call and aborting whatever caller happened
+  // to trigger it (saveChats() has no catch of its own) — see the
+  // imageUrl fix above for exactly that happening.
+  try {
+    setDoc(doc(db, 'aiChats', user.email), { chats }).catch(() => {});
+  } catch (err) {
+    console.error('Could not push chats to cloud:', err);
+  }
 }
 
 onAccountChange(user => {
@@ -662,7 +663,6 @@ onAccountChange(user => {
     const cloudChats = (snap.exists() && snap.data().chats) || [];
     const merged = mergeChats(chats, cloudChats);
     const changed = JSON.stringify(merged) !== JSON.stringify(chats);
-    console.log('[AI-DEBUG] onSnapshot fired, hasPendingWrites=', snap.metadata.hasPendingWrites, 'fromCache=', snap.metadata.fromCache, 'changed=', changed, 'controller=', !!controller, 'cloudChats=', cloudChats.map(c => ({ id: c.id, n: c.messages.length, updatedAt: c.updatedAt })), 'localChats=', chats.map(c => ({ id: c.id, n: c.messages.length, updatedAt: c.updatedAt })));
     chats = merged;
     if (!chats.some(c => c.id === currentChatId) && chats.length) currentChatId = chats[0].id;
     if (changed) {
@@ -691,7 +691,11 @@ onAccountChange(user => {
       // every saveChats() into a write -> snapshot -> write loop, and while
       // the assistant's reply was still streaming, a stale echo could land
       // right as controller cleared and wipe the just-finished reply.
-      setDoc(doc(db, 'aiChats', user.email), { chats }).catch(() => {});
+      try {
+        setDoc(doc(db, 'aiChats', user.email), { chats }).catch(() => {});
+      } catch (err) {
+        console.error('Could not push merged chats to cloud:', err);
+      }
     }
   });
 });
@@ -862,7 +866,18 @@ async function sendMessage() {
       addMessageEl('user', text);
     }
 
-    const userMsg = { role: 'user', content: text, imageUrl: imageUrl || undefined };
+    // Omit imageUrl entirely for plain-text messages rather than setting it
+    // to undefined — Firestore's setDoc() rejects any write containing an
+    // undefined field, which was the actual root cause of the "AI doesn't
+    // respond when signed in" bug: for a plain-text message, this made every
+    // cloud sync write throw, and that throw propagated straight out of
+    // saveChats() (which has no catch of its own) and aborted sendMessage()
+    // before it ever reached sendToModel() — no fetch, no assistant bubble,
+    // no error shown. Only signed-in users hit this (pushChatsToCloud() is a
+    // no-op when signed out) and only for messages without an image (a real
+    // imageUrl string is a valid Firestore value) — which is exactly the
+    // reported pattern.
+    const userMsg = imageUrl ? { role: 'user', content: text, imageUrl } : { role: 'user', content: text };
     chat.messages.push(userMsg);
     if (chat.title === 'New chat' && text) chat.title = text.slice(0, 40) + (text.length > 40 ? '…' : '');
     chat.updatedAt = Date.now();
@@ -955,7 +970,6 @@ async function sendToModel(chat) {
   } finally {
     clearInterval(watchdog);
     controller = null;
-    console.log('[AI-DEBUG] stream finished, contentBuf=', JSON.stringify(contentBuf.slice(0, 60)), 'chat=', chat.id, 'is same object still in chats?', chats.some(c => c === chat));
     setSending(false);
     // The final <think> tag (if inline, not a separate reasoning_content
     // field) is stripped from what gets persisted/re-sent, so reloading
@@ -969,9 +983,6 @@ async function sendToModel(chat) {
       chat.messages.push({ role: 'assistant', content: answer });
       chat.updatedAt = Date.now();
       saveChats();
-      console.log('[AI-DEBUG] pushed assistant answer, chat now has', chat.messages.length, 'messages; currentChat has', getCurrentChat().messages.length);
-    } else {
-      console.log('[AI-DEBUG] no answer to push! reasoningBuf=', JSON.stringify(reasoningBuf.slice(0,60)), 'contentBuf=', JSON.stringify(contentBuf.slice(0,60)));
     }
     renderChatsList();
   }
