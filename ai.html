@@ -175,11 +175,26 @@
   .attach-remove-btn:hover { transform: scale(1.1); }
   .attach-remove-btn .material-symbols-rounded { font-size: 14px; }
 
+  /* Groups attach-preview + model-bar + chat-inputbar into one sticky unit.
+     Only chat-inputbar used to be sticky on its own — in an empty chat
+     (nothing above it to push it down through normal flex flow) that let
+     model-bar end up sitting at the same spot the sticky input bar pins
+     itself to, hidden underneath it: the model picker was invisible and
+     unclickable for anyone opening a fresh chat. Sticking the whole group
+     together means model-bar is always positioned right above the input,
+     regardless of how much (or how little) is above it. */
+  .chat-input-area { position: sticky; bottom: 16px; }
   .model-bar { display: flex; justify-content: flex-end; margin-bottom: 8px; padding: 0 4px; }
   .model-bar .oe-dropdown-btn { font-size: 12px; font-weight: 500; padding: 5px 12px; }
+  /* This dropdown sits right above the sticky input bar at the very
+     bottom of the screen — dropdown.js's default open-downward behavior
+     (shared by every dropdown site-wide, not worth changing generally)
+     would clip the option list under the input bar here specifically, so
+     just this instance opens upward instead. */
+  .model-bar .oe-dropdown-list { top: auto; bottom: calc(100% + 6px); }
 
   .chat-inputbar {
-    position: sticky; bottom: 16px; display: flex; align-items: flex-end; gap: 4px;
+    display: flex; align-items: flex-end; gap: 4px;
     background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
     border-radius: 26px; padding: 8px 8px 8px 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
   }
@@ -268,22 +283,24 @@
       </div>
     </div>
 
-    <div class="attach-preview" id="attachPreview" style="display:none;">
-      <div class="attach-preview-item">
-        <img id="attachPreviewImg" src="" alt="">
-        <button id="attachRemoveBtn" class="attach-remove-btn" title="Remove"><span class="material-symbols-rounded">close</span></button>
+    <div class="chat-input-area">
+      <div class="attach-preview" id="attachPreview" style="display:none;">
+        <div class="attach-preview-item">
+          <img id="attachPreviewImg" src="" alt="">
+          <button id="attachRemoveBtn" class="attach-remove-btn" title="Remove"><span class="material-symbols-rounded">close</span></button>
+        </div>
       </div>
-    </div>
 
-    <div class="model-bar" id="modelBar"></div>
+      <div class="model-bar" id="modelBar"></div>
 
-    <div class="chat-inputbar">
-      <label class="attach-btn" title="Attach an image">
-        <span class="material-symbols-rounded">add_photo_alternate</span>
-        <input type="file" id="attachInput" accept="image/*">
-      </label>
-      <textarea id="chatInput" placeholder="Message…" rows="1"></textarea>
-      <button id="sendBtn" class="send-btn" title="Send"><span class="material-symbols-rounded">arrow_upward</span></button>
+      <div class="chat-inputbar">
+        <label class="attach-btn" title="Attach an image">
+          <span class="material-symbols-rounded">add_photo_alternate</span>
+          <input type="file" id="attachInput" accept="image/*">
+        </label>
+        <textarea id="chatInput" placeholder="Message…" rows="1"></textarea>
+        <button id="sendBtn" class="send-btn" title="Send"><span class="material-symbols-rounded">arrow_upward</span></button>
+      </div>
     </div>
     <p class="chat-footnote">
       Runs on a small on-device model over my home network — replies can be slow, or briefly unavailable if the host is offline.
