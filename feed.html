@@ -329,12 +329,15 @@
   .audio-attach-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
   .audio-attach-body audio { width: 100%; height: 32px; }
 
-  /* New post modal */
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 60; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  /* New post modal — z-index must clear .thread-panel/.thread-overlay (200/201):
+     the voters modal is opened from inside the thread panel, which covers the
+     full viewport width on mobile, so a lower z-index left the modal opening
+     (class toggled, pointer-events on) but rendered invisibly underneath it. */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 210; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
   .overlay.open { opacity: 1; pointer-events: all; }
   .modal {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -48%); width: min(600px, 92vw); max-height: 86vh; overflow-y: auto;
-    background-color: var(--md-sys-color-surface); border-radius: 28px; padding: 28px; z-index: 61; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+    background-color: var(--md-sys-color-surface); border-radius: 28px; padding: 28px; z-index: 211; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
   }
   .modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
   .modal h3 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 20px; font-weight: 400; margin-bottom: 20px; }
@@ -601,7 +604,7 @@ import {
   getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded, handleOf,
   uploadFile, sendNotification, resolveUidsToEmails, linkifyMentions, loadFollowRelationships,
 } from './shared/account.js?v=24';
-import { mountTopNav } from './shared/topnav.js?v=12';
+import { mountTopNav } from './shared/topnav.js?v=13';
 import { mountFooter } from './shared/footer.js?v=4';
 import { createDropdown } from './shared/dropdown.js?v=1';
 import {
@@ -1380,9 +1383,18 @@ function runForum() {
 
   function renderList() {
     const q = searchInput.value.toLowerCase().trim();
+    // Match on individual words, not the whole typed phrase as one
+    // contiguous substring — "website comment" used to require a post to
+    // contain that exact phrase to show up at all, even though
+    // relevanceScore() below already scores per-word for sorting. This
+    // lets a post like "please comment on this website" pass the filter,
+    // then relevanceScore ranks phrase/all-word matches above partial ones.
+    const qWords = q.split(/\s+/).filter(Boolean);
     let filtered = posts.filter(p => {
       const tagMatch = activeFilter === '__all__' || (p.tags || []).includes(activeFilter);
-      const searchMatch = !q || (p.title||'').toLowerCase().includes(q) || (p.body||'').toLowerCase().includes(q);
+      const title = (p.title||'').toLowerCase();
+      const body = (p.body||'').toLowerCase();
+      const searchMatch = !q || qWords.some(w => title.includes(w) || body.includes(w));
       return tagMatch && searchMatch;
     });
 

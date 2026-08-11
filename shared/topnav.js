@@ -427,6 +427,33 @@ function initSearch(navEl) {
     return idx === 0 ? 0 : 1;
   }
 
+  // Keyword-aware rank across multiple weighted fields (title counts more
+  // than body/description). The old behavior only tested the whole typed
+  // query as one contiguous phrase against a single field — a post had to
+  // contain that exact phrase to ever show up, and once it had a title its
+  // body was never searched at all. This still ranks an exact/phrase match
+  // above everything (tiers 0-2, matching matchRank's convention so people-
+  // search and content-search sort together), but falls back to scoring how
+  // many of the typed words appear anywhere across the given fields, so
+  // "website comment" can still find a post that says "please comment on
+  // this website" even though that's not a contiguous match.
+  function keywordRank(fields, q) {
+    const words = q.split(/\s+/).filter(Boolean);
+    if (!words.length) return -1;
+    let phraseTier = -1;
+    let hits = 0;
+    fields.forEach(({ text, weight }) => {
+      const hay = (text || '').toLowerCase();
+      if (!hay) return;
+      const tier = hay === q ? 0 : hay.startsWith(q) ? 1 : hay.includes(q) ? 2 : -1;
+      if (tier !== -1) phraseTier = phraseTier === -1 ? tier : Math.min(phraseTier, tier);
+      words.forEach(w => { if (hay.includes(w)) hits += weight; });
+    });
+    if (phraseTier !== -1) return phraseTier;
+    if (hits === 0) return -1;
+    return 12 - Math.min(hits, 10);
+  }
+
   async function runSearch(qRaw) {
     const q = qRaw.trim().toLowerCase();
     if (!q) { closeDropdown(); return; }
@@ -449,15 +476,15 @@ function initSearch(navEl) {
     });
     corpus.posts.forEach(p => {
       const name = p.title || p.body || '';
-      const rank = matchRank(name, q);
+      const rank = keywordRank([{ text: p.title, weight: 3 }, { text: p.body, weight: 1 }], q);
       if (rank !== -1) results.push({ rank, name, sub: 'in Feed', url: `/feed?post=${p.id}`, icon: 'forum' });
     });
     corpus.videos.forEach(v => {
-      const rank = matchRank(v.title, q);
+      const rank = keywordRank([{ text: v.title, weight: 3 }, { text: v.description, weight: 1 }], q);
       if (rank !== -1) results.push({ rank, name: v.title || '', sub: 'in Videos', url: `/videos?video=${v.id}`, icon: 'smart_display' });
     });
     corpus.projects.forEach(p => {
-      const rank = matchRank(p.title, q);
+      const rank = keywordRank([{ text: p.title, weight: 3 }, { text: p.description, weight: 1 }], q);
       if (rank !== -1) results.push({ rank, name: p.title || '', sub: 'in Projects', url: `/projects?project=${p.id}`, icon: 'apps' });
     });
 
