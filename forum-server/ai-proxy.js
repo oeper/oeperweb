@@ -78,6 +78,18 @@ app.use(cors({ origin: ALLOWED_ORIGINS }));
 // API) — ai.html sends those inline in the message body, so this needs
 // enough headroom for a resized-but-still-substantial image.
 app.use(express.json({ limit: '8mb' }));
+// A malformed JSON body makes body-parser's underlying JSON.parse throw
+// inside a raw-body stream callback that Express's normal routing never
+// sees — left unhandled, that's an uncaught exception that kills the whole
+// process (confirmed: this took the server down earlier). This is the
+// standard fix — a 4-arg error-handling middleware right after the parser
+// catches it and returns a clean 400 instead.
+app.use((err, req, res, next) => {
+  if (err && (err.type === 'entity.parse.failed' || err instanceof SyntaxError)) {
+    return res.status(400).json({ error: 'Invalid JSON in request body' });
+  }
+  next(err);
+});
 
 const rateLimitMap = new Map(); // ip -> { count, windowStart }
 function checkRateLimit(ip) {
