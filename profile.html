@@ -172,6 +172,20 @@
     color: var(--md-sys-color-on-primary); text-decoration: none; vertical-align: middle;
   }
   .ig-description a.md-btn .material-symbols-rounded { font-size: 13px; }
+  .ig-audio-attach {
+    display: flex; align-items: center; gap: 10px; margin: 12px 14px 0; padding: 12px 14px;
+    background: var(--md-sys-color-surface-variant); border-radius: 12px; cursor: default;
+  }
+  .ig-audio-attach .material-symbols-rounded { font-size: 22px; color: var(--md-sys-color-primary); flex-shrink: 0; }
+  .ig-audio-attach audio { flex: 1; min-width: 0; height: 32px; }
+  .ig-text-post-title {
+    padding: 10px 14px 0; font-size: 16px; font-weight: 500; line-height: 1.4;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
+  }
+  .ig-card.text-only .ig-description { padding: 6px 14px 0; -webkit-line-clamp: 6; }
+  .ig-card.text-only .ig-actions {
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--md-sys-color-outline-variant);
+  }
   .ig-timestamp { padding: 6px 14px 14px; font-size: 11px; color: var(--md-sys-color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.3px; }
   .poll-block { margin: 8px 14px 0; }
   .poll-option-btn {
@@ -241,6 +255,16 @@ function firstImageUrl(p) {
   const urls = p.imageUrls && p.imageUrls.length ? p.imageUrls : (p.imageUrl ? [p.imageUrl] : []);
   const url = urls[0];
   return url && IMAGE_EXT_RE.test(url.split('?')[0]) ? url : null;
+}
+function firstVideoUrl(p) {
+  const urls = p.imageUrls && p.imageUrls.length ? p.imageUrls : (p.imageUrl ? [p.imageUrl] : []);
+  const url = urls[0];
+  return url && /\.(mp4|webm|mov|m4v|ogv)$/i.test(url.split('?')[0]) ? url : null;
+}
+function firstAudioUrl(p) {
+  const urls = p.imageUrls && p.imageUrls.length ? p.imageUrls : (p.imageUrl ? [p.imageUrl] : []);
+  const url = urls[0];
+  return url && /\.(mp3|wav|ogg|m4a|flac|aac|opus|weba)$/i.test(url.split('?')[0]) ? url : null;
 }
 
 // Discord-style shorthand: :name: -> an emoji, [icon_name] -> an inline
@@ -474,28 +498,48 @@ async function init() {
     const up = user && (item.upvoters || []).includes(user.uid);
     const down = user && (item.downvoters || []).includes(user.uid);
     const img = isVideo ? null : firstImageUrl(item);
-    const mediaHtml = isVideo
-      ? `<div class="ig-media"><video src="${item.url}" muted preload="metadata"></video><div class="ig-play-overlay"><span class="material-symbols-rounded">play_arrow</span></div></div>`
-      : (img ? `<div class="ig-media"><img src="${img}" alt="" loading="lazy"></div>` : '');
+    const vid = isVideo ? null : (!img ? firstVideoUrl(item) : null);
+    const aud = isVideo ? null : (!img && !vid ? firstAudioUrl(item) : null);
+    const hasMedia = isVideo || !!(img || vid || aud);
     const href = isVideo ? `/videos?video=${item.id}` : `/feed?post=${item.id}`;
     const bodyText = isVideo ? item.description : item.body;
+    const actionsHtml = `
+      <div class="ig-actions">
+        <button type="button" class="ig-vote-btn ${up ? 'upvoted' : ''}" data-vote-up data-kind="${isVideo ? 'video' : 'post'}" data-id="${item.id}" title="Like">
+          <span class="material-symbols-rounded">${up ? 'favorite' : 'favorite_border'}</span>
+        </button>
+        <span class="ig-vote-score">${score}</span>
+        <button type="button" class="ig-vote-btn ${down ? 'downvoted' : ''}" data-vote-down data-kind="${isVideo ? 'video' : 'post'}" data-id="${item.id}" title="Dislike">
+          <span class="material-symbols-rounded">heart_broken</span>
+        </button>
+        <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
+        <span class="ig-action-count">${item.views || 0}</span>
+      </div>
+    `;
+    const bodyHtml = bodyText ? `<div class="ig-description">${renderExcerptMarkdown(bodyText, 220)}</div>` : '';
+    if (!hasMedia) {
+      return `
+        <div class="ig-card text-only" data-kind="post" data-id="${item.id}" data-href="${href}">
+          ${item.title ? `<div class="ig-text-post-title">${escHtml(item.title)}</div>` : ''}
+          ${bodyHtml}
+          ${actionsHtml}
+          ${pollHtml(item)}
+          <div class="ig-timestamp">${timeAgo(item._date)}</div>
+        </div>
+      `;
+    }
+    const mediaHtml = isVideo
+      ? `<div class="ig-media"><video src="${item.url}" muted preload="metadata"></video><div class="ig-play-overlay"><span class="material-symbols-rounded">play_arrow</span></div></div>`
+      : img ? `<div class="ig-media"><img src="${img}" alt="" loading="lazy"></div>`
+      : vid ? `<div class="ig-media"><video src="${vid}" muted preload="metadata"></video></div>`
+      : `<div class="ig-audio-attach" onclick="event.stopPropagation()"><span class="material-symbols-rounded">music_note</span><audio controls preload="metadata" src="${aud}"></audio></div>`;
     return `
       <div class="ig-card" data-kind="${isVideo ? 'video' : 'post'}" data-id="${item.id}" data-href="${href}">
         ${mediaHtml}
-        <div class="ig-actions">
-          <button type="button" class="ig-vote-btn ${up ? 'upvoted' : ''}" data-vote-up data-kind="${isVideo ? 'video' : 'post'}" data-id="${item.id}" title="Like">
-            <span class="material-symbols-rounded">${up ? 'favorite' : 'favorite_border'}</span>
-          </button>
-          <span class="ig-vote-score">${score}</span>
-          <button type="button" class="ig-vote-btn ${down ? 'downvoted' : ''}" data-vote-down data-kind="${isVideo ? 'video' : 'post'}" data-id="${item.id}" title="Dislike">
-            <span class="material-symbols-rounded">heart_broken</span>
-          </button>
-          <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
-          <span class="ig-action-count">${item.views || 0}</span>
-        </div>
+        ${actionsHtml}
         <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
         ${item.title ? `<div class="ig-caption">${escHtml(item.title)}</div>` : ''}
-        ${bodyText ? `<div class="ig-description">${renderExcerptMarkdown(bodyText, 220)}</div>` : ''}
+        ${bodyHtml}
         ${pollHtml(item)}
         <div class="ig-timestamp">${timeAgo(item._date)}</div>
       </div>
