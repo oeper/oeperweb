@@ -269,6 +269,7 @@ import {
 } from './shared/account.js?v=24';
 import { mountTopNav } from './shared/topnav.js?v=13';
 import { mountFooter } from './shared/footer.js?v=4';
+import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=1';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
   arrayUnion, arrayRemove, increment, query, orderBy,
@@ -508,6 +509,7 @@ function openWatch(v) {
   const watchCommentForm = document.getElementById('watchCommentForm');
   const watchCommentInput = document.getElementById('watchCommentInput');
   const watchCommentSendBtn = document.getElementById('watchCommentSendBtn');
+  attachMentionAutocomplete(watchCommentInput);
   watchCommentForm.addEventListener('submit', async e => {
     e.preventDefault();
     const commenter = getCurrentUser();

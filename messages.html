@@ -363,6 +363,7 @@ import {
   loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions,
 } from './shared/account.js?v=24';
 import { mountFooter } from './shared/footer.js?v=4';
+import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=1';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
   arrayUnion, arrayRemove,
@@ -1077,6 +1078,7 @@ async function openGroupThread(groupId, user) {
 
   const msgList = document.getElementById('msgList');
   const msgInput = document.getElementById('msgInput');
+  attachMentionAutocomplete(msgInput);
   function autoGrowGroupInput() {
     msgInput.style.height = 'auto';
     msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + 'px';
@@ -1239,6 +1241,7 @@ async function openThread(otherEmail, user) {
 
   const msgList = document.getElementById('msgList');
   const msgInput = document.getElementById('msgInput');
+  attachMentionAutocomplete(msgInput);
   function autoGrowMsgInput() {
     msgInput.style.height = 'auto';
     msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + 'px';

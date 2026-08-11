@@ -607,6 +607,7 @@ import {
 import { mountTopNav } from './shared/topnav.js?v=13';
 import { mountFooter } from './shared/footer.js?v=4';
 import { createDropdown } from './shared/dropdown.js?v=1';
+import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=1';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
   query, orderBy, serverTimestamp, arrayUnion, arrayRemove, increment, Timestamp
@@ -1659,6 +1660,7 @@ function runForum() {
   const overlay = document.getElementById('overlay');
   const modal = document.getElementById('modal');
   const postForm = document.getElementById('postForm');
+  attachMentionAutocomplete(postForm.querySelector('textarea[name="body"]'));
   let selectedTags = [];
   let postImageAttach = createMultiImageAttach(document.getElementById('postImageAttach'), MAX_POST_IMAGES);
 
@@ -1982,6 +1984,7 @@ function runForum() {
       </form>
     `;
     const commentImageAttach = createImageAttach(document.getElementById('commentImageAttach'));
+    attachMentionAutocomplete(document.querySelector('#commentForm textarea[name="body"]'));
     document.getElementById('commentReplyCancelBtn').addEventListener('click', cancelCommentReply);
     document.getElementById('commentForm').addEventListener('submit', async e => {
       e.preventDefault();
