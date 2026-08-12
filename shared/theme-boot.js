@@ -684,8 +684,12 @@
         '--md-sys-color-surface-variant': '#493222',
         '--md-sys-color-primary': '#E5A36A',
         '--md-sys-color-on-primary': '#2a1d14',
-        '--md-sys-color-secondary-container': '#513a29',
-        '--md-sys-color-on-secondary-container': '#F3D6B8',
+        // The third given color (#A35E2D, a rust brown distinct from the
+        // sandy-orange primary) was never actually used — this was derived
+        // from the primary instead, so the theme only ever showed 2 of its
+        // 3 source colors. Rebuilt from the real third color for balance.
+        '--md-sys-color-secondary-container': '#70411f',
+        '--md-sys-color-on-secondary-container': '#ebd3c1',
         '--md-sys-color-on-surface': '#eceae9',
         '--md-sys-color-on-surface-variant': '#bfb6b0',
         '--md-sys-color-outline': '#6a5344',
@@ -708,8 +712,12 @@
         '--md-sys-color-surface-variant': '#2f3a27',
         '--md-sys-color-primary': '#A59A52',
         '--md-sys-color-on-primary': '#1e2518',
-        '--md-sys-color-secondary-container': '#3b4832',
-        '--md-sys-color-on-secondary-container': '#DDE5C8',
+        // The third given color (#4D593C, a muted green distinct from the
+        // khaki primary) was never actually used — this was derived from
+        // the primary instead, so the theme only ever showed 2 of its 3
+        // source colors. Rebuilt from the real third color for balance.
+        '--md-sys-color-secondary-container': '#4a5837',
+        '--md-sys-color-on-secondary-container': '#d7ddcf',
         '--md-sys-color-on-surface': '#eaebea',
         '--md-sys-color-on-surface-variant': '#b7bcb3',
         '--md-sys-color-outline': '#55614c',
