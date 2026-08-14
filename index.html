@@ -514,6 +514,7 @@
   .ig-vote-btn:hover, .ig-comment-btn:hover { background: var(--md-sys-state-hover); }
   .ig-vote-btn.upvoted .material-symbols-rounded { color: #ff5c7a; font-variation-settings: 'FILL' 1; }
   .ig-vote-btn.downvoted .material-symbols-rounded { color: var(--md-sys-color-error); }
+  .ig-vote-btn.saved .material-symbols-rounded { color: var(--md-sys-color-primary); }
   .ig-vote-score { font-size: 13px; font-weight: 600; min-width: 16px; text-align: center; margin: 0 2px; }
   .ig-comment-btn { margin-left: 6px; }
   .ig-likes { padding: 4px 14px 0; font-size: 13px; font-weight: 600; }
@@ -739,7 +740,7 @@
     db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser, sendNotification,
     onAccountChange, SERVER_ENDPOINT, MAX_IMAGE_BYTES, uploadFile, linkifyMentions,
   } from './shared/account.js?v=26';
-  import { mountTopNav } from './shared/topnav.js?v=17';
+  import { mountTopNav } from './shared/topnav.js?v=18';
   import { mountFooter } from './shared/footer.js?v=4';
   import { createDropdown } from './shared/dropdown.js?v=2';
   import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=2';
@@ -1355,6 +1356,16 @@
       `;
     }
 
+    function saveBtnHtml(item, kind) {
+      const user = getCurrentUser();
+      const saved = user && (item.savedBy || []).includes(user.uid);
+      return `
+        <button type="button" class="ig-vote-btn ${saved ? 'saved' : ''}" data-save-toggle data-kind="${kind}" data-id="${item.id}" title="${saved ? 'Remove from saved' : 'Save'}" style="margin-left:auto;">
+          <span class="material-symbols-rounded" style="font-variation-settings:'FILL' ${saved ? 1 : 0};">bookmark</span>
+        </button>
+      `;
+    }
+
     function authorNameHtml(email, profile) {
       const handle = handleOf(email);
       const inner = `${escHtml(profile.name)}${officialBadgeHtml(email)}`;
@@ -1389,8 +1400,9 @@
           <button type="button" class="ig-comment-btn" data-open-comments data-kind="post" data-id="${p.id}" title="Comments">
             <span class="material-symbols-rounded">mode_comment</span>
           </button>
-          <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
+          <span class="material-symbols-rounded">visibility</span>
           <span class="ig-action-count">${p.views || 0}</span>
+          ${saveBtnHtml(p, 'post')}
         </div>
       `;
       const bodyHtml = p.body ? `<div class="ig-description">${renderExcerptMarkdown(p.body, 220)}</div>` : '';
@@ -1445,8 +1457,9 @@
             <button type="button" class="ig-comment-btn" data-open-comments data-kind="video" data-id="${v.id}" title="Comments">
               <span class="material-symbols-rounded">mode_comment</span>
             </button>
-            <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
+            <span class="material-symbols-rounded">visibility</span>
             <span class="ig-action-count">${v.views || 0}</span>
+            ${saveBtnHtml(v, 'video')}
           </div>
           <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
           <div class="ig-caption"><strong>${authorNameHtml(v.authorEmail, profile)}</strong>${linkify(v.title)}</div>
@@ -1481,6 +1494,21 @@
         }
       } catch (err) {
         showToast('Could not vote: ' + err.message);
+      }
+    }
+
+    async function toggleSave(kind, id) {
+      const user = getCurrentUser();
+      if (!user) { showToast('Sign in to save'); return; }
+      const list = kind === 'video' ? latestVideos : latestPosts;
+      const item = list.find(x => x.id === id);
+      if (!item) return;
+      const uid = user.uid;
+      const saved = (item.savedBy || []).includes(uid);
+      try {
+        await updateDoc(doc(db, kind === 'video' ? 'videos' : 'posts', id), { savedBy: saved ? arrayRemove(uid) : arrayUnion(uid) });
+      } catch (err) {
+        showToast('Could not save: ' + err.message);
       }
     }
 
@@ -1529,8 +1557,9 @@
           <button type="button" class="ig-vote-btn ${down ? 'downvoted' : ''}" data-modal-vote-down title="Dislike">
             <span class="material-symbols-rounded">heart_broken</span>
           </button>
-          <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
+          <span class="material-symbols-rounded">visibility</span>
           <span class="ig-action-count">${item.views || 0}</span>
+          ${saveBtnHtml(item, kind)}
         </div>
         <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
         <div class="ig-caption"><strong>${authorNameHtml(item.authorEmail, profile)}</strong>${linkify(item.title)}</div>
@@ -1625,6 +1654,13 @@
         if (item) togglePollVote(item, Number(pollBtn.dataset.pollVote));
         return;
       }
+      const saveBtn = e.target.closest('[data-save-toggle]');
+      if (saveBtn) {
+        toggleSave(saveBtn.dataset.kind, saveBtn.dataset.id).then(() => {
+          if (openItemId === saveBtn.dataset.id && openItemKind === saveBtn.dataset.kind) renderModalPostContent();
+        });
+        return;
+      }
       const upBtn = e.target.closest('[data-modal-vote-up]');
       const downBtn = e.target.closest('[data-modal-vote-down]');
       if (!upBtn && !downBtn) return;
@@ -1707,9 +1743,11 @@
       if (e.target.closest('a')) return; // real links (linkified URLs) behave normally
       const voteUpBtn = e.target.closest('[data-vote-up]');
       const voteDownBtn = e.target.closest('[data-vote-down]');
+      const saveBtn = e.target.closest('[data-save-toggle]');
       const commentBtn = e.target.closest('[data-open-comments]');
       if (voteUpBtn) { toggleVote(voteUpBtn.dataset.kind, voteUpBtn.dataset.id, 'up'); return; }
       if (voteDownBtn) { toggleVote(voteDownBtn.dataset.kind, voteDownBtn.dataset.id, 'down'); return; }
+      if (saveBtn) { toggleSave(saveBtn.dataset.kind, saveBtn.dataset.id); return; }
       if (commentBtn) { openComments(commentBtn.dataset.kind, commentBtn.dataset.id); return; }
       const videoMedia = e.target.closest('[data-video-media]');
       if (videoMedia) {

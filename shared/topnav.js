@@ -245,14 +245,19 @@ function injectStyles() {
        screen mechanism (position, transition, backdrop) for the Create
        menu instead — same visual language, new content and trigger. */
     .oe-create-drawer {
-      position: fixed; top: 72px; left: 0; right: 0; z-index: 150;
+      /* Anchored to the bottom edge (not the top navbar) since its only
+         trigger, #oeCreateBtn, lives in the mobile-only bottom nav —
+         growing max-height with bottom fixed naturally expands upward
+         from just above that bar, instead of sliding down from the top
+         of the screen where the button that opened it isn't even visible. */
+      position: fixed; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; z-index: 150;
       background-color: var(--md-sys-color-surface);
       padding: 0 8px; overflow: hidden; max-height: 0; opacity: 0; visibility: hidden;
-      box-shadow: 0 12px 24px rgba(0,0,0,0.35);
+      box-shadow: 0 -12px 24px rgba(0,0,0,0.35);
       transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 220ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1), visibility 0s linear 340ms;
     }
     .oe-create-drawer.open {
-      max-height: min(70vh, calc(100vh - 72px)); opacity: 1; visibility: visible; padding: 8px;
+      max-height: min(60vh, calc(100vh - 160px)); opacity: 1; visibility: visible; padding: 8px;
       overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
       transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 260ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1);
     }
