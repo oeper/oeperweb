@@ -46,13 +46,25 @@ function injectStyles() {
   stylesInjected = true;
   const style = document.createElement('style');
   style.textContent = `
+    /* iOS Safari has a known bug where position:sticky combined with
+       backdrop-filter on the SAME element renders it invisible once it
+       actually sticks (scroll past it, then it's just gone) — doesn't
+       happen in Chrome/Firefox, which is why this wasn't caught testing
+       here. The fix is putting the two on separate elements: .oe-navbar
+       only sticks (no filter of its own), .oe-navbar-bg is an absolutely-
+       positioned layer behind the content that carries the blur/tint —
+       sticky still establishes a containing block for it, same as
+       position:relative would. */
     .oe-navbar {
       position: sticky; top: 0; z-index: 100;
+      padding: 0 24px; height: 72px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .oe-navbar-bg {
+      position: absolute; inset: 0; z-index: -1;
       background-color: rgba(var(--md-sys-color-background-rgb, 17, 19, 24), 0.8);
       backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid rgba(var(--md-sys-color-outline-rgb, 67, 71, 78), 0.4);
-      padding: 0 24px; height: 72px;
-      display: flex; align-items: center; gap: 12px;
     }
     .oe-nav-logo {
       display: flex; align-items: center; gap: 10px; flex-shrink: 0;
@@ -286,6 +298,7 @@ export function mountTopNav(container) {
   el.innerHTML = `
     <div class="oe-nav-backdrop" id="oeNavBackdrop"></div>
     <nav class="oe-navbar">
+      <div class="oe-navbar-bg"></div>
       <button class="oe-nav-hamburger" id="oeNavHamburger" aria-label="Menu" aria-expanded="false"><span class="material-symbols-rounded">menu</span></button>
       <a href="https://oeper.dev/" class="oe-nav-logo">
         <span class="oe-nav-logo-icon">${LOGO_SVG}</span>
