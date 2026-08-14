@@ -14,8 +14,8 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-  getFirestore, doc, getDoc, getDocs, setDoc, serverTimestamp, deleteField, collection, addDoc,
-  query, where, documentId,
+  getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, serverTimestamp, deleteField, collection, addDoc,
+  query, where, documentId, orderBy,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 export const FIREBASE_CONFIG = {
@@ -327,6 +327,35 @@ export async function changeHandle(newHandle) {
   return newHandle;
 }
 
+// Stable per-browser id (not per-account — a shared/public computer signed
+// into two different accounts should still show as "two devices", one per
+// account, not merge into one) used to key the signed-in-devices log below.
+function getDeviceId() {
+  let id;
+  try { id = localStorage.getItem('oe_device_id'); } catch { return null; }
+  if (!id) {
+    id = (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+    try { localStorage.setItem('oe_device_id', id); } catch { return null; }
+  }
+  return id;
+}
+function deviceLabel() {
+  const ua = navigator.userAgent;
+  let os = 'an unknown OS';
+  if (/iPhone|iPad|iPod/.test(ua)) os = 'iOS';
+  else if (/Android/.test(ua)) os = 'Android';
+  else if (/Windows/.test(ua)) os = 'Windows';
+  else if (/Mac OS X/.test(ua)) os = 'macOS';
+  else if (/Linux/.test(ua)) os = 'Linux';
+  let browser = 'an unknown browser';
+  if (/Edg\//.test(ua)) browser = 'Edge';
+  else if (/OPR\//.test(ua)) browser = 'Opera';
+  else if (/Chrome\//.test(ua)) browser = 'Chrome';
+  else if (/Firefox\//.test(ua)) browser = 'Firefox';
+  else if (/Safari\//.test(ua)) browser = 'Safari';
+  return `${browser} on ${os}`;
+}
+
 onAuthStateChanged(auth, async user => {
   currentUser = user;
   if (user) {
@@ -343,10 +372,40 @@ onAuthStateChanged(auth, async user => {
     // adding a second, uid-keyed profile store. Best-effort, doesn't block
     // sign-in on it.
     setDoc(doc(db, 'uidLookup', user.uid), { email: user.email }, { merge: true }).catch(() => {});
+    // Upserts this browser into the signed-in-devices log settings.html
+    // shows under Security — fires on every page load with a persisted
+    // session (not just a fresh sign-in), which is what makes lastSeenAt
+    // actually mean "recently active" rather than just "once signed in".
+    const deviceId = getDeviceId();
+    if (deviceId) {
+      setDoc(doc(db, 'users', user.email, 'sessions', deviceId), {
+        label: deviceLabel(), lastSeenAt: serverTimestamp(),
+      }, { merge: true }).catch(() => {});
+    }
   }
   authReady = true;
   notify();
 });
+
+// Signed-in-devices log for settings.html's Security section — see the
+// upsert above for what gets written and when. Not a remote kill switch:
+// removing an entry here only clears it from this list, since revoking an
+// actual session would need a server holding the Firebase Admin SDK, which
+// this static site doesn't have. Real session control lives on Google's
+// side (linked from the same Security section) since sign-in is Google-only.
+export async function listSessions(email) {
+  try {
+    const snap = await getDocs(query(collection(db, 'users', email, 'sessions'), orderBy('lastSeenAt', 'desc')));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.warn('Could not load sessions:', err.message);
+    return [];
+  }
+}
+export function removeSession(email, sessionId) {
+  return deleteDoc(doc(db, 'users', email, 'sessions', sessionId));
+}
+export function getCurrentDeviceId() { return getDeviceId(); }
 
 // Completes a signInWithRedirect() flow (see signIn()'s popup-blocked
 // fallback below) — the page fully navigates away to Google and back, so

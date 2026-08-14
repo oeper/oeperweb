@@ -93,6 +93,27 @@
 
   .oe-theme-grid { display: flex; flex-wrap: wrap; gap: 12px; }
 
+  .session-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; }
+  .session-row-icon {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; background: var(--md-sys-color-surface-variant);
+    display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface-variant);
+  }
+  .session-row-icon .material-symbols-rounded { font-size: 18px; }
+  .session-row-main { flex: 1; min-width: 0; }
+  .session-row-label { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .session-current-tag {
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; color: var(--md-sys-color-on-secondary-container);
+    background: var(--md-sys-color-secondary-container); border-radius: 100px; padding: 2px 8px;
+  }
+  .session-row-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; }
+  .session-remove-btn {
+    width: 32px; height: 32px; border-radius: 50%; border: none; background: none; flex-shrink: 0;
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .session-remove-btn:hover { background: var(--md-sys-state-hover); color: var(--md-sys-color-error); }
+  .session-remove-btn .material-symbols-rounded { font-size: 18px; }
+  .session-empty { padding: 8px 0; font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+
   .footnote { text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; margin-top: 8px; }
 </style>
 </head>
@@ -125,6 +146,28 @@
         <div class="row-text">
           <div class="row-title" id="profileRowTitle">Profile</div>
           <div class="row-sub" id="profileRowSub">Sign in to edit your display name, bio, and photo.</div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <div class="settings-section" id="securitySection" style="display:none;">
+    <h2>Security</h2>
+    <p class="section-desc">Sign-in is Google-only, so real session control (revoking a device, 2-step verification, connected apps) lives on Google's side. This is just a local log of browsers that have signed in recently, so you can spot one you don't recognize.</p>
+    <div class="group">
+      <div class="row">
+        <div class="row-icon"><span class="material-symbols-rounded">devices</span></div>
+        <div class="row-text">
+          <div class="row-title">Signed-in devices</div>
+          <div class="row-sub">Removing one only clears it from this list — it doesn't sign that device out.</div>
+        </div>
+      </div>
+      <div class="row-block" id="sessionsList"><div class="session-empty">Loading…</div></div>
+      <a class="row" href="https://myaccount.google.com/security" target="_blank" rel="noopener" style="text-decoration:none; color:inherit;">
+        <div class="row-icon"><span class="material-symbols-rounded">open_in_new</span></div>
+        <div class="row-text">
+          <div class="row-title">Manage your Google Account</div>
+          <div class="row-sub">Full session control, 2-step verification, and recent security activity.</div>
         </div>
       </a>
     </div>
@@ -178,7 +221,8 @@
 import {
   getCurrentUser, onAccountChange, handleOf, signIn, signOutUser,
   isOwnerEmail, ensureProfileLoaded, getBadgeOverride, setOwnBadgeOverride,
-} from './shared/account.js?v=25';
+  listSessions, removeSession, getCurrentDeviceId,
+} from './shared/account.js?v=26';
 import { mountTopNav } from './shared/topnav.js?v=17';
 import { mountThemePicker } from './shared/theme-picker.js?v=3';
 import { mountFooter } from './shared/footer.js?v=4';
@@ -208,7 +252,64 @@ onAccountChange(user => {
   }
   document.getElementById('accountActionsSection').style.display = user ? '' : 'none';
   initBadgeSection(user);
+  initSecuritySection(user);
 });
+
+// ── Security: signed-in-devices log ────────────────────────────────
+function timeAgo(date) {
+  const s = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  if (s < 2592000) return Math.floor(s / 86400) + 'd ago';
+  return date.toLocaleDateString();
+}
+let securitySectionLoadedFor = null;
+async function initSecuritySection(user) {
+  const section = document.getElementById('securitySection');
+  if (!user) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  if (securitySectionLoadedFor === user.email) return;
+  securitySectionLoadedFor = user.email;
+  await renderSessions(user);
+}
+async function renderSessions(user) {
+  const list = document.getElementById('sessionsList');
+  const sessions = await listSessions(user.email);
+  const thisDeviceId = getCurrentDeviceId();
+  if (!sessions.length) {
+    list.innerHTML = '<div class="session-empty">No sign-in activity logged yet.</div>';
+    return;
+  }
+  list.innerHTML = sessions.map(s => {
+    const isThis = s.id === thisDeviceId;
+    const lastSeen = s.lastSeenAt && s.lastSeenAt.toDate ? s.lastSeenAt.toDate() : null;
+    return `
+      <div class="session-row">
+        <div class="session-row-icon"><span class="material-symbols-rounded">${isThis ? 'smartphone' : 'devices_other'}</span></div>
+        <div class="session-row-main">
+          <div class="session-row-label">${escHtmlSec(s.label || 'Unknown device')}${isThis ? '<span class="session-current-tag">This device</span>' : ''}</div>
+          <div class="session-row-meta">Active ${lastSeen ? timeAgo(lastSeen) : 'recently'}</div>
+        </div>
+        <button type="button" class="session-remove-btn" data-remove-session="${s.id}" title="Remove from list"><span class="material-symbols-rounded">close</span></button>
+      </div>
+    `;
+  }).join('');
+  list.querySelectorAll('[data-remove-session]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.removeSession;
+      const isThis = id === thisDeviceId;
+      if (isThis && !(await oeConfirm("This is your current device — removing it just clears the log entry, it won't sign you out. Continue?"))) return;
+      try {
+        await removeSession(user.email, id);
+        await renderSessions(user);
+      } catch (err) {
+        oeAlert('Could not remove: ' + err.message);
+      }
+    });
+  });
+}
+function escHtmlSec(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
 // ── Your OFFICIAL badge (owner accounts only) ─────────────────────────
 const badgeModeDropdown = createDropdown([

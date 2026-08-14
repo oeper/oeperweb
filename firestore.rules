@@ -122,6 +122,17 @@ service cloud.firestore {
         && request.resource.data.displayName.size() <= 40
         && (!('photoURL' in request.resource.data) || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 500))
         && (!('bio' in request.resource.data) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 200));
+
+      // Signed-in-devices log (settings.html's Security section) — a private
+      // audit trail, not a public profile field, so only the account itself
+      // can read or write it (unlike the rest of /users/{email}, which is
+      // publicly readable).
+      match /sessions/{sessionId} {
+        allow read, delete: if isSignedIn() && request.auth.token.email == email;
+        allow write: if isSignedIn() && request.auth.token.email == email
+          && request.resource.data.label is string
+          && request.resource.data.label.size() <= 100;
+      }
     }
 
     // Ban list, keyed by email. Public read so the client can show "you're
