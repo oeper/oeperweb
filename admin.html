@@ -19,7 +19,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--md-sys-color-primary, #a8c7fa); }
 
   :root {
     --md-sys-color-background: #111318;
@@ -101,17 +101,17 @@
     display: inline-flex; align-items: center; gap: 8px;
     font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: 14px; font-weight: 500;
-    padding: 10px 18px; border-radius: 100px; border: 1px solid var(--md-sys-color-outline);
-    background: transparent; color: var(--md-sys-color-on-surface); cursor: pointer;
+    padding: 10px 18px; border-radius: 100px; border: none;
+    background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); cursor: pointer;
     transition: background-color 0.15s;
   }
   .btn .material-symbols-rounded { font-size: 18px; }
   .btn:hover { background-color: var(--md-sys-state-hover); }
-  .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
+  .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
   .btn.primary:hover { opacity: 0.9; }
   .btn.primary:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn.danger { color: var(--md-sys-color-error); border-color: var(--md-sys-color-error); }
-  .btn.danger:hover { background-color: rgba(255,180,171,0.08); }
+  .btn.danger { color: var(--md-sys-color-error); background: color-mix(in srgb, var(--md-sys-color-error) 18%, transparent); }
+  .btn.danger:hover { background-color: color-mix(in srgb, var(--md-sys-color-error) 28%, transparent); }
   .btn.small { padding: 6px 12px; font-size: 13px; }
 
   /* Add button row */
@@ -158,11 +158,11 @@
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 6px; }
   .field input[type="text"], .field textarea {
-    width: 100%; background-color: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline);
+    width: 100%; background-color: var(--md-sys-color-surface-variant); border: none;
     border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px;
     font-family: inherit; outline: none; resize: vertical;
   }
-  .field input[type="text"]:focus, .field textarea:focus { border-color: var(--md-sys-color-primary); }
+  .field input[type="text"]:focus, .field textarea:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
   .field textarea { min-height: 90px; }
   .field textarea.tall { min-height: 220px; font-family: monospace; font-size: 13px; }
   .field-row { display: flex; gap: 12px; }
@@ -171,23 +171,23 @@
   .chip-select { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip-select label {
     display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
-    padding: 7px 14px; border-radius: 10px; border: 1px solid var(--md-sys-color-outline);
+    padding: 7px 14px; border-radius: 10px; background: var(--md-sys-color-surface-variant);
     font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin: 0;
   }
   .chip-select input { accent-color: var(--md-sys-color-primary); }
-  .chip-select label:has(input:checked) { background-color: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent; }
+  .chip-select label:has(input:checked) { background-color: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
 
   .add-cat-row { display: flex; gap: 8px; margin-top: 10px; }
   .add-cat-row input { flex: 1; min-width: 0; }
 
   .preview-toggle { display: flex; gap: 8px; margin-bottom: 8px; }
   .preview-toggle button {
-    background: none; border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface-variant);
+    background: var(--md-sys-color-surface-variant); border: none; color: var(--md-sys-color-on-surface-variant);
     font-size: 12px; padding: 5px 12px; border-radius: 8px; cursor: pointer;
   }
-  .preview-toggle button.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent; }
+  .preview-toggle button.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
   .md-preview {
-    display: none; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline);
+    display: none; background: var(--md-sys-color-background);
     border-radius: 12px; padding: 16px; min-height: 220px; font-size: 14px; line-height: 1.6; overflow-y: auto; max-height: 400px;
   }
   .md-preview.show { display: block; }
@@ -305,8 +305,8 @@
   </p>
   <div class="item-list" id="aiModelList"></div>
   <form id="aiModelAddForm" style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
-    <input type="text" id="aiModelIdInput" placeholder="Model id (e.g. google/gemma-4-e2b)" required style="flex:1; min-width:220px; background-color:var(--md-sys-color-background); border:1px solid var(--md-sys-color-outline); border-radius:12px; padding:12px 14px; color:var(--md-sys-color-on-surface); font-size:14px; font-family:inherit; outline:none;">
-    <input type="text" id="aiModelLabelInput" placeholder="Display label (e.g. Gemma 4 E2B)" required style="flex:1; min-width:180px; background-color:var(--md-sys-color-background); border:1px solid var(--md-sys-color-outline); border-radius:12px; padding:12px 14px; color:var(--md-sys-color-on-surface); font-size:14px; font-family:inherit; outline:none;">
+    <input type="text" id="aiModelIdInput" placeholder="Model id (e.g. google/gemma-4-e2b)" required style="flex:1; min-width:220px; background-color:var(--md-sys-color-surface-variant); border:none; border-radius:12px; padding:12px 14px; color:var(--md-sys-color-on-surface); font-size:14px; font-family:inherit; outline:none;">
+    <input type="text" id="aiModelLabelInput" placeholder="Display label (e.g. Gemma 4 E2B)" required style="flex:1; min-width:180px; background-color:var(--md-sys-color-surface-variant); border:none; border-radius:12px; padding:12px 14px; color:var(--md-sys-color-on-surface); font-size:14px; font-family:inherit; outline:none;">
     <button type="submit" class="btn primary"><span class="material-symbols-rounded">add</span> Add</button>
   </form>
 </div>
@@ -323,10 +323,10 @@
 <script type="module">
 import {
   isOwnerEmail, onAccountChange, mountAccountBar, getCurrentUser, db,
-} from './shared/account.js?v=24';
-import { mountTopNav } from './shared/topnav.js?v=16';
+} from './shared/account.js?v=25';
+import { mountTopNav } from './shared/topnav.js?v=17';
 import { mountFooter } from './shared/footer.js?v=4';
-import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=2';
 import {
   collection, addDoc, serverTimestamp, Timestamp, doc, onSnapshot, setDoc,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';

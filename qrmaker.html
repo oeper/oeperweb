@@ -25,7 +25,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--md-sys-color-primary, #a8c7fa); }
 
   :root {
     --md-sys-color-background: #111318;
@@ -68,13 +68,13 @@
 
   .type-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
   .pill {
-    display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--md-sys-color-outline);
+    display: inline-flex; align-items: center; gap: 6px; background: var(--md-sys-color-surface-variant); border: none;
     border-radius: 100px; padding: 9px 18px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; font-weight: 500;
     color: var(--md-sys-color-on-surface-variant); cursor: pointer; transition: all 0.2s ease; white-space: nowrap;
   }
   .pill .material-symbols-rounded { font-size: 18px; }
   .pill:hover { background-color: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
-  .pill.active { background-color: var(--md-sys-color-secondary-container); border-color: transparent; color: var(--md-sys-color-on-secondary-container); }
+  .pill.active { background-color: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
 
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
   @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
@@ -85,27 +85,27 @@
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 6px; }
   .field input[type="text"], .field input[type="url"], .field input[type="tel"], .field input[type="email"], .field textarea {
-    width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline);
+    width: 100%; background: var(--md-sys-color-surface-variant); border: none;
     border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none;
-    transition: border-color 0.2s;
+    transition: box-shadow 0.2s;
   }
-  .field input:focus, .field textarea:focus { border-color: var(--md-sys-color-primary); }
+  .field input:focus, .field textarea:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
   .field textarea { resize: vertical; min-height: 80px; }
-  .field .oe-dropdown-btn { background: var(--md-sys-color-background); border-radius: 12px; padding: 12px 14px; }
+  .field .oe-dropdown-btn { background: var(--md-sys-color-surface-variant); border-radius: 12px; padding: 12px 14px; }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .field .hint { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 4px; }
 
   .customize-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--md-sys-state-hover); }
   .color-field { display: flex; align-items: center; gap: 10px; }
-  .color-field input[type="color"] { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--md-sys-color-outline); background: none; cursor: pointer; padding: 2px; }
+  .color-field input[type="color"] { width: 40px; height: 40px; border-radius: 10px; border: none; background: var(--md-sys-color-surface-variant); cursor: pointer; padding: 2px; }
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 500; padding: 12px 20px;
-    border-radius: 100px; border: 1px solid var(--md-sys-color-outline); background: transparent;
+    border-radius: 100px; border: none; background: var(--md-sys-color-surface-variant);
     color: var(--md-sys-color-on-surface); cursor: pointer; font-family: inherit; width: 100%;
   }
   .btn:hover { background-color: var(--md-sys-state-hover); }
-  .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
+  .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
   .btn.primary:hover { opacity: 0.9; }
 
   .preview-wrap { display: flex; flex-direction: column; align-items: center; gap: 20px; }
@@ -219,11 +219,11 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=16';
+import { mountTopNav } from './shared/topnav.js?v=17';
 mountTopNav();
 </script>
 <script type="module">
-import { createDropdown } from './shared/dropdown.js?v=1';
+import { createDropdown } from './shared/dropdown.js?v=2';
 let currentType = 'url';
 const qrCanvas = document.getElementById('qrCanvas');
 const qrBox = document.getElementById('qrBox');

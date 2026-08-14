@@ -24,7 +24,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--md-sys-color-primary, #a8c7fa); }
 
   :root {
     --md-sys-color-background: #111318;
@@ -62,7 +62,7 @@
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
   }
   .header-icon-btn {
-    width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--md-sys-color-outline); background: var(--md-sys-color-surface);
+    width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--md-sys-color-surface-variant);
     color: var(--md-sys-color-on-surface); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
   .header-icon-btn:hover { background-color: var(--md-sys-state-hover); }
@@ -201,7 +201,7 @@
 
   .chat-inputbar {
     display: flex; align-items: flex-end; gap: 4px;
-    background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    background: var(--md-sys-color-surface-variant); border: none;
     border-radius: 26px; padding: 8px 8px 8px 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
   }
   .attach-btn {
@@ -242,7 +242,7 @@
   .chats-overlay.open { opacity: 1; pointer-events: all; }
   .chats-panel {
     position: fixed; top: 0; right: 0; bottom: 0; width: min(340px, 88vw); background: var(--md-sys-color-background);
-    border-left: 1px solid var(--md-sys-color-outline-variant); z-index: 201; transform: translateX(100%);
+    box-shadow: -12px 0 32px rgba(0,0,0,0.4); z-index: 201; transform: translateX(100%);
     transition: transform 0.25s; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px;
   }
   .chats-panel.open { transform: translateX(0); }
@@ -326,11 +326,11 @@
 </div>
 
 <script type="module">
-import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange } from './shared/account.js?v=24';
-import { mountTopNav } from './shared/topnav.js?v=16';
+import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange } from './shared/account.js?v=25';
+import { mountTopNav } from './shared/topnav.js?v=17';
 import { mountFooter } from './shared/footer.js?v=4';
-import { createDropdown } from './shared/dropdown.js?v=1';
-import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
+import { createDropdown } from './shared/dropdown.js?v=2';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=2';
 import { doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 mountFooter();

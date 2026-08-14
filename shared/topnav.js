@@ -8,7 +8,7 @@
 // behavior change needs its `?v=N` bumped on every `from './shared/topnav.js?v=N'`
 // import across the site (grep for it) — otherwise visitors can sit on a
 // stale cached copy for hours after a deploy.
-import { mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange, signIn } from './account.js?v=24';
+import { mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange, signIn } from './account.js?v=25';
 import {
   collection, query, orderBy, limit, getDocs, onSnapshot, where, doc, updateDoc, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -87,12 +87,12 @@ function injectStyles() {
       transition: border-color 0.2s, background-color 0.2s;
     }
     .oe-nav-search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
-    .oe-nav-search-input:focus { border-color: var(--md-sys-color-primary); background-color: var(--md-sys-color-background); }
+    .oe-nav-search-input:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); background-color: var(--md-sys-color-background); }
     .oe-nav-search-mobile-close { display: none; }
 
     .oe-nav-search-dropdown {
       position: absolute; top: calc(100% + 8px); left: 0; right: 0;
-      background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+      background: var(--md-sys-color-surface);
       border-radius: 16px; padding: 8px; max-height: 420px; overflow-y: auto; z-index: 20;
       opacity: 0; pointer-events: none; transform: translateY(-6px);
       transition: opacity 0.15s, transform 0.15s;
@@ -137,7 +137,7 @@ function injectStyles() {
 
     .oe-notif-dropdown {
       position: absolute; top: calc(100% + 12px); right: 0; width: min(380px, 90vw);
-      background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+      background: var(--md-sys-color-surface);
       border-radius: 16px; max-height: 480px; overflow-y: auto; z-index: 20;
       opacity: 0; pointer-events: none; transform: translateY(-6px) scale(0.98);
       transition: opacity 180ms ease, transform 220ms cubic-bezier(0.2, 0, 0, 1);
@@ -239,14 +239,14 @@ function injectStyles() {
     .oe-bottom-nav-item img {
       width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant);
     }
-    .oe-bottom-nav-item.active img { outline: 2px solid var(--md-sys-color-primary); }
+    .oe-bottom-nav-item.active img { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
 
     /* Reuses the old nav-links drawer's exact slide-down-from-top-of-
        screen mechanism (position, transition, backdrop) for the Create
        menu instead — same visual language, new content and trigger. */
     .oe-create-drawer {
       position: fixed; top: 72px; left: 0; right: 0; z-index: 150;
-      background-color: var(--md-sys-color-surface); border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      background-color: var(--md-sys-color-surface);
       padding: 0 8px; overflow: hidden; max-height: 0; opacity: 0; visibility: hidden;
       box-shadow: 0 12px 24px rgba(0,0,0,0.35);
       transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 220ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1), visibility 0s linear 340ms;

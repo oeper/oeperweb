@@ -24,7 +24,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--md-sys-color-primary, #a8c7fa); }
 
   :root {
     --md-sys-color-background: #111318;
@@ -68,21 +68,21 @@
   .toolrow { display: flex; justify-content: flex-end; margin-bottom: 24px; }
   .btn {
     display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; padding: 10px 20px;
-    border-radius: 100px; border: 1px solid var(--md-sys-color-outline); background: transparent;
+    border-radius: 100px; border: none; background: var(--md-sys-color-surface-variant);
     color: var(--md-sys-color-on-surface); cursor: pointer; font-family: inherit;
   }
   .btn:hover { background-color: var(--md-sys-state-hover); }
-  .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
+  .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
   .btn.primary:hover { opacity: 0.9; }
   .btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn.danger { color: var(--md-sys-color-error); border-color: var(--md-sys-color-error); }
+  .btn.danger { color: var(--md-sys-color-error); background: color-mix(in srgb, var(--md-sys-color-error) 18%, transparent); }
 
   .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
   .video-card {
-    background: var(--md-sys-color-surface); border: 1px solid transparent; border-radius: 20px; overflow: hidden;
-    cursor: pointer; transition: background-color 0.2s, border-color 0.2s;
+    background: var(--md-sys-color-surface); border-radius: 20px; overflow: hidden;
+    cursor: pointer; transition: background-color 0.2s;
   }
-  .video-card:hover { background-color: var(--md-sys-color-hover-surface); border-color: var(--md-sys-color-outline-variant); }
+  .video-card:hover { background-color: var(--md-sys-color-hover-surface); }
   .video-thumb { width: 100%; aspect-ratio: 16/9; object-fit: contain; background: #000; display: block; }
   .video-info { padding: 14px 16px; }
   .video-title {
@@ -143,9 +143,10 @@
   .comment-reply-indicator button:hover { background: var(--md-sys-state-hover); }
   .watch-comment-form { display: flex; gap: 8px; margin-top: 12px; }
   .watch-comment-input {
-    flex: 1; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: 20px;
+    flex: 1; background: var(--md-sys-color-surface-variant); border: none; border-radius: 20px;
     padding: 10px 16px; color: var(--md-sys-color-on-surface); font-family: inherit; font-size: 13px; outline: none; resize: none;
   }
+  .watch-comment-input:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
   .watch-comment-send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
   .watch-comment-send-btn:disabled { opacity: 0.4; cursor: default; }
   .watch-close { position: absolute; top: 16px; right: 16px; width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -188,11 +189,11 @@
   .voters-modal h3 { font-size: 16px; font-weight: 500; margin-bottom: 14px; }
   .voters-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
   .voters-tab {
-    flex: 1; background: transparent; border: 1px solid var(--md-sys-color-outline); border-radius: 100px;
+    flex: 1; background: var(--md-sys-color-surface-variant); border: none; border-radius: 100px;
     padding: 8px 14px; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); cursor: pointer;
     display: flex; align-items: center; justify-content: center; gap: 6px;
   }
-  .voters-tab.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent; }
+  .voters-tab.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
   .voters-list { display: flex; flex-direction: column; gap: 2px; max-height: 50vh; overflow-y: auto; }
   .voter-row { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 12px; text-decoration: none; color: inherit; }
   .voter-row:hover { background: var(--md-sys-state-hover); }
@@ -201,9 +202,10 @@
   .field { margin-bottom: 16px; }
   .field label { display: block; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 6px; }
   .field input[type="text"], .field textarea {
-    width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline);
+    width: 100%; background: var(--md-sys-color-surface-variant); border: none;
     border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none;
   }
+  .field input[type="text"]:focus, .field textarea:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
   .field textarea { resize: vertical; min-height: 60px; }
   .field input[type="file"] { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
 
@@ -272,11 +274,11 @@ import {
   auth, db, SERVER_ENDPOINT, isOwnerEmail, officialBadgeHtml, getCurrentUser, onAccountChange,
   getProfile, handleOf, uploadFile, ensureProfileLoaded, sendNotification, linkifyMentions, resolveUidsToEmails,
   loadFollowRelationships,
-} from './shared/account.js?v=24';
-import { mountTopNav } from './shared/topnav.js?v=16';
+} from './shared/account.js?v=25';
+import { mountTopNav } from './shared/topnav.js?v=17';
 import { mountFooter } from './shared/footer.js?v=4';
-import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=1';
-import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
+import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=2';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=2';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
   arrayUnion, arrayRemove, increment, query, orderBy,

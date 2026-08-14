@@ -24,7 +24,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--md-sys-color-primary, #a8c7fa); }
 
   :root {
     --md-sys-color-background: #111318;
@@ -76,10 +76,10 @@
   .icon-btn:hover { opacity: 0.85; }
   .harmony-btn {
     display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 100px;
-    border: 1px solid var(--md-sys-color-outline); background: transparent; color: var(--md-sys-color-on-surface-variant);
+    border: none; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant);
     cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500; flex-shrink: 0;
   }
-  .harmony-btn.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent; }
+  .harmony-btn.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
   .harmony-btn .material-symbols-rounded { font-size: 18px; }
   .toolbar-field { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
   .toolbar-field input[type="range"] { accent-color: var(--md-sys-color-primary); }
@@ -96,7 +96,7 @@
   .mm-tile:hover { filter: brightness(1.25); }
   .mm-tile:active { transform: scale(0.94); }
   .mm-tile.on { background: var(--tile-color); box-shadow: 0 2px 6px rgba(0,0,0,0.35); }
-  .mm-tile.col-playing { outline: 2px solid rgba(255,255,255,0.85); outline-offset: -2px; }
+  .mm-tile.col-playing { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.85); }
   .mm-tile.harmony-echo::after {
     content: ''; position: absolute; inset: 3px; border-radius: 4px; border: 2px solid rgba(255,255,255,0.75);
     pointer-events: none;
@@ -137,7 +137,7 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=16';
+import { mountTopNav } from './shared/topnav.js?v=17';
 mountTopNav();
 </script>
 <script>

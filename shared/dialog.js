@@ -31,11 +31,11 @@ function injectStyles() {
     .oe-dialog-overlay.open .oe-dialog-box { transform: scale(1); }
     .oe-dialog-message { font-size: 14px; line-height: 1.5; margin-bottom: 18px; white-space: pre-wrap; }
     .oe-dialog-input {
-      width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline);
+      width: 100%; background: var(--md-sys-color-surface-variant); border: none;
       border-radius: 12px; padding: 10px 14px; color: var(--md-sys-color-on-surface); font-size: 14px;
       font-family: inherit; outline: none; margin-bottom: 18px; box-sizing: border-box;
     }
-    .oe-dialog-input:focus { border-color: var(--md-sys-color-primary); }
+    .oe-dialog-input:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
     .oe-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
     .oe-dialog-btn {
       border: none; border-radius: 100px; padding: 9px 20px; font-size: 14px; font-weight: 500; cursor: pointer;

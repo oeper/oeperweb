@@ -12,7 +12,7 @@
 // `from './shared/mention-autocomplete.js?v=N'` import across the site
 // (grep for it) — otherwise visitors can sit on a stale cached copy for
 // hours after a deploy.
-import { db } from './account.js?v=24';
+import { db } from './account.js?v=25';
 import { collection, query, orderBy, limit, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 function escHtml(str) {
@@ -29,7 +29,7 @@ function injectStyles() {
   style.textContent = `
     .oe-mention-box {
       position: absolute; z-index: 400; background: var(--md-sys-color-surface);
-      border: 1px solid var(--md-sys-color-outline-variant); border-radius: 14px;
+      border-radius: 14px;
       box-shadow: 0 12px 28px rgba(0,0,0,0.35); overflow: hidden; max-height: 220px; overflow-y: auto;
     }
     .oe-mention-row {

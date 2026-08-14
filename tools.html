@@ -24,7 +24,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--md-sys-color-primary, #a8c7fa); }
 
   :root {
     --md-sys-color-background: #111318;
@@ -68,10 +68,10 @@
 
   .tool-card {
     background-color: var(--md-sys-color-surface); border-radius: 28px; padding: 28px; text-decoration: none; color: inherit;
-    border: 1px solid transparent; display: flex; flex-direction: column; justify-content: space-between; min-height: 180px;
-    transition: background-color 0.2s, border-color 0.2s, transform 0.25s;
+    display: flex; flex-direction: column; justify-content: space-between; min-height: 180px;
+    transition: background-color 0.2s, transform 0.25s;
   }
-  .tool-card:hover { background-color: var(--md-sys-color-hover-surface); border-color: var(--md-sys-color-outline-variant); transform: translateY(-4px); }
+  .tool-card:hover { background-color: var(--md-sys-color-hover-surface); transform: translateY(-4px); }
   .tool-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
   .tool-icon-box {
     width: 48px; height: 48px; border-radius: 14px; background-color: var(--md-sys-color-surface-variant);
@@ -126,7 +126,7 @@
 </div>
 
 <script type="module">
-  import { mountTopNav } from './shared/topnav.js?v=16';
+  import { mountTopNav } from './shared/topnav.js?v=17';
   import { mountFooter } from './shared/footer.js?v=4';
   mountTopNav();
   mountFooter();

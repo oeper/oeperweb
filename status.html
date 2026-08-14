@@ -19,7 +19,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--md-sys-color-primary, #a8c7fa); }
 
   :root {
     --md-sys-color-background: #111318;
@@ -78,7 +78,7 @@
   .last-checked { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
   .btn {
     display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; padding: 8px 16px;
-    border-radius: 100px; border: 1px solid var(--md-sys-color-outline); background: transparent;
+    border-radius: 100px; border: none; background: var(--md-sys-color-surface-variant);
     color: var(--md-sys-color-on-surface); cursor: pointer; font-family: inherit;
   }
   .btn:hover { background-color: var(--md-sys-state-hover); }
@@ -104,8 +104,8 @@
 </div>
 
 <script type="module">
-import { SERVER_ENDPOINT } from './shared/account.js?v=24';
-import { mountTopNav } from './shared/topnav.js?v=16';
+import { SERVER_ENDPOINT } from './shared/account.js?v=25';
+import { mountTopNav } from './shared/topnav.js?v=17';
 mountTopNav();
 
 const AI_ENDPOINT = 'https://ai2.oeper.dev';

@@ -24,7 +24,7 @@
   .material-symbols-rounded { -webkit-user-select: none; user-select: none; }
 
   :focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--md-sys-color-primary, #a8c7fa); }
 
   :root {
     --md-sys-color-background: #111318;
@@ -91,7 +91,7 @@
 
   .inbox-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
   .new-group-btn {
-    display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid var(--md-sys-color-outline);
+    display: inline-flex; align-items: center; gap: 8px; background: var(--md-sys-color-surface-variant); border: none;
     color: var(--md-sys-color-on-surface); border-radius: 100px; padding: 9px 16px; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
   }
   .new-group-btn:hover { background: var(--md-sys-color-hover-surface); }
@@ -229,7 +229,7 @@
 
   .thread-inputbar {
     position: sticky; bottom: 16px; display: flex; align-items: center; gap: 0;
-    background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    background: var(--md-sys-color-surface-variant); border: none;
     border-radius: 26px; padding: 8px 8px 8px 20px;
   }
   /* shared/topnav.js's mobile bottom nav bar (Home/Create/Profile) sits
@@ -270,7 +270,7 @@
   .note-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); }
   .note-bubble {
     position: absolute; bottom: 38px; left: 50%; transform: translateX(-50%); background: var(--md-sys-color-surface-variant);
-    border: 1px solid var(--md-sys-color-outline); border-radius: 14px; padding: 6px 10px; font-size: 11px;
+    border-radius: 14px; padding: 6px 10px; font-size: 11px;
     white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; color: var(--md-sys-color-on-surface);
   }
   .note-label { font-size: 11px; color: var(--md-sys-color-on-surface-variant); max-width: 62px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -283,7 +283,8 @@
     opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
   }
   .note-modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
-  .note-modal input[type="text"] { width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none; margin-bottom: 16px; }
+  .note-modal input[type="text"] { width: 100%; background: var(--md-sys-color-surface-variant); border: none; border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none; margin-bottom: 16px; }
+  .note-modal input[type="text"]:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
   /* A plain <input type="checkbox"> matched the rule above too — width:100%
      and 12px padding turned it into a huge misplaced box instead of a
      small checkbox. Scoping that rule to [type="text"] fixes the layout;
@@ -323,7 +324,7 @@
 <div class="note-modal" id="noteModal">
   <input type="text" id="noteInput" maxlength="60" placeholder="Share a thought…">
   <div class="note-modal-actions">
-    <button class="btn danger" id="noteCancelBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;border:1px solid var(--md-sys-color-error);background:transparent;color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">Cancel</button>
+    <button class="btn danger" id="noteCancelBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">Cancel</button>
     <button class="send-btn" id="noteShareBtn" style="width:auto;border-radius:100px;padding:10px 20px;">Share</button>
   </div>
 </div>
@@ -334,7 +335,7 @@
   <input type="text" id="newGroupNameInput" maxlength="60" placeholder="Group name">
   <div id="newGroupMemberPicker" class="member-picker"></div>
   <div class="note-modal-actions">
-    <button id="newGroupCancelBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;border:1px solid var(--md-sys-color-error);background:transparent;color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">Cancel</button>
+    <button id="newGroupCancelBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">Cancel</button>
     <button class="send-btn" id="newGroupCreateBtn" style="width:auto;border-radius:100px;padding:10px 20px;">Create</button>
   </div>
 </div>
@@ -344,7 +345,7 @@
   <h3 style="font-size:16px;font-weight:500;margin-bottom:14px;">Group info</h3>
   <div class="group-icon-picker">
     <div id="groupInfoIconSlot"></div>
-    <button type="button" id="groupInfoIconBtn" style="display:none;background:transparent;border:1px solid var(--md-sys-color-outline);color:var(--md-sys-color-on-surface);border-radius:100px;padding:8px 14px;font-family:inherit;font-size:13px;cursor:pointer;">Change icon</button>
+    <button type="button" id="groupInfoIconBtn" style="display:none;background:var(--md-sys-color-surface-variant);border:none;color:var(--md-sys-color-on-surface);border-radius:100px;padding:8px 14px;font-family:inherit;font-size:13px;cursor:pointer;">Change icon</button>
     <input type="file" id="groupIconInput" accept="image/*" style="display:none;">
   </div>
   <input type="text" id="groupInfoNameInput" maxlength="60" placeholder="Group name">
@@ -352,7 +353,7 @@
   <div id="groupInfoMemberList" class="member-picker" style="max-height:200px;"></div>
   <div id="groupInfoAddSlot"></div>
   <div class="note-modal-actions">
-    <button id="groupInfoLeaveBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;border:1px solid var(--md-sys-color-error);background:transparent;color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">Leave group</button>
+    <button id="groupInfoLeaveBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">Leave group</button>
     <button class="send-btn" id="groupInfoSaveBtn" style="width:auto;border-radius:100px;padding:10px 20px;">Save</button>
   </div>
 </div>
@@ -363,14 +364,14 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=16';
+import { mountTopNav } from './shared/topnav.js?v=17';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
   loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions,
-} from './shared/account.js?v=24';
+} from './shared/account.js?v=25';
 import { mountFooter } from './shared/footer.js?v=4';
-import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=1';
-import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
+import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=2';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=2';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
   arrayUnion, arrayRemove,

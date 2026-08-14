@@ -23,7 +23,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--md-sys-color-primary, #a8c7fa); }
 
   :root {
     --md-sys-color-background: #111318;
@@ -198,7 +198,7 @@
       display: none;
       position: fixed; top: 72px; left: 0; right: 0; z-index: 150;
       flex-direction: column; align-items: stretch; height: auto; gap: 2px;
-      background-color: var(--md-sys-color-surface); border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      background-color: var(--md-sys-color-surface);
       padding: 8px; max-height: calc(100vh - 72px); overflow-y: auto;
       box-shadow: 0 12px 24px rgba(0,0,0,0.35);
     }
@@ -294,17 +294,17 @@
     color: var(--md-sys-color-on-surface-variant); font-size: 22px; pointer-events: none;
   }
   .home-search-input {
-    width: 100%; background-color: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    width: 100%; background-color: var(--md-sys-color-surface); border: none;
     border-radius: 28px; padding: 16px 20px 16px 56px; color: var(--md-sys-color-on-surface);
     font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
     font-size: 16px; outline: none;
-    transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+    transition: background-color 0.2s, box-shadow 0.2s;
   }
   .home-search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
-  .home-search-input:focus { border-color: var(--md-sys-color-primary); background-color: var(--md-sys-color-hover-surface); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .home-search-input:focus { background-color: var(--md-sys-color-hover-surface); box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 0 0 2px var(--md-sys-color-primary); }
   .home-search-dropdown {
     position: absolute; top: calc(100% + 8px); left: 0; right: 0;
-    background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    background: var(--md-sys-color-surface);
     border-radius: 20px; padding: 8px; max-height: 400px; overflow-y: auto; z-index: 20; text-align: left;
     opacity: 0; pointer-events: none; transform: translateY(-6px);
     transition: opacity 0.15s, transform 0.15s;
@@ -332,16 +332,16 @@
   }
   .home-search-engines { display: flex; gap: 6px; margin-top: 10px; }
   .home-search-engine {
-    background: transparent; border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface-variant);
+    background: var(--md-sys-color-surface-variant); border: none; color: var(--md-sys-color-on-surface-variant);
     border-radius: 100px; padding: 5px 14px; font-size: 12px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-weight: 500; cursor: pointer; transition: all 0.2s;
   }
   .home-search-engine:hover { background: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
-  .home-search-engine.active { background: var(--md-sys-color-secondary-container); border-color: transparent; color: var(--md-sys-color-on-secondary-container); }
+  .home-search-engine.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
 
   .home-ai-btn {
     display: inline-flex; align-items: center; gap: 8px; margin-top: 14px;
-    background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    background: var(--md-sys-color-surface-variant); border: none;
     border-radius: 100px; padding: 8px 16px; font-size: 13px; font-weight: 500;
     font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     color: var(--md-sys-color-on-surface); text-decoration: none; transition: background-color 0.2s;
@@ -354,7 +354,7 @@
 
   .home-search-dropdown {
     position: absolute; top: 100%; margin-top: 8px; left: 0; right: 0;
-    background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+    background: var(--md-sys-color-surface);
     border-radius: 20px; padding: 8px; max-height: 380px; overflow-y: auto; z-index: 20;
     opacity: 0; pointer-events: none; transform: translateY(-6px);
     transition: opacity 0.15s, transform 0.15s;
@@ -441,7 +441,7 @@
   .note-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); }
   .note-bubble {
     position: absolute; bottom: 38px; left: 50%; transform: translateX(-50%); background: var(--md-sys-color-surface-variant);
-    border: 1px solid var(--md-sys-color-outline); border-radius: 14px; padding: 6px 10px; font-size: 11px;
+    border-radius: 14px; padding: 6px 10px; font-size: 11px;
     white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; color: var(--md-sys-color-on-surface);
   }
   .note-label { font-size: 11px; color: var(--md-sys-color-on-surface-variant); max-width: 62px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -453,7 +453,8 @@
     opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
   }
   .note-modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%); }
-  .note-modal input { width: 100%; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none; margin-bottom: 16px; }
+  .note-modal input { width: 100%; background: var(--md-sys-color-surface-variant); border: none; border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none; margin-bottom: 16px; }
+  .note-modal input:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
   .note-modal-actions { display: flex; justify-content: space-between; gap: 12px; }
   .story-vis-people-list { display: none; max-height: 180px; overflow-y: auto; margin-bottom: 16px; flex-direction: column; gap: 4px; }
   .story-vis-people-list.open { display: flex; }
@@ -466,15 +467,15 @@
   .home-feed { display: flex; flex-direction: column; gap: 24px; max-width: 470px; margin: 0 auto; }
   .home-feed-empty { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 0; text-align: center; }
   .home-feed-load-more {
-    display: block; margin: 4px auto 0; padding: 10px 24px; border-radius: 100px; border: 1px solid var(--md-sys-color-outline);
-    background: transparent; color: var(--md-sys-color-on-surface); font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
+    display: block; margin: 4px auto 0; padding: 10px 24px; border-radius: 100px; border: none;
+    background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: 14px; font-weight: 500; cursor: pointer;
   }
   .home-feed-load-more:hover { background: var(--md-sys-state-hover); }
 
   /* Instagram-style post card */
   .ig-card {
-    display: block; background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline-variant);
+    display: block; background: var(--md-sys-color-surface);
     border-radius: 12px; text-decoration: none; color: inherit; overflow: hidden; cursor: pointer;
   }
   .ig-caption a { color: var(--md-sys-color-primary); text-decoration: underline; }
@@ -576,7 +577,7 @@
     position: relative; margin-bottom: 8px; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-variant);
     padding: 12px 16px; cursor: pointer;
   }
-  .poll-result-row.voted { border: 1px solid var(--md-sys-color-primary); }
+  .poll-result-row.voted { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
   .poll-result-fill { position: absolute; inset: 0; width: 0%; background: var(--md-sys-color-secondary-container); z-index: 0; transition: width 0.4s cubic-bezier(0.2,0,0,1); }
   .poll-result-text { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
   .poll-result-text .pct { font-weight: 600; color: var(--md-sys-color-on-surface-variant); flex-shrink: 0; }
@@ -596,9 +597,10 @@
   .ig-comment-empty { text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; padding: 30px 0; }
   .ig-comment-form { display: flex; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--md-sys-color-outline-variant); flex-shrink: 0; }
   .ig-comment-input {
-    flex: 1; background: var(--md-sys-color-background); border: 1px solid var(--md-sys-color-outline); border-radius: 20px;
+    flex: 1; background: var(--md-sys-color-surface-variant); border: none; border-radius: 20px;
     padding: 10px 16px; color: var(--md-sys-color-on-surface); font-family: inherit; font-size: 13px; outline: none; resize: none;
   }
+  .ig-comment-input:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
   .ig-comment-send-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
   .ig-comment-send-btn:disabled { opacity: 0.4; cursor: default; }
 
@@ -614,20 +616,17 @@
     padding: 28px;
     text-decoration: none;
     color: inherit;
-    border: 1px solid transparent;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     min-height: 180px;
     -webkit-tap-highlight-color: transparent; /* Suppresses blue system feedback box over link geometry */
     transition: background-color 200ms var(--md-easing-standard),
-                border-color 200ms var(--md-easing-standard),
                 transform 250ms var(--md-easing-emphasized);
   }
 
   .interactive-card:hover {
     background-color: var(--md-sys-color-hover-surface);
-    border-color: var(--md-sys-color-outline-variant);
     transform: translateY(-4px);
   }
 
@@ -719,7 +718,7 @@
   <div class="note-modal" id="noteModal">
     <input type="text" id="noteInput" maxlength="60" placeholder="Share a thought…">
     <div class="note-modal-actions">
-      <button type="button" id="noteCancelBtn" class="ig-comment-close-btn" style="width:auto;border-radius:100px;padding:10px 18px;border:1px solid var(--md-sys-color-error);color:var(--md-sys-color-error);">Cancel</button>
+      <button type="button" id="noteCancelBtn" class="ig-comment-close-btn" style="width:auto;border-radius:100px;padding:10px 18px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);">Cancel</button>
       <button type="button" id="noteShareBtn" class="ig-comment-send-btn" style="width:auto;border-radius:100px;padding:10px 20px;">Share</button>
     </div>
   </div>
@@ -730,7 +729,7 @@
     <div id="storyVisDropdownSlot" style="margin-bottom:14px;"></div>
     <div class="story-vis-people-list" id="storyVisPeopleList"></div>
     <div class="note-modal-actions">
-      <button type="button" id="storyVisCancelBtn" class="ig-comment-close-btn" style="width:auto;border-radius:100px;padding:10px 18px;border:1px solid var(--md-sys-color-error);color:var(--md-sys-color-error);">Cancel</button>
+      <button type="button" id="storyVisCancelBtn" class="ig-comment-close-btn" style="width:auto;border-radius:100px;padding:10px 18px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);">Cancel</button>
       <button type="button" id="storyVisConfirmBtn" class="ig-comment-send-btn" style="width:auto;border-radius:100px;padding:10px 20px;">Post story</button>
     </div>
   </div>
@@ -739,11 +738,11 @@
   import {
     db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser, sendNotification,
     onAccountChange, SERVER_ENDPOINT, MAX_IMAGE_BYTES, uploadFile, linkifyMentions,
-  } from './shared/account.js?v=24';
-  import { mountTopNav } from './shared/topnav.js?v=16';
+  } from './shared/account.js?v=25';
+  import { mountTopNav } from './shared/topnav.js?v=17';
   import { mountFooter } from './shared/footer.js?v=4';
-  import { createDropdown } from './shared/dropdown.js?v=1';
-  import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
+  import { createDropdown } from './shared/dropdown.js?v=2';
+  import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=2';
   import {
     collection, query, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp,
     getDocs, where, setDoc, Timestamp,

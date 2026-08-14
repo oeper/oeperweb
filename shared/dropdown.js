@@ -19,19 +19,19 @@ function injectStyles() {
     .oe-dropdown { position: relative; display: inline-block; }
     .oe-dropdown.block { display: block; width: 100%; }
     .oe-dropdown-btn {
-      display: inline-flex; align-items: center; gap: 8px; background: var(--md-sys-color-surface);
-      color: var(--md-sys-color-on-surface-variant); border: 1px solid var(--md-sys-color-outline);
+      display: inline-flex; align-items: center; gap: 8px; background: var(--md-sys-color-surface-variant);
+      color: var(--md-sys-color-on-surface-variant); border: none;
       border-radius: 100px; padding: 8px 14px; font: inherit; font-size: 14px; cursor: pointer;
       width: 100%; text-align: left; justify-content: space-between;
     }
     .oe-dropdown-btn:hover { background: var(--md-sys-state-hover); }
-    .oe-dropdown.open .oe-dropdown-btn { border-color: var(--md-sys-color-primary); }
+    .oe-dropdown.open .oe-dropdown-btn { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
     .oe-dropdown-btn-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .oe-dropdown-caret { font-size: 18px; transition: transform 0.15s; flex-shrink: 0; }
     .oe-dropdown.open .oe-dropdown-caret { transform: rotate(180deg); }
     .oe-dropdown-list {
       position: absolute; top: calc(100% + 6px); left: 0; right: 0; min-width: 180px;
-      background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
+      background: var(--md-sys-color-surface); border: none;
       border-radius: 14px; padding: 6px; z-index: 200; max-height: 280px; overflow-y: auto;
       opacity: 0; transform: translateY(-6px) scale(0.97); pointer-events: none;
       transition: opacity 0.15s, transform 0.15s; box-shadow: 0 8px 24px rgba(0,0,0,0.3);

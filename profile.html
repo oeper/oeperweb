@@ -19,7 +19,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--md-sys-color-primary, #a8c7fa); }
 
   :root {
     --md-sys-color-background: #111318;
@@ -81,13 +81,13 @@
 
   .kebab-wrap { position: relative; }
   .kebab-btn {
-    width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--md-sys-color-outline); background: transparent;
+    width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--md-sys-color-surface-variant);
     color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
   .kebab-btn:hover { background: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
   .kebab-menu {
     position: absolute; top: calc(100% + 6px); right: 0; min-width: 210px; background: var(--md-sys-color-surface);
-    border: 1px solid var(--md-sys-color-outline); border-radius: 14px; padding: 6px; z-index: 20;
+    border-radius: 14px; padding: 6px; z-index: 20;
     opacity: 0; transform: translateY(-6px) scale(0.98); pointer-events: none; transition: opacity 0.15s, transform 0.15s;
     box-shadow: 0 12px 28px rgba(0,0,0,0.4);
   }
@@ -101,11 +101,11 @@
   .kebab-item .material-symbols-rounded { font-size: 18px; }
   .btn {
     display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; padding: 10px 18px;
-    border-radius: 100px; border: 1px solid var(--md-sys-color-outline); background: transparent;
+    border-radius: 100px; border: none; background: var(--md-sys-color-surface-variant);
     color: var(--md-sys-color-on-surface); cursor: pointer; font-family: inherit; text-decoration: none;
   }
   .btn:hover { background-color: var(--md-sys-state-hover); }
-  .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
+  .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
   .btn.primary:hover { opacity: 0.9; }
 
   .stats-row { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
@@ -149,7 +149,7 @@
   /* Same card treatment as index.html's home feed — just without the
      author header row, since we're already on their profile. */
   .post-list { display: flex; flex-direction: column; gap: 24px; max-width: 470px; margin: 0 auto; }
-  .ig-card { background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline-variant); border-radius: 12px; overflow: hidden; cursor: pointer; }
+  .ig-card { background: var(--md-sys-color-surface); border-radius: 12px; overflow: hidden; cursor: pointer; }
   .ig-media { width: 100%; aspect-ratio: 4/5; background: #000; position: relative; }
   .ig-media img, .ig-media video { width: 100%; height: 100%; object-fit: contain; display: block; }
   .ig-play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.15); pointer-events: none; }
@@ -198,7 +198,7 @@
     position: relative; margin-bottom: 8px; border-radius: 12px; overflow: hidden; background: var(--md-sys-color-surface-variant);
     padding: 12px 16px; cursor: pointer;
   }
-  .poll-result-row.voted { border: 1px solid var(--md-sys-color-primary); }
+  .poll-result-row.voted { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
   .poll-result-fill { position: absolute; inset: 0; width: 0%; background: var(--md-sys-color-secondary-container); z-index: 0; transition: width 0.4s cubic-bezier(0.2,0,0,1); }
   .poll-result-text { position: relative; z-index: 1; display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
   .poll-result-text .pct { font-weight: 600; color: var(--md-sys-color-on-surface-variant); flex-shrink: 0; }
@@ -226,13 +226,13 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=16';
+import { mountTopNav } from './shared/topnav.js?v=17';
 import {
   getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
   openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setUserBadge, sendNotification, linkifyMentions,
-} from './shared/account.js?v=24';
+} from './shared/account.js?v=25';
 import { mountFooter } from './shared/footer.js?v=4';
-import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=2';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
   arrayUnion, arrayRemove,

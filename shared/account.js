@@ -491,7 +491,7 @@ function injectStyles() {
     .oe-acct-chip img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant, #2f353d); }
     .oe-acct-chip .oe-acct-name { font-size: 13px; color: var(--md-sys-color-on-surface-variant, #c4c7c5); font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); }
     .oe-acct-chip button {
-      background: none; border: 1px solid var(--md-sys-color-outline, #43474e); color: var(--md-sys-color-on-surface-variant, #c4c7c5);
+      background: var(--md-sys-color-surface-variant, #2f353d); border: none; color: var(--md-sys-color-on-surface-variant, #c4c7c5);
       border-radius: 100px; padding: 6px 14px; font-size: 12px; cursor: pointer; font-family: inherit;
     }
     .oe-acct-chip button:hover { color: var(--md-sys-color-on-surface, #e2e2e6); }
@@ -514,32 +514,33 @@ function injectStyles() {
     .oe-acct-avatar-row { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
     .oe-acct-avatar-row img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant, #2f353d); }
     .oe-acct-avatar-row label {
-      display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--md-sys-color-outline, #43474e);
+      display: inline-flex; align-items: center; gap: 6px; background: var(--md-sys-color-surface-variant, #2f353d); border: none;
       border-radius: 10px; padding: 8px 14px; font-size: 13px; cursor: pointer; color: var(--md-sys-color-on-surface-variant, #c4c7c5);
     }
+    .oe-acct-avatar-row label:hover { background: var(--md-sys-state-hover); }
     .oe-acct-avatar-row input[type="file"] { display: none; }
     .oe-acct-field { margin-bottom: 20px; }
     .oe-acct-field label { display: block; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant, #c4c7c5); margin-bottom: 6px; }
     .oe-acct-field input[type="text"], .oe-acct-field textarea {
-      width: 100%; background-color: var(--md-sys-color-background, #111318); border: 1px solid var(--md-sys-color-outline, #43474e);
+      width: 100%; background-color: var(--md-sys-color-surface-variant, #2f353d); border: none;
       border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface, #e2e2e6); font-size: 14px; font-family: inherit; outline: none;
     }
     .oe-acct-field textarea { resize: vertical; min-height: 60px; }
-    .oe-acct-field input[type="text"]:focus, .oe-acct-field textarea:focus { border-color: var(--md-sys-color-primary, #a8c7fa); }
+    .oe-acct-field input[type="text"]:focus, .oe-acct-field textarea:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary, #a8c7fa); }
     .oe-acct-handle-status { font-size: 12px; margin-top: 6px; min-height: 14px; }
     .oe-acct-handle-status.ok { color: var(--md-sys-color-success, #a6d9a8); }
     .oe-acct-handle-status.bad { color: var(--md-sys-color-error, #ffb4ab); }
     .oe-acct-actions { display: flex; justify-content: space-between; gap: 12px; }
     .oe-acct-btn {
       display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; padding: 10px 18px;
-      border-radius: 100px; border: 1px solid var(--md-sys-color-outline, #43474e); background: transparent;
+      border-radius: 100px; border: none; background: var(--md-sys-color-surface-variant, #2f353d);
       color: var(--md-sys-color-on-surface, #e2e2e6); cursor: pointer; font-family: inherit;
     }
     .oe-acct-btn:hover { background-color: var(--md-sys-state-hover); }
-    .oe-acct-btn.primary { background-color: var(--md-sys-color-primary, #a8c7fa); color: var(--md-sys-color-on-primary, #062e6f); border-color: transparent; }
+    .oe-acct-btn.primary { background-color: var(--md-sys-color-primary, #a8c7fa); color: var(--md-sys-color-on-primary, #062e6f); }
     .oe-acct-btn.primary:hover { opacity: 0.9; }
     .oe-acct-btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .oe-acct-btn.danger { color: var(--md-sys-color-error, #ffb4ab); border-color: var(--md-sys-color-error, #ffb4ab); }
+    .oe-acct-btn.danger { color: var(--md-sys-color-error, #ffb4ab); background: color-mix(in srgb, var(--md-sys-color-error, #ffb4ab) 18%, transparent); }
 
     .oe-acct-toast {
       position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: #303034;

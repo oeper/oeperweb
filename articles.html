@@ -24,7 +24,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--md-sys-color-primary, #a8c7fa); }
 
   :root {
     --md-sys-color-background: #111318;
@@ -99,21 +99,21 @@
     font-size: 22px;
     pointer-events: none; 
   }
-  .search-input { 
+  .search-input {
     width: 100%;
     background-color: var(--md-sys-color-surface);
-    border: 1px solid var(--md-sys-color-outline);
+    border: none;
     border-radius: 28px;
     padding: 16px 20px 16px 56px;
     color: var(--md-sys-color-on-surface);
     font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
     font-size: 16px;
     outline: none;
-    transition: border-color 0.2s, background-color 0.2s;
+    transition: box-shadow 0.2s, background-color 0.2s;
   }
   .search-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
-  .search-input:focus { 
-    border-color: var(--md-sys-color-primary);
+  .search-input:focus {
+    box-shadow: 0 0 0 2px var(--md-sys-color-primary);
     background-color: var(--md-sys-color-hover-surface);
   }
 
@@ -126,12 +126,12 @@
   }
 
   .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex: 1; }
-  .pill { 
+  .pill {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: transparent;
-    border: 1px solid var(--md-sys-color-outline);
+    background: var(--md-sys-color-surface-variant);
+    border: none;
     border-radius: 8px;
     padding: 8px 16px;
     font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
@@ -144,13 +144,12 @@
     -webkit-tap-highlight-color: transparent;
   }
   .pill .material-symbols-rounded { font-size: 18px; }
-  .pill:hover { 
-    background-color: rgba(255, 255, 255, 0.04);
+  .pill:hover {
+    background-color: var(--md-sys-state-hover);
     color: var(--md-sys-color-on-surface);
   }
-  .pill.active { 
+  .pill.active {
     background-color: var(--md-sys-color-secondary-container);
-    border-color: transparent;
     color: var(--md-sys-color-on-secondary-container);
   }
 
@@ -164,8 +163,8 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: transparent;
-    border: 1px solid var(--md-sys-color-outline);
+    background: var(--md-sys-color-surface-variant);
+    border: none;
     border-radius: 8px;
     padding: 8px 14px;
     font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
@@ -179,12 +178,11 @@
   }
   .sort-btn .material-symbols-rounded { font-size: 18px; }
   .sort-btn:hover {
-    background-color: rgba(255, 255, 255, 0.04);
+    background-color: var(--md-sys-state-hover);
     color: var(--md-sys-color-on-surface);
   }
   .sort-btn.active {
     background-color: var(--md-sys-color-secondary-container);
-    border-color: transparent;
     color: var(--md-sys-color-on-secondary-container);
   }
   .sort-btn .sort-chevron {
@@ -200,7 +198,6 @@
     top: calc(100% + 8px);
     right: 0;
     background-color: var(--md-sys-color-surface);
-    border: 1px solid var(--md-sys-color-outline);
     border-radius: 16px;
     padding: 8px;
     min-width: 200px;
@@ -287,16 +284,14 @@
   .article-card {
     position: relative;
     background-color: var(--md-sys-color-surface);
-    border: 1px solid transparent;
-    border-radius: 28px; 
+    border-radius: 28px;
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.2s, background-color 0.2s, border-color 0.2s;
+    transition: transform 0.2s, background-color 0.2s;
     -webkit-tap-highlight-color: transparent;
   }
-  .article-card:hover { 
+  .article-card:hover {
     background-color: var(--md-sys-color-hover-surface);
-    border-color: var(--md-sys-color-outline-variant);
   }
 
   .article-card.has-image .card-image-wrap { position: relative; overflow: hidden; }
@@ -384,7 +379,7 @@
   .reader-close-btn {
     width: 48px; height: 48px; border-radius: 50%;
     background: var(--md-sys-color-surface);
-    border: 1px solid var(--md-sys-color-outline);
+    border: none;
     display: flex; align-items: center; justify-content: center;
     color: var(--md-sys-color-on-surface); cursor: pointer; transition: background-color 0.2s;
     -webkit-tap-highlight-color: transparent;
@@ -427,9 +422,9 @@
     background: var(--md-sys-color-surface-variant); border-radius: 6px; padding: 3px 6px; 
     color: #fff;
   }
-  .reader-body pre { 
-    background: #1e2025; border: 1px solid var(--md-sys-color-outline); 
-    border-radius: 16px; padding: 20px; overflow-x: auto; margin-bottom: 1.5em; 
+  .reader-body pre {
+    background: #1e2025;
+    border-radius: 16px; padding: 20px; overflow-x: auto; margin-bottom: 1.5em;
   }
   .reader-body pre code { background: none; padding: 0; }
   .reader-body a { color: var(--md-sys-color-primary); text-decoration: none; font-weight: 500; }
@@ -912,7 +907,7 @@ if (urlArticle !== null && ARTICLES[+urlArticle]) {
 })();
 </script>
 <script type="module">
-  import { mountTopNav } from './shared/topnav.js?v=16';
+  import { mountTopNav } from './shared/topnav.js?v=17';
   import { mountFooter } from './shared/footer.js?v=4';
   mountTopNav();
   mountFooter();
