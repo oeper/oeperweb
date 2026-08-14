@@ -506,7 +506,6 @@
   .ig-audio-attach audio { flex: 1; min-width: 0; height: 32px; }
   .ig-actions { display: flex; align-items: center; gap: 4px; padding: 10px 14px 4px; }
   .ig-actions .material-symbols-rounded { font-size: 24px; color: var(--md-sys-color-on-surface); }
-  .ig-action-count { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
   .ig-vote-btn, .ig-comment-btn {
     background: none; border: none; padding: 4px; margin: 0; cursor: pointer; display: flex; align-items: center;
     color: var(--md-sys-color-on-surface); border-radius: 50%;
@@ -1400,8 +1399,6 @@
           <button type="button" class="ig-comment-btn" data-open-comments data-kind="post" data-id="${p.id}" title="Comments">
             <span class="material-symbols-rounded">mode_comment</span>
           </button>
-          <span class="material-symbols-rounded">visibility</span>
-          <span class="ig-action-count">${p.views || 0}</span>
           ${saveBtnHtml(p, 'post')}
         </div>
       `;
@@ -1422,7 +1419,7 @@
             ${bodyHtml}
             ${actionsHtml}
             ${viewCommentsHtml}
-            <div class="ig-timestamp">${timeAgo(p._date)}</div>
+            <div class="ig-timestamp">${timeAgo(p._date)} • ${p.views || 0} view${p.views === 1 ? '' : 's'}</div>
           </div>
         `;
       }
@@ -1437,7 +1434,7 @@
           <div class="ig-caption"><strong>${authorNameHtml(p.authorEmail, profile)}</strong>${linkify(p.title)}</div>
           ${bodyHtml}
           ${viewCommentsHtml}
-          <div class="ig-timestamp">${timeAgo(p._date)}</div>
+          <div class="ig-timestamp">${timeAgo(p._date)} • ${p.views || 0} view${p.views === 1 ? '' : 's'}</div>
         </div>
       `;
     }
@@ -1457,15 +1454,13 @@
             <button type="button" class="ig-comment-btn" data-open-comments data-kind="video" data-id="${v.id}" title="Comments">
               <span class="material-symbols-rounded">mode_comment</span>
             </button>
-            <span class="material-symbols-rounded">visibility</span>
-            <span class="ig-action-count">${v.views || 0}</span>
             ${saveBtnHtml(v, 'video')}
           </div>
           <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
           <div class="ig-caption"><strong>${authorNameHtml(v.authorEmail, profile)}</strong>${linkify(v.title)}</div>
           ${v.description ? `<div class="ig-description">${renderExcerptMarkdown(v.description, 220)}</div>` : ''}
           <button type="button" class="ig-view-comments" data-open-comments data-kind="video" data-id="${v.id}">${v.commentCount ? `View all ${v.commentCount} comments` : 'Add a comment…'}</button>
-          <div class="ig-timestamp">${timeAgo(v._date)}</div>
+          <div class="ig-timestamp">${timeAgo(v._date)} • ${v.views || 0} view${v.views === 1 ? '' : 's'}</div>
         </div>
       `;
     }
@@ -1557,15 +1552,13 @@
           <button type="button" class="ig-vote-btn ${down ? 'downvoted' : ''}" data-modal-vote-down title="Dislike">
             <span class="material-symbols-rounded">heart_broken</span>
           </button>
-          <span class="material-symbols-rounded">visibility</span>
-          <span class="ig-action-count">${item.views || 0}</span>
           ${saveBtnHtml(item, kind)}
         </div>
         <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
         <div class="ig-caption"><strong>${authorNameHtml(item.authorEmail, profile)}</strong>${linkify(item.title)}</div>
         ${body ? `<div class="ig-modal-full-body">${parseMarkdown(body)}</div>` : ''}
         ${pollHtml(item)}
-        <div class="ig-timestamp">${timeAgo(item._date)}</div>
+        <div class="ig-timestamp">${timeAgo(item._date)} • ${item.views || 0} view${item.views === 1 ? '' : 's'}</div>
         <div class="ig-modal-divider"></div>
       `;
     }

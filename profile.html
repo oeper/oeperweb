@@ -174,7 +174,6 @@
   .ig-play-overlay .material-symbols-rounded { font-size: 30px; color: #fff; background: rgba(0,0,0,0.45); border-radius: 50%; padding: 14px; }
   .ig-actions { display: flex; align-items: center; gap: 4px; padding: 10px 14px 4px; }
   .ig-actions .material-symbols-rounded { font-size: 24px; color: var(--md-sys-color-on-surface); }
-  .ig-action-count { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
   .ig-vote-btn { background: none; border: none; padding: 4px; margin: 0; cursor: pointer; display: flex; align-items: center; color: var(--md-sys-color-on-surface); border-radius: 50%; }
   .ig-vote-btn:hover { background: var(--md-sys-state-hover); }
   .ig-vote-btn.upvoted .material-symbols-rounded { color: #ff5c7a; font-variation-settings: 'FILL' 1; }
@@ -567,9 +566,7 @@ async function init() {
         <button type="button" class="ig-vote-btn ${down ? 'downvoted' : ''}" data-vote-down data-kind="${isVideo ? 'video' : 'post'}" data-id="${item.id}" title="Dislike">
           <span class="material-symbols-rounded">heart_broken</span>
         </button>
-        <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
-        <span class="ig-action-count">${item.views || 0}</span>
-        <button type="button" class="ig-vote-btn ${saved ? 'saved' : ''}" data-save-toggle data-kind="${isVideo ? 'video' : 'post'}" data-id="${item.id}" title="${saved ? 'Remove from saved' : 'Save'}">
+        <button type="button" class="ig-vote-btn ${saved ? 'saved' : ''}" data-save-toggle data-kind="${isVideo ? 'video' : 'post'}" data-id="${item.id}" title="${saved ? 'Remove from saved' : 'Save'}" style="margin-left:auto;">
           <span class="material-symbols-rounded" style="font-variation-settings:'FILL' ${saved ? 1 : 0};">bookmark</span>
         </button>
       </div>
@@ -582,7 +579,7 @@ async function init() {
           ${bodyHtml}
           ${actionsHtml}
           ${pollHtml(item)}
-          <div class="ig-timestamp">${timeAgo(item._date)}</div>
+          <div class="ig-timestamp">${timeAgo(item._date)} • ${item.views || 0} view${item.views === 1 ? '' : 's'}</div>
         </div>
       `;
     }
@@ -599,7 +596,7 @@ async function init() {
         ${item.title ? `<div class="ig-caption">${escHtml(item.title)}</div>` : ''}
         ${bodyHtml}
         ${pollHtml(item)}
-        <div class="ig-timestamp">${timeAgo(item._date)}</div>
+        <div class="ig-timestamp">${timeAgo(item._date)} • ${item.views || 0} view${item.views === 1 ? '' : 's'}</div>
       </div>
     `;
   }
