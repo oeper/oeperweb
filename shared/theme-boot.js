@@ -883,15 +883,30 @@
   // it loads. Both are theme-aware via the existing color role variables.
   var spinnerStyle = document.createElement('style');
   spinnerStyle.textContent = [
+    // `.oe-spinner` mimics Material/Android's indeterminate circular
+    // progress indicator: the ring rotates continuously (oe-spin-rotate)
+    // while its arc independently grows and shrinks (oe-spin-arc), giving
+    // the "chasing tail" look instead of a static spinning quarter-circle.
+    // The arc shape is a conic-gradient masked down to a ring; --oe-spin-a0/
+    // --oe-spin-a1 are registered via @property so the angles interpolate
+    // smoothly instead of snapping between keyframes.',
+    '@property --oe-spin-a0 { syntax: "<angle>"; inherits: false; initial-value: 0deg; }',
+    '@property --oe-spin-a1 { syntax: "<angle>"; inherits: false; initial-value: 10deg; }',
     '.oe-spinner {',
-    '  display: inline-block; width: 24px; height: 24px; border-radius: 50%;',
-    '  border: 3px solid var(--md-sys-color-secondary-container);',
-    '  border-top-color: var(--md-sys-color-primary); border-right-color: var(--md-sys-color-primary);',
-    '  animation: oe-spin 0.7s linear infinite; flex-shrink: 0;',
+    '  display: inline-block; width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;',
+    '  background: conic-gradient(from var(--oe-spin-a0), var(--md-sys-color-primary) 0deg, var(--md-sys-color-primary) calc(var(--oe-spin-a1) - var(--oe-spin-a0)), transparent calc(var(--oe-spin-a1) - var(--oe-spin-a0)));',
+    '  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));',
+    '  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));',
+    '  animation: oe-spin-rotate 2s linear infinite, oe-spin-arc 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;',
     '}',
-    '.oe-spinner.small { width: 16px; height: 16px; border-width: 2px; }',
-    '.oe-spinner.large { width: 40px; height: 40px; border-width: 4px; }',
-    '@keyframes oe-spin { to { transform: rotate(360deg); } }',
+    '.oe-spinner.small { width: 16px; height: 16px; -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px)); mask-image: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px)); }',
+    '.oe-spinner.large { width: 40px; height: 40px; -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px)); mask-image: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px)); }',
+    '@keyframes oe-spin-rotate { to { transform: rotate(360deg); } }',
+    '@keyframes oe-spin-arc {',
+    '  0%   { --oe-spin-a0: 0deg;   --oe-spin-a1: 10deg; }',
+    '  50%  { --oe-spin-a0: 90deg;  --oe-spin-a1: 270deg; }',
+    '  100% { --oe-spin-a0: 360deg; --oe-spin-a1: 370deg; }',
+    '}',
     '.oe-loading-bar {',
     '  position: relative; width: 100%; height: 4px; border-radius: 100px;',
     '  background: var(--md-sys-color-secondary-container); overflow: hidden;',
