@@ -29,8 +29,6 @@
     location.replace('/feed.html?post=' + m[1]);
   } else if ((m = path.match(/^\/videos\/([^/]+)\/?$/))) {
     location.replace('/videos.html?video=' + m[1]);
-  } else if ((m = path.match(/^\/projects\/([^/]+)\/?$/))) {
-    location.replace('/projects.html?project=' + m[1]);
   }
 })();
 </script>

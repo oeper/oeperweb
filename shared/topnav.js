@@ -8,7 +8,7 @@
 // behavior change needs its `?v=N` bumped on every `from './shared/topnav.js?v=N'`
 // import across the site (grep for it) — otherwise visitors can sit on a
 // stale cached copy for hours after a deploy.
-import { mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange } from './account.js?v=19';
+import { mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange, signIn } from './account.js?v=24';
 import {
   collection, query, orderBy, limit, getDocs, onSnapshot, where, doc, updateDoc, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -22,7 +22,6 @@ const NAV_ITEMS = [
   { id: 'home', title: 'Home', icon: 'home', url: 'https://oeper.dev/', path: '/' },
   { id: 'feed', title: 'Feed', icon: 'forum', url: 'https://oeper.dev/feed', path: '/feed' },
   { id: 'videos', title: 'Videos', icon: 'smart_display', url: 'https://oeper.dev/videos', path: '/videos' },
-  { id: 'projects', title: 'Projects', icon: 'apps', url: 'https://oeper.dev/projects', path: '/projects' },
   { id: 'files', title: 'Files', icon: 'folder', url: 'https://oeper.dev/files', path: '/files' },
   { id: 'tools', title: 'Tools', icon: 'build', url: 'https://oeper.dev/tools', path: '/tools' },
 ];
@@ -222,10 +221,55 @@ function injectStyles() {
       opacity: 1; transform: scaleX(1);
     }
 
+    /* Mobile bottom nav — Home / Create / Profile. Fixed instead of the
+       old hamburger-triggered top drawer of every nav link; secondary
+       pages (Feed, Videos, Files, Tools) are reached by drilling in from
+       Home's own hub tiles instead of being top-level tabs here. */
+    .oe-bottom-nav { display: none; }
+    .oe-bottom-nav-item {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+      flex: 1; padding: 6px 4px 4px; border: none; background: none; cursor: pointer;
+      color: var(--md-sys-color-on-surface-variant); text-decoration: none;
+      font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif); font-size: 11px; font-weight: 500;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .oe-bottom-nav-item:visited { color: var(--md-sys-color-on-surface-variant); }
+    .oe-bottom-nav-item .material-symbols-rounded { font-size: 24px; }
+    .oe-bottom-nav-item.active { color: var(--md-sys-color-primary); }
+    .oe-bottom-nav-item img {
+      width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant);
+    }
+    .oe-bottom-nav-item.active img { outline: 2px solid var(--md-sys-color-primary); }
+
+    /* Reuses the old nav-links drawer's exact slide-down-from-top-of-
+       screen mechanism (position, transition, backdrop) for the Create
+       menu instead — same visual language, new content and trigger. */
+    .oe-create-drawer {
+      position: fixed; top: 72px; left: 0; right: 0; z-index: 150;
+      background-color: var(--md-sys-color-surface); border-bottom: 1px solid var(--md-sys-color-outline-variant);
+      padding: 0 8px; overflow: hidden; max-height: 0; opacity: 0; visibility: hidden;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.35);
+      transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 220ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1), visibility 0s linear 340ms;
+    }
+    .oe-create-drawer.open {
+      max-height: min(70vh, calc(100vh - 72px)); opacity: 1; visibility: visible; padding: 8px;
+      overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+      transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 260ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .oe-create-item {
+      display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px;
+      text-decoration: none; color: var(--md-sys-color-on-surface);
+      font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 15px; font-weight: 500;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .oe-create-item:visited { color: var(--md-sys-color-on-surface); }
+    .oe-create-item:hover, .oe-create-item:active { background: var(--md-sys-state-hover); }
+    .oe-create-item .material-symbols-rounded { font-size: 22px; color: var(--md-sys-color-primary); }
+
     @media (max-width: 600px) {
       .oe-navbar { padding: 0 12px; gap: 8px; }
       .oe-nav-logo span:last-child { display: none; }
-      .oe-nav-hamburger { display: flex; }
+      .oe-nav-hamburger, .oe-nav-links { display: none !important; }
       .oe-nav-search-wrap { display: none; }
       .oe-nav-mobile-search-btn { display: flex; }
 
@@ -257,36 +301,40 @@ function injectStyles() {
       .oe-nav-backdrop {
         /* z-index must stay below .oe-navbar's own (100): .oe-navbar creates
            its own stacking context (position: sticky + z-index), so its
-           children's z-index (e.g. #oeNavLinks at 150) only ranks against
-           siblings inside that context — a backdrop with a higher root-level
-           z-index than the navbar would render on top of the whole navbar,
-           including the dropdown, and silently swallow every tap on it. */
+           children's z-index (e.g. the create drawer at 150) only ranks
+           against siblings inside that context — a backdrop with a higher
+           root-level z-index than the navbar would render on top of the
+           whole navbar, including the drawer, and silently swallow every
+           tap on it. */
         position: fixed; inset: 0; top: 72px; z-index: 90; background: rgba(0,0,0,0.4);
         opacity: 0; pointer-events: none; transition: opacity 280ms ease;
       }
       .oe-nav-backdrop.open { opacity: 1; pointer-events: all; }
 
-      .oe-nav-links {
-        display: flex; position: fixed; top: 72px; left: 0; right: 0; z-index: 150; height: auto;
-        flex-direction: column; align-items: stretch; gap: 2px;
-        background-color: var(--md-sys-color-surface); border-bottom: 1px solid var(--md-sys-color-outline-variant);
-        padding: 0 8px; overflow: hidden; max-height: 0; opacity: 0; visibility: hidden;
-        box-shadow: 0 12px 24px rgba(0,0,0,0.35);
-        transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 220ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1), visibility 0s linear 340ms;
-      }
-      .oe-nav-links.mobile-open {
-        max-height: min(70vh, calc(100vh - 72px)); opacity: 1; visibility: visible; padding: 8px;
-        overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
-        transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 260ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1);
-      }
-      .oe-nav-item {
-        width: auto; height: auto; border-radius: 14px; justify-content: flex-start; padding: 14px 16px; gap: 14px;
-        opacity: 0; transition: color 400ms cubic-bezier(0.2, 0, 0, 1), opacity 260ms ease;
-      }
-      .oe-nav-item::before { border-radius: 14px; }
-      .oe-nav-links.mobile-open .oe-nav-item { opacity: 1; }
-      .oe-nav-links.mobile-open .oe-nav-item-label { display: inline; font-size: 15px; }
       #oeNavAccountBar { flex-shrink: 0; }
+
+      /* env(safe-area-inset-bottom) accounts for the home-indicator strip
+         on notched iPhones so the bar's content isn't flush against it. */
+      .oe-bottom-nav {
+        display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 140;
+        background-color: rgba(var(--md-sys-color-background-rgb, 17, 19, 24), 0.92);
+        backdrop-filter: blur(12px);
+        border-top: 1px solid rgba(var(--md-sys-color-outline-rgb, 67, 71, 78), 0.4);
+        padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px));
+      }
+      /* Same iOS Safari sticky+backdrop-filter bug as .oe-navbar — this is
+         position:fixed rather than sticky so it isn't technically hit by
+         that exact bug, but -webkit-backdrop-filter is still left off on
+         purpose here as a precaution since fixed + filter has its own
+         history of iOS compositing glitches. Plain blur() without the
+         -webkit prefix already works fine on current iOS Safari for a
+         fixed (non-sticky) element. */
+
+      /* Room at the bottom of every page so content doesn't render behind
+         the fixed bar. Pages with their own bottom-fixed/sticky UI (ai.html's
+         message composer, messages.html's) need their own offset — this
+         alone isn't enough for those, see the comments in each. */
+      body { padding-bottom: 64px; }
     }
   `;
   document.head.appendChild(style);
@@ -299,7 +347,6 @@ export function mountTopNav(container) {
     <div class="oe-nav-backdrop" id="oeNavBackdrop"></div>
     <nav class="oe-navbar">
       <div class="oe-navbar-bg"></div>
-      <button class="oe-nav-hamburger" id="oeNavHamburger" aria-label="Menu" aria-expanded="false"><span class="material-symbols-rounded">menu</span></button>
       <a href="https://oeper.dev/" class="oe-nav-logo">
         <span class="oe-nav-logo-icon">${LOGO_SVG}</span>
         <span>oeper.dev</span>
@@ -325,14 +372,30 @@ export function mountTopNav(container) {
         <div id="oeNavAccountBar"></div>
       </div>
     </nav>
+    <div class="oe-create-drawer" id="oeCreateDrawer">
+      <a href="/feed" class="oe-create-item"><span class="material-symbols-rounded">forum</span>New Post</a>
+      <a href="/videos" class="oe-create-item"><span class="material-symbols-rounded">smart_display</span>New Video</a>
+      <a href="/files" class="oe-create-item"><span class="material-symbols-rounded">folder</span>New File</a>
+    </div>
+    <nav class="oe-bottom-nav" id="oeBottomNav">
+      <a href="https://oeper.dev/" class="oe-bottom-nav-item" data-id="home"><span class="material-symbols-rounded">home</span><span>Home</span></a>
+      <button type="button" class="oe-bottom-nav-item" id="oeCreateBtn" aria-expanded="false"><span class="material-symbols-rounded">add_circle</span><span>Create</span></button>
+      <a href="#" class="oe-bottom-nav-item" id="oeBottomProfileLink" data-id="profile"><span class="material-symbols-rounded">person</span><span>Profile</span></a>
+    </nav>
   `;
   const navEl = el.querySelector('.oe-navbar');
   const backdropEl = el.querySelector('#oeNavBackdrop');
+  const createDrawerEl = el.querySelector('#oeCreateDrawer');
+  const bottomNavEl = el.querySelector('#oeBottomNav');
   if (container) {
     container.appendChild(backdropEl);
     container.appendChild(navEl);
+    container.appendChild(createDrawerEl);
+    container.appendChild(bottomNavEl);
   } else {
     document.body.insertBefore(navEl, document.body.firstChild);
+    document.body.appendChild(createDrawerEl);
+    document.body.appendChild(bottomNavEl);
     document.body.insertBefore(backdropEl, navEl);
   }
 
@@ -345,22 +408,47 @@ export function mountTopNav(container) {
     navLinks.appendChild(a);
   });
 
-  const hamburger = navEl.querySelector('#oeNavHamburger');
   const backdrop = backdropEl;
-  const hamburgerIcon = hamburger.querySelector('.material-symbols-rounded');
-  function setMobileMenu(open) {
-    navLinks.classList.toggle('mobile-open', open);
-    hamburger.classList.toggle('open', open);
-    hamburger.setAttribute('aria-expanded', String(open));
-    hamburgerIcon.textContent = open ? 'close' : 'menu';
+  const createBtn = bottomNavEl.querySelector('#oeCreateBtn');
+  function setCreateDrawer(open) {
+    createDrawerEl.classList.toggle('open', open);
+    createBtn.setAttribute('aria-expanded', String(open));
     backdrop.classList.toggle('open', open);
   }
-  hamburger.addEventListener('click', () => setMobileMenu(!navLinks.classList.contains('mobile-open')));
-  backdrop.addEventListener('click', () => setMobileMenu(false));
-  navLinks.addEventListener('click', e => { if (e.target.closest('.oe-nav-item')) setMobileMenu(false); });
+  createBtn.addEventListener('click', () => setCreateDrawer(!createDrawerEl.classList.contains('open')));
+  backdrop.addEventListener('click', () => setCreateDrawer(false));
+  createDrawerEl.addEventListener('click', e => { if (e.target.closest('.oe-create-item')) setCreateDrawer(false); });
   document.addEventListener('click', e => {
-    if (navLinks.classList.contains('mobile-open') && !navLinks.contains(e.target) && !hamburger.contains(e.target)) {
-      setMobileMenu(false);
+    if (createDrawerEl.classList.contains('open') && !createDrawerEl.contains(e.target) && !createBtn.contains(e.target)) {
+      setCreateDrawer(false);
+    }
+  });
+
+  // Home/Create highlight active state by URL like the desktop nav items
+  // do; Profile can't (its target URL depends on who's signed in, resolved
+  // below) so it's only ever marked active by matching /profile/* directly.
+  const currentPath = normalizePath(window.location.pathname);
+  bottomNavEl.querySelectorAll('.oe-bottom-nav-item[data-id]').forEach(el2 => {
+    if (el2.dataset.id === 'home' && (currentPath === '/' || currentPath === '/index')) el2.classList.add('active');
+    if (el2.dataset.id === 'profile' && currentPath.startsWith('/profile')) el2.classList.add('active');
+  });
+
+  // Signed in: go straight to your own profile. Signed out: there's
+  // nothing to show, so tapping it starts sign-in instead (same button
+  // mountAccountBar itself shows) rather than landing on a dead link.
+  const profileLink = bottomNavEl.querySelector('#oeBottomProfileLink');
+  onAccountChange(user => {
+    if (user) {
+      const handle = handleOf(user.email);
+      profileLink.href = handle ? `/profile?u=${encodeURIComponent(handle)}` : '#';
+    } else {
+      profileLink.href = '#';
+    }
+  });
+  profileLink.addEventListener('click', e => {
+    if (!getCurrentUser()) {
+      e.preventDefault();
+      signIn().catch(() => {});
     }
   });
 
@@ -423,12 +511,10 @@ function initSearch(navEl) {
     corpusPromise = Promise.allSettled([
       getDocs(query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(300))),
       getDocs(query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(300))),
-      getDocs(query(collection(db, 'projects'), orderBy('createdAt', 'desc'), limit(300))),
       getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(300))),
-    ]).then(([postsR, videosR, projectsR, usersR]) => ({
+    ]).then(([postsR, videosR, usersR]) => ({
       posts: postsR.status === 'fulfilled' ? postsR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
       videos: videosR.status === 'fulfilled' ? videosR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
-      projects: projectsR.status === 'fulfilled' ? projectsR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
       users: usersR.status === 'fulfilled' ? usersR.value.docs.map(d => ({ email: d.id, ...d.data() })) : [],
     }));
     return corpusPromise;
@@ -474,7 +560,7 @@ function initSearch(navEl) {
     dropdown.classList.add('open');
 
     let corpus;
-    try { corpus = await loadCorpus(); } catch { corpus = { posts: [], videos: [], projects: [], users: [] }; }
+    try { corpus = await loadCorpus(); } catch { corpus = { posts: [], videos: [], users: [] }; }
     if (searchInput.value.trim().toLowerCase() !== q) return;
 
     const results = [];
@@ -495,10 +581,6 @@ function initSearch(navEl) {
     corpus.videos.forEach(v => {
       const rank = keywordRank([{ text: v.title, weight: 3 }, { text: v.description, weight: 1 }], q);
       if (rank !== -1) results.push({ rank, name: v.title || '', sub: 'in Videos', url: `/videos?video=${v.id}`, icon: 'smart_display' });
-    });
-    corpus.projects.forEach(p => {
-      const rank = keywordRank([{ text: p.title, weight: 3 }, { text: p.description, weight: 1 }], q);
-      if (rank !== -1) results.push({ rank, name: p.title || '', sub: 'in Projects', url: `/projects?project=${p.id}`, icon: 'apps' });
     });
 
     results.sort((a, b) => a.rank - b.rank);
@@ -566,7 +648,6 @@ function notifUrl(n) {
   if (n.type === 'badge') return '/settings';
   if (n.targetKind === 'post') return `/feed?post=${n.targetId}`;
   if (n.targetKind === 'video') return `/videos?video=${n.targetId}`;
-  if (n.targetKind === 'project') return `/projects?project=${n.targetId}`;
   return '/';
 }
 

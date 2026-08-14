@@ -336,7 +336,7 @@ onAuthStateChanged(auth, async user => {
     // so profile seeding has to finish first.
     await ensureProfileSeeded(user);
     ensureHandle(user.email, user.displayName);
-    // Posts/videos/projects store voters as Firebase Auth uid, not email
+    // Posts/videos store voters as Firebase Auth uid, not email
     // (arrayUnion(uid) on upvoters/downvoters) — this is the only place
     // that uid gets tied back to an email, so "who liked this" can resolve
     // a name/photo via the normal email-keyed profile system instead of

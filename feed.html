@@ -197,9 +197,9 @@
   .kebab-item .material-symbols-rounded { font-size: 17px; }
 
   /* Thread panel (post detail + comments) */
-  /* Same side-drawer pattern as videos.html's .watch-panel / projects.html's
-     .watch-panel — kept in sync by hand across the three pages so opening
-     any piece of content (post, video, project) feels like the same UI. */
+  /* Same side-drawer pattern as videos.html's .watch-panel — kept in sync
+     by hand across the two pages so opening any piece of content (post,
+     video) feels like the same UI. */
   .thread-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.75); opacity: 0; pointer-events: none; transition: opacity 0.2s; }
   .thread-overlay.open { opacity: 1; pointer-events: all; }
   .thread-panel {
@@ -605,7 +605,7 @@ import {
   getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded, handleOf,
   uploadFile, sendNotification, resolveUidsToEmails, linkifyMentions, loadFollowRelationships,
 } from './shared/account.js?v=24';
-import { mountTopNav } from './shared/topnav.js?v=14';
+import { mountTopNav } from './shared/topnav.js?v=15';
 import { mountFooter } from './shared/footer.js?v=4';
 import { createDropdown } from './shared/dropdown.js?v=1';
 import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=1';

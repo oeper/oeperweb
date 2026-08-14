@@ -184,6 +184,12 @@
      together means model-bar is always positioned right above the input,
      regardless of how much (or how little) is above it. */
   .chat-input-area { position: sticky; bottom: 16px; }
+  /* shared/topnav.js's mobile bottom nav bar (Home/Create/Profile) sits
+     fixed at the very bottom of the screen below 600px — without this,
+     it covers this sticky input bar instead of sitting below it. */
+  @media (max-width: 600px) {
+    .chat-input-area { bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 16px); }
+  }
   .model-bar { display: flex; justify-content: flex-end; margin-bottom: 8px; padding: 0 4px; }
   .model-bar .oe-dropdown-btn { font-size: 12px; font-weight: 500; padding: 5px 12px; }
   /* This dropdown sits right above the sticky input bar at the very
@@ -321,7 +327,7 @@
 
 <script type="module">
 import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange } from './shared/account.js?v=24';
-import { mountTopNav } from './shared/topnav.js?v=14';
+import { mountTopNav } from './shared/topnav.js?v=15';
 import { mountFooter } from './shared/footer.js?v=4';
 import { createDropdown } from './shared/dropdown.js?v=1';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';

@@ -175,7 +175,7 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'search_oeper_dev',
-      description: "Search oeper.dev's own content — forum posts, projects, and articles — for a query. Use this whenever the user asks about something on the site itself (\"is there a post about...\", \"what projects has X made\", \"find the article on...\") instead of guessing from your own training data, which knows nothing about this site.",
+      description: "Search oeper.dev's own content — forum posts and articles — for a query. Use this whenever the user asks about something on the site itself (\"is there a post about...\", \"find the article on...\") instead of guessing from your own training data, which knows nothing about this site.",
       parameters: {
         type: 'object',
         properties: { query: { type: 'string', description: 'Keywords to search for' } },
@@ -194,7 +194,7 @@ const MAX_TOOL_ROUNDS = 3;
 const FIREBASE_PROJECT_ID = 'oepernet-1683535959256';
 
 // Firestore REST responses wrap every field in a {typeName: value} envelope
-// — this only unwraps the handful of types posts/projects actually use.
+// — this only unwraps the handful of types posts actually use.
 function unwrapFirestoreFields(fields) {
   const out = {};
   for (const [key, val] of Object.entries(fields || {})) {
@@ -241,9 +241,8 @@ async function searchOeperDev(queryText) {
     return terms.some(term => t.includes(term));
   };
 
-  const [posts, projects, articlesData] = await Promise.all([
+  const [posts, articlesData] = await Promise.all([
     fetchRecentDocs('posts', 60),
-    fetchRecentDocs('projects', 60),
     fetch('https://oeper.dev/data/articles.json').then(r => r.ok ? r.json() : { articles: [] }).catch(() => ({ articles: [] })),
   ]);
 
@@ -251,11 +250,6 @@ async function searchOeperDev(queryText) {
   for (const p of posts) {
     if (matches(p.title) || matches(p.body)) {
       results.push({ type: 'forum post', title: p.title, snippet: (p.body || '').slice(0, 200), url: `https://oeper.dev/feed/${p.id}` });
-    }
-  }
-  for (const p of projects) {
-    if (matches(p.title) || matches(p.description)) {
-      results.push({ type: 'project', title: p.title, snippet: (p.description || '').slice(0, 200), url: `https://oeper.dev/projects?project=${p.id}` });
     }
   }
   (articlesData.articles || []).forEach((a, i) => {

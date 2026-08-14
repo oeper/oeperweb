@@ -232,6 +232,12 @@
     background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline);
     border-radius: 26px; padding: 8px 8px 8px 20px;
   }
+  /* shared/topnav.js's mobile bottom nav bar (Home/Create/Profile) sits
+     fixed at the very bottom of the screen below 600px — without this,
+     it covers this sticky input bar instead of sitting below it. */
+  @media (max-width: 600px) {
+    .thread-inputbar { bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 16px); }
+  }
   .input-normal { display: flex; align-items: flex-end; gap: 6px; flex: 1; min-width: 0; }
   #msgInput { flex: 1; background: transparent; border: none; outline: none; resize: none; color: var(--md-sys-color-on-surface); font-family: inherit; font-size: 14px; line-height: 1.5; max-height: 120px; padding: 8px 0; }
   #msgInput::placeholder { color: var(--md-sys-color-on-surface-variant); }
@@ -357,7 +363,7 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=14';
+import { mountTopNav } from './shared/topnav.js?v=15';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
   loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions,

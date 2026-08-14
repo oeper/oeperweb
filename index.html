@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>oeper.dev — Portal</title>
-<meta name="description" content="A community hub with a forum feed, videos, projects, file sharing, and tools.">
+<meta name="description" content="A community hub with a forum feed, videos, file sharing, and tools.">
 <meta property="og:title" content="oeper.dev — Portal">
-<meta property="og:description" content="A community hub with a forum feed, videos, projects, file sharing, and tools.">
+<meta property="og:description" content="A community hub with a forum feed, videos, file sharing, and tools.">
 <meta property="og:image" content="https://oeper.dev/icon.png">
 <meta property="og:url" content="https://oeper.dev/">
 <meta property="og:type" content="website">
@@ -740,7 +740,7 @@
     db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser, sendNotification,
     onAccountChange, SERVER_ENDPOINT, MAX_IMAGE_BYTES, uploadFile, linkifyMentions,
   } from './shared/account.js?v=24';
-  import { mountTopNav } from './shared/topnav.js?v=14';
+  import { mountTopNav } from './shared/topnav.js?v=15';
   import { mountFooter } from './shared/footer.js?v=4';
   import { createDropdown } from './shared/dropdown.js?v=1';
   import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=1';
@@ -1812,12 +1812,10 @@
       corpusPromise = Promise.allSettled([
         getDocs(query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(300))),
         getDocs(query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(300))),
-        getDocs(query(collection(db, 'projects'), orderBy('createdAt', 'desc'), limit(300))),
         getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(300))),
-      ]).then(([postsR, videosR, projectsR, usersR]) => ({
+      ]).then(([postsR, videosR, usersR]) => ({
         posts: postsR.status === 'fulfilled' ? postsR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
         videos: videosR.status === 'fulfilled' ? videosR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
-        projects: projectsR.status === 'fulfilled' ? projectsR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
         users: usersR.status === 'fulfilled' ? usersR.value.docs.map(d => ({ email: d.id, ...d.data() })) : [],
       }));
       return corpusPromise;
@@ -1834,7 +1832,7 @@
       dropdown.classList.add('open');
 
       let corpus;
-      try { corpus = await loadCorpus(); } catch { corpus = { posts: [], videos: [], projects: [], users: [] }; }
+      try { corpus = await loadCorpus(); } catch { corpus = { posts: [], videos: [], users: [] }; }
       if (searchInput.value.trim().toLowerCase() !== q) return;
 
       const results = [];
@@ -1855,10 +1853,6 @@
       corpus.videos.forEach(v => {
         const rank = matchRank(v.title, q);
         if (rank !== -1) results.push({ rank, name: v.title || '', sub: 'in Videos', url: `/videos?video=${v.id}`, icon: 'smart_display' });
-      });
-      corpus.projects.forEach(p => {
-        const rank = matchRank(p.title, q);
-        if (rank !== -1) results.push({ rank, name: p.title || '', sub: 'in Projects', url: `/projects?project=${p.id}`, icon: 'apps' });
       });
       results.sort((a, b) => a.rank - b.rank);
       const top = results.slice(0, 6);
@@ -1956,15 +1950,6 @@ const PAGES = [
     url: 'https://oeper.dev/videos',
     heroTitle: 'Long-Form Videos',
     heroSub: 'Watch and upload videos from anyone signed in.',
-    items: []
-  },
-  {
-    id: 'projects',
-    title: 'Projects',
-    icon: 'apps',
-    url: 'https://oeper.dev/projects',
-    heroTitle: 'What People Have Built',
-    heroSub: 'Projects uploaded by anyone signed in.',
     items: []
   },
   {
