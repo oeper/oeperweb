@@ -268,10 +268,16 @@ function injectStyles() {
 
     @media (max-width: 600px) {
       .oe-navbar { padding: 0 12px; gap: 8px; }
-      .oe-nav-logo span:last-child { display: none; }
       .oe-nav-hamburger, .oe-nav-links { display: none !important; }
       .oe-nav-search-wrap { display: none; }
-      .oe-nav-mobile-search-btn { display: flex; }
+      /* Reordered (not restructured — same markup as desktop) into
+         search icon / centered logo+name / notif+chat, with settings and
+         the account chip dropped from up here since Profile now lives on
+         the bottom bar. */
+      .oe-nav-mobile-search-btn { display: flex; order: 1; }
+      .oe-nav-logo { order: 2; flex: 1; justify-content: center; }
+      .oe-nav-right { order: 3; gap: 10px; margin-left: 0; }
+      .oe-nav-icon-link[title="Settings"], #oeNavAccountBar { display: none; }
 
       .oe-nav-search-wrap.mobile-open {
         display: flex; align-items: center; position: fixed; top: 0; left: 0; right: 0; height: 72px;
@@ -433,16 +439,39 @@ export function mountTopNav(container) {
     if (el2.dataset.id === 'profile' && currentPath.startsWith('/profile')) el2.classList.add('active');
   });
 
-  // Signed in: go straight to your own profile. Signed out: there's
-  // nothing to show, so tapping it starts sign-in instead (same button
-  // mountAccountBar itself shows) rather than landing on a dead link.
+  // Signed in: go straight to your own profile, and show your actual
+  // profile photo instead of the generic person icon (same idea as the
+  // active-state ring above — this is your own tab, make it recognizably
+  // yours). Signed out: there's nothing to show, so tapping it starts
+  // sign-in instead (same button mountAccountBar itself shows) rather
+  // than landing on a dead link.
   const profileLink = bottomNavEl.querySelector('#oeBottomProfileLink');
-  onAccountChange(user => {
+  onAccountChange(async user => {
     if (user) {
       const handle = handleOf(user.email);
       profileLink.href = handle ? `/profile?u=${encodeURIComponent(handle)}` : '#';
+      await ensureProfileLoaded(user.email);
+      const photo = getProfile(user.email, user.displayName, user.photoURL).photo;
+      // Re-queried each time rather than captured once outside — the icon
+      // slot is a different DOM node after the first swap (the old one is
+      // detached), so a stale reference here would silently no-op on any
+      // account change after the very first.
+      const currentIconSlot = profileLink.querySelector('.material-symbols-rounded');
+      if (photo && currentIconSlot) {
+        const img = document.createElement('img');
+        img.alt = '';
+        img.src = photo;
+        currentIconSlot.replaceWith(img);
+      }
     } else {
       profileLink.href = '#';
+      const img = profileLink.querySelector('img');
+      if (img) {
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-rounded';
+        icon.textContent = 'person';
+        img.replaceWith(icon);
+      }
     }
   });
   profileLink.addEventListener('click', e => {
