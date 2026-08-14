@@ -167,6 +167,13 @@
   .post-footer { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
   .post-footer span { display: inline-flex; align-items: center; gap: 4px; }
   .post-footer .material-symbols-rounded { font-size: 16px; }
+  .post-save-btn {
+    margin-left: auto; background: none; border: none; padding: 0; cursor: pointer;
+    display: flex; align-items: center; color: var(--md-sys-color-on-surface-variant);
+  }
+  .post-save-btn:hover { color: var(--md-sys-color-on-surface); }
+  .post-save-btn.saved { color: var(--md-sys-color-primary); }
+  .post-save-btn .material-symbols-rounded { font-size: 18px; }
 
   .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
   .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
@@ -236,9 +243,17 @@
     max-height: 240px; overflow-y: auto;
   }
 
-  .thread-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--md-sys-color-outline); }
+  .thread-actions { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--md-sys-color-outline); }
+  .thread-actions-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .thread-actions .vote-col { flex-direction: row; padding: 4px; background: var(--md-sys-color-surface); border-radius: 100px; gap: 2px; }
   .thread-actions .vote-count { padding: 0 4px; }
+  .save-btn {
+    width: 44px; height: 44px; border-radius: 50%; border: none; background: none; flex-shrink: 0;
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .save-btn:hover { background: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
+  .save-btn.saved { color: var(--md-sys-color-primary); }
+  .save-btn .material-symbols-rounded { font-size: 24px; }
   .thread-liked-by { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--md-sys-color-on-surface-variant); padding-left: 4px; min-height: 20px; }
   .thread-liked-by img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--md-sys-color-surface-variant); }
   .thread-liked-by a { color: var(--md-sys-color-on-surface); font-weight: 500; text-decoration: none; }
@@ -1425,6 +1440,26 @@ function runForum() {
   // upvoters/downvoters for whatever was clicked, regardless of whether it
   // was a post card, the open thread's header, or a comment.
   const voteItemsById = new Map();
+  function saveBtnHtml(item) {
+    const u = currentUser();
+    const saved = u && (item.savedBy || []).includes(u.uid);
+    return `
+      <button type="button" class="save-btn ${saved ? 'saved' : ''}" data-save-toggle="${escHtml(item.id)}" title="${saved ? 'Remove from saved' : 'Save'}">
+        <span class="material-symbols-rounded" style="font-variation-settings:'FILL' ${saved ? 1 : 0};">bookmark</span>
+      </button>
+    `;
+  }
+  async function toggleSave(item) {
+    const u = currentUser();
+    if (!u) { showToast('Sign in to save'); return; }
+    if (isBanned()) { showToast("You've been banned"); return; }
+    const uid = u.uid;
+    const saved = (item.savedBy || []).includes(uid);
+    try {
+      await updateDoc(postRef(item.id), { savedBy: saved ? arrayRemove(uid) : arrayUnion(uid) });
+    } catch (err) { showToast('Could not save: ' + err.message); }
+  }
+
   function voteColHtml(item, idPrefix) {
     voteItemsById.set(item.id, item);
     const netScore = score(item);
@@ -1505,6 +1540,8 @@ function runForum() {
     card.className = 'post-card';
     const atts = attachmentsOf(p);
     const photo = photoOf(p);
+    const u = currentUser();
+    const saved = u && (p.savedBy || []).includes(u.uid);
     card.innerHTML = `
       ${voteColHtml(p, 'post')}
       <div class="post-body">
@@ -1527,6 +1564,9 @@ function runForum() {
           <span><span class="material-symbols-rounded">chat_bubble</span>${p.commentCount||0} comments</span>
           <span><span class="material-symbols-rounded">visibility</span>${p.views||0} views</span>
           ${p.poll ? `<span><span class="material-symbols-rounded">bar_chart</span>Poll · ${p.poll.options.length} options</span>` : ''}
+          <button type="button" class="post-save-btn ${saved ? 'saved' : ''}" data-post-save="${escHtml(p.id)}" title="${saved ? 'Remove from saved' : 'Save'}" onclick="event.stopPropagation()">
+            <span class="material-symbols-rounded" style="font-variation-settings:'FILL' ${saved ? 1 : 0};">bookmark</span>
+          </button>
         </div>
       </div>
       <div class="kebab-slot" data-kebab></div>
@@ -1536,6 +1576,7 @@ function runForum() {
       toggleVote(postRef(p.id), p, 'up', { recipientEmail: p.authorEmail, type: 'upvote', targetKind: 'post', targetId: p.id, preview: p.title });
     });
     card.querySelector('[data-post-down]').addEventListener('click', e => { e.stopPropagation(); toggleVote(postRef(p.id), p, 'down'); });
+    card.querySelector('[data-post-save]').addEventListener('click', e => { e.stopPropagation(); toggleSave(p); });
     const thumbWrap = card.querySelector('[data-thumb]');
     if (thumbWrap) thumbWrap.addEventListener('click', e => { if (e.target.closest('a')) e.stopPropagation(); });
     const kebabSlot = card.querySelector('[data-kebab]');
@@ -1837,8 +1878,10 @@ function runForum() {
     const voteCol = threadContent.querySelector('.thread-actions .vote-col');
     if (voteCol) {
       voteCol.outerHTML = voteColHtml(p, 'thread');
-      wireThreadVoteButtons(p);
     }
+    const saveBtn = threadContent.querySelector('.thread-actions-row [data-save-toggle]');
+    if (saveBtn) saveBtn.outerHTML = saveBtnHtml(p);
+    wireThreadVoteButtons(p);
     const pollBlock = threadContent.querySelector('.poll-block');
     if (pollBlock && p.poll) {
       pollBlock.outerHTML = pollHtml(p);
@@ -1884,6 +1927,8 @@ function runForum() {
     const downBtn = threadContent.querySelector('[data-thread-down]');
     if (upBtn) upBtn.onclick = () => toggleVote(postRef(p.id), p, 'up', { recipientEmail: p.authorEmail, type: 'upvote', targetKind: 'post', targetId: p.id, preview: p.title });
     if (downBtn) downBtn.onclick = () => toggleVote(postRef(p.id), p, 'down');
+    const saveBtn = threadContent.querySelector('[data-save-toggle]');
+    if (saveBtn) saveBtn.onclick = () => toggleSave(p);
   }
 
   async function openThread(postId, opts) {
@@ -1925,7 +1970,10 @@ function runForum() {
       <div class="thread-body">${parseMarkdown(p.body)}</div>
       ${pollHtml(p)}
       <div class="thread-actions">
-        ${voteColHtml(p, 'thread')}
+        <div class="thread-actions-row">
+          ${voteColHtml(p, 'thread')}
+          ${saveBtnHtml(p)}
+        </div>
         <div class="thread-liked-by" id="threadLikedBy"></div>
       </div>
       <div class="comments-heading" id="commentsHeading">Comments</div>

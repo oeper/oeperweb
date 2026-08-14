@@ -59,6 +59,9 @@ service cloud.firestore {
       // lets someone who isn't the post author cast/change a vote.
       allow update: if isAuthor(resource.data) || isOwner()
         || (isSignedIn() && !isBanned() && onlyChanged(['upvoters', 'downvoters']))
+        // Bookmarking is per-viewer, not per-author, so it's granted the
+        // same way as up/downvoting rather than folded into isAuthor().
+        || (isSignedIn() && !isBanned() && onlyChanged(['savedBy']))
         || (isSignedIn() && onlyChanged(['commentCount']))
         || (isSignedIn() && onlyChanged(['views'])
             && request.resource.data.views == (('views' in resource.data) ? resource.data.views : 0) + 1)
@@ -278,6 +281,7 @@ service cloud.firestore {
 
       allow update: if isAuthor(resource.data) || isOwner()
         || (isSignedIn() && !isBanned() && onlyChanged(['upvoters', 'downvoters']))
+        || (isSignedIn() && !isBanned() && onlyChanged(['savedBy']))
         || (isSignedIn() && onlyChanged(['views'])
             && request.resource.data.views == (('views' in resource.data) ? resource.data.views : 0) + 1)
         || (isSignedIn() && onlyChanged(['commentCount'])

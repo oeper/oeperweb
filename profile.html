@@ -95,10 +95,28 @@
   .kebab-item {
     display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 10px; border: none;
     background: none; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; cursor: pointer; text-align: left;
+    text-decoration: none; box-sizing: border-box;
   }
   .kebab-item:hover { background: var(--md-sys-state-hover); }
   .kebab-item.dangerous { color: var(--md-sys-color-error); }
   .kebab-item .material-symbols-rounded { font-size: 18px; }
+
+  /* Own-profile hamburger — mobile only, since desktop already has the
+     Settings icon in the sitewide top bar (shared/topnav.js hides it on
+     mobile in favor of the bottom nav, which has no room for it). */
+  .profile-mobile-bar { display: none; }
+  @media (max-width: 600px) {
+    .profile-mobile-bar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+  }
+
+  .profile-tabs { display: flex; justify-content: center; gap: 48px; border-top: 1px solid var(--md-sys-color-outline-variant); margin: 8px 0 20px; }
+  .profile-tab {
+    display: flex; align-items: center; gap: 6px; padding: 14px 0; background: none; border: none; cursor: pointer;
+    border-top: 2px solid transparent; margin-top: -1px; font-family: inherit;
+    color: var(--md-sys-color-on-surface-variant); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .profile-tab.active { color: var(--md-sys-color-on-surface); border-top-color: var(--md-sys-color-on-surface); }
+  .profile-tab .material-symbols-rounded { font-size: 18px; }
   .btn {
     display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; padding: 10px 18px;
     border-radius: 100px; border: none; background: var(--md-sys-color-surface-variant);
@@ -161,6 +179,7 @@
   .ig-vote-btn:hover { background: var(--md-sys-state-hover); }
   .ig-vote-btn.upvoted .material-symbols-rounded { color: #ff5c7a; font-variation-settings: 'FILL' 1; }
   .ig-vote-btn.downvoted .material-symbols-rounded { color: var(--md-sys-color-error); }
+  .ig-vote-btn.saved .material-symbols-rounded { color: var(--md-sys-color-primary); }
   .ig-vote-score { font-size: 13px; font-weight: 600; min-width: 16px; text-align: center; margin: 0 2px; }
   .ig-likes { padding: 4px 14px 0; font-size: 13px; font-weight: 600; }
   .ig-caption { padding: 6px 14px 0; font-size: 13px; line-height: 1.4; font-weight: 500; }
@@ -245,6 +264,8 @@ mountFooter();
 document.addEventListener('click', () => {
   const menu = document.getElementById('profileKebabMenu');
   if (menu) menu.classList.remove('open');
+  const hamburgerMenu = document.getElementById('profileHamburgerMenu');
+  if (hamburgerMenu) hamburgerMenu.classList.remove('open');
 });
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -456,6 +477,38 @@ async function init() {
   let commentKarma = 0;
   let followerCount = 0, followingCount = 0;
   let followState = { following: false, followedBy: false };
+  let activeTab = params.get('tab') === 'saved' ? 'saved' : 'posts';
+  let savedItems = [];
+  let savedItemsLoaded = false;
+
+  async function loadSavedItems() {
+    const user = getCurrentUser();
+    if (!user) { savedItems = []; return; }
+    try {
+      const [postsSnap, videosSnap] = await Promise.all([
+        getDocs(query(collection(db, 'posts'), where('savedBy', 'array-contains', user.uid))),
+        getDocs(query(collection(db, 'videos'), where('savedBy', 'array-contains', user.uid))),
+      ]);
+      savedItems = [
+        ...postsSnap.docs.map(d => { const data = d.data(); return { _kind: 'post', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() }; }),
+        ...videosSnap.docs.map(d => { const data = d.data(); return { _kind: 'video', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() }; }),
+      ].sort((a, b) => b._date - a._date);
+    } catch (err) {
+      console.warn('Could not load saved items:', err.message);
+      savedItems = [];
+    }
+  }
+
+  async function switchProfileTab(tab) {
+    if (activeTab === tab) return;
+    activeTab = tab;
+    if (tab === 'saved' && !savedItemsLoaded) {
+      savedItemsLoaded = true;
+      render();
+      await loadSavedItems();
+    }
+    render();
+  }
 
   async function loadFollowState(user) {
     if (!user || user.email === viewedEmail) return { following: false, followedBy: false };
@@ -498,6 +551,7 @@ async function init() {
     const user = getCurrentUser();
     const up = user && (item.upvoters || []).includes(user.uid);
     const down = user && (item.downvoters || []).includes(user.uid);
+    const saved = user && (item.savedBy || []).includes(user.uid);
     const img = isVideo ? null : firstImageUrl(item);
     const vid = isVideo ? null : (!img ? firstVideoUrl(item) : null);
     const aud = isVideo ? null : (!img && !vid ? firstAudioUrl(item) : null);
@@ -515,6 +569,9 @@ async function init() {
         </button>
         <span class="material-symbols-rounded" style="margin-left:auto;">visibility</span>
         <span class="ig-action-count">${item.views || 0}</span>
+        <button type="button" class="ig-vote-btn ${saved ? 'saved' : ''}" data-save-toggle data-kind="${isVideo ? 'video' : 'post'}" data-id="${item.id}" title="${saved ? 'Remove from saved' : 'Save'}">
+          <span class="material-symbols-rounded" style="font-variation-settings:'FILL' ${saved ? 1 : 0};">bookmark</span>
+        </button>
       </div>
     `;
     const bodyHtml = bodyText ? `<div class="ig-description">${renderExcerptMarkdown(bodyText, 220)}</div>` : '';
@@ -604,11 +661,20 @@ async function init() {
     }
   }
 
+  // Posts/videos come from three possible arrays depending on which tab is
+  // showing (own posts+videos, or the saved-items list) — a plain kind-based
+  // lookup into `posts`/`videos` alone misses items on the Saved tab, since
+  // those are authored by other people and never populate those two arrays.
+  function findDisplayedItem(kind, id) {
+    return activeTab === 'saved'
+      ? savedItems.find(x => x.id === id)
+      : (kind === 'video' ? videos : posts).find(x => x.id === id);
+  }
+
   async function toggleItemVote(kind, id, direction) {
     const user = getCurrentUser();
     if (!user) { showToast('Sign in to vote'); return; }
-    const list = kind === 'video' ? videos : posts;
-    const item = list.find(x => x.id === id);
+    const item = findDisplayedItem(kind, id);
     if (!item) return;
     const uid = user.uid;
     const up = (item.upvoters || []).includes(uid);
@@ -639,6 +705,23 @@ async function init() {
     }
   }
 
+  async function toggleItemSave(kind, id) {
+    const user = getCurrentUser();
+    if (!user) { showToast('Sign in to save'); return; }
+    const item = findDisplayedItem(kind, id);
+    if (!item) return;
+    const uid = user.uid;
+    const saved = (item.savedBy || []).includes(uid);
+    try {
+      await updateDoc(doc(db, kind === 'video' ? 'videos' : 'posts', id), { savedBy: saved ? arrayRemove(uid) : arrayUnion(uid) });
+      item.savedBy = saved ? (item.savedBy || []).filter(x => x !== uid) : [...(item.savedBy || []), uid];
+      if (saved && activeTab === 'saved') savedItems = savedItems.filter(x => x.id !== id);
+      render();
+    } catch (err) {
+      showToast('Could not save: ' + err.message);
+    }
+  }
+
   function render() {
     const user = getCurrentUser();
     const isOwn = user && user.email === viewedEmail;
@@ -646,8 +729,20 @@ async function init() {
     const areFriends = following && followedBy;
     const items = [...posts, ...videos].sort((a, b) => b._date - a._date);
     const karma = items.reduce((sum, p) => sum + (p.upvoters || []).length - (p.downvoters || []).length, 0) + commentKarma;
+    const shownItems = isOwn && activeTab === 'saved' ? savedItems : items;
 
     content.innerHTML = `
+      ${isOwn ? `
+        <div class="profile-mobile-bar">
+          <div class="kebab-wrap">
+            <button type="button" class="kebab-btn" id="profileHamburgerBtn" title="Menu"><span class="material-symbols-rounded">menu</span></button>
+            <div class="kebab-menu" id="profileHamburgerMenu">
+              <a class="kebab-item" href="/settings"><span class="material-symbols-rounded">settings</span>Settings</a>
+              <a class="kebab-item" href="/activity"><span class="material-symbols-rounded">insights</span>Your activity</a>
+            </div>
+          </div>
+        </div>
+      ` : ''}
       <div class="profile-card">
         <div class="profile-top">
           <img class="profile-avatar" src="${profile.photo || ''}" alt="">
@@ -674,9 +769,16 @@ async function init() {
         </div>
       </div>
 
-      <div class="section-heading">Posts</div>
+      ${isOwn ? `
+        <div class="profile-tabs">
+          <button type="button" class="profile-tab ${activeTab === 'posts' ? 'active' : ''}" data-profile-tab="posts"><span class="material-symbols-rounded">grid_on</span>Posts</button>
+          <button type="button" class="profile-tab ${activeTab === 'saved' ? 'active' : ''}" data-profile-tab="saved"><span class="material-symbols-rounded">bookmark</span>Saved</button>
+        </div>
+      ` : `<div class="section-heading">Posts</div>`}
       <div class="post-list" id="profilePostList">
-        ${items.length === 0 ? '<div class="empty-note">No posts yet.</div>' : items.map(itemCardHtml).join('')}
+        ${activeTab === 'saved' && !savedItemsLoaded ? '<div class="empty-note">Loading…</div>'
+          : shownItems.length === 0 ? `<div class="empty-note">${activeTab === 'saved' ? 'No saved posts yet.' : 'No posts yet.'}</div>`
+          : shownItems.map(itemCardHtml).join('')}
       </div>
     `;
 
@@ -685,13 +787,23 @@ async function init() {
     const followBtn = document.getElementById('followBtn');
     if (followBtn) followBtn.addEventListener('click', () => toggleFollow(following));
 
+    document.querySelectorAll('[data-profile-tab]').forEach(el => {
+      el.addEventListener('click', () => switchProfileTab(el.dataset.profileTab));
+    });
+
+    const hamburgerBtn = document.getElementById('profileHamburgerBtn');
+    const hamburgerMenu = document.getElementById('profileHamburgerMenu');
+    if (hamburgerBtn) hamburgerBtn.addEventListener('click', e => { e.stopPropagation(); hamburgerMenu.classList.toggle('open'); });
+
     document.getElementById('profilePostList').addEventListener('click', e => {
       const pollBtn = e.target.closest('[data-poll-vote]');
       if (pollBtn) { e.preventDefault(); togglePollVote(pollBtn.closest('[data-poll-postid]').dataset.pollPostid, Number(pollBtn.dataset.pollVote)); return; }
       const voteUpBtn = e.target.closest('[data-vote-up]');
       const voteDownBtn = e.target.closest('[data-vote-down]');
+      const saveBtn = e.target.closest('[data-save-toggle]');
       if (voteUpBtn) { e.preventDefault(); toggleItemVote(voteUpBtn.dataset.kind, voteUpBtn.dataset.id, 'up'); return; }
       if (voteDownBtn) { e.preventDefault(); toggleItemVote(voteDownBtn.dataset.kind, voteDownBtn.dataset.id, 'down'); return; }
+      if (saveBtn) { e.preventDefault(); toggleItemSave(saveBtn.dataset.kind, saveBtn.dataset.id); return; }
       const card = e.target.closest('.ig-card');
       if (card && card.dataset.href) window.location.href = card.dataset.href;
     });
@@ -700,6 +812,13 @@ async function init() {
     const menuItems = [
       { label: 'Share profile', icon: 'link', onClick: () => copyLink(window.location.href, 'Profile link') },
     ];
+    // Mobile gets a dedicated hamburger for this (profileHamburgerMenu,
+    // above) since shared/topnav.js hides the sitewide Settings icon on
+    // mobile — desktop still has that icon, so only Activity needs
+    // surfacing here to avoid a redundant Settings entry.
+    if (isOwn) {
+      menuItems.push({ label: 'Your activity', icon: 'insights', onClick: () => { window.location.href = '/activity'; } });
+    }
     if (user && !isOwn) {
       menuItems.push({ label: 'Report', icon: 'flag', dangerous: true, onClick: reportProfile });
     }

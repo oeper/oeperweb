@@ -89,9 +89,23 @@
     font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 15px; font-weight: 500; margin-bottom: 4px;
     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .video-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: flex; gap: 10px; flex-wrap: wrap; }
+  .video-meta { font-size: 12px; color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .video-meta span { display: inline-flex; align-items: center; gap: 4px; }
   .video-meta .material-symbols-rounded { font-size: 14px; }
+  .video-save-btn {
+    margin-left: auto; background: none; border: none; padding: 0; cursor: pointer;
+    display: flex; align-items: center; color: var(--md-sys-color-on-surface-variant);
+  }
+  .video-save-btn:hover { color: var(--md-sys-color-on-surface); }
+  .video-save-btn.saved { color: var(--md-sys-color-primary); }
+  .video-save-btn .material-symbols-rounded { font-size: 18px; }
+  .save-btn {
+    width: 44px; height: 44px; border-radius: 50%; border: none; background: none; flex-shrink: 0;
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .save-btn:hover { background: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
+  .save-btn.saved { color: var(--md-sys-color-primary); }
+  .save-btn .material-symbols-rounded { font-size: 24px; }
 
   .empty-note { text-align: center; padding: 80px 24px; color: var(--md-sys-color-on-surface-variant); }
 
@@ -372,6 +386,8 @@ function buildCard(v) {
   const card = document.createElement('div');
   card.className = 'video-card';
   const profile = getProfile(v.authorEmail, v.authorName, v.authorPhoto);
+  const user = getCurrentUser();
+  const saved = user && (v.savedBy || []).includes(user.uid);
   card.innerHTML = `
     <video class="video-thumb" src="${v.url}" preload="metadata" muted></video>
     <div class="video-info">
@@ -381,9 +397,13 @@ function buildCard(v) {
         <span><span class="material-symbols-rounded">favorite</span>${score(v)}</span>
         <span><span class="material-symbols-rounded">visibility</span>${v.views||0}</span>
         <span>${timeAgo(v._date)}</span>
+        <button type="button" class="video-save-btn ${saved ? 'saved' : ''}" data-video-save title="${saved ? 'Remove from saved' : 'Save'}">
+          <span class="material-symbols-rounded" style="font-variation-settings:'FILL' ${saved ? 1 : 0};">bookmark</span>
+        </button>
       </div>
     </div>
   `;
+  card.querySelector('[data-video-save]').addEventListener('click', e => { e.stopPropagation(); toggleSave(v); });
   card.addEventListener('click', () => openWatch(v));
   return card;
 }
@@ -458,6 +478,7 @@ function openWatch(v) {
         <span class="vote-count" data-voters-id="${escHtml(v.id)}" title="See who reacted">${score(v)}</span>
         <button class="vote-btn ${down ? 'downvoted' : ''}" id="downBtn" title="Dislike"><span class="material-symbols-rounded">heart_broken</span></button>
       </div>
+      ${saveBtnHtml(v)}
       ${authorLinkHtml(v, `${profile.photo ? `<img src="${profile.photo}" alt="">` : ''}${escHtml(profile.name)}`)}
       <span style="color:var(--md-sys-color-on-surface-variant); font-size:13px;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:middle;">visibility</span> ${v.views||0} views</span>
       <button class="watch-icon-btn" id="shareBtn" title="Share" style="margin-left:auto;"><span class="material-symbols-rounded">link</span></button>
@@ -614,6 +635,7 @@ function openWatch(v) {
 
   document.getElementById('upBtn').addEventListener('click', () => toggleVote(v, 'up'));
   document.getElementById('downBtn').addEventListener('click', () => toggleVote(v, 'down'));
+  document.getElementById('watchSaveBtn').addEventListener('click', () => toggleSave(v));
   document.querySelector('[data-voters-id]')?.addEventListener('click', () => openVotersModal(v));
   document.getElementById('shareBtn').addEventListener('click', () => copyLink(videoUrl(v.id), 'Video link'));
   document.getElementById('reportBtn').addEventListener('click', () => reportItem('video', v.id, videoUrl(v.id)));
@@ -680,6 +702,24 @@ async function openVotersModal(item) {
   };
   votersData = { likes: upUids.map(rowFor), dislikes: downUids.map(rowFor) };
   renderVotersList();
+}
+
+function saveBtnHtml(v) {
+  const user = getCurrentUser();
+  const saved = user && (v.savedBy || []).includes(user.uid);
+  return `
+    <button type="button" class="save-btn ${saved ? 'saved' : ''}" id="watchSaveBtn" title="${saved ? 'Remove from saved' : 'Save'}">
+      <span class="material-symbols-rounded" style="font-variation-settings:'FILL' ${saved ? 1 : 0};">bookmark</span>
+    </button>
+  `;
+}
+async function toggleSave(v) {
+  const user = getCurrentUser();
+  if (!user) { showToast('Sign in to save'); return; }
+  const saved = (v.savedBy || []).includes(user.uid);
+  try {
+    await updateDoc(doc(db, 'videos', v.id), { savedBy: saved ? arrayRemove(user.uid) : arrayUnion(user.uid) });
+  } catch (err) { showToast('Could not save: ' + err.message); }
 }
 
 async function toggleVote(v, dir) {
