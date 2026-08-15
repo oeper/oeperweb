@@ -226,15 +226,17 @@ function injectStyles() {
        pages (Feed, Videos, Files, Tools) are reached by drilling in from
        Home's own hub tiles instead of being top-level tabs here. */
     .oe-bottom-nav { display: none; }
+    /* Icon-only — a label under each icon was redundant with the title/
+       aria-label already there for a11y, and five text rows made for a
+       busier bar than five icons need. */
     .oe-bottom-nav-item {
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-      flex: 1; padding: 6px 4px 4px; border: none; background: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex: 1; padding: 10px 4px; border: none; background: none; cursor: pointer;
       color: var(--md-sys-color-on-surface-variant); text-decoration: none;
-      font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif); font-size: 11px; font-weight: 500;
       -webkit-tap-highlight-color: transparent;
     }
     .oe-bottom-nav-item:visited { color: var(--md-sys-color-on-surface-variant); }
-    .oe-bottom-nav-item .material-symbols-rounded { font-size: 24px; }
+    .oe-bottom-nav-item .material-symbols-rounded { font-size: 26px; }
     .oe-bottom-nav-item.active { color: var(--md-sys-color-primary); }
     .oe-bottom-nav-item img {
       width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant);
@@ -272,6 +274,25 @@ function injectStyles() {
     .oe-create-item:visited { color: var(--md-sys-color-on-surface); }
     .oe-create-item:hover, .oe-create-item:active { background: var(--md-sys-state-hover); }
     .oe-create-item .material-symbols-rounded { font-size: 22px; color: var(--md-sys-color-primary); }
+
+    /* Unlike the Create drawer (bottom-anchored, since its trigger lives in
+       the bottom nav), this one's trigger sits in the TOP bar next to the
+       notification icon — so its list drops down from the top instead,
+       right under the navbar, with the curve on the bottom edge instead
+       of the top. */
+    .oe-profile-menu-sheet {
+      position: fixed; top: 72px; left: 0; right: 0; z-index: 150;
+      background-color: var(--md-sys-color-surface);
+      border-radius: 0 0 24px 24px;
+      padding: 0 8px; overflow: hidden; max-height: 0; opacity: 0; visibility: hidden;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.35);
+      transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 220ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1), visibility 0s linear 340ms;
+    }
+    .oe-profile-menu-sheet.open {
+      max-height: min(60vh, calc(100vh - 160px)); opacity: 1; visibility: visible; padding: 8px;
+      overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+      transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 260ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1);
+    }
 
     /* Own-profile menu trigger (Settings/Your activity) — mobile only,
        since desktop already has a standalone Settings icon here and its
@@ -408,16 +429,16 @@ export function mountTopNav(container) {
       <a href="/videos" class="oe-create-item"><span class="material-symbols-rounded">smart_display</span>new video</a>
       <a href="/files" class="oe-create-item"><span class="material-symbols-rounded">folder</span>new file</a>
     </div>
-    <div class="oe-create-drawer" id="oeProfileMenuSheet">
+    <div class="oe-profile-menu-sheet" id="oeProfileMenuSheet">
       <a href="/settings" class="oe-create-item"><span class="material-symbols-rounded">settings</span>settings</a>
       <a href="/activity" class="oe-create-item"><span class="material-symbols-rounded">insights</span>your activity</a>
     </div>
     <nav class="oe-bottom-nav" id="oeBottomNav">
-      <a href="https://oeper.dev/" class="oe-bottom-nav-item" data-id="home"><span class="material-symbols-rounded">home</span><span>home</span></a>
-      <div class="oe-bottom-nav-item disabled" title="Reels — coming soon"><span class="material-symbols-rounded">movie</span><span>soon</span></div>
-      <button type="button" class="oe-bottom-nav-item" id="oeCreateBtn" aria-expanded="false"><span class="material-symbols-rounded">add_circle</span><span>create</span></button>
-      <a href="/messages" class="oe-bottom-nav-item" data-id="messages"><span class="material-symbols-rounded" id="oeBottomChatIcon">chat_bubble</span><span>messages</span></a>
-      <a href="#" class="oe-bottom-nav-item" id="oeBottomProfileLink" data-id="profile"><span class="material-symbols-rounded">person</span><span>profile</span></a>
+      <a href="https://oeper.dev/" class="oe-bottom-nav-item" data-id="home" title="home" aria-label="home"><span class="material-symbols-rounded">home</span></a>
+      <div class="oe-bottom-nav-item disabled" title="reels — coming soon" aria-label="reels — coming soon"><span class="material-symbols-rounded">movie</span></div>
+      <button type="button" class="oe-bottom-nav-item" id="oeCreateBtn" aria-expanded="false" title="create" aria-label="create"><span class="material-symbols-rounded">add_circle</span></button>
+      <a href="/messages" class="oe-bottom-nav-item" data-id="messages" title="messages" aria-label="messages"><span class="material-symbols-rounded" id="oeBottomChatIcon">chat_bubble</span></a>
+      <a href="#" class="oe-bottom-nav-item" id="oeBottomProfileLink" data-id="profile" title="profile" aria-label="profile"><span class="material-symbols-rounded">person</span></a>
     </nav>
   `;
   const navEl = el.querySelector('.oe-navbar');
