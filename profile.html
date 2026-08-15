@@ -245,6 +245,7 @@ import {
 } from './shared/account.js?v=27';
 import { mountFooter } from './shared/footer.js?v=5';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
+import { observeList } from './shared/motion.js?v=1';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
   arrayUnion, arrayRemove,
@@ -359,6 +360,7 @@ const followListOverlay = document.getElementById('followListOverlay');
 const followListModal = document.getElementById('followListModal');
 const followListTitle = document.getElementById('followListTitle');
 const followListBody = document.getElementById('followListBody');
+observeList(followListBody);
 
 async function openFollowList(kind, viewedEmail) {
   followListTitle.textContent = kind === 'followers' ? 'followers' : 'following';
@@ -772,6 +774,8 @@ async function init() {
     });
 
     setProfileMenuVisible(isOwn);
+
+    observeList(document.getElementById('profilePostList'));
 
     document.getElementById('profilePostList').addEventListener('click', e => {
       const pollBtn = e.target.closest('[data-poll-vote]');

@@ -528,7 +528,7 @@
     </div>
   </div>
 
-  <div class="stats"><span>Total: <strong id="visibleCount">0</strong> posts</span></div>
+  <div class="stats"><span>total: <strong id="visibleCount">0</strong> posts</span></div>
 
   <div class="post-list" id="postList"></div>
 
@@ -629,6 +629,7 @@ import { mountFooter } from './shared/footer.js?v=5';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
+import { observeList } from './shared/motion.js?v=1';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
   query, orderBy, serverTimestamp, arrayUnion, arrayRemove, increment, Timestamp
@@ -1374,6 +1375,7 @@ function runForum() {
 
   // ── Feed ──────────────────────────────────────────────────
   const postList = document.getElementById('postList');
+  observeList(postList);
   const emptyState = document.getElementById('emptyState');
   const visibleCount = document.getElementById('visibleCount');
   const searchInput = document.getElementById('searchInput');
@@ -1479,6 +1481,7 @@ function runForum() {
   const votersOverlay = document.getElementById('votersOverlay');
   const votersModal = document.getElementById('votersModal');
   const votersList = document.getElementById('votersList');
+  observeList(votersList);
   const votersLikeTab = document.getElementById('votersLikeTab');
   const votersDislikeTab = document.getElementById('votersDislikeTab');
   let votersData = { likes: [], dislikes: [] };
@@ -1493,7 +1496,7 @@ function runForum() {
       return r.handle
         ? `<a class="voter-row" href="/profile?u=${encodeURIComponent(r.handle)}">${inner}</a>`
         : `<div class="voter-row">${inner}</div>`;
-    }).join('') : `<div class="voters-empty">No ${votersActiveTab === 'likes' ? 'likes' : 'dislikes'} yet</div>`;
+    }).join('') : `<div class="voters-empty">no ${votersActiveTab === 'likes' ? 'likes' : 'dislikes'} yet</div>`;
   }
   votersLikeTab.addEventListener('click', () => { votersActiveTab = 'likes'; renderVotersList(); });
   votersDislikeTab.addEventListener('click', () => { votersActiveTab = 'dislikes'; renderVotersList(); });
@@ -2019,7 +2022,8 @@ function runForum() {
   function renderComments(comments, postId, highlightId) {
     const list = document.getElementById('commentList');
     if (!list) return;
-    document.getElementById('commentsHeading').textContent = `Comments (${comments.length})`;
+    observeList(list);
+    document.getElementById('commentsHeading').textContent = `comments (${comments.length})`;
     list.innerHTML = comments.map(c => `
       <div class="comment${c.id === highlightId ? ' highlighted' : ''}" id="comment-${c.id}">
         ${voteColHtml(c, 'c-' + c.id)}

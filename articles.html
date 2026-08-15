@@ -526,7 +526,7 @@
   </div>
 
   <div class="stats">
-    <span>Total: <strong id="visibleCount">0</strong> items displayed</span>
+    <span>total: <strong id="visibleCount">0</strong> items displayed</span>
   </div>
 
   <div class="article-list" id="articleList"></div>
@@ -547,7 +547,8 @@
   <div class="reader-content" id="readerContent"></div>
 </div>
 
-<script>
+<script type="module">
+import { observeList } from './shared/motion.js?v=1';
 (async function() {
 
 const res = await fetch('data/articles.json');
@@ -602,6 +603,7 @@ usedCatIds.forEach(id => {
 });
 
 const articleList = document.getElementById('articleList');
+observeList(articleList);
 
 // Build card elements keyed by original index
 const cardEls = {};

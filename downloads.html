@@ -322,7 +322,7 @@
   </div>
 
   <div class="stats">
-    <span>Total: <strong id="visibleCount">0</strong> resources found</span>
+    <span>total: <strong id="visibleCount">0</strong> resources found</span>
   </div>
 
   <div class="file-list" id="fileList"></div>
@@ -335,7 +335,8 @@
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+import { observeList } from './shared/motion.js?v=1';
 (async function() {
 
 const res = await fetch('data/downloads.json');
@@ -390,6 +391,7 @@ usedCatIds.forEach(id => {
 });
 
 const fileList = document.getElementById('fileList');
+observeList(fileList);
 
 FILES.forEach((file, i) => {
   const catIds = getCategoryIds(file.category);

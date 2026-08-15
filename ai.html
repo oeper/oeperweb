@@ -331,6 +331,7 @@ import { mountTopNav } from './shared/topnav.js?v=21';
 import { mountFooter } from './shared/footer.js?v=5';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
+import { observeList } from './shared/motion.js?v=1';
 import { doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 mountFooter();
@@ -682,7 +683,8 @@ renderChatFromHistory();
 
 function renderChatsList() {
   const list = document.getElementById('chatsList');
-  if (!chats.length) { list.innerHTML = '<p class="chats-empty">No chats yet.</p>'; return; }
+  observeList(list);
+  if (!chats.length) { list.innerHTML = '<p class="chats-empty">no chats yet.</p>'; return; }
   const sorted = [...chats].sort((a, b) => b.updatedAt - a.updatedAt);
   list.innerHTML = sorted.map(c => `
     <div class="chat-row ${c.id === currentChatId ? 'active' : ''}" data-id="${c.id}">

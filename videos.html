@@ -293,6 +293,7 @@ import { mountTopNav } from './shared/topnav.js?v=21';
 import { mountFooter } from './shared/footer.js?v=5';
 import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
+import { observeList } from './shared/motion.js?v=1';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
   arrayUnion, arrayRemove, increment, query, orderBy,
@@ -373,10 +374,11 @@ onSnapshot(collection(db, 'videos'), snap => {
     const match = wanted && videos.find(v => v.id === wanted);
     if (match) openWatch(match);
   }
-}, err => { document.getElementById('emptyNote').style.display = 'block'; document.getElementById('emptyNote').textContent = 'Could not load videos: ' + err.message; });
+}, err => { document.getElementById('emptyNote').style.display = 'block'; document.getElementById('emptyNote').textContent = 'could not load videos: ' + err.message; });
 
 function render() {
   const grid = document.getElementById('grid');
+  observeList(grid);
   grid.innerHTML = '';
   videos.forEach(v => grid.appendChild(buildCard(v)));
   document.getElementById('emptyNote').style.display = videos.length === 0 ? 'block' : 'none';
@@ -523,6 +525,7 @@ function openWatch(v) {
 
   let unsubWatchComments = null;
   const watchCommentList = document.getElementById('watchCommentList');
+  observeList(watchCommentList);
   unsubWatchComments = onSnapshot(
     query(collection(db, 'videos', v.id, 'comments'), orderBy('createdAt', 'asc')),
     snap => {
@@ -656,6 +659,7 @@ function openWatch(v) {
 const votersOverlay = document.getElementById('votersOverlay');
 const votersModal = document.getElementById('votersModal');
 const votersList = document.getElementById('votersList');
+observeList(votersList);
 const votersLikeTab = document.getElementById('votersLikeTab');
 const votersDislikeTab = document.getElementById('votersDislikeTab');
 let votersData = { likes: [], dislikes: [] };

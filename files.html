@@ -284,7 +284,7 @@
 
   <div class="breadcrumb-row" id="breadcrumbRow" style="display:none;"></div>
 
-  <div class="stats" id="stats" style="display:none;"><span>Total: <strong id="visibleCount">0</strong> items</span></div>
+  <div class="stats" id="stats" style="display:none;"><span>total: <strong id="visibleCount">0</strong> items</span></div>
 
   <div class="file-list" id="fileList"></div>
 
@@ -334,6 +334,7 @@ import {
 import { mountFooter } from './shared/footer.js?v=5';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
+import { observeList } from './shared/motion.js?v=1';
 
 mountTopNav();
 mountFooter();
@@ -668,6 +669,7 @@ function render() {
   document.getElementById('uploadInput').closest('.upload-btn').style.display = (files !== null && isOwnSpace()) ? '' : 'none';
 
   const list = document.getElementById('fileList');
+  observeList(list);
   const empty = document.getElementById('emptyState');
 
   if (scope === 'all' && currentOwnerEmail === null) {
@@ -713,6 +715,7 @@ function render() {
 // itself, since each user's own folder tree lives one level below their row.
 function renderUserList() {
   const list = document.getElementById('fileList');
+  observeList(list);
   const empty = document.getElementById('emptyState');
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
 
@@ -897,7 +900,7 @@ function uploadAnon(file, onProgress) {
       if (xhr.status >= 200 && xhr.status < 300) resolve(data);
       else reject(new Error(data.error || `HTTP ${xhr.status}`));
     };
-    xhr.onerror = () => reject(new Error('Upload failed — network error'));
+    xhr.onerror = () => reject(new Error('upload failed — network error'));
     xhr.send(fd);
   });
 }
@@ -905,6 +908,7 @@ function uploadAnon(file, onProgress) {
 let anonUploadedCount = 0;
 function addAnonResultRow(url, temporary) {
   const list = document.getElementById('anonResultList');
+  observeList(list);
   const row = document.createElement('div');
   row.className = 'anon-result-row';
   row.innerHTML = `

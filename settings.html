@@ -162,7 +162,7 @@
           <div class="row-sub">removing one only clears it from this list — it doesn't sign that device out.</div>
         </div>
       </div>
-      <div class="row-block" id="sessionsList"><div class="session-empty">Loading…</div></div>
+      <div class="row-block" id="sessionsList"><div class="session-empty">loading…</div></div>
       <a class="row" href="https://myaccount.google.com/security" target="_blank" rel="noopener" style="text-decoration:none; color:inherit;">
         <div class="row-icon"><span class="material-symbols-rounded">open_in_new</span></div>
         <div class="row-text">
@@ -217,6 +217,7 @@ import { mountTopNav } from './shared/topnav.js?v=21';
 import { mountThemePicker } from './shared/theme-picker.js?v=4';
 import { mountFooter } from './shared/footer.js?v=5';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
+import { observeList } from './shared/motion.js?v=1';
 
 mountTopNav();
 mountFooter();
@@ -264,6 +265,7 @@ async function initSecuritySection(user) {
 }
 async function renderSessions(user) {
   const list = document.getElementById('sessionsList');
+  observeList(list);
   const sessions = await listSessions(user.email);
   const thisDeviceId = getCurrentDeviceId();
   if (!sessions.length) {
@@ -277,10 +279,10 @@ async function renderSessions(user) {
       <div class="session-row">
         <div class="session-row-icon"><span class="material-symbols-rounded">${isThis ? 'smartphone' : 'devices_other'}</span></div>
         <div class="session-row-main">
-          <div class="session-row-label">${escHtmlSec(s.label || 'Unknown device')}${isThis ? '<span class="session-current-tag">This device</span>' : ''}</div>
-          <div class="session-row-meta">Active ${lastSeen ? timeAgo(lastSeen) : 'recently'}</div>
+          <div class="session-row-label">${escHtmlSec(s.label || 'unknown device')}${isThis ? '<span class="session-current-tag">this device</span>' : ''}</div>
+          <div class="session-row-meta">active ${lastSeen ? timeAgo(lastSeen) : 'recently'}</div>
         </div>
-        <button type="button" class="session-remove-btn" data-remove-session="${s.id}" title="Remove from list"><span class="material-symbols-rounded">close</span></button>
+        <button type="button" class="session-remove-btn" data-remove-session="${s.id}" title="remove from list"><span class="material-symbols-rounded">close</span></button>
       </div>
     `;
   }).join('');

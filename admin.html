@@ -327,6 +327,7 @@ import {
 import { mountTopNav } from './shared/topnav.js?v=21';
 import { mountFooter } from './shared/footer.js?v=5';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
+import { observeList } from './shared/motion.js?v=1';
 import {
   collection, addDoc, serverTimestamp, Timestamp, doc, onSnapshot, setDoc,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -421,8 +422,9 @@ onSnapshot(AI_MODELS_DOC, snap => {
 
 function renderAiModelList() {
   const list = document.getElementById('aiModelList');
+  observeList(list);
   if (!aiModels.length) {
-    list.innerHTML = '<p style="color:var(--md-sys-color-on-surface-variant); font-size:14px;">No models yet — add one below.</p>';
+    list.innerHTML = '<p style="color:var(--md-sys-color-on-surface-variant); font-size:14px;">no models yet — add one below.</p>';
     return;
   }
   list.innerHTML = aiModels.map((m, i) => `
@@ -646,12 +648,13 @@ function renderList() {
   const s = state[activeTab];
   const cfg = TABS[activeTab];
   const list = document.getElementById('itemList');
+  observeList(list);
   const empty = document.getElementById('emptyHint');
   list.innerHTML = '';
 
   if (!s.handle && !s.usingFallback) {
     empty.style.display = 'block';
-    empty.querySelector('p').innerHTML = `Open <code>data/${cfg.file}</code> to start editing.`;
+    empty.querySelector('p').innerHTML = `open <code>data/${cfg.file}</code> to start editing.`;
     return;
   }
   if (s.items.length === 0) {

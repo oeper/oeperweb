@@ -118,6 +118,7 @@
 import { onAccountChange, db } from './shared/account.js?v=27';
 import { mountTopNav } from './shared/topnav.js?v=21';
 import { mountFooter } from './shared/footer.js?v=5';
+import { observeList } from './shared/motion.js?v=1';
 import {
   collection, collectionGroup, query, where, getDocs,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -284,6 +285,7 @@ function render() {
   content.querySelectorAll('[data-tab]').forEach(el => {
     el.addEventListener('click', () => { activeTab = el.dataset.tab; render(); });
   });
+  observeList(content.querySelector('.activity-list'));
 }
 
 async function init(user) {

@@ -743,6 +743,7 @@
   import { mountFooter } from './shared/footer.js?v=5';
   import { createDropdown } from './shared/dropdown.js?v=2';
   import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
+  import { observeList } from './shared/motion.js?v=1';
   import {
     collection, query, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp,
     getDocs, where, setDoc, Timestamp,
@@ -1316,6 +1317,7 @@
 
   const feedEl = document.getElementById('homeFeed');
   if (feedEl) {
+    observeList(feedEl);
     let latestPosts = [];
     let latestVideos = [];
     let gotPosts = false, gotVideos = false;
@@ -1519,6 +1521,7 @@
     const modalTitle = document.getElementById('igModalTitle');
     const postContentEl = document.getElementById('igPostContent');
     const commentList = document.getElementById('igCommentList');
+    observeList(commentList);
     const commentForm = document.getElementById('igCommentForm');
     const commentInput = document.getElementById('igCommentInput');
     const commentSendBtn = document.getElementById('igCommentSendBtn');
@@ -1834,6 +1837,7 @@
     // Submitting the form (Enter, or no result picked) still goes to the
     // chosen web search engine as before — this is additive, not a replacement.
     const dropdown = document.getElementById('homeSearchDropdown');
+    observeList(dropdown);
     function closeDropdown() { dropdown.classList.remove('open'); }
 
     let corpusPromise = null;
@@ -1873,25 +1877,25 @@
           matchRank(name, q) === -1 ? 99 : matchRank(name, q),
           matchRank(u.handle, q) === -1 ? 99 : matchRank(u.handle, q)
         );
-        if (rank < 99) results.push({ rank, name, sub: 'in People', url: `/profile?u=${encodeURIComponent(u.handle)}`, photo: getProfile(u.email, u.displayName, u.photoURL).photo, icon: 'person' });
+        if (rank < 99) results.push({ rank, name, sub: 'in people', url: `/profile?u=${encodeURIComponent(u.handle)}`, photo: getProfile(u.email, u.displayName, u.photoURL).photo, icon: 'person' });
       });
       corpus.posts.forEach(p => {
         const name = p.title || p.body || '';
         const rank = matchRank(name, q);
-        if (rank !== -1) results.push({ rank, name, sub: 'in Feed', url: `/feed?post=${p.id}`, icon: 'forum' });
+        if (rank !== -1) results.push({ rank, name, sub: 'in feed', url: `/feed?post=${p.id}`, icon: 'forum' });
       });
       corpus.videos.forEach(v => {
         const rank = matchRank(v.title, q);
-        if (rank !== -1) results.push({ rank, name: v.title || '', sub: 'in Videos', url: `/videos?video=${v.id}`, icon: 'smart_display' });
+        if (rank !== -1) results.push({ rank, name: v.title || '', sub: 'in videos', url: `/videos?video=${v.id}`, icon: 'smart_display' });
       });
       results.sort((a, b) => a.rank - b.rank);
       const top = results.slice(0, 6);
 
       const engineName = SEARCH_ENGINES[engine] ? engine[0].toUpperCase() + engine.slice(1) : 'Google';
-      const footer = engine === 'oeper' ? '' : `<div class="hsd-footer"><span class="material-symbols-rounded" style="font-size:16px;">public</span>Press Enter to search the web on ${engineName}</div>`;
+      const footer = engine === 'oeper' ? '' : `<div class="hsd-footer"><span class="material-symbols-rounded" style="font-size:16px;">public</span>press Enter to search the web on ${engineName}</div>`;
 
       if (top.length === 0) {
-        dropdown.innerHTML = `<div class="hsd-empty">No oeper.dev results for "${escHtml(qRaw.trim())}"</div>${footer}`;
+        dropdown.innerHTML = `<div class="hsd-empty">no oeper.dev results for "${escHtml(qRaw.trim())}"</div>${footer}`;
         return;
       }
       dropdown.innerHTML = top.map(r => `

@@ -372,6 +372,7 @@ import {
 import { mountFooter } from './shared/footer.js?v=5';
 import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
+import { observeList } from './shared/motion.js?v=1';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
   arrayUnion, arrayRemove,
@@ -632,6 +633,7 @@ function initNotes() {
 }
 
 const content = document.getElementById('content');
+observeList(content);
 let unsubConvos = null;
 let unsubGroups = null;
 let unsubMessages = null;
@@ -743,7 +745,7 @@ function showInbox(user) {
         }
         const g = r.data;
         const unread = isUnreadGroup(g);
-        const preview = g.lastMessage ? `${g.lastMessageSenderEmail === user.email ? 'You: ' : ''}${escHtml(g.lastMessage)}` : 'No messages yet';
+        const preview = g.lastMessage ? `${g.lastMessageSenderEmail === user.email ? 'you: ' : ''}${escHtml(g.lastMessage)}` : 'no messages yet';
         return `
           <button class="convo-row${unread ? ' unread' : ''}" data-kind="group" data-id="${escHtml(g.id)}">
             ${g.icon ? `<img class="convo-avatar" src="${escHtml(g.icon)}" alt="">` : `<div class="group-icon-fallback"><span class="material-symbols-rounded">groups</span></div>`}
@@ -882,6 +884,7 @@ async function openGroupInfoModal(groupId) {
     nameInput.disabled = !iAmAdmin;
 
     await Promise.all(g.members.map(e => ensureProfileLoaded(e)));
+    observeList(document.getElementById('groupInfoMemberList'));
     document.getElementById('groupInfoMemberList').innerHTML = g.members.map(email => {
       const p = getProfile(email, null, null);
       const isAdmin = (g.admins || []).includes(email);
@@ -1085,6 +1088,7 @@ async function openGroupThread(groupId, user) {
   document.getElementById('groupThreadInfoBtn').addEventListener('click', openInfo);
 
   const msgList = document.getElementById('msgList');
+  observeList(msgList);
   const msgInput = document.getElementById('msgInput');
   attachMentionAutocomplete(msgInput);
   function autoGrowGroupInput() {
@@ -1248,6 +1252,7 @@ async function openThread(otherEmail, user) {
   });
 
   const msgList = document.getElementById('msgList');
+  observeList(msgList);
   const msgInput = document.getElementById('msgInput');
   attachMentionAutocomplete(msgInput);
   function autoGrowMsgInput() {
