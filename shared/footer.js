@@ -31,7 +31,7 @@ const STATUS_ICON = `<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 1
 const SITE_LINKS = [
   { name: 'oeper.dev profile', handle: '@oeperdev', url: '/profile?u=oeperdev', icon: SITE_ICON },
   { name: 'oeper.dev profile', handle: '@sanhackerman', url: '/profile?u=sanhackerman', icon: SITE_ICON },
-  { name: 'Server status', handle: 'Server status', url: '/status', icon: STATUS_ICON },
+  { name: 'server status', handle: 'server status', url: '/status', icon: STATUS_ICON },
 ];
 
 let stylesInjected = false;

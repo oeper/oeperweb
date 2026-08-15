@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js?v=10"></script>
+<script src="./shared/theme-boot.js?v=11"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -69,7 +69,7 @@
   .convo-list { display: flex; flex-direction: column; gap: 8px; }
   .convo-row {
     display: flex; align-items: center; gap: 14px; background: var(--md-sys-color-surface);
-    border-radius: 18px; padding: 14px 16px; cursor: pointer; border: none; text-align: left; width: 100%;
+    border-radius: 16px; padding: 14px 16px; cursor: pointer; border: none; text-align: left; width: 100%;
     font-family: inherit; color: inherit; transition: background-color 0.2s;
   }
   .convo-row:hover { background-color: var(--md-sys-color-hover-surface); }
@@ -230,7 +230,7 @@
   .thread-inputbar {
     position: sticky; bottom: 16px; display: flex; align-items: center; gap: 0;
     background: var(--md-sys-color-surface-variant); border: none;
-    border-radius: 26px; padding: 8px 8px 8px 20px;
+    border-radius: 100px; padding: 8px 8px 8px 20px;
   }
   /* shared/topnav.js's mobile bottom nav bar (Home/Create/Profile) sits
      fixed at the very bottom of the screen below 600px — without this,
@@ -364,14 +364,14 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=19';
+import { mountTopNav } from './shared/topnav.js?v=20';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
   loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions,
-} from './shared/account.js?v=26';
-import { mountFooter } from './shared/footer.js?v=4';
+} from './shared/account.js?v=27';
+import { mountFooter } from './shared/footer.js?v=5';
 import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=2';
-import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=2';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
   arrayUnion, arrayRemove,

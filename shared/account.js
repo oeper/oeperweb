@@ -177,7 +177,7 @@ export function getProfile(email, fallbackName, fallbackPhoto) {
 // lets an owner touch the `badge` field, nothing else on someone else's
 // profile — this check just avoids a doomed round-trip for everyone else.
 export async function setUserBadge(email, badge) {
-  if (!currentUser || !isOwnerEmail(currentUser.email)) throw new Error('Only owners can do this');
+  if (!currentUser || !isOwnerEmail(currentUser.email)) throw new Error('only owners can do this');
   if (badge) {
     await setDoc(doc(db, 'users', email), { badge }, { merge: true });
   } else {
@@ -197,7 +197,7 @@ export async function setUserBadge(email, badge) {
 // exists to fix. Pass { label, icon } for a custom badge, { hidden: true }
 // to show nothing, or undefined to go back to the default OFFICIAL badge.
 export async function setOwnBadgeOverride(override) {
-  if (!currentUser) throw new Error('Sign in first');
+  if (!currentUser) throw new Error('sign in first');
   if (override === undefined) {
     await setDoc(doc(db, 'users', currentUser.email), { badgeOverride: deleteField() }, { merge: true });
   } else {
@@ -315,11 +315,11 @@ export async function isHandleAvailable(newHandle) {
 // account — harmless, and it means old profile links keep working instead
 // of breaking the moment someone renames themselves.
 export async function changeHandle(newHandle) {
-  if (!currentUser) throw new Error('Sign in first');
-  if (!isValidHandle(newHandle)) throw new Error('Usernames must be 3-20 characters: lowercase letters, numbers, periods, and underscores only.');
+  if (!currentUser) throw new Error('sign in first');
+  if (!isValidHandle(newHandle)) throw new Error('usernames must be 3-20 characters: lowercase letters, numbers, periods, and underscores only.');
   if (handleOf(currentUser.email) === newHandle) return newHandle; // no-op, already yours
   const available = await isHandleAvailable(newHandle);
-  if (!available) throw new Error('That username is already taken.');
+  if (!available) throw new Error('that username is already taken.');
   await setDoc(doc(db, 'handles', newHandle), { email: currentUser.email });
   await setDoc(doc(db, 'users', currentUser.email), { handle: newHandle }, { merge: true });
   profileCache[currentUser.email] = { ...(profileCache[currentUser.email] || {}), handle: newHandle };
@@ -462,8 +462,8 @@ export function signOutUser() {
 // via XMLHttpRequest since fetch has no cross-browser upload-progress event.
 export async function uploadFile(file, endpointPath, extraFields, onProgress) {
   if (!file) return null;
-  if (!SERVER_ENDPOINT) throw new Error('Image uploads are not set up yet');
-  if (!currentUser) throw new Error('Sign in first');
+  if (!SERVER_ENDPOINT) throw new Error('image uploads are not set up yet');
+  if (!currentUser) throw new Error('sign in first');
   const idToken = await currentUser.getIdToken();
   const fd = new FormData();
   // Extra text fields (e.g. files.html's target folder) must be appended
@@ -486,13 +486,13 @@ export async function uploadFile(file, endpointPath, extraFields, onProgress) {
       if (xhr.status >= 200 && xhr.status < 300) resolve(data);
       else reject(new Error(data.error || `Upload failed (${xhr.status})`));
     };
-    xhr.onerror = () => reject(new Error('Upload failed — network error'));
+    xhr.onerror = () => reject(new Error('upload failed — network error'));
     xhr.send(fd);
   }).then(data => data.url);
 }
 
 export async function updateProfile({ displayName, photoFile, bio, onProgress }) {
-  if (!currentUser) throw new Error('Sign in first');
+  if (!currentUser) throw new Error('sign in first');
   const patch = { updatedAt: serverTimestamp() };
   const trimmedName = (displayName || '').trim().slice(0, 40);
   patch.displayName = trimmedName || currentUser.displayName || currentUser.email;
@@ -646,30 +646,30 @@ function ensureModal() {
   const modal = document.createElement('div');
   modal.className = 'oe-acct-modal';
   modal.innerHTML = `
-    <h3>Edit profile</h3>
+    <h3>edit profile</h3>
     <div class="oe-acct-avatar-row">
       <img id="oeAcctAvatarPreview" src="" alt="">
       <label>
-        <span class="material-symbols-rounded" style="font-size:16px;">photo_camera</span> Change photo
+        <span class="material-symbols-rounded" style="font-size:16px;">photo_camera</span> change photo
         <input type="file" accept="image/*" id="oeAcctPhotoInput">
       </label>
     </div>
     <div class="oe-acct-field">
-      <label>Display name</label>
+      <label>display name</label>
       <input type="text" id="oeAcctNameInput" maxlength="40">
     </div>
     <div class="oe-acct-field">
-      <label>Username</label>
+      <label>username</label>
       <input type="text" id="oeAcctHandleInput" maxlength="20" placeholder="lowercase, no spaces">
       <div class="oe-acct-handle-status" id="oeAcctHandleStatus"></div>
     </div>
     <div class="oe-acct-field">
-      <label>Bio</label>
-      <textarea id="oeAcctBioInput" maxlength="200" rows="3" placeholder="Say something about yourself…"></textarea>
+      <label>bio</label>
+      <textarea id="oeAcctBioInput" maxlength="200" rows="3" placeholder="say something about yourself…"></textarea>
     </div>
     <div class="oe-acct-actions">
-      <button type="button" class="oe-acct-btn danger" id="oeAcctCancel">Cancel</button>
-      <button type="button" class="oe-acct-btn primary" id="oeAcctSave"><span class="material-symbols-rounded" style="font-size:16px;">check</span> Save</button>
+      <button type="button" class="oe-acct-btn danger" id="oeAcctCancel">cancel</button>
+      <button type="button" class="oe-acct-btn primary" id="oeAcctSave"><span class="material-symbols-rounded" style="font-size:16px;">check</span> save</button>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -713,7 +713,7 @@ export function openEditProfileModal() {
   photoInput.onchange = () => {
     const f = photoInput.files[0];
     if (!f) return;
-    if (f.size > MAX_IMAGE_BYTES) { showToast(`Image must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); return; }
+    if (f.size > MAX_IMAGE_BYTES) { showToast(`image must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); return; }
     pendingFile = f;
     avatarPreview.src = URL.createObjectURL(f);
   };
@@ -729,12 +729,12 @@ export function openEditProfileModal() {
       handleStatus.className = 'oe-acct-handle-status bad';
       return;
     }
-    handleStatus.textContent = 'Checking…';
+    handleStatus.textContent = 'checking…';
     handleStatus.className = 'oe-acct-handle-status';
     handleCheckTimer = setTimeout(async () => {
       const available = await isHandleAvailable(value);
       if (handleInput.value !== value) return; // stale, they've kept typing
-      handleStatus.textContent = available ? 'Available' : 'Already taken';
+      handleStatus.textContent = available ? 'available' : 'already taken';
       handleStatus.className = 'oe-acct-handle-status ' + (available ? 'ok' : 'bad');
     }, 400);
   };
@@ -742,7 +742,7 @@ export function openEditProfileModal() {
   saveBtn.onclick = async () => {
     const newHandle = handleInput.value.trim().toLowerCase();
     if (newHandle && newHandle !== currentHandle && !isValidHandle(newHandle)) {
-      showToast('Fix your username before saving');
+      showToast('fix your username before saving');
       return;
     }
     saveBtn.disabled = true;
@@ -750,16 +750,16 @@ export function openEditProfileModal() {
     try {
       await updateProfile({
         displayName: nameInput.value, photoFile: pendingFile, bio: bioInput.value,
-        onProgress: pendingFile ? frac => { saveBtn.textContent = `Uploading… ${Math.round(frac * 100)}%`; } : undefined,
+        onProgress: pendingFile ? frac => { saveBtn.textContent = `uploading… ${Math.round(frac * 100)}%`; } : undefined,
       });
       if (newHandle && newHandle !== currentHandle) {
         try { await changeHandle(newHandle); }
-        catch (err) { showToast('Profile saved, but username change failed: ' + err.message); saveBtn.disabled = false; return; }
+        catch (err) { showToast('profile saved, but username change failed: ' + err.message); saveBtn.disabled = false; return; }
       }
       closeModal();
-      showToast('Profile updated');
+      showToast('profile updated');
     } catch (err) {
-      showToast('Could not update profile: ' + err.message);
+      showToast('could not update profile: ' + err.message);
     } finally {
       saveBtn.disabled = false;
       saveBtn.textContent = saveBtnLabel;
@@ -783,14 +783,14 @@ export function mountAccountBar(container) {
       container.innerHTML = `
         <div class="oe-acct-chip">
           ${handle
-            ? `<a href="/profile?u=${encodeURIComponent(handle)}" class="oe-acct-profile-link" title="View profile">${profileInner}</a>`
+            ? `<a href="/profile?u=${encodeURIComponent(handle)}" class="oe-acct-profile-link" title="view profile">${profileInner}</a>`
             : `<span class="oe-acct-profile-link">${profileInner}</span>`}
         </div>
       `;
     } else {
-      container.innerHTML = `<button class="oe-acct-signin" id="oeAcctSignInBtn"><span class="material-symbols-rounded" style="font-size:18px;">login</span> Sign in</button>`;
+      container.innerHTML = `<button class="oe-acct-signin" id="oeAcctSignInBtn"><span class="material-symbols-rounded" style="font-size:18px;">login</span> sign in</button>`;
       container.querySelector('#oeAcctSignInBtn').addEventListener('click', () => {
-        signIn().catch(err => showToast('Sign-in failed: ' + err.message));
+        signIn().catch(err => showToast('sign-in failed: ' + err.message));
       });
     }
   }

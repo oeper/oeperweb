@@ -41,7 +41,7 @@ function injectStyles() {
 export function mountThemePicker(container, onChange) {
   injectStyles();
   if (!window.OE_THEMES) {
-    container.textContent = 'Theme options unavailable — shared/theme-boot.js failed to load.';
+    container.textContent = 'theme options unavailable — shared/theme-boot.js failed to load.';
     return;
   }
   const current = localStorage.getItem(window.OE_THEME_KEY) || 'material-dark';
@@ -63,7 +63,7 @@ export function mountThemePicker(container, onChange) {
   function renderFlipBtn() {
     const flipped = isFlipped();
     flipBtn.classList.toggle('active', flipped);
-    flipBtn.innerHTML = `<span class="material-symbols-rounded">invert_colors</span><span>${flipped ? 'Colors flipped' : 'Flip colors'}</span>`;
+    flipBtn.innerHTML = `<span class="material-symbols-rounded">invert_colors</span><span>${flipped ? 'colors flipped' : 'flip colors'}</span>`;
   }
   renderFlipBtn();
   container.appendChild(flipBtn);

@@ -111,7 +111,7 @@ export function oeAlert(message, opts) {
     message,
     input: null,
     cancelValue: undefined,
-    buttons: [{ label: (opts && opts.okLabel) || 'OK', primary: true, value: undefined }],
+    buttons: [{ label: (opts && opts.okLabel) || 'ok', primary: true, value: undefined }],
   });
 }
 
@@ -124,8 +124,8 @@ export function oeConfirm(message, opts) {
     input: null,
     cancelValue: false,
     buttons: [
-      { label: (opts && opts.cancelLabel) || 'Cancel', value: false },
-      { label: (opts && opts.okLabel) || 'OK', value: true, primary: !(opts && opts.danger), dangerPrimary: !!(opts && opts.danger) },
+      { label: (opts && opts.cancelLabel) || 'cancel', value: false },
+      { label: (opts && opts.okLabel) || 'ok', value: true, primary: !(opts && opts.danger), dangerPrimary: !!(opts && opts.danger) },
     ],
   });
 }
@@ -138,8 +138,8 @@ export function oePrompt(message, opts) {
     input: { defaultValue: (opts && opts.defaultValue) || '', placeholder: (opts && opts.placeholder) || '', maxLength: opts && opts.maxLength },
     cancelValue: null,
     buttons: [
-      { label: (opts && opts.cancelLabel) || 'Cancel', value: null },
-      { label: (opts && opts.okLabel) || 'OK', primary: true, useInputValue: true },
+      { label: (opts && opts.cancelLabel) || 'cancel', value: null },
+      { label: (opts && opts.okLabel) || 'ok', primary: true, useInputValue: true },
     ],
   });
 }

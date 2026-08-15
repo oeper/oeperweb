@@ -8,7 +8,7 @@
 // behavior change needs its `?v=N` bumped on every `from './shared/topnav.js?v=N'`
 // import across the site (grep for it) — otherwise visitors can sit on a
 // stale cached copy for hours after a deploy.
-import { mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange, signIn } from './account.js?v=26';
+import { mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange, signIn } from './account.js?v=27';
 import {
   collection, query, orderBy, limit, getDocs, onSnapshot, where, doc, updateDoc, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -19,11 +19,11 @@ import {
 export const LOGO_SVG = `<svg viewBox="0 0 98 118" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M97.21 104.246C99.8214 110.812 94.9842 117.941 87.918 117.941H10.0098C2.94348 117.941 -1.89373 110.812 0.717769 104.246L24.9966 43.2019C25.2993 42.4406 26.0357 41.941 26.855 41.941H71.0728C71.892 41.941 72.6284 42.4406 72.9312 43.2019L97.21 104.246ZM39.6719 6.30428C43.0151 -2.10143 54.9127 -2.10143 58.2559 6.30428L65.3744 24.2018C65.8967 25.515 64.9293 26.941 63.516 26.941H34.4117C32.9985 26.941 32.031 25.515 32.5533 24.2018L39.6719 6.30428Z"/></svg>`;
 
 const NAV_ITEMS = [
-  { id: 'home', title: 'Home', icon: 'home', url: 'https://oeper.dev/', path: '/' },
-  { id: 'feed', title: 'Feed', icon: 'forum', url: 'https://oeper.dev/feed', path: '/feed' },
-  { id: 'videos', title: 'Videos', icon: 'smart_display', url: 'https://oeper.dev/videos', path: '/videos' },
-  { id: 'files', title: 'Files', icon: 'folder', url: 'https://oeper.dev/files', path: '/files' },
-  { id: 'tools', title: 'Tools', icon: 'build', url: 'https://oeper.dev/tools', path: '/tools' },
+  { id: 'home', title: 'home', icon: 'home', url: 'https://oeper.dev/', path: '/' },
+  { id: 'feed', title: 'feed', icon: 'forum', url: 'https://oeper.dev/feed', path: '/feed' },
+  { id: 'videos', title: 'videos', icon: 'smart_display', url: 'https://oeper.dev/videos', path: '/videos' },
+  { id: 'files', title: 'files', icon: 'folder', url: 'https://oeper.dev/files', path: '/files' },
+  { id: 'tools', title: 'tools', icon: 'build', url: 'https://oeper.dev/tools', path: '/tools' },
 ];
 
 function escHtml(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
@@ -381,7 +381,7 @@ export function mountTopNav(container) {
       </a>
       <div class="oe-nav-search-wrap" id="oeNavSearchWrap">
         <span class="material-symbols-rounded oe-nav-search-icon">search</span>
-        <input class="oe-nav-search-input" id="oeNavSearchInput" type="text" placeholder="Search oeper.dev…" autocomplete="off">
+        <input class="oe-nav-search-input" id="oeNavSearchInput" type="text" placeholder="search oeper.dev…" autocomplete="off">
         <button class="oe-nav-search-mobile-close" id="oeNavSearchMobileClose" aria-label="Close search"><span class="material-symbols-rounded">close</span></button>
         <div class="oe-nav-search-dropdown" id="oeNavSearchDropdown"></div>
       </div>
@@ -404,13 +404,13 @@ export function mountTopNav(container) {
       </div>
     </nav>
     <div class="oe-create-drawer" id="oeCreateDrawer">
-      <a href="/feed" class="oe-create-item"><span class="material-symbols-rounded">forum</span>New Post</a>
-      <a href="/videos" class="oe-create-item"><span class="material-symbols-rounded">smart_display</span>New Video</a>
-      <a href="/files" class="oe-create-item"><span class="material-symbols-rounded">folder</span>New File</a>
+      <a href="/feed" class="oe-create-item"><span class="material-symbols-rounded">forum</span>new post</a>
+      <a href="/videos" class="oe-create-item"><span class="material-symbols-rounded">smart_display</span>new video</a>
+      <a href="/files" class="oe-create-item"><span class="material-symbols-rounded">folder</span>new file</a>
     </div>
     <div class="oe-create-drawer" id="oeProfileMenuSheet">
-      <a href="/settings" class="oe-create-item"><span class="material-symbols-rounded">settings</span>Settings</a>
-      <a href="/activity" class="oe-create-item"><span class="material-symbols-rounded">insights</span>Your activity</a>
+      <a href="/settings" class="oe-create-item"><span class="material-symbols-rounded">settings</span>settings</a>
+      <a href="/activity" class="oe-create-item"><span class="material-symbols-rounded">insights</span>your activity</a>
     </div>
     <nav class="oe-bottom-nav" id="oeBottomNav">
       <a href="https://oeper.dev/" class="oe-bottom-nav-item" data-id="home"><span class="material-symbols-rounded">home</span><span>home</span></a>
@@ -674,23 +674,23 @@ function initSearch(navEl) {
         matchRank(name, q) === -1 ? 99 : matchRank(name, q),
         matchRank(u.handle, q) === -1 ? 99 : matchRank(u.handle, q)
       );
-      if (rank < 99) results.push({ rank, name, sub: 'in People', url: `/profile?u=${encodeURIComponent(u.handle)}`, photo: getProfile(u.email, u.displayName, u.photoURL).photo, icon: 'person' });
+      if (rank < 99) results.push({ rank, name, sub: 'in people', url: `/profile?u=${encodeURIComponent(u.handle)}`, photo: getProfile(u.email, u.displayName, u.photoURL).photo, icon: 'person' });
     });
     corpus.posts.forEach(p => {
       const name = p.title || p.body || '';
       const rank = keywordRank([{ text: p.title, weight: 3 }, { text: p.body, weight: 1 }], q);
-      if (rank !== -1) results.push({ rank, name, sub: 'in Feed', url: `/feed?post=${p.id}`, icon: 'forum' });
+      if (rank !== -1) results.push({ rank, name, sub: 'in feed', url: `/feed?post=${p.id}`, icon: 'forum' });
     });
     corpus.videos.forEach(v => {
       const rank = keywordRank([{ text: v.title, weight: 3 }, { text: v.description, weight: 1 }], q);
-      if (rank !== -1) results.push({ rank, name: v.title || '', sub: 'in Videos', url: `/videos?video=${v.id}`, icon: 'smart_display' });
+      if (rank !== -1) results.push({ rank, name: v.title || '', sub: 'in videos', url: `/videos?video=${v.id}`, icon: 'smart_display' });
     });
 
     results.sort((a, b) => a.rank - b.rank);
     const top = results.slice(0, 8);
 
     if (top.length === 0) {
-      dropdown.innerHTML = `<div class="oe-nsd-empty">No results for "${escHtml(qRaw.trim())}"</div>`;
+      dropdown.innerHTML = `<div class="oe-nsd-empty">no results for "${escHtml(qRaw.trim())}"</div>`;
       return;
     }
     dropdown.innerHTML = top.map(r => `
@@ -738,12 +738,12 @@ function notifTimeAgo(date) {
   return date.toLocaleDateString();
 }
 function notifText(n) {
-  const name = `<strong>${escHtml(n.actorName || 'Someone')}</strong>`;
+  const name = `<strong>${escHtml(n.actorName || 'someone')}</strong>`;
   const target = escHtml(n.targetKind || 'post');
   if (n.type === 'upvote') return `${name} liked your ${target}${n.preview ? ': ' + escHtml(n.preview) : ''}`;
   if (n.type === 'comment') return `${name} commented on your ${target}${n.preview ? ': ' + escHtml(n.preview) : ''}`;
   if (n.type === 'follow') return `${name} started following you`;
-  if (n.type === 'badge') return `You were given a badge${n.preview ? ': ' + escHtml(n.preview) : ''}`;
+  if (n.type === 'badge') return `you were given a badge${n.preview ? ': ' + escHtml(n.preview) : ''}`;
   return name;
 }
 function notifUrl(n) {
@@ -785,10 +785,10 @@ function initNotifications(navEl) {
     dot.style.display = 'none';
     const needsSetup = err && (err.code === 'permission-denied' || err.code === 'failed-precondition');
     dropdown.innerHTML = `
-      <div class="oe-notif-header"><h3>Notifications</h3></div>
+      <div class="oe-notif-header"><h3>notifications</h3></div>
       <div class="oe-notif-empty">${needsSetup
-        ? "Notifications aren't fully set up yet on this site — ask the owner to publish firestore.rules and create the notifications index (check the browser console for a one-click link)."
-        : 'Could not load notifications. Try again shortly.'}</div>
+        ? "notifications aren't fully set up yet on this site — ask the owner to publish firestore.rules and create the notifications index (check the browser console for a one-click link)."
+        : 'could not load notifications. try again shortly.'}</div>
     `;
   }
 
@@ -801,17 +801,17 @@ function initNotifications(navEl) {
 
     if (items.length === 0) {
       dropdown.innerHTML = `
-        <div class="oe-notif-header"><h3>Notifications</h3></div>
-        <div class="oe-notif-empty">Nothing yet — activity on your posts, comments, and profile shows up here.</div>
+        <div class="oe-notif-header"><h3>notifications</h3></div>
+        <div class="oe-notif-empty">nothing yet — activity on your posts, comments, and profile shows up here.</div>
       `;
       return;
     }
     dropdown.innerHTML = `
       <div class="oe-notif-header">
-        <h3>Notifications</h3>
-        ${unread.length ? `<button type="button" class="oe-notif-mark-read" id="oeNotifMarkAll">Mark all read</button>` : ''}
+        <h3>notifications</h3>
+        ${unread.length ? `<button type="button" class="oe-notif-mark-read" id="oeNotifMarkAll">mark all read</button>` : ''}
       </div>
-      ${unread.length ? `<div class="oe-notif-section-label">New</div>${unread.map(rowHtml).join('')}` : ''}
+      ${unread.length ? `<div class="oe-notif-section-label">new</div>${unread.map(rowHtml).join('')}` : ''}
       ${read.length ? `<div class="oe-notif-section-label">Earlier</div>${read.map(rowHtml).join('')}` : ''}
     `;
     const markAllBtn = dropdown.querySelector('#oeNotifMarkAll');

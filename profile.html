@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js?v=10"></script>
+<script src="./shared/theme-boot.js?v=11"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -237,14 +237,14 @@
 </div>
 
 <script type="module">
-import { mountTopNav, setProfileMenuVisible } from './shared/topnav.js?v=19';
+import { mountTopNav, setProfileMenuVisible } from './shared/topnav.js?v=20';
 import {
   getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
   openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setUserBadge, sendNotification, linkifyMentions,
   getBadgeOverride, setOwnBadgeOverride,
-} from './shared/account.js?v=26';
-import { mountFooter } from './shared/footer.js?v=4';
-import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=2';
+} from './shared/account.js?v=27';
+import { mountFooter } from './shared/footer.js?v=5';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
   arrayUnion, arrayRemove,

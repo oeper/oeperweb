@@ -30,7 +30,7 @@
 
   window.OE_THEMES = {
     'material-dark': {
-      name: 'Dark',
+      name: 'dark',
       swatch: '#a8c7fa',
       dark: true,
       vars: {
@@ -54,7 +54,7 @@
       },
     },
     'light': {
-      name: 'Light',
+      name: 'light',
       swatch: '#3a5a9b',
       dark: false,
       vars: {
@@ -78,7 +78,7 @@
       },
     },
     'violet': {
-      name: 'Violet',
+      name: 'violet',
       swatch: '#c9a4ff',
       dark: true,
       vars: {
@@ -102,7 +102,7 @@
       },
     },
     'ocean': {
-      name: 'Ocean',
+      name: 'ocean',
       swatch: '#7fd8d0',
       dark: true,
       vars: {
@@ -126,7 +126,7 @@
       },
     },
     'sepia': {
-      name: 'Sepia',
+      name: 'sepia',
       swatch: '#8a5a2b',
       dark: false,
       vars: {
@@ -150,7 +150,7 @@
       },
     },
     'sunset': {
-      name: 'Sunset',
+      name: 'sunset',
       swatch: '#ffb787',
       dark: true,
       vars: {
@@ -174,7 +174,7 @@
       },
     },
     'amber': {
-      name: 'Amber',
+      name: 'amber',
       swatch: '#ff6b35',
       dark: true,
       vars: {
@@ -198,7 +198,7 @@
       },
     },
     'tundra': {
-      name: 'Tundra',
+      name: 'tundra',
       swatch: '#e4f0f6',
       dark: true,
       vars: {
@@ -222,7 +222,7 @@
       },
     },
     'vault': {
-      name: 'Vault',
+      name: 'vault',
       swatch: '#c8a96e',
       dark: true,
       vars: {
@@ -246,7 +246,7 @@
       },
     },
     'red': {
-      name: 'Red',
+      name: 'red',
       swatch: '#dc143c',
       dark: false,
       vars: {
@@ -274,7 +274,7 @@
     // see fontOverride/bgImage below, consumed by applyOeTheme() and by
     // each page's body{} rule via var(--oe-font-override)/var(--oe-bg-image).
     'sketch': {
-      name: 'Sketch',
+      name: 'sketch',
       swatch: '#1a1a1a',
       dark: false,
       fontOverride: "'Freehand', cursive",
@@ -300,7 +300,7 @@
       },
     },
     'merlot': {
-      name: 'Merlot',
+      name: 'merlot',
       swatch: '#c5a880',
       dark: true,
       vars: {
@@ -324,7 +324,7 @@
       },
     },
     'cream': {
-      name: 'Cream',
+      name: 'cream',
       swatch: '#f5deb3',
       dark: false,
       vars: {
@@ -348,7 +348,7 @@
       },
     },
     'vintage': {
-      name: 'Vintage',
+      name: 'vintage',
       swatch: '#c08081',
       dark: true,
       vars: {
@@ -372,7 +372,7 @@
       },
     },
     'sage': {
-      name: 'Sage',
+      name: 'sage',
       swatch: '#d4a373',
       dark: true,
       vars: {
@@ -396,7 +396,7 @@
       },
     },
     'pistachio': {
-      name: 'Pistachio',
+      name: 'pistachio',
       swatch: '#b9d3af',
       dark: false,
       vars: {
@@ -424,7 +424,7 @@
     // --oe-glass-blur (applied sitewide, see GLASS_SELECTORS below) so the
     // background actually shows through blurred, not just tinted.
     'light-glass': {
-      name: 'Light Glass',
+      name: 'light glass',
       swatch: '#1c1f26',
       dark: false,
       glassBlur: 'blur(24px) saturate(1.2)',
@@ -450,7 +450,7 @@
       },
     },
     'dark-glass': {
-      name: 'Dark Glass',
+      name: 'dark glass',
       swatch: '#f0f0f0',
       dark: true,
       glassBlur: 'blur(24px) saturate(1.2)',
@@ -476,7 +476,7 @@
       },
     },
     'boreal': {
-      name: 'Boreal',
+      name: 'boreal',
       swatch: '#B2D5E5',
       dark: true,
       vars: {
@@ -500,7 +500,7 @@
       },
     },
     'pumpkin': {
-      name: 'Pumpkin',
+      name: 'pumpkin',
       swatch: '#FC7D14',
       dark: true,
       vars: {
@@ -527,7 +527,7 @@
       },
     },
     'summer': {
-      name: 'Summer',
+      name: 'summer',
       swatch: '#F59E71',
       dark: true,
       vars: {
@@ -554,7 +554,7 @@
       },
     },
     'cherry': {
-      name: 'Cherry',
+      name: 'cherry',
       swatch: '#BE2C55',
       dark: true,
       vars: {
@@ -578,7 +578,7 @@
       },
     },
     'grayscale': {
-      name: 'Grayscale',
+      name: 'grayscale',
       swatch: '#9e9e9e',
       dark: true,
       vars: {
@@ -602,7 +602,7 @@
       },
     },
     'coastline': {
-      name: 'Coastline',
+      name: 'coastline',
       swatch: '#CA9A73',
       dark: true,
       vars: {
@@ -626,7 +626,7 @@
       },
     },
     'copper': {
-      name: 'Copper',
+      name: 'copper',
       swatch: '#C98F7C',
       dark: true,
       vars: {
@@ -650,7 +650,7 @@
       },
     },
     'voltage': {
-      name: 'Voltage',
+      name: 'voltage',
       swatch: '#E159E4',
       dark: true,
       vars: {
@@ -674,7 +674,7 @@
       },
     },
     'dune': {
-      name: 'Dune',
+      name: 'dune',
       swatch: '#E5A36A',
       dark: true,
       vars: {
@@ -702,7 +702,7 @@
       },
     },
     'undergrowth': {
-      name: 'Undergrowth',
+      name: 'undergrowth',
       swatch: '#A59A52',
       dark: true,
       vars: {
