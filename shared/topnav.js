@@ -269,10 +269,14 @@ function injectStyles() {
       display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 14px;
       text-decoration: none; color: var(--md-sys-color-on-surface);
       font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 15px; font-weight: 500;
+      background-color: var(--md-sys-color-surface-variant);
+      margin-bottom: 6px;
       -webkit-tap-highlight-color: transparent;
+      transition: background-color 0.15s;
     }
+    .oe-create-item:last-child { margin-bottom: 0; }
     .oe-create-item:visited { color: var(--md-sys-color-on-surface); }
-    .oe-create-item:hover, .oe-create-item:active { background: var(--md-sys-state-hover); }
+    .oe-create-item:hover, .oe-create-item:active { background-color: var(--md-sys-color-hover-surface); }
     .oe-create-item .material-symbols-rounded { font-size: 22px; color: var(--md-sys-color-primary); }
 
     /* Unlike the Create drawer (bottom-anchored, since its trigger lives in
