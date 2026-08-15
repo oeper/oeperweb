@@ -58,13 +58,14 @@
   .header-link:visited { color: var(--md-sys-color-primary); }
 
   .profile-card { background: var(--md-sys-color-surface); border-radius: 28px; padding: 32px; margin-bottom: 24px; }
-  .profile-top { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+  .profile-top { display: flex; align-items: flex-start; gap: 20px; }
   .profile-avatar {
     width: 84px; height: 84px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
     background: var(--md-sys-color-surface-variant);
   }
-  .profile-main { flex: 1; min-width: 200px; }
-  .profile-name { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 26px; font-weight: 500; margin-bottom: 4px; }
+  .profile-main { flex: 1; min-width: 0; }
+  .profile-name-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .profile-name { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 26px; font-weight: 500; }
   .profile-joined { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 12px; }
   .profile-bio { font-size: 14px; line-height: 1.6; color: var(--md-sys-color-on-surface); white-space: pre-wrap; max-width: 480px; }
   .profile-bio.empty { color: var(--md-sys-color-on-surface-variant); font-style: italic; }
@@ -77,7 +78,7 @@
   .profile-bio a.md-btn:hover { opacity: 0.9; }
   .profile-bio a.md-btn .material-symbols-rounded { font-size: 16px; }
 
-  .profile-actions { display: flex; gap: 10px; flex-shrink: 0; margin-left: auto; }
+  .profile-actions { display: flex; gap: 10px; flex-shrink: 0; }
 
   .kebab-wrap { position: relative; }
   .kebab-btn {
@@ -101,19 +102,11 @@
   .kebab-item.dangerous { color: var(--md-sys-color-error); }
   .kebab-item .material-symbols-rounded { font-size: 18px; }
 
-  /* Own-profile hamburger — mobile only, since desktop already has the
-     Settings icon in the sitewide top bar (shared/topnav.js hides it on
-     mobile in favor of the bottom nav, which has no room for it). */
-  .profile-mobile-bar { display: none; }
-  @media (max-width: 600px) {
-    .profile-mobile-bar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
-  }
-
   .profile-tabs { display: flex; justify-content: center; gap: 48px; border-top: 1px solid var(--md-sys-color-outline-variant); margin: 8px 0 20px; }
   .profile-tab {
     display: flex; align-items: center; gap: 6px; padding: 14px 0; background: none; border: none; cursor: pointer;
     border-top: 2px solid transparent; margin-top: -1px; font-family: inherit;
-    color: var(--md-sys-color-on-surface-variant); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--md-sys-color-on-surface-variant); font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
   }
   .profile-tab.active { color: var(--md-sys-color-on-surface); border-top-color: var(--md-sys-color-on-surface); }
   .profile-tab .material-symbols-rounded { font-size: 18px; }
@@ -230,7 +223,7 @@
 
 <div class="page">
   <div id="content">
-    <div class="loading-note">Loading profile…</div>
+    <div class="loading-note">loading profile…</div>
   </div>
 </div>
 
@@ -244,10 +237,11 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=18';
+import { mountTopNav, setProfileMenuVisible } from './shared/topnav.js?v=19';
 import {
   getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
   openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setUserBadge, sendNotification, linkifyMentions,
+  getBadgeOverride, setOwnBadgeOverride,
 } from './shared/account.js?v=26';
 import { mountFooter } from './shared/footer.js?v=4';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=2';
@@ -263,8 +257,6 @@ mountFooter();
 document.addEventListener('click', () => {
   const menu = document.getElementById('profileKebabMenu');
   if (menu) menu.classList.remove('open');
-  const hamburgerMenu = document.getElementById('profileHamburgerMenu');
-  if (hamburgerMenu) hamburgerMenu.classList.remove('open');
 });
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -369,7 +361,7 @@ const followListTitle = document.getElementById('followListTitle');
 const followListBody = document.getElementById('followListBody');
 
 async function openFollowList(kind, viewedEmail) {
-  followListTitle.textContent = kind === 'followers' ? 'Followers' : 'Following';
+  followListTitle.textContent = kind === 'followers' ? 'followers' : 'following';
   followListBody.innerHTML = '<div class="empty-note">Loading…</div>';
   followListOverlay.classList.add('open');
   followListModal.classList.add('open');
@@ -380,7 +372,7 @@ async function openFollowList(kind, viewedEmail) {
     const snap = await getDocs(q);
     const emails = snap.docs.map(d => kind === 'followers' ? d.data().followerEmail : d.data().followeeEmail);
     if (emails.length === 0) {
-      followListBody.innerHTML = `<div class="empty-note">No ${escHtml(kind)} yet.</div>`;
+      followListBody.innerHTML = `<div class="empty-note">no ${escHtml(kind)} yet.</div>`;
       return;
     }
     await Promise.all(emails.map(e => ensureProfileLoaded(e)));
@@ -442,7 +434,7 @@ if (!handle) {
 }
 
 if (!handle) {
-  content.innerHTML = '<div class="empty-note">No profile specified. Open a profile from a post author\'s name in the forum, or add ?u=&lt;handle&gt; to the URL.</div>';
+  content.innerHTML = '<div class="empty-note">no profile specified. open a profile from a post author\'s name in the forum, or add ?u=&lt;handle&gt; to the URL.</div>';
 } else {
   history.replaceState(null, '', '/profile/' + encodeURIComponent(handle));
   init();
@@ -457,7 +449,7 @@ async function init() {
     console.warn('Could not resolve handle:', err.message);
   }
   if (!viewedEmail) {
-    content.innerHTML = '<div class="empty-note">No profile found for @' + escHtml(handle) + '.</div>';
+    content.innerHTML = '<div class="empty-note">no profile found for @' + escHtml(handle) + '.</div>';
     return;
   }
 
@@ -729,52 +721,43 @@ async function init() {
     const shownItems = isOwn && activeTab === 'saved' ? savedItems : items;
 
     content.innerHTML = `
-      ${isOwn ? `
-        <div class="profile-mobile-bar">
-          <div class="kebab-wrap">
-            <button type="button" class="kebab-btn" id="profileHamburgerBtn" title="Menu"><span class="material-symbols-rounded">menu</span></button>
-            <div class="kebab-menu" id="profileHamburgerMenu">
-              <a class="kebab-item" href="/settings"><span class="material-symbols-rounded">settings</span>Settings</a>
-              <a class="kebab-item" href="/activity"><span class="material-symbols-rounded">insights</span>Your activity</a>
-            </div>
-          </div>
-        </div>
-      ` : ''}
       <div class="profile-card">
         <div class="profile-top">
           <img class="profile-avatar" src="${profile.photo || ''}" alt="">
           <div class="profile-main">
-            <div class="profile-name">${escHtml(profile.name)}${officialBadgeHtml(viewedEmail)}${areFriends ? `<span class="friends-badge"><span class="material-symbols-rounded">people</span>Friends</span>` : ''}</div>
-            <div class="profile-joined">@${escHtml(handle)}${joinDate ? ' · Member since ' + joinDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long' }) : ''}${!isOwn && followedBy ? ' · Follows you' : ''}</div>
-            <div class="profile-bio ${bio ? '' : 'empty'}">${bio ? (bioMarkdownAllowed || isOwnerEmail(viewedEmail) ? parseBioMarkdown(bio) : linkifyMentions(expandIconShorthand(expandShortcodes(escHtml(bio))))) : 'No bio yet.'}</div>
-          </div>
-          <div class="profile-actions">
-            ${isOwn ? `<button class="btn primary" id="editProfileBtn"><span class="material-symbols-rounded" style="font-size:16px;">edit</span> Edit profile</button>` : ''}
-            ${!isOwn && user ? `<button class="btn ${following ? '' : 'primary'}" id="followBtn"><span class="material-symbols-rounded" style="font-size:16px;">${following ? 'how_to_reg' : 'person_add'}</span> ${following ? 'Following' : 'Follow'}</button>` : ''}
-            ${!isOwn && user ? `<a class="btn primary" href="/messages?to=${encodeURIComponent(handle)}"><span class="material-symbols-rounded" style="font-size:16px;">chat</span> Chat</a>` : ''}
-            <div class="kebab-wrap">
-              <button type="button" class="kebab-btn" id="profileKebabBtn" title="More options"><span class="material-symbols-rounded">more_vert</span></button>
-              <div class="kebab-menu" id="profileKebabMenu"></div>
+            <div class="profile-name-row">
+              <div class="profile-name">${escHtml(profile.name)}${officialBadgeHtml(viewedEmail)}${areFriends ? `<span class="friends-badge"><span class="material-symbols-rounded">people</span>friends</span>` : ''}</div>
+              <div class="profile-actions">
+                ${isOwn ? `<button class="btn primary" id="editProfileBtn"><span class="material-symbols-rounded" style="font-size:16px;">edit</span> edit profile</button>` : ''}
+                ${!isOwn && user ? `<button class="btn ${following ? '' : 'primary'}" id="followBtn"><span class="material-symbols-rounded" style="font-size:16px;">${following ? 'how_to_reg' : 'person_add'}</span> ${following ? 'following' : 'follow'}</button>` : ''}
+                ${!isOwn && user ? `<a class="btn primary" href="/messages?to=${encodeURIComponent(handle)}"><span class="material-symbols-rounded" style="font-size:16px;">chat</span> chat</a>` : ''}
+                <div class="kebab-wrap">
+                  <button type="button" class="kebab-btn" id="profileKebabBtn" title="More options"><span class="material-symbols-rounded">more_vert</span></button>
+                  <div class="kebab-menu" id="profileKebabMenu"></div>
+                </div>
+              </div>
             </div>
+            <div class="profile-joined">@${escHtml(handle)}${joinDate ? ' · member since ' + joinDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long' }) : ''}${!isOwn && followedBy ? ' · follows you' : ''}</div>
+            <div class="profile-bio ${bio ? '' : 'empty'}">${bio ? (bioMarkdownAllowed || isOwnerEmail(viewedEmail) ? parseBioMarkdown(bio) : linkifyMentions(expandIconShorthand(expandShortcodes(escHtml(bio))))) : 'no bio yet.'}</div>
           </div>
         </div>
         <div class="stats-row">
-          <div class="stat"><div class="stat-value">${items.length}</div><div class="stat-label">Posts</div></div>
-          <div class="stat"><div class="stat-value">${karma}</div><div class="stat-label">Karma</div></div>
-          <div class="stat clickable" id="followersStat"><div class="stat-value">${followerCount}</div><div class="stat-label">Followers</div></div>
-          <div class="stat clickable" id="followingStat"><div class="stat-value">${followingCount}</div><div class="stat-label">Following</div></div>
+          <div class="stat"><div class="stat-value">${items.length}</div><div class="stat-label">posts</div></div>
+          <div class="stat"><div class="stat-value">${karma}</div><div class="stat-label">karma</div></div>
+          <div class="stat clickable" id="followersStat"><div class="stat-value">${followerCount}</div><div class="stat-label">followers</div></div>
+          <div class="stat clickable" id="followingStat"><div class="stat-value">${followingCount}</div><div class="stat-label">following</div></div>
         </div>
       </div>
 
       ${isOwn ? `
         <div class="profile-tabs">
-          <button type="button" class="profile-tab ${activeTab === 'posts' ? 'active' : ''}" data-profile-tab="posts"><span class="material-symbols-rounded">grid_on</span>Posts</button>
-          <button type="button" class="profile-tab ${activeTab === 'saved' ? 'active' : ''}" data-profile-tab="saved"><span class="material-symbols-rounded">bookmark</span>Saved</button>
+          <button type="button" class="profile-tab ${activeTab === 'posts' ? 'active' : ''}" data-profile-tab="posts"><span class="material-symbols-rounded">grid_on</span>posts</button>
+          <button type="button" class="profile-tab ${activeTab === 'saved' ? 'active' : ''}" data-profile-tab="saved"><span class="material-symbols-rounded">bookmark</span>saved</button>
         </div>
-      ` : `<div class="section-heading">Posts</div>`}
+      ` : `<div class="section-heading">posts</div>`}
       <div class="post-list" id="profilePostList">
-        ${activeTab === 'saved' && !savedItemsLoaded ? '<div class="empty-note">Loading…</div>'
-          : shownItems.length === 0 ? `<div class="empty-note">${activeTab === 'saved' ? 'No saved posts yet.' : 'No posts yet.'}</div>`
+        ${activeTab === 'saved' && !savedItemsLoaded ? '<div class="empty-note">loading…</div>'
+          : shownItems.length === 0 ? `<div class="empty-note">${activeTab === 'saved' ? 'no saved posts yet.' : 'no posts yet.'}</div>`
           : shownItems.map(itemCardHtml).join('')}
       </div>
     `;
@@ -788,9 +771,7 @@ async function init() {
       el.addEventListener('click', () => switchProfileTab(el.dataset.profileTab));
     });
 
-    const hamburgerBtn = document.getElementById('profileHamburgerBtn');
-    const hamburgerMenu = document.getElementById('profileHamburgerMenu');
-    if (hamburgerBtn) hamburgerBtn.addEventListener('click', e => { e.stopPropagation(); hamburgerMenu.classList.toggle('open'); });
+    setProfileMenuVisible(isOwn);
 
     document.getElementById('profilePostList').addEventListener('click', e => {
       const pollBtn = e.target.closest('[data-poll-vote]');
@@ -807,39 +788,56 @@ async function init() {
 
     const isOwnerViewer = user && isOwnerEmail(user.email);
     const menuItems = [
-      { label: 'Share profile', icon: 'link', onClick: () => copyLink(window.location.href, 'Profile link') },
+      { label: 'share profile', icon: 'link', onClick: () => copyLink(window.location.href, 'Profile link') },
     ];
-    // Mobile gets a dedicated hamburger for this (profileHamburgerMenu,
-    // above) since shared/topnav.js hides the sitewide Settings icon on
-    // mobile — desktop still has that icon, so only Activity needs
+    // Mobile gets a dedicated menu trigger for this (setProfileMenuVisible,
+    // wired up in shared/topnav.js) since it hides the sitewide Settings
+    // icon on mobile — desktop still has that icon, so only Activity needs
     // surfacing here to avoid a redundant Settings entry.
     if (isOwn) {
-      menuItems.push({ label: 'Your activity', icon: 'insights', onClick: () => { window.location.href = '/activity'; } });
+      menuItems.push({ label: 'your activity', icon: 'insights', onClick: () => { window.location.href = '/activity'; } });
     }
     if (user && !isOwn) {
-      menuItems.push({ label: 'Report', icon: 'flag', dangerous: true, onClick: reportProfile });
+      menuItems.push({ label: 'report', icon: 'flag', dangerous: true, onClick: reportProfile });
     }
-    // Owner can edit their own tag too (previously only other people's) —
-    // isOwn only ever coincides with isOwnerEmail(viewedEmail) when the
-    // owner is viewing themselves, so this still can't touch a non-owner
-    // viewer's own badge.
-    if (isOwnerViewer && (isOwn || !isOwnerEmail(viewedEmail))) {
+    // Owner viewing their own profile: their badge isn't the granted
+    // `badge` field everyone else has (that's what setUserBadge/applyBadge
+    // below write) — it's `badgeOverride`, the thing that lets an owner
+    // swap out or hide their hardcoded default OFFICIAL badge. Routing
+    // this case through editBadge/applyBadge used to silently write to the
+    // wrong field: officialBadgeHtml only ever reads badgeOverride for an
+    // owner email, so the edit had no visible effect at all.
+    if (isOwn && isOwnerViewer) {
+      const override = getBadgeOverride(viewedEmail);
+      const isHidden = override && override.hidden;
       menuItems.push({
-        label: profile.badge ? 'Edit badge' : 'Set custom badge',
+        label: override && !isHidden ? 'edit badge' : 'set custom badge',
+        icon: override && !isHidden ? 'edit' : 'add_moderator',
+        onClick: editOwnBadge,
+      });
+      if (override !== undefined) {
+        menuItems.push({ label: 'reset to default badge', icon: 'restart_alt', onClick: () => applyOwnBadge(undefined) });
+      }
+      if (!isHidden) {
+        menuItems.push({ label: 'hide badge', icon: 'visibility_off', dangerous: true, onClick: () => applyOwnBadge({ hidden: true }) });
+      }
+    } else if (isOwnerViewer && !isOwn) {
+      menuItems.push({
+        label: profile.badge ? 'edit badge' : 'set custom badge',
         icon: profile.badge ? 'edit' : 'add_moderator',
         onClick: editBadge,
       });
       if (profile.badge) {
-        menuItems.push({ label: 'Remove badge', icon: 'remove_moderator', dangerous: true, onClick: () => applyBadge(null) });
+        menuItems.push({ label: 'remove badge', icon: 'remove_moderator', dangerous: true, onClick: () => applyBadge(null) });
       }
     }
     if (isOwnerViewer && !isOwn) {
       menuItems.push({
-        label: bioMarkdownAllowed ? 'Disallow bio markdown' : 'Allow bio markdown',
+        label: bioMarkdownAllowed ? 'disallow bio markdown' : 'allow bio markdown',
         icon: bioMarkdownAllowed ? 'format_clear' : 'format_bold',
         onClick: toggleBioMarkdown,
       });
-      menuItems.push({ label: 'Edit this profile', icon: 'manage_accounts', onClick: editOtherProfile });
+      menuItems.push({ label: 'edit this profile', icon: 'manage_accounts', onClick: editOtherProfile });
     }
     const kebabBtn = document.getElementById('profileKebabBtn');
     const kebabMenu = document.getElementById('profileKebabMenu');
@@ -893,6 +891,26 @@ async function init() {
     try {
       await setUserBadge(viewedEmail, badge);
       showToast(badge ? 'Badge updated' : 'Badge removed');
+      render();
+    } catch (err) {
+      showToast('Could not update badge: ' + err.message);
+    }
+  }
+
+  async function editOwnBadge() {
+    const current = getBadgeOverride(viewedEmail) || {};
+    const label = await oePrompt('Badge label (e.g. Moderator, VIP, Beta Tester) — leave blank for an icon-only badge:', { defaultValue: current.label || '' });
+    if (label === null) return; // cancelled
+    const trimmed = label.trim();
+    const icon = await oePrompt('Material Symbol icon name (e.g. verified, star, shield, bolt, diamond):', { defaultValue: current.icon || 'verified' });
+    if (icon === null) return;
+    await applyOwnBadge({ label: trimmed.slice(0, 24), icon: (icon.trim() || 'verified').slice(0, 40) });
+  }
+
+  async function applyOwnBadge(override) {
+    try {
+      await setOwnBadgeOverride(override);
+      showToast(override === undefined ? 'Badge reset to default' : override.hidden ? 'Badge hidden' : 'Badge updated');
       render();
     } catch (err) {
       showToast('Could not update badge: ' + err.message);

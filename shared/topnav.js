@@ -240,6 +240,7 @@ function injectStyles() {
       width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant);
     }
     .oe-bottom-nav-item.active img { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
+    .oe-bottom-nav-item.disabled { opacity: 0.4; cursor: default; pointer-events: none; }
 
     /* Reuses the old nav-links drawer's exact slide-down-from-top-of-
        screen mechanism (position, transition, backdrop) for the Create
@@ -252,6 +253,7 @@ function injectStyles() {
          of the screen where the button that opened it isn't even visible. */
       position: fixed; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; z-index: 150;
       background-color: var(--md-sys-color-surface);
+      border-radius: 24px 24px 0 0;
       padding: 0 8px; overflow: hidden; max-height: 0; opacity: 0; visibility: hidden;
       box-shadow: 0 -12px 24px rgba(0,0,0,0.35);
       transition: max-height 340ms cubic-bezier(0.2, 0, 0, 1), opacity 220ms ease, padding 340ms cubic-bezier(0.2, 0, 0, 1), visibility 0s linear 340ms;
@@ -271,6 +273,15 @@ function injectStyles() {
     .oe-create-item:hover, .oe-create-item:active { background: var(--md-sys-state-hover); }
     .oe-create-item .material-symbols-rounded { font-size: 22px; color: var(--md-sys-color-primary); }
 
+    /* Own-profile menu trigger (Settings/Your activity) — mobile only,
+       since desktop already has a standalone Settings icon here and its
+       own profile-page kebab covers Activity. Lives in the top bar next
+       to the notification icon (set via setProfileMenuVisible, called
+       from profile.html once it knows whether you're viewing yourself)
+       instead of a separate row, and opens the same bottom-sheet drawer
+       mechanism as Create. */
+    .oe-profile-menu-wrap { display: none; }
+
     @media (max-width: 600px) {
       .oe-navbar { padding: 0 12px; gap: 8px; }
       .oe-nav-hamburger, .oe-nav-links { display: none !important; }
@@ -283,6 +294,12 @@ function injectStyles() {
       .oe-nav-logo { order: 2; flex: 1; justify-content: center; }
       .oe-nav-right { order: 3; gap: 10px; margin-left: 0; }
       .oe-nav-icon-link[title="Settings"], #oeNavAccountBar { display: none; }
+      /* The chat icon and this menu trade places with mobile's bottom nav:
+         Chat/Messages moves down there (see .oe-bottom-nav-item[data-id=
+         "messages"]), and this trigger takes roughly where Chat used to
+         sit up here, right after the notification icon. */
+      .oe-nav-chat-link { display: none; }
+      .oe-profile-menu-wrap.visible { display: flex; }
 
       .oe-nav-search-wrap.mobile-open {
         display: flex; align-items: center; position: fixed; top: 0; left: 0; right: 0; height: 72px;
@@ -378,7 +395,10 @@ export function mountTopNav(container) {
           </button>
           <div class="oe-notif-dropdown" id="oeNotifDropdown"></div>
         </div>
-        <a href="/messages" class="oe-nav-icon-link" title="Chat"><span class="material-symbols-rounded" id="oeNavChatIcon">chat_bubble</span></a>
+        <div class="oe-profile-menu-wrap" id="oeProfileMenuWrap">
+          <button type="button" class="oe-nav-icon-link" id="oeProfileMenuBtn" title="Menu"><span class="material-symbols-rounded">menu</span></button>
+        </div>
+        <a href="/messages" class="oe-nav-icon-link oe-nav-chat-link" title="Chat"><span class="material-symbols-rounded" id="oeNavChatIcon">chat_bubble</span></a>
         <a href="/settings" class="oe-nav-icon-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
         <div id="oeNavAccountBar"></div>
       </div>
@@ -388,24 +408,33 @@ export function mountTopNav(container) {
       <a href="/videos" class="oe-create-item"><span class="material-symbols-rounded">smart_display</span>New Video</a>
       <a href="/files" class="oe-create-item"><span class="material-symbols-rounded">folder</span>New File</a>
     </div>
+    <div class="oe-create-drawer" id="oeProfileMenuSheet">
+      <a href="/settings" class="oe-create-item"><span class="material-symbols-rounded">settings</span>Settings</a>
+      <a href="/activity" class="oe-create-item"><span class="material-symbols-rounded">insights</span>Your activity</a>
+    </div>
     <nav class="oe-bottom-nav" id="oeBottomNav">
-      <a href="https://oeper.dev/" class="oe-bottom-nav-item" data-id="home"><span class="material-symbols-rounded">home</span><span>Home</span></a>
-      <button type="button" class="oe-bottom-nav-item" id="oeCreateBtn" aria-expanded="false"><span class="material-symbols-rounded">add_circle</span><span>Create</span></button>
-      <a href="#" class="oe-bottom-nav-item" id="oeBottomProfileLink" data-id="profile"><span class="material-symbols-rounded">person</span><span>Profile</span></a>
+      <a href="https://oeper.dev/" class="oe-bottom-nav-item" data-id="home"><span class="material-symbols-rounded">home</span><span>home</span></a>
+      <div class="oe-bottom-nav-item disabled" title="Reels — coming soon"><span class="material-symbols-rounded">movie</span><span>soon</span></div>
+      <button type="button" class="oe-bottom-nav-item" id="oeCreateBtn" aria-expanded="false"><span class="material-symbols-rounded">add_circle</span><span>create</span></button>
+      <a href="/messages" class="oe-bottom-nav-item" data-id="messages"><span class="material-symbols-rounded" id="oeBottomChatIcon">chat_bubble</span><span>messages</span></a>
+      <a href="#" class="oe-bottom-nav-item" id="oeBottomProfileLink" data-id="profile"><span class="material-symbols-rounded">person</span><span>profile</span></a>
     </nav>
   `;
   const navEl = el.querySelector('.oe-navbar');
   const backdropEl = el.querySelector('#oeNavBackdrop');
   const createDrawerEl = el.querySelector('#oeCreateDrawer');
+  const profileMenuSheetEl = el.querySelector('#oeProfileMenuSheet');
   const bottomNavEl = el.querySelector('#oeBottomNav');
   if (container) {
     container.appendChild(backdropEl);
     container.appendChild(navEl);
     container.appendChild(createDrawerEl);
+    container.appendChild(profileMenuSheetEl);
     container.appendChild(bottomNavEl);
   } else {
     document.body.insertBefore(navEl, document.body.firstChild);
     document.body.appendChild(createDrawerEl);
+    document.body.appendChild(profileMenuSheetEl);
     document.body.appendChild(bottomNavEl);
     document.body.insertBefore(backdropEl, navEl);
   }
@@ -419,19 +448,44 @@ export function mountTopNav(container) {
     navLinks.appendChild(a);
   });
 
+  // Both bottom sheets (Create, the profile menu) share the one backdrop
+  // and close each other on open — two sheets stacked at once would just
+  // look broken since they're both bottom-anchored full-width panels.
   const backdrop = backdropEl;
   const createBtn = bottomNavEl.querySelector('#oeCreateBtn');
+  const profileMenuBtn = navEl.querySelector('#oeProfileMenuBtn');
+  function closeAllSheets() {
+    createDrawerEl.classList.remove('open');
+    createBtn.setAttribute('aria-expanded', 'false');
+    profileMenuSheetEl.classList.remove('open');
+    profileMenuBtn.setAttribute('aria-expanded', 'false');
+    backdrop.classList.remove('open');
+  }
   function setCreateDrawer(open) {
-    createDrawerEl.classList.toggle('open', open);
-    createBtn.setAttribute('aria-expanded', String(open));
-    backdrop.classList.toggle('open', open);
+    closeAllSheets();
+    if (open) {
+      createDrawerEl.classList.add('open');
+      createBtn.setAttribute('aria-expanded', 'true');
+      backdrop.classList.add('open');
+    }
+  }
+  function setProfileMenuSheet(open) {
+    closeAllSheets();
+    if (open) {
+      profileMenuSheetEl.classList.add('open');
+      profileMenuBtn.setAttribute('aria-expanded', 'true');
+      backdrop.classList.add('open');
+    }
   }
   createBtn.addEventListener('click', () => setCreateDrawer(!createDrawerEl.classList.contains('open')));
-  backdrop.addEventListener('click', () => setCreateDrawer(false));
-  createDrawerEl.addEventListener('click', e => { if (e.target.closest('.oe-create-item')) setCreateDrawer(false); });
+  profileMenuBtn.addEventListener('click', () => setProfileMenuSheet(!profileMenuSheetEl.classList.contains('open')));
+  backdrop.addEventListener('click', closeAllSheets);
+  createDrawerEl.addEventListener('click', e => { if (e.target.closest('.oe-create-item')) closeAllSheets(); });
+  profileMenuSheetEl.addEventListener('click', e => { if (e.target.closest('.oe-create-item')) closeAllSheets(); });
   document.addEventListener('click', e => {
-    if (createDrawerEl.classList.contains('open') && !createDrawerEl.contains(e.target) && !createBtn.contains(e.target)) {
-      setCreateDrawer(false);
+    const openSheet = createDrawerEl.classList.contains('open') ? createDrawerEl : (profileMenuSheetEl.classList.contains('open') ? profileMenuSheetEl : null);
+    if (openSheet && !openSheet.contains(e.target) && !createBtn.contains(e.target) && !profileMenuBtn.contains(e.target)) {
+      closeAllSheets();
     }
   });
 
@@ -441,6 +495,7 @@ export function mountTopNav(container) {
   const currentPath = normalizePath(window.location.pathname);
   bottomNavEl.querySelectorAll('.oe-bottom-nav-item[data-id]').forEach(el2 => {
     if (el2.dataset.id === 'home' && (currentPath === '/' || currentPath === '/index')) el2.classList.add('active');
+    if (el2.dataset.id === 'messages' && currentPath.startsWith('/messages')) el2.classList.add('active');
     if (el2.dataset.id === 'profile' && currentPath.startsWith('/profile')) el2.classList.add('active');
   });
 
@@ -492,17 +547,31 @@ export function mountTopNav(container) {
   initChatUnread(navEl);
 }
 
+// Called from profile.html once it knows whether the signed-in viewer is
+// looking at their own profile — shows/hides the mobile-only menu trigger
+// next to the notification icon (see .oe-profile-menu-wrap above). A
+// no-op before mountTopNav() has run or on pages that never call this.
+export function setProfileMenuVisible(visible) {
+  const wrap = document.getElementById('oeProfileMenuWrap');
+  if (wrap) wrap.classList.toggle('visible', !!visible);
+}
+
 // ── Chat unread icon ────────────────────────────────────────
 // No server-tracked read state — "read" is just a localStorage
 // timestamp per conversation, written by messages.html when a thread is
 // opened. A conversation counts as unread if its last message wasn't
 // sent by you and arrived after that timestamp (or was never opened).
 function initChatUnread(navEl) {
-  const icon = navEl.querySelector('#oeNavChatIcon');
+  // Two icons now show this state — the top bar's (desktop) and the
+  // bottom nav's (mobile) — so every update sets both rather than
+  // querying navEl alone, since the bottom nav is mounted as its own
+  // top-level sibling, not inside navEl.
+  const icons = [navEl.querySelector('#oeNavChatIcon'), document.getElementById('oeBottomChatIcon')].filter(Boolean);
+  function setIcon(name) { icons.forEach(icon => { icon.textContent = name; }); }
   let unsub = null;
   function subscribe(user) {
     if (unsub) { unsub(); unsub = null; }
-    if (!user) { icon.textContent = 'chat_bubble'; return; }
+    if (!user) { setIcon('chat_bubble'); return; }
     unsub = onSnapshot(
       query(collection(db, 'conversations'), where('participants', 'array-contains', user.email)),
       snap => {
@@ -513,9 +582,9 @@ function initChatUnread(navEl) {
           const readMs = Number(localStorage.getItem('oe-chat-read-' + d.id) || 0);
           return lastMs > readMs;
         });
-        icon.textContent = hasUnread ? 'mark_chat_unread' : 'chat_bubble';
+        setIcon(hasUnread ? 'mark_chat_unread' : 'chat_bubble');
       },
-      () => { icon.textContent = 'chat_bubble'; }
+      () => setIcon('chat_bubble')
     );
   }
   onAccountChange(subscribe);

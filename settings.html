@@ -176,22 +176,13 @@
   <div class="settings-section" id="badgeSection" style="display:none;">
     <h2>Your badge</h2>
     <div class="group">
-      <div class="row">
+      <a class="row" id="badgeRow" href="#" style="text-decoration:none; color:inherit;">
         <div class="row-icon"><span class="material-symbols-rounded">verified</span></div>
         <div class="row-text">
-          <div class="row-title">OFFICIAL badge</div>
-          <div class="row-sub">Shown next to your name everywhere on the site.</div>
+          <div class="row-title">Manage your badge</div>
+          <div class="row-sub">Set a custom badge, hide it, or go back to the default OFFICIAL tag — from the ⋮ menu on your own profile.</div>
         </div>
-      </div>
-      <div class="row-block" id="badgeModeSlot"></div>
-      <div class="row-block" id="badgeLabelSlot" style="display:none;">
-        <input type="text" id="badgeLabelInput" maxlength="24" placeholder="Custom label (e.g. FOUNDER)"
-          style="width:100%; background: var(--md-sys-color-surface-variant); border: none; border-radius: 12px; padding: 12px 14px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none;">
-      </div>
-      <button class="row" id="badgeSaveBtn" style="width:100%; border:none; background:none; text-align:left; cursor:pointer; font:inherit; color:var(--md-sys-color-primary);">
-        <div class="row-icon"><span class="material-symbols-rounded">check</span></div>
-        <div class="row-text"><div class="row-title">Save</div></div>
-      </button>
+      </a>
     </div>
   </div>
 
@@ -219,15 +210,13 @@
 
 <script type="module">
 import {
-  getCurrentUser, onAccountChange, handleOf, signIn, signOutUser,
-  isOwnerEmail, ensureProfileLoaded, getBadgeOverride, setOwnBadgeOverride,
-  listSessions, removeSession, getCurrentDeviceId,
+  onAccountChange, handleOf, signIn, signOutUser,
+  isOwnerEmail, listSessions, removeSession, getCurrentDeviceId,
 } from './shared/account.js?v=26';
-import { mountTopNav } from './shared/topnav.js?v=18';
+import { mountTopNav } from './shared/topnav.js?v=19';
 import { mountThemePicker } from './shared/theme-picker.js?v=3';
 import { mountFooter } from './shared/footer.js?v=4';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=2';
-import { createDropdown } from './shared/dropdown.js?v=2';
 
 mountTopNav();
 mountFooter();
@@ -312,50 +301,20 @@ async function renderSessions(user) {
 function escHtmlSec(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
 // ── Your OFFICIAL badge (owner accounts only) ─────────────────────────
-const badgeModeDropdown = createDropdown([
-  { value: 'default', label: 'OFFICIAL (default)' },
-  { value: 'custom', label: 'Custom label' },
-  { value: 'hidden', label: 'Hidden' },
-], {
-  value: 'default',
-  onChange: v => { document.getElementById('badgeLabelSlot').style.display = v === 'custom' ? '' : 'none'; },
-});
-document.getElementById('badgeModeSlot').appendChild(badgeModeDropdown.el);
-
-let badgeSectionLoadedFor = null;
-async function initBadgeSection(user) {
+// Actually editing it happens from the ⋮ menu on your own profile page
+// (profile.html) — that's the one place setOwnBadgeOverride gets called
+// correctly against badgeOverride. This section used to duplicate that
+// with its own dropdown+input UI, but it wrote badgeOverride without an
+// icon and diverged from the profile-page flow in ways that made it feel
+// broken; simplest fix is one link instead of two inconsistent editors.
+function initBadgeSection(user) {
   const section = document.getElementById('badgeSection');
+  const row = document.getElementById('badgeRow');
   if (!user || !isOwnerEmail(user.email)) { section.style.display = 'none'; return; }
   section.style.display = '';
-  if (badgeSectionLoadedFor === user.email) return;
-  badgeSectionLoadedFor = user.email;
-  await ensureProfileLoaded(user.email);
-  const override = getBadgeOverride(user.email);
-  const mode = override === undefined ? 'default' : (!override || override.hidden ? 'hidden' : 'custom');
-  badgeModeDropdown.setValue(mode);
-  document.getElementById('badgeLabelSlot').style.display = mode === 'custom' ? '' : 'none';
-  document.getElementById('badgeLabelInput').value = (override && override.label) || '';
+  const handle = handleOf(user.email);
+  row.href = handle ? '/profile?u=' + encodeURIComponent(handle) : '#';
 }
-
-document.getElementById('badgeSaveBtn').addEventListener('click', async () => {
-  const user = getCurrentUser();
-  if (!user) return;
-  const mode = badgeModeDropdown.getValue();
-  try {
-    if (mode === 'default') {
-      await setOwnBadgeOverride(undefined);
-    } else if (mode === 'hidden') {
-      await setOwnBadgeOverride({ hidden: true });
-    } else {
-      const label = document.getElementById('badgeLabelInput').value.trim();
-      if (!label) { await oeAlert('Enter a label, or switch to Hidden/Default instead.'); return; }
-      await setOwnBadgeOverride({ label });
-    }
-    await oeAlert('Badge updated.');
-  } catch (err) {
-    await oeAlert('Could not update badge: ' + err.message);
-  }
-});
 
 document.getElementById('switchAccountRow').addEventListener('click', () => {
   signIn().catch(err => oeAlert('Could not switch account: ' + err.message));
