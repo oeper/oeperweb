@@ -682,7 +682,7 @@
   <div class="ig-comment-overlay" id="igCommentOverlay"></div>
   <div class="ig-comment-modal" id="igCommentModal">
     <div class="ig-comment-modal-header">
-      <h3 id="igModalTitle">Post</h3>
+      <h3 id="igModalTitle">post</h3>
       <button class="ig-comment-close-btn" id="igCommentCloseBtn" title="Close"><span class="material-symbols-rounded">close</span></button>
     </div>
     <div class="ig-modal-scroll" id="igModalScroll">
@@ -690,7 +690,7 @@
       <div class="ig-comment-list" id="igCommentList"></div>
     </div>
     <form class="ig-comment-form" id="igCommentForm">
-      <textarea class="ig-comment-input" id="igCommentInput" rows="1" placeholder="Add a comment…" maxlength="2000"></textarea>
+      <textarea class="ig-comment-input" id="igCommentInput" rows="1" placeholder="add a comment…" maxlength="2000"></textarea>
       <button type="submit" class="ig-comment-send-btn" id="igCommentSendBtn"><span class="material-symbols-rounded">send</span></button>
     </form>
   </div>
@@ -716,21 +716,21 @@
 
   <div class="note-overlay" id="noteOverlay"></div>
   <div class="note-modal" id="noteModal">
-    <input type="text" id="noteInput" maxlength="60" placeholder="Share a thought…">
+    <input type="text" id="noteInput" maxlength="60" placeholder="share a thought…">
     <div class="note-modal-actions">
-      <button type="button" id="noteCancelBtn" class="ig-comment-close-btn" style="width:auto;border-radius:100px;padding:10px 18px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);">Cancel</button>
-      <button type="button" id="noteShareBtn" class="ig-comment-send-btn" style="width:auto;border-radius:100px;padding:10px 20px;">Share</button>
+      <button type="button" id="noteCancelBtn" class="ig-comment-close-btn" style="width:auto;border-radius:100px;padding:10px 18px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);">cancel</button>
+      <button type="button" id="noteShareBtn" class="ig-comment-send-btn" style="width:auto;border-radius:100px;padding:10px 20px;">share</button>
     </div>
   </div>
 
   <div class="note-overlay" id="storyVisOverlay"></div>
   <div class="note-modal" id="storyVisModal" style="width:min(380px,90vw);">
-    <h3 style="font-size:16px;font-weight:500;margin-bottom:14px;">Who can see this story?</h3>
+    <h3 style="font-size:16px;font-weight:500;margin-bottom:14px;">who can see this story?</h3>
     <div id="storyVisDropdownSlot" style="margin-bottom:14px;"></div>
     <div class="story-vis-people-list" id="storyVisPeopleList"></div>
     <div class="note-modal-actions">
-      <button type="button" id="storyVisCancelBtn" class="ig-comment-close-btn" style="width:auto;border-radius:100px;padding:10px 18px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);">Cancel</button>
-      <button type="button" id="storyVisConfirmBtn" class="ig-comment-send-btn" style="width:auto;border-radius:100px;padding:10px 20px;">Post story</button>
+      <button type="button" id="storyVisCancelBtn" class="ig-comment-close-btn" style="width:auto;border-radius:100px;padding:10px 18px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);">cancel</button>
+      <button type="button" id="storyVisConfirmBtn" class="ig-comment-send-btn" style="width:auto;border-radius:100px;padding:10px 20px;">post story</button>
     </div>
   </div>
 
@@ -817,7 +817,7 @@
   }
   async function reportItem(type, itemId, contentPreview, aboutHandleOrEmail, url) {
     const u = getCurrentUser();
-    if (!u) { showToast('Sign in to report'); return; }
+    if (!u) { showToast('sign in to report'); return; }
     if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
     const reason = await oePrompt('Why are you reporting this?');
     if (!reason || !reason.trim()) return;
@@ -836,8 +836,8 @@
         try { msg = (await res.json()).error || msg; } catch {}
         throw new Error(msg);
       }
-      showToast('Report sent — thank you');
-    } catch (err) { showToast('Could not send report: ' + err.message); }
+      showToast('report sent — thank you');
+    } catch (err) { showToast('could not send report: ' + err.message); }
   }
 
   // ── Stories ──────────────────────────────────────────────────
@@ -982,9 +982,9 @@
           createdAt: serverTimestamp(),
           expiresAt: Timestamp.fromMillis(Date.now() + STORY_LIFETIME_MS),
         });
-        showToast('Story posted — visible for 24h');
+        showToast('story posted — visible for 24h');
       } catch (err) {
-        showToast('Could not post story: ' + err.message);
+        showToast('could not post story: ' + err.message);
       }
     });
 
@@ -1176,7 +1176,7 @@
         });
         closeNoteModal();
       } catch (err) {
-        showToast('Could not share note: ' + err.message);
+        showToast('could not share note: ' + err.message);
       }
     });
     input.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('noteShareBtn').click(); });
@@ -1325,12 +1325,12 @@
       if (!gotPosts || !gotVideos) return; // wait for both so items interleave by date, not by whichever loaded first
       const items = [...latestPosts, ...latestVideos].sort((a, b) => b._date - a._date).slice(0, feedLimit);
       if (items.length === 0) {
-        feedEl.innerHTML = '<div class="home-feed-empty">Nothing posted yet — be the first to say something.</div>';
+        feedEl.innerHTML = '<div class="home-feed-empty">nothing posted yet — be the first to say something.</div>';
         return;
       }
       const canLoadMore = latestPosts.length >= feedLimit || latestVideos.length >= feedLimit;
       feedEl.innerHTML = items.map(item => item._kind === 'video' ? videoCardHtml(item) : postCardHtml(item)).join('')
-        + (canLoadMore ? `<button type="button" class="home-feed-load-more" id="feedLoadMoreBtn">Load more</button>` : '');
+        + (canLoadMore ? `<button type="button" class="home-feed-load-more" id="feedLoadMoreBtn">load more</button>` : '');
       const loadMoreBtn = document.getElementById('feedLoadMoreBtn');
       if (loadMoreBtn) loadMoreBtn.addEventListener('click', () => {
         feedLimit += 20;
@@ -1403,7 +1403,7 @@
         </div>
       `;
       const bodyHtml = p.body ? `<div class="ig-description">${renderExcerptMarkdown(p.body, 220)}</div>` : '';
-      const viewCommentsHtml = `<button type="button" class="ig-view-comments" data-open-comments data-kind="post" data-id="${p.id}">${p.commentCount ? `View all ${p.commentCount} comments` : 'Add a comment…'}</button>`;
+      const viewCommentsHtml = `<button type="button" class="ig-view-comments" data-open-comments data-kind="post" data-id="${p.id}">${p.commentCount ? `view all ${p.commentCount} comments` : 'add a comment…'}</button>`;
 
       if (!hasMedia) {
         // No image/video/audio to anchor the Instagram-style card on —
@@ -1459,7 +1459,7 @@
           <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
           <div class="ig-caption"><strong>${authorNameHtml(v.authorEmail, profile)}</strong>${linkify(v.title)}</div>
           ${v.description ? `<div class="ig-description">${renderExcerptMarkdown(v.description, 220)}</div>` : ''}
-          <button type="button" class="ig-view-comments" data-open-comments data-kind="video" data-id="${v.id}">${v.commentCount ? `View all ${v.commentCount} comments` : 'Add a comment…'}</button>
+          <button type="button" class="ig-view-comments" data-open-comments data-kind="video" data-id="${v.id}">${v.commentCount ? `view all ${v.commentCount} comments` : 'add a comment…'}</button>
           <div class="ig-timestamp">${timeAgo(v._date)} • ${v.views || 0} view${v.views === 1 ? '' : 's'}</div>
         </div>
       `;
@@ -1467,7 +1467,7 @@
 
     async function toggleVote(kind, id, direction) {
       const user = getCurrentUser();
-      if (!user) { showToast('Sign in to vote'); return; }
+      if (!user) { showToast('sign in to vote'); return; }
       const list = kind === 'video' ? latestVideos : latestPosts;
       const item = list.find(x => x.id === id);
       if (!item) return;
@@ -1488,13 +1488,13 @@
           sendNotification({ recipientEmail: item.authorEmail, type: 'upvote', targetKind: kind, targetId: id, preview: item.title });
         }
       } catch (err) {
-        showToast('Could not vote: ' + err.message);
+        showToast('could not vote: ' + err.message);
       }
     }
 
     async function toggleSave(kind, id) {
       const user = getCurrentUser();
-      if (!user) { showToast('Sign in to save'); return; }
+      if (!user) { showToast('sign in to save'); return; }
       const list = kind === 'video' ? latestVideos : latestPosts;
       const item = list.find(x => x.id === id);
       if (!item) return;
@@ -1503,7 +1503,7 @@
       try {
         await updateDoc(doc(db, kind === 'video' ? 'videos' : 'posts', id), { savedBy: saved ? arrayRemove(uid) : arrayUnion(uid) });
       } catch (err) {
-        showToast('Could not save: ' + err.message);
+        showToast('could not save: ' + err.message);
       }
     }
 
@@ -1599,7 +1599,7 @@
     }
     async function togglePollVote(item, newIdx) {
       const user = getCurrentUser();
-      if (!user) { showToast('Sign in to vote'); return; }
+      if (!user) { showToast('sign in to vote'); return; }
       const uid = user.uid;
       const optionVotes = item.poll.optionVotes;
       const oldIdx = optionVotes.findIndex(arr => arr.includes(uid));
@@ -1611,7 +1611,7 @@
         await updateDoc(doc(db, 'posts', item.id), patch);
         renderModalPostContent();
       } catch (err) {
-        showToast('Could not vote: ' + err.message);
+        showToast('could not vote: ' + err.message);
       }
     }
 
@@ -1637,7 +1637,7 @@
 
     function renderModalPostContent() {
       const item = (openItemKind === 'video' ? latestVideos : latestPosts).find(x => x.id === openItemId);
-      modalTitle.textContent = openItemKind === 'video' ? 'Video' : 'Post';
+      modalTitle.textContent = openItemKind === 'video' ? 'video' : 'post';
       postContentEl.innerHTML = item ? postContentHtml(item, openItemKind) : '';
     }
     postContentEl.addEventListener('click', e => {
@@ -1703,7 +1703,7 @@
       const user = getCurrentUser();
       const body = commentInput.value.trim();
       if (!openItemId || !body) return;
-      if (!user) { showToast('Sign in to comment'); return; }
+      if (!user) { showToast('sign in to comment'); return; }
       commentSendBtn.disabled = true;
       try {
         const collectionName = openItemKind === 'video' ? 'videos' : 'posts';
@@ -1723,7 +1723,7 @@
         if (item) sendNotification({ recipientEmail: item.authorEmail, type: 'comment', targetKind: openItemKind, targetId: openItemId, preview: body.slice(0, 120) });
         commentInput.value = '';
       } catch (err) {
-        showToast('Could not comment: ' + err.message);
+        showToast('could not comment: ' + err.message);
       } finally {
         commentSendBtn.disabled = false;
       }
@@ -1781,7 +1781,7 @@
           gotPosts = true;
           renderFeed();
         },
-        err => { feedEl.innerHTML = `<div class="home-feed-empty">Could not load the feed: ${escHtml(err.message)}</div>`; }
+        err => { feedEl.innerHTML = `<div class="home-feed-empty">could not load the feed: ${escHtml(err.message)}</div>`; }
       );
 
       unsubFeedVideos = onSnapshot(
@@ -1932,23 +1932,23 @@
 // the whole thing being reduced to "good morning / good afternoon / good
 // evening / good night" every single visit.
 const HOME_GREETINGS = [
-  'Welcome to oeper.dev!',
-  "Hey, you're here.",
-  'Good to see you.',
-  "Let's see what's new.",
-  'Glad you stopped by.',
-  'Welcome back.',
-  "What's on your mind?",
-  'Make yourself at home.',
+  'welcome to oeper.dev!',
+  "hey, you're here.",
+  'good to see you.',
+  "let's see what's new.",
+  'glad you stopped by.',
+  'welcome back.',
+  "what's on your mind?",
+  'make yourself at home.',
   'oeper.dev, at your service.',
-  'Look around, stay a while.',
+  'look around, stay a while.',
 ];
 function homeGreetingByHour() {
   const h = new Date().getHours();
-  if (h < 5) return ['Still up?', 'Burning the midnight oil?', 'Night owl mode.'];
-  if (h < 12) return ['Rise and shine.', 'Fresh start today.', 'Morning.'];
-  if (h < 18) return ["Here's what's new.", 'Back for more?', 'Afternoon.'];
-  return ['Winding down?', 'Evening.', 'End-of-day check-in.'];
+  if (h < 5) return ['still up?', 'burning the midnight oil?', 'night owl mode.'];
+  if (h < 12) return ['rise and shine.', 'fresh start today.', 'morning.'];
+  if (h < 18) return ["here's what's new.", 'back for more?', 'afternoon.'];
+  return ['winding down?', 'evening.', 'end-of-day check-in.'];
 }
 function homeGreeting() {
   const pool = HOME_GREETINGS.concat(homeGreetingByHour());
@@ -1958,46 +1958,46 @@ function homeGreeting() {
 const PAGES = [
   {
     id: 'home',
-    title: 'Home',
+    title: 'home',
     icon: 'home',
     heroTitle: homeGreeting(),
-    heroSub: 'This is my website with a bunch of my stuff like my projects, articles and a lot more. Feel free to do whatever you want!',
+    heroSub: 'this is my website with a bunch of my stuff like my projects, articles and a lot more. feel free to do whatever you want!',
     items: []
   },
   {
     id: 'feed',
-    title: 'Feed',
+    title: 'feed',
     icon: 'forum',
     url: 'https://oeper.dev/feed',
-    heroTitle: 'Talk to Other Visitors',
-    heroSub: 'Post, tag, and discuss.',
+    heroTitle: 'talk to other visitors',
+    heroSub: 'post, tag, and discuss.',
     items: []
   },
   {
     id: 'videos',
-    title: 'Videos',
+    title: 'videos',
     icon: 'smart_display',
     url: 'https://oeper.dev/videos',
-    heroTitle: 'Long-Form Videos',
-    heroSub: 'Watch and upload videos from anyone signed in.',
+    heroTitle: 'long-form videos',
+    heroSub: 'watch and upload videos from anyone signed in.',
     items: []
   },
   {
     id: 'files',
-    title: 'Files',
+    title: 'files',
     icon: 'folder',
     url: 'https://oeper.dev/files',
-    heroTitle: 'Shared Files',
-    heroSub: 'Browse and download everything shared here.',
+    heroTitle: 'shared files',
+    heroSub: 'browse and download everything shared here.',
     items: []
   },
   {
     id: 'tools',
-    title: 'Tools',
+    title: 'tools',
     icon: 'build',
     url: 'https://oeper.dev/tools',
-    heroTitle: 'Free Tools',
-    heroSub: 'No sign-up, no paywall.',
+    heroTitle: 'free tools',
+    heroSub: 'no sign-up, no paywall.',
     items: []
   }
 ];
@@ -2034,7 +2034,7 @@ PAGES.forEach((page, index) => {
         <form class="home-search-form" id="homeSearchForm" action="https://www.google.com/search" method="GET" autocomplete="off">
           <div class="home-search-wrap">
             <span class="material-symbols-rounded home-search-icon">search</span>
-            <input class="home-search-input" type="text" name="q" id="homeSearchInput" placeholder="Search the web…" autocomplete="off">
+            <input class="home-search-input" type="text" name="q" id="homeSearchInput" placeholder="search the web…" autocomplete="off">
             <div class="home-search-dropdown" id="homeSearchDropdown"></div>
           </div>
           <div class="home-search-engines" id="homeSearchEngines">
@@ -2060,7 +2060,7 @@ PAGES.forEach((page, index) => {
       <input type="file" id="storyFileInput" accept="image/*,video/*" style="display:none;">
       <div class="home-feed-section">
         <div class="home-feed-heading">
-          <h2>Feed</h2>
+          <h2>feed</h2>
           <a href="/feed?new=1" class="header-link" id="homeNewPostBtn"><span class="material-symbols-rounded">add</span> New post</a>
         </div>
         <div class="home-feed" id="homeFeed"></div>

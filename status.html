@@ -90,17 +90,17 @@
 
 <div class="page">
   <header class="header">
-    <h1>Server Status</h1>
+    <h1>server status</h1>
   </header>
 
   <div class="status-list" id="statusList"></div>
 
   <div class="refresh-row">
     <span class="last-checked" id="lastChecked"></span>
-    <button class="btn" id="refreshBtn"><span class="material-symbols-rounded" style="font-size:16px;">refresh</span> Check again</button>
+    <button class="btn" id="refreshBtn"><span class="material-symbols-rounded" style="font-size:16px;">refresh</span> check again</button>
   </div>
 
-  <p class="note">Auto-rechecks every 30 seconds while this tab is open. A "down" file server means uploads, downloads, chat attachments, and the Feed's images/videos will fail to load. A "down" AI server just means the AI chat page won't respond.</p>
+  <p class="note">auto-rechecks every 30 seconds while this tab is open. a "down" file server means uploads, downloads, chat attachments, and the feed's images/videos will fail to load. a "down" AI server just means the AI chat page won't respond.</p>
 </div>
 
 <script type="module">
@@ -110,8 +110,8 @@ mountTopNav();
 
 const AI_ENDPOINT = 'https://ai2.oeper.dev';
 const SERVICES = [
-  { name: 'File server', desc: 'Uploads, downloads, chat attachments', url: SERVER_ENDPOINT + '/' },
-  { name: 'AI server', desc: 'The chat model behind /ai', url: AI_ENDPOINT + '/' },
+  { name: 'file server', desc: 'uploads, downloads, chat attachments', url: SERVER_ENDPOINT + '/' },
+  { name: 'AI server', desc: 'the chat model behind /ai', url: AI_ENDPOINT + '/' },
 ];
 
 const listEl = document.getElementById('statusList');
@@ -124,7 +124,7 @@ listEl.innerHTML = SERVICES.map((s, i) => `
       <div class="status-name">${s.name}</div>
       <div class="status-detail" id="detail-${i}">${s.desc}</div>
     </div>
-    <div class="status-badge checking" id="badge-${i}">Checking…</div>
+    <div class="status-badge checking" id="badge-${i}">checking…</div>
   </div>
 `).join('');
 
@@ -134,7 +134,7 @@ async function checkService(s, i) {
   const detail = document.getElementById(`detail-${i}`);
   dot.className = 'status-dot checking';
   badge.className = 'status-badge checking';
-  badge.textContent = 'Checking…';
+  badge.textContent = 'checking…';
 
   const start = performance.now();
   try {
@@ -146,7 +146,7 @@ async function checkService(s, i) {
     if (res.ok) {
       dot.className = 'status-dot up';
       badge.className = 'status-badge up';
-      badge.textContent = 'Online';
+      badge.textContent = 'online';
       detail.textContent = `${s.desc} · ${ms}ms`;
     } else {
       dot.className = 'status-dot down';
@@ -157,14 +157,14 @@ async function checkService(s, i) {
   } catch (err) {
     dot.className = 'status-dot down';
     badge.className = 'status-badge down';
-    badge.textContent = err.name === 'AbortError' ? 'Timed out' : 'Offline';
+    badge.textContent = err.name === 'AbortError' ? 'timed out' : 'offline';
     detail.textContent = s.desc;
   }
 }
 
 async function checkAll() {
   await Promise.all(SERVICES.map((s, i) => checkService(s, i)));
-  lastCheckedEl.textContent = 'Last checked ' + new Date().toLocaleTimeString();
+  lastCheckedEl.textContent = 'last checked ' + new Date().toLocaleTimeString();
 }
 
 document.getElementById('refreshBtn').addEventListener('click', checkAll);

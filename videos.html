@@ -241,29 +241,29 @@
 
 <div class="page">
   <header class="header">
-    <h1>Videos</h1>
+    <h1>videos</h1>
   </header>
 
   <div class="toolrow">
-    <button class="btn primary" id="uploadBtn"><span class="material-symbols-rounded">upload</span> Upload video</button>
+    <button class="btn primary" id="uploadBtn"><span class="material-symbols-rounded">upload</span> upload video</button>
   </div>
 
   <div id="grid" class="video-grid"></div>
-  <div class="empty-note" id="emptyNote" style="display:none;">No videos yet — be the first to upload one.</div>
+  <div class="empty-note" id="emptyNote" style="display:none;">no videos yet — be the first to upload one.</div>
 </div>
 
 <div class="overlay" id="uploadOverlay"></div>
 <div class="modal" id="uploadModal">
-  <h3>Upload a video</h3>
-  <div class="field"><label>Title</label><input type="text" id="titleInput" maxlength="150"></div>
-  <div class="field"><label>Description</label><textarea id="descInput" maxlength="2000" rows="3"></textarea></div>
-  <div class="field"><label>Video file</label><input type="file" id="fileInput" accept="video/*"></div>
+  <h3>upload a video</h3>
+  <div class="field"><label>title</label><input type="text" id="titleInput" maxlength="150"></div>
+  <div class="field"><label>description</label><textarea id="descInput" maxlength="2000" rows="3"></textarea></div>
+  <div class="field"><label>video file</label><input type="file" id="fileInput" accept="video/*"></div>
   <div class="upload-progress" id="uploadProgress" style="display:none;">
     <div class="upload-progress-label" id="uploadProgressLabel">Uploading…</div>
     <div class="upload-progress-track"><div class="upload-progress-fill" id="uploadProgressFill"></div></div>
   </div>
   <div class="modal-actions">
-    <button class="btn danger" id="uploadCancelBtn">Cancel</button>
+    <button class="btn danger" id="uploadCancelBtn">cancel</button>
     <button class="btn primary" id="uploadSubmitBtn"><span class="material-symbols-rounded" style="font-size:16px;">upload</span> Upload</button>
   </div>
 </div>
@@ -320,7 +320,7 @@ async function copyLink(url, label) {
 }
 async function reportItem(type, itemId, url) {
   const user = getCurrentUser();
-  if (!user) { showToast('Sign in to report'); return; }
+  if (!user) { showToast('sign in to report'); return; }
   if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
   const reason = await oePrompt('Why are you reporting this?');
   if (!reason || !reason.trim()) return;
@@ -336,7 +336,7 @@ async function reportItem(type, itemId, url) {
       try { msg = (await res.json()).error || msg; } catch {}
       throw new Error(msg);
     }
-    showToast('Report sent — thank you');
+    showToast('report sent — thank you');
   } catch (err) { showToast('Could not send report: ' + err.message); }
 }
 function showToast(msg) {
@@ -469,33 +469,33 @@ function openWatch(v) {
   if (descEl && v.description) descEl.setAttribute('content', v.description.slice(0, 160));
 
   panel.innerHTML = `
-    <button class="watch-close" id="watchCloseBtn" title="Close"><span class="material-symbols-rounded">close</span></button>
+    <button class="watch-close" id="watchCloseBtn" title="close"><span class="material-symbols-rounded">close</span></button>
     <video src="${v.url}" controls autoplay></video>
     <div class="watch-title">${escHtml(v.title)}</div>
     <div class="watch-actions">
       <div class="vote-col">
-        <button class="vote-btn ${up ? 'upvoted' : ''}" id="upBtn" title="Like"><span class="material-symbols-rounded">${up ? 'favorite' : 'favorite_border'}</span></button>
-        <span class="vote-count" data-voters-id="${escHtml(v.id)}" title="See who reacted">${score(v)}</span>
-        <button class="vote-btn ${down ? 'downvoted' : ''}" id="downBtn" title="Dislike"><span class="material-symbols-rounded">heart_broken</span></button>
+        <button class="vote-btn ${up ? 'upvoted' : ''}" id="upBtn" title="like"><span class="material-symbols-rounded">${up ? 'favorite' : 'favorite_border'}</span></button>
+        <span class="vote-count" data-voters-id="${escHtml(v.id)}" title="see who reacted">${score(v)}</span>
+        <button class="vote-btn ${down ? 'downvoted' : ''}" id="downBtn" title="dislike"><span class="material-symbols-rounded">heart_broken</span></button>
       </div>
       ${saveBtnHtml(v)}
       ${authorLinkHtml(v, `${profile.photo ? `<img src="${profile.photo}" alt="">` : ''}${escHtml(profile.name)}`)}
       <span style="color:var(--md-sys-color-on-surface-variant); font-size:13px;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:middle;">visibility</span> ${v.views||0} views</span>
-      <button class="watch-icon-btn" id="shareBtn" title="Share" style="margin-left:auto;"><span class="material-symbols-rounded">link</span></button>
-      <button class="watch-icon-btn" id="reportBtn" title="Report"><span class="material-symbols-rounded">flag</span></button>
-      ${isMine ? `<button class="btn danger" id="deleteBtn">Delete</button>` : ''}
+      <button class="watch-icon-btn" id="shareBtn" title="share" style="margin-left:auto;"><span class="material-symbols-rounded">link</span></button>
+      <button class="watch-icon-btn" id="reportBtn" title="report"><span class="material-symbols-rounded">flag</span></button>
+      ${isMine ? `<button class="btn danger" id="deleteBtn">delete</button>` : ''}
     </div>
     <div class="thread-liked-by" id="watchLikedBy"></div>
     <div class="watch-desc">${v.description ? linkifyMentions(escHtml(v.description)) : 'No description.'}</div>
     <div class="watch-comments">
-      <div class="section-heading">Comments</div>
+      <div class="section-heading">comments</div>
       <div class="watch-comment-list" id="watchCommentList"><div class="watch-comment-empty">Loading…</div></div>
       <div class="comment-reply-indicator" id="commentReplyIndicator" style="display:none;">
         <span id="commentReplyIndicatorText"></span>
-        <button type="button" id="commentReplyCancelBtn" title="Cancel reply"><span class="material-symbols-rounded">close</span></button>
+        <button type="button" id="commentReplyCancelBtn" title="cancel reply"><span class="material-symbols-rounded">close</span></button>
       </div>
       <form class="watch-comment-form" id="watchCommentForm">
-        <textarea class="watch-comment-input" id="watchCommentInput" rows="1" placeholder="Add a comment…" maxlength="2000"></textarea>
+        <textarea class="watch-comment-input" id="watchCommentInput" rows="1" placeholder="add a comment…" maxlength="2000"></textarea>
         <button type="submit" class="watch-comment-send-btn" id="watchCommentSendBtn"><span class="material-symbols-rounded">send</span></button>
       </form>
     </div>
@@ -506,7 +506,7 @@ function openWatch(v) {
 
   let replyingToComment = null; // { id, authorEmail, authorName }
   function startCommentReply(c) {
-    if (!getCurrentUser()) { showToast('Sign in to reply'); return; }
+    if (!getCurrentUser()) { showToast('sign in to reply'); return; }
     const cp = getProfile(c.authorEmail, c.authorName, c.authorPhoto);
     replyingToComment = { id: c.id, authorEmail: c.authorEmail, authorName: cp.name };
     document.getElementById('commentReplyIndicatorText').textContent = `Replying to ${cp.name}`;
@@ -553,9 +553,9 @@ function openWatch(v) {
         return `
           <div class="watch-comment-row" id="watch-comment-${c.id}">
             <div class="vote-col">
-              <button class="vote-btn ${cUp ? 'upvoted' : ''}" data-comment-up="${c.id}" title="Like"><span class="material-symbols-rounded">${cUp ? 'favorite' : 'favorite_border'}</span></button>
+              <button class="vote-btn ${cUp ? 'upvoted' : ''}" data-comment-up="${c.id}" title="like"><span class="material-symbols-rounded">${cUp ? 'favorite' : 'favorite_border'}</span></button>
               <span class="vote-count ${netScore > 0 ? 'positive' : netScore < 0 ? 'negative' : ''}">${netScore}</span>
-              <button class="vote-btn ${cDown ? 'downvoted' : ''}" data-comment-down="${c.id}" title="Dislike"><span class="material-symbols-rounded">heart_broken</span></button>
+              <button class="vote-btn ${cDown ? 'downvoted' : ''}" data-comment-down="${c.id}" title="dislike"><span class="material-symbols-rounded">heart_broken</span></button>
             </div>
             <img class="watch-comment-avatar" src="${cp.photo || ''}" alt="">
             <div class="watch-comment-body-wrap">
@@ -589,7 +589,7 @@ function openWatch(v) {
     const commenter = getCurrentUser();
     const body = watchCommentInput.value.trim();
     if (!body) return;
-    if (!commenter) { showToast('Sign in to comment'); return; }
+    if (!commenter) { showToast('sign in to comment'); return; }
     watchCommentSendBtn.disabled = true;
     const reply = replyingToComment;
     try {
@@ -611,7 +611,7 @@ function openWatch(v) {
       watchCommentInput.value = '';
       cancelCommentReply();
     } catch (err) {
-      showToast('Could not comment: ' + err.message);
+      showToast('could not comment: ' + err.message);
     } finally {
       watchCommentSendBtn.disabled = false;
     }
@@ -642,8 +642,8 @@ function openWatch(v) {
   const delBtn = document.getElementById('deleteBtn');
   if (delBtn) delBtn.addEventListener('click', async () => {
     if (!(await oeConfirm('Delete this video? This cannot be undone.', { danger: true }))) return;
-    try { await deleteDoc(doc(db, 'videos', v.id)); close(); showToast('Deleted'); }
-    catch (err) { showToast('Could not delete: ' + err.message); }
+    try { await deleteDoc(doc(db, 'videos', v.id)); close(); showToast('deleted'); }
+    catch (err) { showToast('could not delete: ' + err.message); }
   });
 
   overlay.classList.add('open');
@@ -687,7 +687,7 @@ async function openVotersModal(item) {
   votersActiveTab = upUids.length ? 'likes' : 'dislikes';
   document.getElementById('votersLikeCount').textContent = upUids.length;
   document.getElementById('votersDislikeCount').textContent = downUids.length;
-  votersList.innerHTML = '<div class="oe-spinner-row"><span class="oe-spinner small"></span>Loading…</div>';
+  votersList.innerHTML = '<div class="oe-spinner-row"><span class="oe-spinner small"></span>loading…</div>';
   votersOverlay.classList.add('open');
   votersModal.classList.add('open');
 
@@ -715,16 +715,16 @@ function saveBtnHtml(v) {
 }
 async function toggleSave(v) {
   const user = getCurrentUser();
-  if (!user) { showToast('Sign in to save'); return; }
+  if (!user) { showToast('sign in to save'); return; }
   const saved = (v.savedBy || []).includes(user.uid);
   try {
     await updateDoc(doc(db, 'videos', v.id), { savedBy: saved ? arrayRemove(user.uid) : arrayUnion(user.uid) });
-  } catch (err) { showToast('Could not save: ' + err.message); }
+  } catch (err) { showToast('could not save: ' + err.message); }
 }
 
 async function toggleVote(v, dir) {
   const user = getCurrentUser();
-  if (!user) { showToast('Sign in to vote'); return; }
+  if (!user) { showToast('sign in to vote'); return; }
   const ref = doc(db, 'videos', v.id);
   const up = (v.upvoters || []).includes(user.uid);
   const down = (v.downvoters || []).includes(user.uid);
@@ -739,12 +739,12 @@ async function toggleVote(v, dir) {
   try {
     await updateDoc(ref, patch);
     if (dir === 'up' && !up) sendNotification({ recipientEmail: v.authorEmail, type: 'upvote', targetKind: 'video', targetId: v.id, preview: v.title });
-  } catch (err) { showToast('Could not vote: ' + err.message); }
+  } catch (err) { showToast('could not vote: ' + err.message); }
 }
 
 async function toggleCommentVote(videoId, c, dir) {
   const user = getCurrentUser();
-  if (!user) { showToast('Sign in to vote'); return; }
+  if (!user) { showToast('sign in to vote'); return; }
   const ref = doc(db, 'videos', videoId, 'comments', c.id);
   const up = (c.upvoters || []).includes(user.uid);
   const down = (c.downvoters || []).includes(user.uid);
@@ -756,7 +756,7 @@ async function toggleCommentVote(videoId, c, dir) {
     patch.downvoters = down ? arrayRemove(user.uid) : arrayUnion(user.uid);
     if (up) patch.upvoters = arrayRemove(user.uid);
   }
-  try { await updateDoc(ref, patch); } catch (err) { showToast('Could not vote: ' + err.message); }
+  try { await updateDoc(ref, patch); } catch (err) { showToast('could not vote: ' + err.message); }
 }
 
 // ── Upload modal ──────────────────────────────────────────────
@@ -765,7 +765,7 @@ const uploadModal = document.getElementById('uploadModal');
 function closeUploadModal() { uploadOverlay.classList.remove('open'); uploadModal.classList.remove('open'); }
 
 document.getElementById('uploadBtn').addEventListener('click', () => {
-  if (!getCurrentUser()) { showToast('Sign in to upload'); return; }
+  if (!getCurrentUser()) { showToast('sign in to upload'); return; }
   document.getElementById('titleInput').value = '';
   document.getElementById('descInput').value = '';
   document.getElementById('fileInput').value = '';
@@ -777,12 +777,12 @@ document.getElementById('uploadCancelBtn').addEventListener('click', closeUpload
 
 document.getElementById('uploadSubmitBtn').addEventListener('click', async () => {
   const user = getCurrentUser();
-  if (!user) { showToast('Sign in to upload'); return; }
+  if (!user) { showToast('sign in to upload'); return; }
   const title = document.getElementById('titleInput').value.trim();
   const description = document.getElementById('descInput').value.trim();
   const file = document.getElementById('fileInput').files[0];
-  if (!title) { showToast('Title is required'); return; }
-  if (!file) { showToast('Choose a video file'); return; }
+  if (!title) { showToast('title is required'); return; }
+  if (!file) { showToast('choose a video file'); return; }
 
   const btn = document.getElementById('uploadSubmitBtn');
   const progressEl = document.getElementById('uploadProgress');
@@ -811,9 +811,9 @@ document.getElementById('uploadSubmitBtn').addEventListener('click', async () =>
       downvoters: [],
     });
     closeUploadModal();
-    showToast('Uploaded!');
+    showToast('uploaded!');
   } catch (err) {
-    showToast('Could not upload: ' + err.message);
+    showToast('could not upload: ' + err.message);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<span class="material-symbols-rounded" style="font-size:16px;">upload</span> Upload';

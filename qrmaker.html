@@ -124,57 +124,57 @@
 
 <div class="page">
   <header class="header">
-    <h1>QR Maker</h1>
+    <h1>QR maker</h1>
   </header>
 
   <div class="type-pills" id="typePills">
     <button class="pill active" data-type="url"><span class="material-symbols-rounded">link</span> URL</button>
-    <button class="pill" data-type="text"><span class="material-symbols-rounded">notes</span> Text</button>
+    <button class="pill" data-type="text"><span class="material-symbols-rounded">notes</span> text</button>
     <button class="pill" data-type="wifi"><span class="material-symbols-rounded">wifi</span> WiFi</button>
-    <button class="pill" data-type="contact"><span class="material-symbols-rounded">person</span> Contact</button>
-    <button class="pill" data-type="email"><span class="material-symbols-rounded">mail</span> Email</button>
-    <button class="pill" data-type="phone"><span class="material-symbols-rounded">call</span> Phone</button>
+    <button class="pill" data-type="contact"><span class="material-symbols-rounded">person</span> contact</button>
+    <button class="pill" data-type="email"><span class="material-symbols-rounded">mail</span> email</button>
+    <button class="pill" data-type="phone"><span class="material-symbols-rounded">call</span> phone</button>
   </div>
 
   <div class="grid">
     <div class="card">
-      <h2 id="formTitle">Website URL</h2>
+      <h2 id="formTitle">website URL</h2>
 
       <div class="input-view" id="view-url">
         <div class="field"><label>URL</label><input type="url" id="urlInput" placeholder="example.com"><div class="hint">https:// added automatically if missing.</div></div>
       </div>
 
       <div class="input-view" id="view-text" style="display:none;">
-        <div class="field"><label>Text</label><textarea id="textInput" placeholder="Anything you want encoded…" rows="4"></textarea></div>
+        <div class="field"><label>text</label><textarea id="textInput" placeholder="anything you want encoded…" rows="4"></textarea></div>
       </div>
 
       <div class="input-view" id="view-wifi" style="display:none;">
-        <div class="field"><label>Network name (SSID)</label><input type="text" id="wifiSsid"></div>
-        <div class="field"><label>Password</label><input type="text" id="wifiPass"></div>
+        <div class="field"><label>network name (SSID)</label><input type="text" id="wifiSsid"></div>
+        <div class="field"><label>password</label><input type="text" id="wifiPass"></div>
         <div class="field">
-          <label>Security</label>
+          <label>security</label>
           <div id="wifiSecuritySlot"></div>
         </div>
       </div>
 
       <div class="input-view" id="view-contact" style="display:none;">
         <div class="field-row">
-          <div class="field"><label>First name</label><input type="text" id="cFirst"></div>
-          <div class="field"><label>Last name</label><input type="text" id="cLast"></div>
+          <div class="field"><label>first name</label><input type="text" id="cFirst"></div>
+          <div class="field"><label>last name</label><input type="text" id="cLast"></div>
         </div>
-        <div class="field"><label>Phone</label><input type="tel" id="cPhone"></div>
-        <div class="field"><label>Email</label><input type="email" id="cEmail"></div>
-        <div class="field"><label>Organization</label><input type="text" id="cOrg"></div>
+        <div class="field"><label>phone</label><input type="tel" id="cPhone"></div>
+        <div class="field"><label>email</label><input type="email" id="cEmail"></div>
+        <div class="field"><label>organization</label><input type="text" id="cOrg"></div>
       </div>
 
       <div class="input-view" id="view-email" style="display:none;">
-        <div class="field"><label>To</label><input type="email" id="eTo"></div>
-        <div class="field"><label>Subject</label><input type="text" id="eSubject"></div>
-        <div class="field"><label>Body</label><textarea id="eBody" rows="3"></textarea></div>
+        <div class="field"><label>to</label><input type="email" id="eTo"></div>
+        <div class="field"><label>subject</label><input type="text" id="eSubject"></div>
+        <div class="field"><label>body</label><textarea id="eBody" rows="3"></textarea></div>
       </div>
 
       <div class="input-view" id="view-phone" style="display:none;">
-        <div class="field"><label>Phone number</label><input type="tel" id="pNumber" placeholder="+60123456789"></div>
+        <div class="field"><label>phone number</label><input type="tel" id="pNumber" placeholder="+60123456789"></div>
       </div>
 
       <div class="customize-row">
@@ -187,20 +187,20 @@
           <div><label style="margin:0;">Background</label></div>
         </div>
         <div class="field">
-          <label>Error correction</label>
+          <label>error correction</label>
           <div id="errorLevelSlot"></div>
         </div>
         <div class="field">
-          <label>Size</label>
+          <label>size</label>
           <div id="qrSizeSlot"></div>
         </div>
       </div>
 
-      <button class="btn" id="clearBtn" style="margin-top:8px;">Clear all fields</button>
+      <button class="btn" id="clearBtn" style="margin-top:8px;">clear all fields</button>
     </div>
 
     <div class="card">
-      <h2>Generated QR code</h2>
+      <h2>generated QR code</h2>
       <div class="preview-wrap">
         <div class="qr-box empty" id="qrBox">
           <div class="qr-empty-note" id="qrEmptyNote">
@@ -211,7 +211,7 @@
         </div>
         <div class="action-row" id="actionRow" style="display:none;">
           <button class="btn primary" id="downloadBtn"><span class="material-symbols-rounded" style="font-size:18px;">download</span> Download</button>
-          <button class="btn" id="copyBtn"><span class="material-symbols-rounded" style="font-size:18px;">content_copy</span> <span id="copyBtnText">Copy data</span></button>
+          <button class="btn" id="copyBtn"><span class="material-symbols-rounded" style="font-size:18px;">content_copy</span> <span id="copyBtnText">copy data</span></button>
         </div>
       </div>
     </div>
@@ -233,28 +233,28 @@ const actionRow = document.getElementById('actionRow');
 const wifiSecurityDropdown = createDropdown([
   { value: 'WPA', label: 'WPA/WPA2' },
   { value: 'WEP', label: 'WEP' },
-  { value: 'nopass', label: 'None (open network)' },
+  { value: 'nopass', label: 'none (open network)' },
 ], { value: 'WPA', onChange: () => updateQR() });
 document.getElementById('wifiSecuritySlot').appendChild(wifiSecurityDropdown.el);
 
 const errorLevelDropdown = createDropdown([
-  { value: 'L', label: 'Low (L)' },
-  { value: 'M', label: 'Medium (M)' },
-  { value: 'Q', label: 'Quartile (Q)' },
-  { value: 'H', label: 'High (H)' },
+  { value: 'L', label: 'low (L)' },
+  { value: 'M', label: 'medium (M)' },
+  { value: 'Q', label: 'quartile (Q)' },
+  { value: 'H', label: 'high (H)' },
 ], { value: 'M', onChange: () => updateQR() });
 document.getElementById('errorLevelSlot').appendChild(errorLevelDropdown.el);
 
 const qrSizeDropdown = createDropdown([
-  { value: '200', label: 'Small (200px)' },
-  { value: '300', label: 'Medium (300px)' },
-  { value: '500', label: 'Large (500px)' },
-  { value: '800', label: 'Extra large (800px)' },
+  { value: '200', label: 'small (200px)' },
+  { value: '300', label: 'medium (300px)' },
+  { value: '500', label: 'large (500px)' },
+  { value: '800', label: 'extra large (800px)' },
 ], { value: '300', onChange: () => updateQR() });
 document.getElementById('qrSizeSlot').appendChild(qrSizeDropdown.el);
 
 const FORM_TITLES = {
-  url: 'Website URL', text: 'Text', wifi: 'WiFi network', contact: 'Contact card', email: 'Email', phone: 'Phone number',
+  url: 'website URL', text: 'text', wifi: 'WiFi network', contact: 'contact card', email: 'email', phone: 'phone number',
 };
 
 document.querySelectorAll('#typePills .pill').forEach(pill => {
@@ -357,7 +357,7 @@ document.getElementById('copyBtn').addEventListener('click', () => {
   const data = buildData();
   navigator.clipboard.writeText(data).then(() => {
     const label = document.getElementById('copyBtnText');
-    label.textContent = 'Copied!';
+    label.textContent = 'copied!';
     setTimeout(() => { label.textContent = 'Copy data'; }, 2000);
   });
 });

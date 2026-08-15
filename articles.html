@@ -468,13 +468,13 @@
 
 <div class="page">
   <header class="header">
-    <h1>Articles</h1>
+    <h1>articles</h1>
   </header>
 
   <div class="toolbar">
     <div class="search-wrap">
       <span class="material-symbols-rounded">search</span>
-      <input class="search-input" type="text" placeholder="Search articles…" id="searchInput">
+      <input class="search-input" type="text" placeholder="search articles…" id="searchInput">
     </div>
     <div class="controls-row">
       <div class="filter-pills" id="filterPills">
@@ -488,25 +488,25 @@
       <div class="sort-wrap" id="sortWrap">
         <button class="sort-btn" id="sortBtn" aria-haspopup="listbox" aria-expanded="false">
           <span class="material-symbols-rounded">sort</span>
-          <span id="sortLabel">Relevance</span>
+          <span id="sortLabel">relevance</span>
           <span class="material-symbols-rounded sort-chevron">expand_more</span>
         </button>
         <div class="sort-dropdown" id="sortDropdown" role="listbox">
-          <div class="sort-label">Sort by</div>
+          <div class="sort-label">sort by</div>
           <button class="sort-option selected" data-sort="relevance" role="option">
             <span class="material-symbols-rounded">auto_awesome</span>
-            Relevance
+            relevance
             <span class="material-symbols-rounded check-icon">check</span>
           </button>
           <div class="sort-divider"></div>
           <button class="sort-option" data-sort="newest" role="option">
             <span class="material-symbols-rounded">schedule</span>
-            Newest first
+            newest first
             <span class="material-symbols-rounded check-icon">check</span>
           </button>
           <button class="sort-option" data-sort="oldest" role="option">
             <span class="material-symbols-rounded">history</span>
-            Oldest first
+            oldest first
             <span class="material-symbols-rounded check-icon">check</span>
           </button>
           <div class="sort-divider"></div>
@@ -533,14 +533,14 @@
   
   <div class="empty" id="emptyState">
     <span class="material-symbols-rounded">search_off</span>
-    <p>No results match your search parameters.</p>
+    <p>no results match your search parameters.</p>
   </div>
 </div>
 
 <div class="reader-overlay" id="readerOverlay"></div>
 <div class="reader-panel" id="readerPanel">
   <div class="reader-close">
-    <button class="reader-close-btn" id="readerCloseBtn" title="Close">
+    <button class="reader-close-btn" id="readerCloseBtn" title="close">
       <span class="material-symbols-rounded">close</span>
     </button>
   </div>
@@ -629,7 +629,7 @@ ARTICLES.forEach((article, i) => {
       </div>
       <div class="article-title">${article.title}</div>
       ${article.excerpt ? `<div class="article-excerpt">${article.excerpt}</div>` : ''}
-      <span class="read-more">Read article</span>
+      <span class="read-more">read article</span>
     </div>
   `;
 
@@ -640,7 +640,7 @@ ARTICLES.forEach((article, i) => {
 
 // ── Sort state ──────────────────────────────────────────────
 let activeSort = 'relevance';
-const SORT_LABELS = { relevance: 'Relevance', newest: 'Newest', oldest: 'Oldest', az: 'A → Z', za: 'Z → A' };
+const SORT_LABELS = { relevance: 'relevance', newest: 'newest', oldest: 'oldest', az: 'A → Z', za: 'Z → A' };
 
 const sortBtn      = document.getElementById('sortBtn');
 const sortDropdown = document.getElementById('sortDropdown');
@@ -756,7 +756,7 @@ function renderReader(article, bodyHtml) {
 
 async function openReader(index) {
   const article = ARTICLES[index];
-  renderReader(article, `<p style="opacity:0.5;">Loading…</p>`);
+  renderReader(article, `<p style="opacity:0.5;">loading…</p>`);
   overlay.classList.add('open');
   panel.classList.add('open');
   panel.scrollTop = 0;
@@ -774,7 +774,7 @@ async function openReader(index) {
       const text = await res.text();
       bodyHtml = parseMarkdown(text);
     } catch (err) {
-      bodyHtml = `<p style="opacity:0.5;">Could not load content: ${err.message}</p>`;
+      bodyHtml = `<p style="opacity:0.5;">could not load content: ${err.message}</p>`;
     }
   } else {
     const looksLikeHtml = /<[a-z][\s\S]*>/i.test(article.content);

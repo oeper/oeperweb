@@ -230,7 +230,7 @@
 <div class="follow-list-overlay" id="followListOverlay"></div>
 <div class="follow-list-modal" id="followListModal">
   <div class="follow-list-header">
-    <h3 id="followListTitle">Followers</h3>
+    <h3 id="followListTitle">followers</h3>
     <button class="follow-list-close-btn" id="followListCloseBtn" title="Close"><span class="material-symbols-rounded">close</span></button>
   </div>
   <div class="follow-list-body" id="followListBody"></div>
@@ -408,7 +408,7 @@ function showToast(msg) {
 async function copyLink(url, label) {
   try {
     await navigator.clipboard.writeText(url);
-    showToast((label || 'Link') + ' copied to clipboard');
+    showToast((label || 'link') + ' copied to clipboard');
   } catch {
     await oePrompt('Copy this link:', { defaultValue: url });
   }
@@ -530,7 +530,7 @@ async function init() {
       followState = await loadFollowState(user);
       render();
     } catch (err) {
-      showToast('Could not update follow: ' + err.message);
+      showToast('could not update follow: ' + err.message);
     }
   }
 
@@ -630,7 +630,7 @@ async function init() {
   }
   async function togglePollVote(id, newIdx) {
     const user = getCurrentUser();
-    if (!user) { showToast('Sign in to vote'); return; }
+    if (!user) { showToast('sign in to vote'); return; }
     const item = posts.find(x => x.id === id);
     if (!item || !item.poll) return;
     const uid = user.uid;
@@ -646,7 +646,7 @@ async function init() {
       optionVotes[newIdx] = [...optionVotes[newIdx], uid];
       render();
     } catch (err) {
-      showToast('Could not vote: ' + err.message);
+      showToast('could not vote: ' + err.message);
     }
   }
 
@@ -662,7 +662,7 @@ async function init() {
 
   async function toggleItemVote(kind, id, direction) {
     const user = getCurrentUser();
-    if (!user) { showToast('Sign in to vote'); return; }
+    if (!user) { showToast('sign in to vote'); return; }
     const item = findDisplayedItem(kind, id);
     if (!item) return;
     const uid = user.uid;
@@ -690,13 +690,13 @@ async function init() {
         sendNotification({ recipientEmail: item.authorEmail, type: 'upvote', targetKind: kind, targetId: id, preview: item.title });
       }
     } catch (err) {
-      showToast('Could not vote: ' + err.message);
+      showToast('could not vote: ' + err.message);
     }
   }
 
   async function toggleItemSave(kind, id) {
     const user = getCurrentUser();
-    if (!user) { showToast('Sign in to save'); return; }
+    if (!user) { showToast('sign in to save'); return; }
     const item = findDisplayedItem(kind, id);
     if (!item) return;
     const uid = user.uid;
@@ -707,7 +707,7 @@ async function init() {
       if (saved && activeTab === 'saved') savedItems = savedItems.filter(x => x.id !== id);
       render();
     } catch (err) {
-      showToast('Could not save: ' + err.message);
+      showToast('could not save: ' + err.message);
     }
   }
 
@@ -857,8 +857,8 @@ async function init() {
 
   async function reportProfile() {
     const user = getCurrentUser();
-    if (!user) { showToast('Sign in to report'); return; }
-    if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
+    if (!user) { showToast('sign in to report'); return; }
+    if (!SERVER_ENDPOINT) { showToast("reporting isn't set up yet"); return; }
     const reason = await oePrompt(`Why are you reporting @${handle}?`);
     if (!reason || !reason.trim()) return;
     try {
@@ -873,16 +873,16 @@ async function init() {
         try { msg = (await res.json()).error || msg; } catch {}
         throw new Error(msg);
       }
-      showToast('Report sent — thank you');
-    } catch (err) { showToast('Could not send report: ' + err.message); }
+      showToast('report sent — thank you');
+    } catch (err) { showToast('could not send report: ' + err.message); }
   }
 
   async function editBadge() {
     const current = profile.badge || {};
-    const label = await oePrompt('Badge label (e.g. Moderator, VIP, Beta Tester) — leave blank for an icon-only badge:', { defaultValue: current.label || '' });
+    const label = await oePrompt('badge label (e.g. moderator, VIP, beta tester) — leave blank for an icon-only badge:', { defaultValue: current.label || '' });
     if (label === null) return; // cancelled
     const trimmed = label.trim();
-    const icon = await oePrompt('Material Symbol icon name (e.g. verified, star, shield, bolt, diamond):', { defaultValue: current.icon || 'verified' });
+    const icon = await oePrompt('material symbol icon name (e.g. verified, star, shield, bolt, diamond):', { defaultValue: current.icon || 'verified' });
     if (icon === null) return;
     await applyBadge({ label: trimmed.slice(0, 24), icon: (icon.trim() || 'verified').slice(0, 40) });
   }
@@ -890,19 +890,19 @@ async function init() {
   async function applyBadge(badge) {
     try {
       await setUserBadge(viewedEmail, badge);
-      showToast(badge ? 'Badge updated' : 'Badge removed');
+      showToast(badge ? 'badge updated' : 'badge removed');
       render();
     } catch (err) {
-      showToast('Could not update badge: ' + err.message);
+      showToast('could not update badge: ' + err.message);
     }
   }
 
   async function editOwnBadge() {
     const current = getBadgeOverride(viewedEmail) || {};
-    const label = await oePrompt('Badge label (e.g. Moderator, VIP, Beta Tester) — leave blank for an icon-only badge:', { defaultValue: current.label || '' });
+    const label = await oePrompt('badge label (e.g. moderator, VIP, beta tester) — leave blank for an icon-only badge:', { defaultValue: current.label || '' });
     if (label === null) return; // cancelled
     const trimmed = label.trim();
-    const icon = await oePrompt('Material Symbol icon name (e.g. verified, star, shield, bolt, diamond):', { defaultValue: current.icon || 'verified' });
+    const icon = await oePrompt('material symbol icon name (e.g. verified, star, shield, bolt, diamond):', { defaultValue: current.icon || 'verified' });
     if (icon === null) return;
     await applyOwnBadge({ label: trimmed.slice(0, 24), icon: (icon.trim() || 'verified').slice(0, 40) });
   }
@@ -910,10 +910,10 @@ async function init() {
   async function applyOwnBadge(override) {
     try {
       await setOwnBadgeOverride(override);
-      showToast(override === undefined ? 'Badge reset to default' : override.hidden ? 'Badge hidden' : 'Badge updated');
+      showToast(override === undefined ? 'badge reset to default' : override.hidden ? 'badge hidden' : 'badge updated');
       render();
     } catch (err) {
-      showToast('Could not update badge: ' + err.message);
+      showToast('could not update badge: ' + err.message);
     }
   }
 
@@ -922,29 +922,29 @@ async function init() {
     try {
       await setDoc(doc(db, 'users', viewedEmail), { bioMarkdownAllowed: next }, { merge: true });
       bioMarkdownAllowed = next;
-      showToast(next ? 'Bio markdown allowed' : 'Bio markdown disallowed');
+      showToast(next ? 'bio markdown allowed' : 'bio markdown disallowed');
       render();
     } catch (err) {
-      showToast('Could not update permission: ' + err.message);
+      showToast('could not update permission: ' + err.message);
     }
   }
 
   async function editOtherProfile() {
-    const newName = await oePrompt('Display name:', { defaultValue: profile.name || '' });
+    const newName = await oePrompt('display name:', { defaultValue: profile.name || '' });
     if (newName === null) return;
     const trimmedName = newName.trim().slice(0, 40);
-    if (!trimmedName) { showToast('Name cannot be empty'); return; }
-    const newBio = await oePrompt('Bio:', { defaultValue: bio || '' });
+    if (!trimmedName) { showToast('name cannot be empty'); return; }
+    const newBio = await oePrompt('bio:', { defaultValue: bio || '' });
     if (newBio === null) return;
     const trimmedBio = newBio.trim().slice(0, 200);
     try {
       await setDoc(doc(db, 'users', viewedEmail), { displayName: trimmedName, bio: trimmedBio }, { merge: true });
       profile = { ...profile, name: trimmedName };
       bio = trimmedBio;
-      showToast('Profile updated');
+      showToast('profile updated');
       render();
     } catch (err) {
-      showToast('Could not update profile: ' + err.message);
+      showToast('could not update profile: ' + err.message);
     }
   }
 

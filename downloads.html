@@ -305,13 +305,13 @@
 
 <div class="page">
   <header class="header">
-    <h1>Downloads</h1>
+    <h1>downloads</h1>
   </header>
 
   <div class="toolbar">
     <div class="search-wrap">
       <span class="material-symbols-rounded">search</span>
-      <input class="search-input" type="text" placeholder="Search files…" id="searchInput">
+      <input class="search-input" type="text" placeholder="search files…" id="searchInput">
     </div>
     <div class="filter-pills" id="filterPills">
       <button class="pill active" data-filter="__all__">
@@ -329,7 +329,7 @@
   
   <div class="empty" id="emptyState">
     <span class="material-symbols-rounded">search_off</span>
-    <p>No downloadable resources found matching your filters.</p>
+    <p>no downloadable resources found matching your filters.</p>
   </div>
 </div>
 
@@ -405,7 +405,7 @@ FILES.forEach((file, i) => {
   const controls = `
     <div class="card-controls">
       <div class="cat-tags">${buildTags(catIds)}</div>
-      <a class="dl-btn" href="${file.url}" download title="Download">
+      <a class="dl-btn" href="${file.url}" download title="download">
         <span class="material-symbols-rounded">download</span>
       </a>
     </div>
@@ -445,7 +445,7 @@ FILES.forEach((file, i) => {
     setTimeout(() => {
       btn.classList.remove('downloading');
       btn.innerHTML = `<span class="material-symbols-rounded">check</span>`;
-      showToast('Downloaded: ' + name);
+      showToast('downloaded: ' + name);
       setTimeout(() => {
         btn.innerHTML = `<span class="material-symbols-rounded">download</span>`;
       }, 2500);

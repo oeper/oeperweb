@@ -317,49 +317,49 @@
 
   <div class="notes-bar" id="notesBar"></div>
 
-  <div id="content"><div class="empty-note">Loading…</div></div>
+  <div id="content"><div class="empty-note">loading…</div></div>
 </div>
 
 <div class="note-overlay" id="noteOverlay"></div>
 <div class="note-modal" id="noteModal">
-  <input type="text" id="noteInput" maxlength="60" placeholder="Share a thought…">
+  <input type="text" id="noteInput" maxlength="60" placeholder="share a thought…">
   <div class="note-modal-actions">
-    <button class="btn danger" id="noteCancelBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">Cancel</button>
+    <button class="btn danger" id="noteCancelBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">cancel</button>
     <button class="send-btn" id="noteShareBtn" style="width:auto;border-radius:100px;padding:10px 20px;">Share</button>
   </div>
 </div>
 
 <div class="note-overlay" id="newGroupOverlay"></div>
 <div class="note-modal" id="newGroupModal" style="width:min(400px,90vw);">
-  <h3 style="font-size:16px;font-weight:500;margin-bottom:14px;">New group</h3>
-  <input type="text" id="newGroupNameInput" maxlength="60" placeholder="Group name">
+  <h3 style="font-size:16px;font-weight:500;margin-bottom:14px;">new group</h3>
+  <input type="text" id="newGroupNameInput" maxlength="60" placeholder="group name">
   <div id="newGroupMemberPicker" class="member-picker"></div>
   <div class="note-modal-actions">
-    <button id="newGroupCancelBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">Cancel</button>
-    <button class="send-btn" id="newGroupCreateBtn" style="width:auto;border-radius:100px;padding:10px 20px;">Create</button>
+    <button id="newGroupCancelBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">cancel</button>
+    <button class="send-btn" id="newGroupCreateBtn" style="width:auto;border-radius:100px;padding:10px 20px;">create</button>
   </div>
 </div>
 
 <div class="note-overlay" id="groupInfoOverlay"></div>
 <div class="note-modal" id="groupInfoModal" style="width:min(420px,90vw);">
-  <h3 style="font-size:16px;font-weight:500;margin-bottom:14px;">Group info</h3>
+  <h3 style="font-size:16px;font-weight:500;margin-bottom:14px;">group info</h3>
   <div class="group-icon-picker">
     <div id="groupInfoIconSlot"></div>
-    <button type="button" id="groupInfoIconBtn" style="display:none;background:var(--md-sys-color-surface-variant);border:none;color:var(--md-sys-color-on-surface);border-radius:100px;padding:8px 14px;font-family:inherit;font-size:13px;cursor:pointer;">Change icon</button>
+    <button type="button" id="groupInfoIconBtn" style="display:none;background:var(--md-sys-color-surface-variant);border:none;color:var(--md-sys-color-on-surface);border-radius:100px;padding:8px 14px;font-family:inherit;font-size:13px;cursor:pointer;">change icon</button>
     <input type="file" id="groupIconInput" accept="image/*" style="display:none;">
   </div>
-  <input type="text" id="groupInfoNameInput" maxlength="60" placeholder="Group name">
-  <div id="groupInfoMembersHeading" style="font-size:12px;color:var(--md-sys-color-on-surface-variant);margin-bottom:8px;">Members</div>
+  <input type="text" id="groupInfoNameInput" maxlength="60" placeholder="group name">
+  <div id="groupInfoMembersHeading" style="font-size:12px;color:var(--md-sys-color-on-surface-variant);margin-bottom:8px;">members</div>
   <div id="groupInfoMemberList" class="member-picker" style="max-height:200px;"></div>
   <div id="groupInfoAddSlot"></div>
   <div class="note-modal-actions">
-    <button id="groupInfoLeaveBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">Leave group</button>
-    <button class="send-btn" id="groupInfoSaveBtn" style="width:auto;border-radius:100px;padding:10px 20px;">Save</button>
+    <button id="groupInfoLeaveBtn" style="display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;padding:10px 18px;border-radius:100px;background:color-mix(in srgb, var(--md-sys-color-error) 18%, transparent);color:var(--md-sys-color-error);cursor:pointer;font-family:inherit;">leave group</button>
+    <button class="send-btn" id="groupInfoSaveBtn" style="width:auto;border-radius:100px;padding:10px 20px;">save</button>
   </div>
 </div>
 
 <div class="img-lightbox" id="imgLightbox">
-  <button class="img-lightbox-close" id="imgLightboxClose" title="Close"><span class="material-symbols-rounded">close</span></button>
+  <button class="img-lightbox-close" id="imgLightboxClose" title="close"><span class="material-symbols-rounded">close</span></button>
   <img id="imgLightboxImg" src="" alt="">
 </div>
 
@@ -471,7 +471,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeImageLi
 
 async function reportItem(type, itemId, contentPreview, aboutHandleOrEmail) {
   const user = getCurrentUser();
-  if (!user) { showToast('Sign in to report'); return; }
+  if (!user) { showToast('sign in to report'); return; }
   if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
   const reason = await oePrompt('Why are you reporting this?');
   if (!reason || !reason.trim()) return;
@@ -490,8 +490,8 @@ async function reportItem(type, itemId, contentPreview, aboutHandleOrEmail) {
       try { msg = (await res.json()).error || msg; } catch {}
       throw new Error(msg);
     }
-    showToast('Report sent — thank you');
-  } catch (err) { showToast('Could not send report: ' + err.message); }
+    showToast('report sent — thank you');
+  } catch (err) { showToast('could not send report: ' + err.message); }
 }
 function showToast(msg) {
   const el = document.createElement('div');
@@ -569,7 +569,7 @@ function initNotes() {
           <div class="note-avatar-wrap">
             <div class="note-bubble">
               ${escHtml(n.text)}
-              <button class="msg-report-btn" data-report-note style="opacity:1; width:16px; height:16px; vertical-align:middle;" title="Report"><span class="material-symbols-rounded" style="font-size:12px;">flag</span></button>
+              <button class="msg-report-btn" data-report-note style="opacity:1; width:16px; height:16px; vertical-align:middle;" title="report"><span class="material-symbols-rounded" style="font-size:12px;">flag</span></button>
             </div>
             <img class="note-avatar" src="${profile.photo || ''}" alt="">
           </div>
@@ -625,7 +625,7 @@ function initNotes() {
       });
       closeNoteModal();
     } catch (err) {
-      showToast('Could not share note: ' + err.message);
+      showToast('could not share note: ' + err.message);
     }
   });
   input.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('noteShareBtn').click(); });
@@ -643,7 +643,7 @@ onAccountChange(user => {
   if (unsubMessages) { unsubMessages(); unsubMessages = null; }
   if (unsubReads) { unsubReads(); unsubReads = null; }
   if (!user) {
-    content.innerHTML = '<div class="signin-note">Sign in to chat.</div>';
+    content.innerHTML = '<div class="signin-note">sign in to chat.</div>';
     return;
   }
   const params = new URLSearchParams(window.location.search);
@@ -657,15 +657,15 @@ onAccountChange(user => {
 });
 
 async function openByHandle(handle, user) {
-  content.innerHTML = '<div class="empty-note">Loading…</div>';
+  content.innerHTML = '<div class="empty-note">loading…</div>';
   try {
     const snap = await getDoc(doc(db, 'handles', handle));
-    if (!snap.exists()) { content.innerHTML = `<div class="empty-note">No profile found for @${escHtml(handle)}.</div>`; return; }
+    if (!snap.exists()) { content.innerHTML = `<div class="empty-note">no profile found for @${escHtml(handle)}.</div>`; return; }
     const otherEmail = snap.data().email;
-    if (otherEmail === user.email) { content.innerHTML = '<div class="empty-note">You can\'t message yourself.</div>'; return; }
+    if (otherEmail === user.email) { content.innerHTML = '<div class="empty-note">you can\'t message yourself.</div>'; return; }
     await openThread(otherEmail, user);
   } catch (err) {
-    content.innerHTML = `<div class="empty-note">Could not open conversation: ${escHtml(err.message)}</div>`;
+    content.innerHTML = `<div class="empty-note">could not open conversation: ${escHtml(err.message)}</div>`;
   }
 }
 
@@ -683,7 +683,7 @@ function showInbox(user) {
   };
   document.getElementById('backLinkText').textContent = 'back';
   document.getElementById('notesBar').style.display = '';
-  content.innerHTML = '<div class="empty-note">Loading…</div>';
+  content.innerHTML = '<div class="empty-note">loading…</div>';
 
   let lastConvos = null;
   let lastGroups = null;
@@ -705,7 +705,7 @@ function showInbox(user) {
     return lastMs > readMs;
   }
   function newGroupBtnHtml() {
-    return `<div class="inbox-toolbar"><button class="new-group-btn" id="newGroupBtn"><span class="material-symbols-rounded" style="font-size:18px;">group_add</span> New group</button></div>`;
+    return `<div class="inbox-toolbar"><button class="new-group-btn" id="newGroupBtn"><span class="material-symbols-rounded" style="font-size:18px;">group_add</span> new group</button></div>`;
   }
 
   // Render right away with whatever's already cached (falls back to "User"
@@ -722,7 +722,7 @@ function showInbox(user) {
     ].sort((a, b) => b.ms - a.ms);
 
     if (rows.length === 0) {
-      content.innerHTML = `${newGroupBtnHtml()}<div class="empty-note">No chats yet. Start one from someone's profile page, or create a group.</div>`;
+      content.innerHTML = `${newGroupBtnHtml()}<div class="empty-note">no chats yet. start one from someone's profile page, or create a group.</div>`;
     } else {
       const rowsHtml = rows.map(r => {
         if (r.kind === 'dm') {
@@ -824,9 +824,9 @@ async function defaultCreateGroupHandler() {
   const user = getCurrentUser();
   if (!user) return;
   const name = newGroupNameInput.value.trim();
-  if (!name) { showToast('Enter a group name'); return; }
+  if (!name) { showToast('enter a group name'); return; }
   const selected = [...newGroupMemberPicker.querySelectorAll('input:checked')].map(el => el.value);
-  if (selected.length === 0) { showToast('Pick at least one member'); return; }
+  if (selected.length === 0) { showToast('pick at least one member'); return; }
   try {
     const ref = await addDoc(collection(db, 'groups'), {
       name,
@@ -841,10 +841,10 @@ async function defaultCreateGroupHandler() {
       lastMessageAt: serverTimestamp(),
     });
     closeNewGroupModal();
-    showToast('Group created');
+    showToast('group created');
     openGroupThread(ref.id, user);
   } catch (err) {
-    showToast('Could not create group: ' + err.message);
+    showToast('could not create group: ' + err.message);
   }
 }
 document.getElementById('newGroupCreateBtn').onclick = defaultCreateGroupHandler;
@@ -888,10 +888,10 @@ async function openGroupInfoModal(groupId) {
       const isMe = user && email === user.email;
       const actions = (iAmAdmin && !isMe) ? `
         <div class="member-row-actions">
-          <button type="button" class="member-action-btn" data-toggle-admin="${escHtml(email)}" title="${isAdmin ? 'Remove as admin' : 'Make admin'}">
+          <button type="button" class="member-action-btn" data-toggle-admin="${escHtml(email)}" title="${isAdmin ? 'remove as admin' : 'make admin'}">
             <span class="material-symbols-rounded">${isAdmin ? 'shield' : 'add_moderator'}</span>
           </button>
-          <button type="button" class="member-action-btn" data-remove-member="${escHtml(email)}" title="Remove from group">
+          <button type="button" class="member-action-btn" data-remove-member="${escHtml(email)}" title="remove from group">
             <span class="material-symbols-rounded">person_remove</span>
           </button>
         </div>
@@ -915,7 +915,7 @@ async function openGroupInfoModal(groupId) {
         const isAdminNow = (g.admins || []).includes(email);
         try {
           await updateDoc(doc(db, 'groups', groupId), { admins: isAdminNow ? arrayRemove(email) : arrayUnion(email) });
-        } catch (err) { showToast('Could not update admin status: ' + err.message); }
+        } catch (err) { showToast('could not update admin status: ' + err.message); }
       });
     });
     document.getElementById('groupInfoMemberList').querySelectorAll('[data-remove-member]').forEach(btn => {
@@ -924,7 +924,7 @@ async function openGroupInfoModal(groupId) {
         if (!(await oeConfirm(`Remove ${getProfile(email, null, null).name} from the group?`))) return;
         try {
           await updateDoc(doc(db, 'groups', groupId), { members: arrayRemove(email), admins: arrayRemove(email) });
-        } catch (err) { showToast('Could not remove member: ' + err.message); }
+        } catch (err) { showToast('could not remove member: ' + err.message); }
       });
     });
     const addBtn = document.getElementById('groupInfoAddMembersBtn');
@@ -942,12 +942,12 @@ groupInfoOverlay.addEventListener('click', closeGroupInfoModal);
 document.getElementById('groupInfoSaveBtn').addEventListener('click', async () => {
   if (!groupInfoGroupId) return;
   const name = document.getElementById('groupInfoNameInput').value.trim();
-  if (!name) { showToast('Group name can\'t be empty'); return; }
+  if (!name) { showToast('group name can\'t be empty'); return; }
   try {
     await updateDoc(doc(db, 'groups', groupInfoGroupId), { name });
-    showToast('Saved');
+    showToast('saved');
   } catch (err) {
-    showToast('Could not save: ' + err.message);
+    showToast('could not save: ' + err.message);
   }
 });
 document.getElementById('groupInfoLeaveBtn').addEventListener('click', async () => {
@@ -959,7 +959,7 @@ document.getElementById('groupInfoLeaveBtn').addEventListener('click', async () 
     closeGroupInfoModal();
     showInbox(user);
   } catch (err) {
-    showToast('Could not leave group: ' + err.message);
+    showToast('could not leave group: ' + err.message);
   }
 });
 document.getElementById('groupIconInput').addEventListener('change', async () => {
@@ -970,9 +970,9 @@ document.getElementById('groupIconInput').addEventListener('change', async () =>
   try {
     const url = await uploadFile(file, '/upload', undefined, frac => showUploadToast(`Uploading… ${Math.round(frac * 100)}%`));
     await updateDoc(doc(db, 'groups', groupInfoGroupId), { icon: url });
-    showToast('Icon updated');
+    showToast('icon updated');
   } catch (err) {
-    showToast('Could not update icon: ' + err.message);
+    showToast('could not update icon: ' + err.message);
   } finally {
     hideUploadToast();
   }
@@ -1005,13 +1005,13 @@ async function openAddMembersModal(groupId, existingMembers) {
   createBtn.textContent = 'Add';
   createBtn.onclick = async () => {
     const selected = [...newGroupMemberPicker.querySelectorAll('input:checked')].map(el => el.value);
-    if (selected.length === 0) { showToast('Pick at least one person'); return; }
+    if (selected.length === 0) { showToast('pick at least one person'); return; }
     try {
       await updateDoc(doc(db, 'groups', groupId), { members: arrayUnion(...selected) });
       closeNewGroupModal();
-      showToast('Members added');
+      showToast('members added');
     } catch (err) {
-      showToast('Could not add members: ' + err.message);
+      showToast('could not add members: ' + err.message);
     }
   };
 }
@@ -1051,7 +1051,7 @@ async function openGroupThread(groupId, user) {
 
   const groupSnap = await getDoc(doc(db, 'groups', groupId));
   if (!groupSnap.exists() || !(groupSnap.data().members || []).includes(user.email)) {
-    content.innerHTML = '<div class="empty-note">This group no longer exists, or you\'re not in it.</div>';
+    content.innerHTML = '<div class="empty-note">this group no longer exists, or you\'re not in it.</div>';
     return;
   }
   let group = { id: groupSnap.id, ...groupSnap.data() };
@@ -1067,13 +1067,13 @@ async function openGroupThread(groupId, user) {
             <div class="sub" id="groupThreadMemberCount"></div>
           </div>
         </div>
-        <button class="thread-header-info-btn" id="groupThreadInfoBtn" title="Group info"><span class="material-symbols-rounded">info</span></button>
+        <button class="thread-header-info-btn" id="groupThreadInfoBtn" title="group info"><span class="material-symbols-rounded">info</span></button>
       </div>
       <div class="msg-list" id="msgList"></div>
       <div class="thread-inputbar">
         <div class="input-normal" id="inputNormal">
-          <textarea id="msgInput" placeholder="Message…" rows="1"></textarea>
-          <button class="send-btn" id="sendMsgBtn" title="Send"><span class="material-symbols-rounded">arrow_upward</span></button>
+          <textarea id="msgInput" placeholder="message…" rows="1"></textarea>
+          <button class="send-btn" id="sendMsgBtn" title="send"><span class="material-symbols-rounded">arrow_upward</span></button>
         </div>
       </div>
     </div>
@@ -1105,7 +1105,7 @@ async function openGroupThread(groupId, user) {
     try {
       await deleteDoc(doc(db, 'groups', groupId, 'messages', m.id));
     } catch (err) {
-      showToast('Could not delete message: ' + err.message);
+      showToast('could not delete message: ' + err.message);
     }
   }
 
@@ -1125,14 +1125,14 @@ async function openGroupThread(groupId, user) {
               <div class="msg-meta-row">
                 ${mine(m) ? `
                   <div class="msg-actions">
-                    <button class="msg-action-btn danger" data-delete-id="${escHtml(m.id)}" title="Delete"><span class="material-symbols-rounded">delete</span></button>
+                    <button class="msg-action-btn danger" data-delete-id="${escHtml(m.id)}" title="delete"><span class="material-symbols-rounded">delete</span></button>
                   </div>
                 ` : ''}
                 <span class="msg-time">${time}</span>
                 ${m.edited ? '<span class="msg-edited-tag">edited</span>' : ''}
               </div>
             </div>
-            ${!mine(m) ? `<button class="msg-report-btn" data-id="${escHtml(m.id)}" title="Report"><span class="material-symbols-rounded">flag</span></button>` : ''}
+            ${!mine(m) ? `<button class="msg-report-btn" data-id="${escHtml(m.id)}" title="report"><span class="material-symbols-rounded">flag</span></button>` : ''}
           </div>
         `;
       }).join('');
@@ -1174,7 +1174,7 @@ async function openGroupThread(groupId, user) {
         updatedAt: serverTimestamp(),
       });
     } catch (err) {
-      showToast('Could not send: ' + err.message);
+      showToast('could not send: ' + err.message);
     } finally {
       sendBtn.disabled = false;
     }
@@ -1212,24 +1212,24 @@ async function openThread(otherEmail, user) {
       <div class="msg-list" id="msgList"></div>
       <div class="edit-indicator" id="replyIndicator" style="display:none;">
         <span id="replyIndicatorText">Replying</span>
-        <button type="button" id="cancelReplyBtn" title="Cancel reply"><span class="material-symbols-rounded">close</span></button>
+        <button type="button" id="cancelReplyBtn" title="cancel reply"><span class="material-symbols-rounded">close</span></button>
       </div>
       <div class="edit-indicator" id="editIndicator" style="display:none;">
         <span>Editing message</span>
-        <button type="button" id="cancelEditBtn" title="Cancel edit"><span class="material-symbols-rounded">close</span></button>
+        <button type="button" id="cancelEditBtn" title="cancel edit"><span class="material-symbols-rounded">close</span></button>
       </div>
       <div class="thread-inputbar">
         <div class="input-normal" id="inputNormal">
-          <label class="attach-btn" title="Send a photo or video"><span class="material-symbols-rounded">image</span><input type="file" id="imageInput" accept="image/*,video/*"></label>
-          <textarea id="msgInput" placeholder="Message…" rows="1"></textarea>
-          <button class="mic-btn" id="micBtn" title="Record voice message"><span class="material-symbols-rounded">mic</span></button>
-          <button class="send-btn" id="sendMsgBtn" title="Send"><span class="material-symbols-rounded" id="sendMsgIcon">arrow_upward</span></button>
+          <label class="attach-btn" title="send a photo or video"><span class="material-symbols-rounded">image</span><input type="file" id="imageInput" accept="image/*,video/*"></label>
+          <textarea id="msgInput" placeholder="message…" rows="1"></textarea>
+          <button class="mic-btn" id="micBtn" title="record voice message"><span class="material-symbols-rounded">mic</span></button>
+          <button class="send-btn" id="sendMsgBtn" title="send"><span class="material-symbols-rounded" id="sendMsgIcon">arrow_upward</span></button>
         </div>
         <div class="recording-bar" id="recordingBar" style="display:none;">
           <div class="recording-dot"></div>
           <span class="recording-time" id="recordingTime">0:00</span>
-          <button class="rec-cancel-btn" id="recCancelBtn" title="Cancel"><span class="material-symbols-rounded">delete</span></button>
-          <button class="rec-send-btn" id="recSendBtn" title="Send"><span class="material-symbols-rounded">arrow_upward</span></button>
+          <button class="rec-cancel-btn" id="recCancelBtn" title="cancel"><span class="material-symbols-rounded">delete</span></button>
+          <button class="rec-send-btn" id="recSendBtn" title="send"><span class="material-symbols-rounded">arrow_upward</span></button>
         </div>
       </div>
     </div>
@@ -1328,7 +1328,7 @@ async function openThread(otherEmail, user) {
     try {
       await deleteDoc(doc(db, 'conversations', convoId, 'messages', m.id));
     } catch (err) {
-      showToast('Could not delete message: ' + err.message);
+      showToast('could not delete message: ' + err.message);
     }
   }
 
@@ -1358,16 +1358,16 @@ async function openThread(otherEmail, user) {
             <div class="msg-bubble">${replyQuoteHtml}${bubbleInnerHtml(m)}</div>
             <div class="msg-meta-row">
               <div class="msg-actions">
-                <button class="msg-action-btn" data-reply-id="${escHtml(m.id)}" title="Reply"><span class="material-symbols-rounded">reply</span></button>
-                ${mine(m) && !m.audioUrl && !m.imageUrl ? `<button class="msg-action-btn" data-edit-id="${escHtml(m.id)}" title="Edit"><span class="material-symbols-rounded">edit</span></button>` : ''}
-                ${mine(m) ? `<button class="msg-action-btn danger" data-delete-id="${escHtml(m.id)}" title="Delete"><span class="material-symbols-rounded">delete</span></button>` : ''}
+                <button class="msg-action-btn" data-reply-id="${escHtml(m.id)}" title="reply"><span class="material-symbols-rounded">reply</span></button>
+                ${mine(m) && !m.audioUrl && !m.imageUrl ? `<button class="msg-action-btn" data-edit-id="${escHtml(m.id)}" title="edit"><span class="material-symbols-rounded">edit</span></button>` : ''}
+                ${mine(m) ? `<button class="msg-action-btn danger" data-delete-id="${escHtml(m.id)}" title="delete"><span class="material-symbols-rounded">delete</span></button>` : ''}
               </div>
               <span class="msg-time">${time}</span>
               ${m.edited ? '<span class="msg-edited-tag">edited</span>' : ''}
               ${seen ? '<span class="msg-seen">Seen</span>' : ''}
             </div>
           </div>
-          ${!mine(m) ? `<button class="msg-report-btn" data-id="${escHtml(m.id)}" title="Report"><span class="material-symbols-rounded">flag</span></button>` : ''}
+          ${!mine(m) ? `<button class="msg-report-btn" data-id="${escHtml(m.id)}" title="report"><span class="material-symbols-rounded">flag</span></button>` : ''}
         </div>
       `;
     }).join('');
@@ -1525,7 +1525,7 @@ async function openThread(otherEmail, user) {
         });
       }
     } catch (err) {
-      showToast('Could not send: ' + err.message);
+      showToast('could not send: ' + err.message);
     } finally {
       sendBtn.disabled = false;
     }
@@ -1649,7 +1649,7 @@ async function openThread(otherEmail, user) {
         createdAt: serverTimestamp(),
       });
     } catch (err) {
-      showToast('Could not send voice message: ' + err.message);
+      showToast('could not send voice message: ' + err.message);
     } finally {
       hideUploadToast();
     }

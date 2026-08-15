@@ -506,7 +506,7 @@
 
 <div class="page">
   <header class="header">
-    <h1>Feed</h1>
+    <h1>feed</h1>
   </header>
 
   <div class="stories-bar" id="storiesBar"></div>
@@ -515,7 +515,7 @@
   <div class="toolbar">
     <div class="search-wrap">
       <span class="material-symbols-rounded">search</span>
-      <input class="search-input" type="text" placeholder="Search posts…" id="searchInput">
+      <input class="search-input" type="text" placeholder="search posts…" id="searchInput">
     </div>
     <div class="controls-row">
       <div class="filter-pills" id="filterPills">
@@ -534,7 +534,7 @@
 
   <div class="empty" id="emptyState">
     <span class="material-symbols-rounded">forum</span>
-    <p>No posts yet — be the first to say something.</p>
+    <p>no posts yet — be the first to say something.</p>
   </div>
 </div>
 
@@ -548,7 +548,7 @@
 <!-- New post modal -->
 <div class="overlay" id="overlay"></div>
 <div class="modal" id="modal">
-  <h3 id="modalTitle">New post</h3>
+  <h3 id="modalTitle">new post</h3>
   <form id="postForm">
     <div class="field">
       <label>Title *</label>
@@ -574,12 +574,12 @@
       <label class="poll-toggle-row"><input type="checkbox" id="pollToggle"> Add a poll (up to 10 options)</label>
       <div class="poll-builder" id="pollBuilder" style="display:none;">
         <div id="pollOptionsList"></div>
-        <button type="button" class="btn small" id="addPollOptionBtn">+ Add option</button>
+        <button type="button" class="btn small" id="addPollOptionBtn">+ add option</button>
       </div>
     </div>
     <div class="modal-actions">
-      <button type="button" class="btn danger" id="cancelPostBtn">Cancel</button>
-      <button type="submit" class="btn primary" id="submitPostBtn"><span class="material-symbols-rounded" id="submitPostIcon">send</span> <span id="submitPostLabel">Post</span></button>
+      <button type="button" class="btn danger" id="cancelPostBtn">cancel</button>
+      <button type="submit" class="btn primary" id="submitPostBtn"><span class="material-symbols-rounded" id="submitPostIcon">send</span> <span id="submitPostLabel">post</span></button>
     </div>
   </form>
 </div>
@@ -635,10 +635,10 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 const DEFAULT_TAGS = [
-  { id: 'general',  label: 'General',  icon: 'forum' },
-  { id: 'showcase', label: 'Showcase', icon: 'auto_awesome' },
-  { id: 'help',     label: 'Help',     icon: 'help' },
-  { id: 'feedback', label: 'Feedback', icon: 'rate_review' },
+  { id: 'general',  label: 'general',  icon: 'forum' },
+  { id: 'showcase', label: 'showcase', icon: 'auto_awesome' },
+  { id: 'help',     label: 'help',     icon: 'help' },
+  { id: 'feedback', label: 'feedback', icon: 'rate_review' },
 ];
 const MAX_POST_IMAGES = 8;
 
@@ -796,9 +796,9 @@ function commentUrl(postId, commentId) {
 }
 async function reportItem(type, postId, commentId, itemId, url) {
   const u = getCurrentUser();
-  if (!u) { showToast('Sign in to report'); return; }
+  if (!u) { showToast('sign in to report'); return; }
   if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
-  const reason = await oePrompt('Why are you reporting this?');
+  const reason = await oePrompt('why are you reporting this?');
   if (!reason || !reason.trim()) return;
   try {
     const idToken = await u.getIdToken();
@@ -816,7 +816,7 @@ async function reportItem(type, postId, commentId, itemId, url) {
       try { msg = (await res.json()).error || msg; } catch {}
       throw new Error(msg);
     }
-    showToast('Report sent — thank you');
+    showToast('report sent — thank you');
   } catch (err) { showToast('Could not send report: ' + err.message); }
 }
 // Legacy posts had a single `imageUrl` string; newer ones have `imageUrls: []`.
@@ -1027,7 +1027,7 @@ function initStories() {
         createdAt: serverTimestamp(),
         expiresAt: Timestamp.fromMillis(Date.now() + STORY_LIFETIME_MS),
       });
-      showToast('Story posted — visible for 24h');
+      showToast('story posted — visible for 24h');
     } catch (err) {
       showToast('Could not post story: ' + err.message);
     }
@@ -1180,8 +1180,8 @@ function runForum() {
     if (!(await oeConfirm(`Ban ${email}? They won't be able to post, comment, or vote anymore.`, { danger: true }))) return;
     try {
       await setDoc(doc(db, 'bans', email), { bannedAt: serverTimestamp(), bannedBy: u.email });
-      showToast('User banned');
-    } catch (err) { showToast('Could not ban: ' + err.message); }
+      showToast('user banned');
+    } catch (err) { showToast('could not ban: ' + err.message); }
   }
 
 
@@ -1190,8 +1190,8 @@ function runForum() {
     try {
       await deleteDoc(postRef(postId));
       if (openPostId === postId) closeThread();
-      showToast('Post deleted');
-    } catch (err) { showToast('Could not delete: ' + err.message); }
+      showToast('post deleted');
+    } catch (err) { showToast('could not delete: ' + err.message); }
   }
 
   async function deleteCommentItem(postId, commentId) {
@@ -1199,23 +1199,23 @@ function runForum() {
     try {
       await deleteDoc(doc(db, 'posts', postId, 'comments', commentId));
       await updateDoc(postRef(postId), { commentCount: Math.max(0, (posts.find(p=>p.id===postId)?.commentCount||1) - 1) });
-    } catch (err) { showToast('Could not delete: ' + err.message); }
+    } catch (err) { showToast('could not delete: ' + err.message); }
   }
 
   function menuItemsForPost(p) {
     const u = currentUser();
     const items = [
-      { label: 'Share', icon: 'link', onClick: () => copyLink(postUrl(p.id), 'Post link') },
-      { label: 'Report', icon: 'flag', onClick: () => reportItem('post', p.id, null) },
+      { label: 'share', icon: 'link', onClick: () => copyLink(postUrl(p.id), 'Post link') },
+      { label: 'report', icon: 'flag', onClick: () => reportItem('post', p.id, null) },
     ];
     if (u && p.authorEmail === u.email) {
-      items.push({ label: 'Edit post', icon: 'edit', onClick: () => openPostModal(p) });
+      items.push({ label: 'edit post', icon: 'edit', onClick: () => openPostModal(p) });
     }
     if (u && isOwner(u.email) && p.authorEmail !== u.email) {
-      items.push({ label: 'Ban user', icon: 'block', dangerous: true, onClick: () => banUser(p.authorEmail) });
+      items.push({ label: 'ban user', icon: 'block', dangerous: true, onClick: () => banUser(p.authorEmail) });
     }
     if (canModerate(p.authorEmail)) {
-      items.push({ label: 'Delete post', icon: 'delete', dangerous: true, onClick: () => deletePost(p.id) });
+      items.push({ label: 'delete post', icon: 'delete', dangerous: true, onClick: () => deletePost(p.id) });
     }
     return items;
   }
@@ -1223,14 +1223,14 @@ function runForum() {
   function menuItemsForComment(c, postId) {
     const u = currentUser();
     const items = [
-      { label: 'Share', icon: 'link', onClick: () => copyLink(commentUrl(postId, c.id), 'Comment link') },
-      { label: 'Report', icon: 'flag', onClick: () => reportItem('comment', postId, c.id) },
+      { label: 'share', icon: 'link', onClick: () => copyLink(commentUrl(postId, c.id), 'Comment link') },
+      { label: 'report', icon: 'flag', onClick: () => reportItem('comment', postId, c.id) },
     ];
     if (u && isOwner(u.email) && c.authorEmail !== u.email) {
-      items.push({ label: 'Ban user', icon: 'block', dangerous: true, onClick: () => banUser(c.authorEmail) });
+      items.push({ label: 'ban user', icon: 'block', dangerous: true, onClick: () => banUser(c.authorEmail) });
     }
     if (canModerate(c.authorEmail)) {
-      items.push({ label: 'Delete comment', icon: 'delete', dangerous: true, onClick: () => deleteCommentItem(postId, c.id) });
+      items.push({ label: 'delete comment', icon: 'delete', dangerous: true, onClick: () => deleteCommentItem(postId, c.id) });
     }
     return items;
   }
@@ -1378,10 +1378,10 @@ function runForum() {
   const visibleCount = document.getElementById('visibleCount');
   const searchInput = document.getElementById('searchInput');
   const sortSelect = createDropdown([
-    { value: 'newest', label: 'Newest' },
-    { value: 'relevance', label: 'Relevance' },
-    { value: 'top', label: 'Most liked' },
-    { value: 'comments', label: 'Most discussed' },
+    { value: 'newest', label: 'newest' },
+    { value: 'relevance', label: 'relevance' },
+    { value: 'top', label: 'most liked' },
+    { value: 'comments', label: 'most discussed' },
   ], { value: 'relevance', onChange: () => renderList() });
   document.getElementById('sortSelectSlot').appendChild(sortSelect.el);
 
@@ -1451,13 +1451,13 @@ function runForum() {
   }
   async function toggleSave(item) {
     const u = currentUser();
-    if (!u) { showToast('Sign in to save'); return; }
+    if (!u) { showToast('sign in to save'); return; }
     if (isBanned()) { showToast("You've been banned"); return; }
     const uid = u.uid;
     const saved = (item.savedBy || []).includes(uid);
     try {
       await updateDoc(postRef(item.id), { savedBy: saved ? arrayRemove(uid) : arrayUnion(uid) });
-    } catch (err) { showToast('Could not save: ' + err.message); }
+    } catch (err) { showToast('could not save: ' + err.message); }
   }
 
   function voteColHtml(item, idPrefix) {
@@ -1511,7 +1511,7 @@ function runForum() {
     votersActiveTab = upUids.length ? 'likes' : 'dislikes';
     document.getElementById('votersLikeCount').textContent = upUids.length;
     document.getElementById('votersDislikeCount').textContent = downUids.length;
-    votersList.innerHTML = '<div class="oe-spinner-row"><span class="oe-spinner small"></span>Loading…</div>';
+    votersList.innerHTML = '<div class="oe-spinner-row"><span class="oe-spinner small"></span>loading…</div>';
     votersOverlay.classList.add('open');
     votersModal.classList.add('open');
 
@@ -1629,7 +1629,7 @@ function runForum() {
   }
   async function togglePollVote(item, newIdx) {
     const u = currentUser();
-    if (!u) { showToast('Sign in to vote'); return; }
+    if (!u) { showToast('sign in to vote'); return; }
     if (isBanned()) { showToast("You've been banned"); return; }
     const uid = u.uid;
     const optionVotes = item.poll.optionVotes;
@@ -1640,12 +1640,12 @@ function runForum() {
     patch[`poll.optionVotes.${newIdx}`] = arrayUnion(uid);
     try {
       await updateDoc(postRef(item.id), patch);
-    } catch (err) { showToast('Could not vote: ' + err.message); }
+    } catch (err) { showToast('could not vote: ' + err.message); }
   }
 
   async function toggleVote(ref, item, direction, notifyMeta) {
     const u = currentUser();
-    if (!u) { showToast('Sign in to vote'); return; }
+    if (!u) { showToast('sign in to vote'); return; }
     if (isBanned()) { showToast("You've been banned"); return; }
     const uid = u.uid;
     const up = (item.upvoters || []).includes(uid);
@@ -1661,7 +1661,7 @@ function runForum() {
     try {
       await updateDoc(ref, patch);
       if (direction === 'up' && !up && notifyMeta) sendNotification(notifyMeta);
-    } catch (err) { showToast('Could not vote: ' + err.message); }
+    } catch (err) { showToast('could not vote: ' + err.message); }
   }
 
   // ── Live posts feed ──────────────────────────────────────────
@@ -1699,7 +1699,7 @@ function runForum() {
         openPostModal(null);
       }
     }
-  }, err => showToast('Could not load posts: ' + err.message));
+  }, err => showToast('could not load posts: ' + err.message));
 
   searchInput.addEventListener('input', renderList);
 
@@ -1722,7 +1722,7 @@ function runForum() {
   function renderPollOptions() {
     pollOptionsList.innerHTML = pollOptions.map((val, i) => `
       <div class="poll-option-row">
-        <input type="text" data-poll-idx="${i}" value="${val.replace(/"/g, '&quot;')}" maxlength="80" placeholder="Option ${i + 1}">
+        <input type="text" data-poll-idx="${i}" value="${val.replace(/"/g, '&quot;')}" maxlength="80" placeholder="option ${i + 1}">
         ${pollOptions.length > 2 ? `<button type="button" class="poll-option-remove" data-remove-idx="${i}"><span class="material-symbols-rounded">close</span></button>` : ''}
       </div>
     `).join('');
@@ -1763,7 +1763,7 @@ function runForum() {
   let editingPostPoll = null; // carried through unchanged if the post being edited already has one — changing options after votes exist would invalidate them
 
   function openPostModal(post) {
-    if (!currentUser()) { showToast('Sign in to post'); return; }
+    if (!currentUser()) { showToast('sign in to post'); return; }
     if (isBanned()) { showToast("You've been banned from posting"); return; }
     postForm.reset();
     postImageAttach.reset();
@@ -1809,7 +1809,7 @@ function runForum() {
   postForm.addEventListener('submit', async e => {
     e.preventDefault();
     const u = currentUser();
-    if (!u) { showToast('Sign in to post'); return; }
+    if (!u) { showToast('sign in to post'); return; }
     if (isBanned()) { showToast("You've been banned from posting"); return; }
     const fd = new FormData(postForm);
     const title = fd.get('title').trim();
@@ -1821,7 +1821,7 @@ function runForum() {
     let pollPayload = null;
     if (pollToggle.checked && !editingPostPoll) {
       const cleanOptions = pollOptions.map(o => o.trim()).filter(Boolean);
-      if (cleanOptions.length < 2) { showToast('Add at least 2 poll options'); return; }
+      if (cleanOptions.length < 2) { showToast('add at least 2 poll options'); return; }
       pollPayload = { options: cleanOptions, optionVotes: cleanOptions.map(() => []) };
     }
     const submitBtn = document.getElementById('submitPostBtn');
@@ -1838,7 +1838,7 @@ function runForum() {
           editedAt: serverTimestamp(),
           ...(pollPayload ? { poll: pollPayload } : {}),
         });
-        showToast('Post updated');
+        showToast('post updated');
       } else {
         await addDoc(collection(db, 'posts'), {
           title,
@@ -1854,11 +1854,11 @@ function runForum() {
           createdAt: serverTimestamp(),
           ...(pollPayload ? { poll: pollPayload } : {}),
         });
-        showToast('Posted!');
+        showToast('posted!');
       }
       closeModal();
     } catch (err) {
-      showToast('Could not post: ' + err.message);
+      showToast('could not post: ' + err.message);
     } finally {
       submitBtn.disabled = false;
     }
@@ -1976,7 +1976,7 @@ function runForum() {
         </div>
         <div class="thread-liked-by" id="threadLikedBy"></div>
       </div>
-      <div class="comments-heading" id="commentsHeading">Comments</div>
+      <div class="comments-heading" id="commentsHeading">comments</div>
       <div class="comment-list" id="commentList"></div>
       <div id="commentFormWrap"></div>
     `;
@@ -2070,7 +2070,7 @@ function runForum() {
         <button type="button" id="commentReplyCancelBtn" title="Cancel reply"><span class="material-symbols-rounded">close</span></button>
       </div>
       <form class="comment-form" id="commentForm">
-        <textarea name="body" placeholder="Add a comment…" maxlength="2000" required></textarea>
+        <textarea name="body" placeholder="add a comment…" maxlength="2000" required></textarea>
         <div class="image-attach" id="commentImageAttach"></div>
         <div class="comment-form-actions">
           <span></span>
@@ -2116,7 +2116,7 @@ function runForum() {
         commentImageAttach.reset();
         cancelCommentReply();
       } catch (err) {
-        showToast('Could not comment: ' + err.message);
+        showToast('could not comment: ' + err.message);
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Comment';
@@ -2125,7 +2125,7 @@ function runForum() {
   }
 
   function startCommentReply(c) {
-    if (!currentUser()) { showToast('Sign in to reply'); return; }
+    if (!currentUser()) { showToast('sign in to reply'); return; }
     replyingToComment = { id: c.id, authorEmail: c.authorEmail, authorName: nameOf(c) };
     const indicator = document.getElementById('commentReplyIndicator');
     const textEl = document.getElementById('commentReplyIndicatorText');

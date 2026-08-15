@@ -108,8 +108,8 @@
 
 <div class="page">
   <div class="header">
-    <h1>Your Activity</h1>
-    <p>Everything you've posted, commented on, liked, and saved — in one place.</p>
+    <h1>your activity</h1>
+    <p>everything you've posted, commented on, liked, and saved — in one place.</p>
   </div>
   <div id="content"><div class="loading-note">Loading…</div></div>
 </div>
@@ -206,11 +206,11 @@ async function loadActivity(user) {
 function statsHtml() {
   return `
     <div class="stats-grid">
-      <div class="stat-card"><div class="stat-value">${data.postCount}</div><div class="stat-label">Posts</div></div>
-      <div class="stat-card"><div class="stat-value">${data.comments.length}</div><div class="stat-label">Comments</div></div>
-      <div class="stat-card"><div class="stat-value">${data.likesReceived}</div><div class="stat-label">Likes received</div></div>
-      <div class="stat-card"><div class="stat-value">${data.likesGiven}</div><div class="stat-label">Likes given</div></div>
-      <div class="stat-card"><div class="stat-value">${data.savedItems.length}</div><div class="stat-label">Saved</div></div>
+      <div class="stat-card"><div class="stat-value">${data.postCount}</div><div class="stat-label">posts</div></div>
+      <div class="stat-card"><div class="stat-value">${data.comments.length}</div><div class="stat-label">comments</div></div>
+      <div class="stat-card"><div class="stat-value">${data.likesReceived}</div><div class="stat-label">likes received</div></div>
+      <div class="stat-card"><div class="stat-value">${data.likesGiven}</div><div class="stat-label">likes given</div></div>
+      <div class="stat-card"><div class="stat-value">${data.savedItems.length}</div><div class="stat-label">saved</div></div>
     </div>
   `;
 }
@@ -220,7 +220,7 @@ function mostLikedCommentHtml() {
   if (!top || top._score <= 0) return '';
   return `
     <a class="highlight-card" href="${commentHref(top.parentKind, top.parentId, top.id)}">
-      <div class="highlight-score"><span class="material-symbols-rounded">favorite</span>Your most liked comment · ${top._score} like${top._score === 1 ? '' : 's'}</div>
+      <div class="highlight-score"><span class="material-symbols-rounded">favorite</span>your most liked comment · ${top._score} like${top._score === 1 ? '' : 's'}</div>
       <div class="highlight-body">${escHtml(top.body || '').slice(0, 240)}</div>
       <div class="highlight-meta">${timeAgo(top._date)} · on a ${top.parentKind}</div>
     </a>
@@ -250,7 +250,7 @@ function itemRowHtml(item) {
     <a class="activity-row" href="${itemHref(item._kind, item.id)}">
       <div class="activity-row-icon"><span class="material-symbols-rounded">${isVideo ? 'movie' : 'article'}</span></div>
       <div class="activity-row-main">
-        <div class="activity-row-text">${escHtml(item.title || (isVideo ? 'Untitled video' : 'Untitled post'))}</div>
+        <div class="activity-row-text">${escHtml(item.title || (isVideo ? 'untitled video' : 'untitled post'))}</div>
         <div class="activity-row-meta">
           <span><span class="material-symbols-rounded">favorite</span>${score(item)}</span>
           <span>${timeAgo(item._date)}</span>
@@ -263,15 +263,15 @@ function itemRowHtml(item) {
 function render() {
   if (!data) return;
   const tabs = [
-    { id: 'comments', label: 'Comments', icon: 'chat_bubble' },
-    { id: 'liked', label: 'Liked', icon: 'favorite' },
-    { id: 'saved', label: 'Saved', icon: 'bookmark' },
+    { id: 'comments', label: 'comments', icon: 'chat_bubble' },
+    { id: 'liked', label: 'liked', icon: 'favorite' },
+    { id: 'saved', label: 'saved', icon: 'bookmark' },
   ];
   const listHtml = activeTab === 'comments'
-    ? (data.comments.length ? data.comments.map(commentRowHtml).join('') : '<div class="empty-note">No comments yet.</div>')
+    ? (data.comments.length ? data.comments.map(commentRowHtml).join('') : '<div class="empty-note">no comments yet.</div>')
     : activeTab === 'liked'
-    ? (data.likedItems.length ? data.likedItems.map(itemRowHtml).join('') : '<div class="empty-note">You haven\'t liked anything yet.</div>')
-    : (data.savedItems.length ? data.savedItems.map(itemRowHtml).join('') : '<div class="empty-note">Nothing saved yet — tap the bookmark icon on a post or video to save it here.</div>');
+    ? (data.likedItems.length ? data.likedItems.map(itemRowHtml).join('') : '<div class="empty-note">you haven\'t liked anything yet.</div>')
+    : (data.savedItems.length ? data.savedItems.map(itemRowHtml).join('') : '<div class="empty-note">nothing saved yet — tap the bookmark icon on a post or video to save it here.</div>');
 
   content.innerHTML = `
     ${statsHtml()}
@@ -291,17 +291,17 @@ async function init(user) {
     content.innerHTML = `
       <div class="signin-note">
         <span class="material-symbols-rounded">insights</span>
-        Sign in to see your activity.
+        sign in to see your activity.
       </div>
     `;
     return;
   }
-  content.innerHTML = '<div class="loading-note">Loading your activity…</div>';
+  content.innerHTML = '<div class="loading-note">loading your activity…</div>';
   try {
     await loadActivity(user);
     render();
   } catch (err) {
-    content.innerHTML = `<div class="empty-note">Could not load activity: ${escHtml(err.message)}</div>`;
+    content.innerHTML = `<div class="empty-note">could not load activity: ${escHtml(err.message)}</div>`;
   }
 }
 

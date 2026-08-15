@@ -121,17 +121,17 @@
 
 <div class="page">
   <header class="header">
-    <h1>Settings</h1>
+    <h1>settings</h1>
   </header>
 
   <div class="settings-section">
-    <h2>Appearance</h2>
+    <h2>appearance</h2>
     <div class="group">
       <div class="row">
         <div class="row-icon"><span class="material-symbols-rounded">palette</span></div>
         <div class="row-text">
-          <div class="row-title">Theme</div>
-          <div class="row-sub" id="themeSubtitle">Material Dark</div>
+          <div class="row-title">theme</div>
+          <div class="row-sub" id="themeSubtitle">dark</div>
         </div>
       </div>
       <div class="row-block" id="themePicker"></div>
@@ -139,48 +139,48 @@
   </div>
 
   <div class="settings-section">
-    <h2>Account</h2>
+    <h2>account</h2>
     <div class="group">
       <a class="row" id="profileRow" href="#" style="text-decoration:none; color:inherit;">
         <div class="row-icon"><span class="material-symbols-rounded">person</span></div>
         <div class="row-text">
-          <div class="row-title" id="profileRowTitle">Profile</div>
-          <div class="row-sub" id="profileRowSub">Sign in to edit your display name, bio, and photo.</div>
+          <div class="row-title" id="profileRowTitle">profile</div>
+          <div class="row-sub" id="profileRowSub">sign in to edit your display name, bio, and photo.</div>
         </div>
       </a>
     </div>
   </div>
 
   <div class="settings-section" id="securitySection" style="display:none;">
-    <h2>Security</h2>
-    <p class="section-desc">Sign-in is Google-only, so real session control (revoking a device, 2-step verification, connected apps) lives on Google's side. This is just a local log of browsers that have signed in recently, so you can spot one you don't recognize.</p>
+    <h2>security</h2>
+    <p class="section-desc">sign-in is Google-only, so real session control (revoking a device, 2-step verification, connected apps) lives on Google's side. this is just a local log of browsers that have signed in recently, so you can spot one you don't recognize.</p>
     <div class="group">
       <div class="row">
         <div class="row-icon"><span class="material-symbols-rounded">devices</span></div>
         <div class="row-text">
           <div class="row-title">Signed-in devices</div>
-          <div class="row-sub">Removing one only clears it from this list — it doesn't sign that device out.</div>
+          <div class="row-sub">removing one only clears it from this list — it doesn't sign that device out.</div>
         </div>
       </div>
       <div class="row-block" id="sessionsList"><div class="session-empty">Loading…</div></div>
       <a class="row" href="https://myaccount.google.com/security" target="_blank" rel="noopener" style="text-decoration:none; color:inherit;">
         <div class="row-icon"><span class="material-symbols-rounded">open_in_new</span></div>
         <div class="row-text">
-          <div class="row-title">Manage your Google Account</div>
-          <div class="row-sub">Full session control, 2-step verification, and recent security activity.</div>
+          <div class="row-title">manage your Google Account</div>
+          <div class="row-sub">full session control, 2-step verification, and recent security activity.</div>
         </div>
       </a>
     </div>
   </div>
 
   <div class="settings-section" id="badgeSection" style="display:none;">
-    <h2>Your badge</h2>
+    <h2>your badge</h2>
     <div class="group">
       <a class="row" id="badgeRow" href="#" style="text-decoration:none; color:inherit;">
         <div class="row-icon"><span class="material-symbols-rounded">verified</span></div>
         <div class="row-text">
-          <div class="row-title">Manage your badge</div>
-          <div class="row-sub">Set a custom badge, hide it, or go back to the default OFFICIAL tag — from the ⋮ menu on your own profile.</div>
+          <div class="row-title">manage your badge</div>
+          <div class="row-sub">set a custom badge, hide it, or go back to the default OFFICIAL tag — from the ⋮ menu on your own profile.</div>
         </div>
       </a>
     </div>
@@ -191,15 +191,15 @@
       <button class="row" id="switchAccountRow" style="width:100%; border:none; background:none; text-align:left; cursor:pointer; font:inherit; color:inherit;">
         <div class="row-icon"><span class="material-symbols-rounded">swap_horiz</span></div>
         <div class="row-text">
-          <div class="row-title">Switch account</div>
+          <div class="row-title">switch account</div>
           <div class="row-sub">Sign in with a different Google account.</div>
         </div>
       </button>
       <button class="row" id="signOutRow" style="width:100%; border:none; background:none; text-align:left; cursor:pointer; font:inherit; color:var(--md-sys-color-error);">
         <div class="row-icon"><span class="material-symbols-rounded">logout</span></div>
         <div class="row-text">
-          <div class="row-title">Sign out</div>
-          <div class="row-sub">You'll need to sign in again to post, chat, or vote.</div>
+          <div class="row-title">sign out</div>
+          <div class="row-sub">you'll need to sign in again to post, chat, or vote.</div>
         </div>
       </button>
     </div>
@@ -228,16 +228,16 @@ onAccountChange(user => {
   const handle = user && handleOf(user.email);
   if (handle) {
     row.href = '/profile?u=' + encodeURIComponent(handle);
-    title.textContent = 'View my profile';
-    sub.textContent = 'See your posts, stats, and edit your bio and photo.';
+    title.textContent = 'view my profile';
+    sub.textContent = 'see your posts, stats, and edit your bio and photo.';
   } else if (user) {
     row.href = '#';
-    title.textContent = 'Setting up your profile…';
-    sub.textContent = 'Just a moment — refresh if this doesn\'t update in a few seconds.';
+    title.textContent = 'setting up your profile…';
+    sub.textContent = 'just a moment — refresh if this doesn\'t update in a few seconds.';
   } else {
     row.href = '#';
     title.textContent = 'Profile';
-    sub.textContent = 'Sign in to edit your display name, bio, and photo.';
+    sub.textContent = 'sign in to edit your display name, bio, and photo.';
   }
   document.getElementById('accountActionsSection').style.display = user ? '' : 'none';
   initBadgeSection(user);
@@ -267,7 +267,7 @@ async function renderSessions(user) {
   const sessions = await listSessions(user.email);
   const thisDeviceId = getCurrentDeviceId();
   if (!sessions.length) {
-    list.innerHTML = '<div class="session-empty">No sign-in activity logged yet.</div>';
+    list.innerHTML = '<div class="session-empty">no sign-in activity logged yet.</div>';
     return;
   }
   list.innerHTML = sessions.map(s => {
@@ -293,7 +293,7 @@ async function renderSessions(user) {
         await removeSession(user.email, id);
         await renderSessions(user);
       } catch (err) {
-        oeAlert('Could not remove: ' + err.message);
+        oeAlert('could not remove: ' + err.message);
       }
     });
   });
@@ -317,15 +317,15 @@ function initBadgeSection(user) {
 }
 
 document.getElementById('switchAccountRow').addEventListener('click', () => {
-  signIn().catch(err => oeAlert('Could not switch account: ' + err.message));
+  signIn().catch(err => oeAlert('could not switch account: ' + err.message));
 });
 document.getElementById('signOutRow').addEventListener('click', async () => {
-  if (await oeConfirm('Sign out?')) signOutUser();
+  if (await oeConfirm('sign out?')) signOutUser();
 });
 
 function updateSubtitle(id) {
   const t = window.OE_THEMES[id];
-  document.getElementById('themeSubtitle').textContent = t ? t.name : 'Material Dark';
+  document.getElementById('themeSubtitle').textContent = t ? t.name : 'dark';
 }
 
 mountThemePicker(document.getElementById('themePicker'), id => updateSubtitle(id));

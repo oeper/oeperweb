@@ -109,15 +109,15 @@
 
 <div class="page">
   <header class="header">
-    <h1>Melody Maker</h1>
-    <p>Click a tile in each column to place a note — one note per column, top is highest. Based on <a href="https://github.com/googlecreativelab/chrome-music-lab/tree/master/melodymaker" target="_blank" rel="noopener">Chrome Music Lab's Melody Maker</a> (Google Creative Lab, Apache-2.0).</p>
+    <h1>melody maker</h1>
+    <p>click a tile in each column to place a note — one note per column, top is highest. based on <a href="https://github.com/googlecreativelab/chrome-music-lab/tree/master/melodymaker" target="_blank" rel="noopener">Chrome Music Lab's Melody Maker</a> (Google Creative Lab, Apache-2.0).</p>
   </header>
 
   <div class="toolbar">
-    <button class="play-toggle-btn" id="playToggleBtn" title="Play"><span class="material-symbols-rounded">play_arrow</span></button>
-    <button class="harmony-btn" id="harmonyBtn" title="Toggle harmony echo">
+    <button class="play-toggle-btn" id="playToggleBtn" title="play"><span class="material-symbols-rounded">play_arrow</span></button>
+    <button class="harmony-btn" id="harmonyBtn" title="toggle harmony echo">
       <span class="material-symbols-rounded">graphic_eq</span>
-      <span id="harmonyLabel">Harmony: off</span>
+      <span id="harmonyLabel">harmony: off</span>
     </button>
     <div class="toolbar-field">
       Tempo <input type="range" id="bpmInput" min="60" max="200" value="120"> <span class="bpm-value" id="bpmValue">120</span> BPM
@@ -126,7 +126,7 @@
       Volume <input type="range" id="volInput" min="0" max="100" value="70"> <span class="vol-value" id="volValue">70</span>%
     </div>
     <div class="toolbar-end">
-      <button class="icon-btn" id="clearBtn" title="Clear all notes"><span class="material-symbols-rounded">delete_sweep</span></button>
+      <button class="icon-btn" id="clearBtn" title="clear all notes"><span class="material-symbols-rounded">delete_sweep</span></button>
     </div>
   </div>
 
@@ -223,7 +223,7 @@ harmonyBtn.addEventListener('click', () => {
   harmonyOn = !harmonyOn;
   harmonyOffset = 0;
   harmonyBtn.classList.toggle('active', harmonyOn);
-  harmonyLabel.textContent = 'Harmony: ' + (harmonyOn ? 'echo →' : 'off');
+  harmonyLabel.textContent = 'harmony: ' + (harmonyOn ? 'echo →' : 'off');
 });
 
 document.getElementById('bpmInput').addEventListener('input', e => {

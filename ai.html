@@ -277,7 +277,7 @@
   <header class="header">
     <div class="header-row">
       <h1>epic AI</h1>
-      <button id="chatsBtn" class="header-icon-btn" title="Chats"><span class="material-symbols-rounded">forum</span></button>
+      <button id="chatsBtn" class="header-icon-btn" title="chats"><span class="material-symbols-rounded">forum</span></button>
     </div>
   </header>
 
@@ -285,7 +285,7 @@
     <div class="chat-messages" id="chatMessages">
       <div class="chat-empty" id="chatEmpty">
         <span class="material-symbols-rounded">auto_awesome</span>
-        <p>Ask epic AI anything.</p>
+        <p>ask epic AI anything.</p>
       </div>
     </div>
 
@@ -293,24 +293,24 @@
       <div class="attach-preview" id="attachPreview" style="display:none;">
         <div class="attach-preview-item">
           <img id="attachPreviewImg" src="" alt="">
-          <button id="attachRemoveBtn" class="attach-remove-btn" title="Remove"><span class="material-symbols-rounded">close</span></button>
+          <button id="attachRemoveBtn" class="attach-remove-btn" title="remove"><span class="material-symbols-rounded">close</span></button>
         </div>
       </div>
 
       <div class="model-bar" id="modelBar"></div>
 
       <div class="chat-inputbar">
-        <label class="attach-btn" title="Attach an image">
+        <label class="attach-btn" title="attach an image">
           <span class="material-symbols-rounded">add_photo_alternate</span>
           <input type="file" id="attachInput" accept="image/*">
         </label>
-        <textarea id="chatInput" placeholder="Message…" rows="1"></textarea>
-        <button id="sendBtn" class="send-btn" title="Send"><span class="material-symbols-rounded">arrow_upward</span></button>
+        <textarea id="chatInput" placeholder="message…" rows="1"></textarea>
+        <button id="sendBtn" class="send-btn" title="send"><span class="material-symbols-rounded">arrow_upward</span></button>
       </div>
     </div>
     <p class="chat-footnote">
-      Runs on a small on-device model over my home network — replies can be slow, or briefly unavailable if the host is offline.
-      <button id="clearBtn" class="link-btn">Clear chat</button>
+      runs on a small on-device model over my home network — replies can be slow, or briefly unavailable if the host is offline.
+      <button id="clearBtn" class="link-btn">clear chat</button>
     </p>
   </div>
 </div>
@@ -318,10 +318,10 @@
 <div class="chats-overlay" id="chatsOverlay"></div>
 <div class="chats-panel" id="chatsPanel">
   <div class="chats-panel-header">
-    <h3>Chats</h3>
-    <button id="chatsCloseBtn" class="header-icon-btn" title="Close" style="width:36px;height:36px;"><span class="material-symbols-rounded">close</span></button>
+    <h3>chats</h3>
+    <button id="chatsCloseBtn" class="header-icon-btn" title="close" style="width:36px;height:36px;"><span class="material-symbols-rounded">close</span></button>
   </div>
-  <button id="newChatBtn" class="new-chat-btn"><span class="material-symbols-rounded">add</span> New chat</button>
+  <button id="newChatBtn" class="new-chat-btn"><span class="material-symbols-rounded">add</span> new chat</button>
   <div class="chats-list" id="chatsList"></div>
 </div>
 
@@ -561,7 +561,7 @@ function saveChats() {
   pushChatsToCloud();
 }
 function newChatId() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
-function makeChat() { return { id: newChatId(), title: 'New chat', messages: [], updatedAt: Date.now() }; }
+function makeChat() { return { id: newChatId(), title: 'new chat', messages: [], updatedAt: Date.now() }; }
 
 let chats = loadChats();
 let currentChatId = localStorage.getItem(CURRENT_CHAT_KEY);
@@ -600,8 +600,8 @@ function addMessageEl(role, content, imageUrl, index) {
   const wrap = document.createElement('div');
   wrap.className = 'msg ' + role;
   const actionsHtml = index === undefined ? '' : role === 'user'
-    ? `<div class="msg-actions"><button type="button" class="msg-action-btn" data-edit-msg="${index}" title="Edit"><span class="material-symbols-rounded">edit</span></button></div>`
-    : `<div class="msg-actions"><button type="button" class="msg-action-btn" data-regen-msg="${index}" title="Regenerate"><span class="material-symbols-rounded">refresh</span></button></div>`;
+    ? `<div class="msg-actions"><button type="button" class="msg-action-btn" data-edit-msg="${index}" title="edit"><span class="material-symbols-rounded">edit</span></button></div>`
+    : `<div class="msg-actions"><button type="button" class="msg-action-btn" data-regen-msg="${index}" title="regenerate"><span class="material-symbols-rounded">refresh</span></button></div>`;
   wrap.innerHTML = `
     <div class="msg-avatar"><span class="material-symbols-rounded">${role === 'user' ? 'person' : 'auto_awesome'}</span></div>
     <div class="msg-col">
@@ -625,7 +625,7 @@ function renderChatFromHistory() {
   messagesEl.style.opacity = '0';
   messagesEl.innerHTML = '';
   if (!chat.messages.length) {
-    messagesEl.innerHTML = `<div class="chat-empty" id="chatEmpty"><span class="material-symbols-rounded">auto_awesome</span><p>Ask epic AI anything.</p></div>`;
+    messagesEl.innerHTML = `<div class="chat-empty" id="chatEmpty"><span class="material-symbols-rounded">auto_awesome</span><p>ask epic AI anything.</p></div>`;
   } else {
     chat.messages.forEach((m, i) => addMessageEl(m.role, m.content, m.imageUrl, i));
   }
@@ -688,7 +688,7 @@ function renderChatsList() {
     <div class="chat-row ${c.id === currentChatId ? 'active' : ''}" data-id="${c.id}">
       <span class="material-symbols-rounded">chat_bubble</span>
       <span class="chat-row-title">${escHtml(c.title)}</span>
-      <button class="chat-row-delete" data-id="${c.id}" title="Delete"><span class="material-symbols-rounded">delete</span></button>
+      <button class="chat-row-delete" data-id="${c.id}" title="delete"><span class="material-symbols-rounded">delete</span></button>
     </div>
   `).join('');
   list.querySelectorAll('.chat-row').forEach(row => {
@@ -1002,7 +1002,7 @@ async function sendMessage() {
     // reported pattern.
     const userMsg = imageUrl ? { role: 'user', content: text, imageUrl } : { role: 'user', content: text };
     chat.messages.push(userMsg);
-    if (chat.title === 'New chat' && text) chat.title = text.slice(0, 40) + (text.length > 40 ? '…' : '');
+    if (chat.title === 'new chat' && text) chat.title = text.slice(0, 40) + (text.length > 40 ? '…' : '');
     chat.updatedAt = Date.now();
     saveChats();
 
@@ -1138,7 +1138,7 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   if (controller) controller.abort();
   const chat = getCurrentChat();
   chat.messages = [];
-  chat.title = 'New chat';
+  chat.title = 'new chat';
   saveChats();
   renderChatFromHistory();
   renderChatsList();

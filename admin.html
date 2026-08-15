@@ -242,19 +242,19 @@
 
 <div class="lock-screen" id="lockScreen">
   <span class="material-symbols-rounded lock-icon">lock</span>
-  <h1>Sign in required</h1>
-  <p>This content manager is restricted to the site owners. Sign in with an authorized Google account to continue.</p>
+  <h1>sign in required</h1>
+  <p>this content manager is restricted to the site owners. sign in with an authorized Google account to continue.</p>
   <div id="lockSignInBtn"></div>
-  <div class="lock-denied" id="lockDenied">Signed in, but this Google account isn't authorized to manage this site.</div>
+  <div class="lock-denied" id="lockDenied">signed in, but this Google account isn't authorized to manage this site.</div>
 </div>
 
 <div class="page" id="appRoot" style="display:none;">
   <header class="header">
-    <h1>Content Manager</h1>
-    <p>Add, edit and publish articles &amp; downloads without touching code.</p>
+    <h1>content manager</h1>
+    <p>add, edit and publish articles &amp; downloads without touching code.</p>
     <a href="/files" class="header-link" style="margin-top:12px;">
       <span class="material-symbols-rounded">folder</span>
-      <span>Manage shared files</span>
+      <span>manage shared files</span>
     </a>
     <div class="notice" id="fsaNotice">
       <strong>Heads up:</strong> your browser doesn't support saving files in place, so "Save" will download an updated JSON file instead — drop it into <code>data/</code>, replacing the old one.
@@ -281,39 +281,39 @@
   </div>
 
   <div class="filebar" id="filebar">
-    <span class="status" id="fileStatus"><span class="dot"></span>No file open</span>
+    <span class="status" id="fileStatus"><span class="dot"></span>no file open</span>
     <button class="btn" id="openBtn"><span class="material-symbols-rounded">folder_open</span> Open data file</button>
     <button class="btn primary" id="saveBtn" disabled><span class="material-symbols-rounded">save</span> Save</button>
   </div>
 
   <div class="toolrow" id="toolrow">
-    <h2 id="listTitle">Articles</h2>
+    <h2 id="listTitle">articles</h2>
     <button class="btn primary" id="addBtn" disabled><span class="material-symbols-rounded">add</span> Add new</button>
   </div>
 
   <div class="item-list" id="itemList"></div>
   <div class="empty-hint" id="emptyHint">
     <span class="material-symbols-rounded">description</span>
-    <p>Open <code id="expectedFileName">data/articles.json</code> to start editing.</p>
+    <p>open <code id="expectedFileName">data/articles.json</code> to start editing.</p>
   </div>
 
   <div class="toolrow" style="margin-top:40px;">
-    <h2>AI Models</h2>
+    <h2>AI models</h2>
   </div>
   <p style="color:var(--md-sys-color-on-surface-variant); font-size:14px; margin-bottom:16px;">
-    Models visitors can pick from on <a href="/ai" class="header-link" style="display:inline-flex;">/ai</a> — stored in Firestore, so changes apply instantly to anyone with the page open, no restart needed.
+    models visitors can pick from on <a href="/ai" class="header-link" style="display:inline-flex;">/ai</a> — stored in Firestore, so changes apply instantly to anyone with the page open, no restart needed.
   </p>
   <div class="item-list" id="aiModelList"></div>
   <form id="aiModelAddForm" style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
     <input type="text" id="aiModelIdInput" placeholder="Model id (e.g. google/gemma-4-e2b)" required style="flex:1; min-width:220px; background-color:var(--md-sys-color-surface-variant); border:none; border-radius:12px; padding:12px 14px; color:var(--md-sys-color-on-surface); font-size:14px; font-family:inherit; outline:none;">
-    <input type="text" id="aiModelLabelInput" placeholder="Display label (e.g. Gemma 4 E2B)" required style="flex:1; min-width:180px; background-color:var(--md-sys-color-surface-variant); border:none; border-radius:12px; padding:12px 14px; color:var(--md-sys-color-on-surface); font-size:14px; font-family:inherit; outline:none;">
+    <input type="text" id="aiModelLabelInput" placeholder="display label (e.g. Gemma 4 E2B)" required style="flex:1; min-width:180px; background-color:var(--md-sys-color-surface-variant); border:none; border-radius:12px; padding:12px 14px; color:var(--md-sys-color-on-surface); font-size:14px; font-family:inherit; outline:none;">
     <button type="submit" class="btn primary"><span class="material-symbols-rounded">add</span> Add</button>
   </form>
 </div>
 
 <div class="overlay" id="overlay"></div>
 <div class="modal" id="modal">
-  <h3 id="modalTitle">Add article</h3>
+  <h3 id="modalTitle">add article</h3>
   <form id="itemForm"></form>
 </div>
 
@@ -345,14 +345,14 @@ function toFeedMarkdown(text) {
 document.getElementById('migrateBtn').addEventListener('click', async () => {
   const user = getCurrentUser();
   if (!user || user.email !== 'taejiding@gmail.com') {
-    await oeAlert("Sign in as taejiding@gmail.com to run this — Firestore only allows a post's authorEmail to match the account that's actually signed in, so running this as any other account would fail on every single post.");
+    await oeAlert("sign in as taejiding@gmail.com to run this — Firestore only allows a post's authorEmail to match the account that's actually signed in, so running this as any other account would fail on every single post.");
     return;
   }
-  if (!(await oeConfirm('This creates a new Feed post for every article and download. It does not delete the original JSON files. Continue?'))) return;
+  if (!(await oeConfirm('this creates a new feed post for every article and download. it does not delete the original JSON files. continue?'))) return;
 
   const btn = document.getElementById('migrateBtn');
   btn.disabled = true;
-  btn.textContent = 'Migrating…';
+  btn.textContent = 'migrating…';
   let done = 0, failed = 0;
 
   try {
@@ -399,9 +399,9 @@ document.getElementById('migrateBtn').addEventListener('click', async () => {
       } catch { failed++; }
     }
 
-    await oeAlert(`Migrated ${done} item${done === 1 ? '' : 's'} to the Feed.${failed ? ` ${failed} failed — check the console for details.` : ''}`);
+    await oeAlert(`migrated ${done} item${done === 1 ? '' : 's'} to the feed.${failed ? ` ${failed} failed — check the console for details.` : ''}`);
   } catch (err) {
-    await oeAlert('Migration failed: ' + err.message);
+    await oeAlert('migration failed: ' + err.message);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<span class="material-symbols-rounded">move_up</span> Migrate to Feed';
@@ -442,7 +442,7 @@ function renderAiModelList() {
       try {
         await setDoc(AI_MODELS_DOC, { models: aiModels.filter((_, i) => i !== idx) });
       } catch (err) {
-        showToast('Could not remove model: ' + err.message);
+        showToast('could not remove model: ' + err.message);
       }
     });
   });
@@ -455,13 +455,13 @@ document.getElementById('aiModelAddForm').addEventListener('submit', async e => 
   const id = idInput.value.trim();
   const label = labelInput.value.trim();
   if (!id || !label) return;
-  if (aiModels.some(m => m.id === id)) { showToast('That model id is already in the list'); return; }
+  if (aiModels.some(m => m.id === id)) { showToast('that model id is already in the list'); return; }
   try {
     await setDoc(AI_MODELS_DOC, { models: [...aiModels, { id, label }] });
     idInput.value = '';
     labelInput.value = '';
   } catch (err) {
-    showToast('Could not add model: ' + err.message);
+    showToast('could not add model: ' + err.message);
   }
 });
 
@@ -581,9 +581,9 @@ async function openFile() {
       s.dirty = false;
       renderList();
       refreshFileBar();
-      showToast(`Loaded ${file.name}`);
+      showToast(`loaded ${file.name}`);
     } catch (err) {
-      if (err.name !== 'AbortError') showToast('Could not open file: ' + err.message);
+      if (err.name !== 'AbortError') showToast('could not open file: ' + err.message);
     }
   } else {
     document.getElementById('jsonFileInput').click();
@@ -604,9 +604,9 @@ document.getElementById('jsonFileInput').addEventListener('change', async (e) =>
     s.dirty = false;
     renderList();
     refreshFileBar();
-    showToast(`Loaded ${file.name}`);
+    showToast(`loaded ${file.name}`);
   } catch (err) {
-    showToast('Invalid JSON file: ' + err.message);
+    showToast('invalid JSON file: ' + err.message);
   }
   e.target.value = '';
 });
@@ -624,9 +624,9 @@ async function saveFile() {
       await writable.close();
       s.dirty = false;
       refreshFileBar();
-      showToast('Saved to data/' + cfg.file);
+      showToast('saved to data/' + cfg.file);
     } catch (err) {
-      showToast('Could not save: ' + err.message);
+      showToast('could not save: ' + err.message);
     }
   } else {
     const blob = new Blob([text], { type: 'application/json' });
@@ -637,7 +637,7 @@ async function saveFile() {
     URL.revokeObjectURL(a.href);
     s.dirty = false;
     refreshFileBar();
-    showToast(`Downloaded ${cfg.file} — replace it in data/`);
+    showToast(`downloaded ${cfg.file} — replace it in data/`);
   }
 }
 
@@ -693,7 +693,7 @@ function renderList() {
       const i = +btn.dataset.delete;
       const s = state[activeTab];
       const title = activeTab === 'articles' ? s.items[i].title : (s.items[i].label || s.items[i].url);
-      if (await oeConfirm(`Delete "${title}"? This can't be undone (until you re-open the file without saving).`, { danger: true })) {
+      if (await oeConfirm(`delete "${title}"? this can't be undone (until you re-open the file without saving).`, { danger: true })) {
         s.items.splice(i, 1);
         s.dirty = true;
         renderList();
@@ -724,48 +724,48 @@ function openForm(index) {
   const selectedCats = index === null ? [] : (Array.isArray(item.category) ? item.category : [item.category].filter(Boolean));
 
   document.getElementById('modalTitle').textContent = index === null
-    ? `Add ${TABS[activeTab].label}`
-    : `Edit ${TABS[activeTab].label}`;
+    ? `add ${TABS[activeTab].label}`
+    : `edit ${TABS[activeTab].label}`;
 
   const form = document.getElementById('itemForm');
 
   if (activeTab === 'articles') {
     form.innerHTML = `
       <div class="field">
-        <label>Title *</label>
+        <label>title *</label>
         <input type="text" name="title" value="${escAttr(item.title||'')}" required>
       </div>
       <div class="field-row">
         <div class="field">
-          <label>Date</label>
+          <label>date</label>
           <input type="text" name="date" placeholder="e.g. April 2, 2026" value="${escAttr(item.date||'')}">
         </div>
         <div class="field">
-          <label>Image URL</label>
+          <label>image URL</label>
           <input type="text" name="image" placeholder="https://…" value="${escAttr(item.image||'')}">
         </div>
       </div>
       <div class="field">
-        <label>Categories</label>
+        <label>categories</label>
         <div class="chip-select" id="catSelect">${chipSelectHtml('category', s.categories, selectedCats)}</div>
         <div class="add-cat-row">
           <input type="text" id="newCatId" placeholder="new category id (e.g. reviews)">
-          <button type="button" class="btn small" id="addCatBtn">Add</button>
+          <button type="button" class="btn small" id="addCatBtn">add</button>
         </div>
       </div>
       <div class="field">
-        <label>Excerpt</label>
+        <label>excerpt</label>
         <textarea name="excerpt">${escHtml(item.excerpt||'')}</textarea>
       </div>
       <div class="field">
-        <label>Content (Markdown, or a URL to fetch markdown from)</label>
+        <label>content (markdown, or a URL to fetch markdown from)</label>
         <div class="preview-toggle">
-          <button type="button" class="active" data-mode="write">Write</button>
-          <button type="button" data-mode="preview">Preview</button>
+          <button type="button" class="active" data-mode="write">write</button>
+          <button type="button" data-mode="preview">preview</button>
         </div>
         <textarea name="content" class="tall" id="contentField">${escHtml(item.content||'')}</textarea>
         <div class="md-preview" id="mdPreview"></div>
-        <div class="hint">Use # for headings, [[Label]](url) for a button link, [Label](url) for a normal link.</div>
+        <div class="hint">use # for headings, [[Label]](url) for a button link, [Label](url) for a normal link.</div>
       </div>
     `;
     wireCategoryAdd();
@@ -773,29 +773,29 @@ function openForm(index) {
   } else {
     form.innerHTML = `
       <div class="field">
-        <label>Download URL *</label>
+        <label>download URL *</label>
         <input type="text" name="url" placeholder="https://…" value="${escAttr(item.url||'')}" required>
       </div>
       <div class="field-row">
         <div class="field">
-          <label>Label</label>
-          <input type="text" name="label" placeholder="Display name" value="${escAttr(item.label||'')}">
+          <label>label</label>
+          <input type="text" name="label" placeholder="display name" value="${escAttr(item.label||'')}">
         </div>
         <div class="field">
-          <label>Image / preview URL</label>
+          <label>image / preview URL</label>
           <input type="text" name="image" placeholder="https://…" value="${escAttr(item.image||'')}">
         </div>
       </div>
       <div class="field">
-        <label>Categories</label>
+        <label>categories</label>
         <div class="chip-select" id="catSelect">${chipSelectHtml('category', s.categories, selectedCats)}</div>
         <div class="add-cat-row">
           <input type="text" id="newCatId" placeholder="new category id (e.g. plugins)">
-          <button type="button" class="btn small" id="addCatBtn">Add</button>
+          <button type="button" class="btn small" id="addCatBtn">add</button>
         </div>
       </div>
       <div class="field">
-        <label>Description</label>
+        <label>description</label>
         <textarea name="desc">${escHtml(item.desc||'')}</textarea>
       </div>
     `;
@@ -860,7 +860,7 @@ function submitForm() {
 
   let item;
   if (activeTab === 'articles') {
-    if (!fd.get('title').trim()) { showToast('Title is required'); return; }
+    if (!fd.get('title').trim()) { showToast('title is required'); return; }
     item = {
       title: fd.get('title').trim(),
       category: cats,
@@ -870,7 +870,7 @@ function submitForm() {
       content: fd.get('content'),
     };
   } else {
-    if (!fd.get('url').trim()) { showToast('Download URL is required'); return; }
+    if (!fd.get('url').trim()) { showToast('download URL is required'); return; }
     item = {
       url: fd.get('url').trim(),
       category: cats,
@@ -894,7 +894,7 @@ function submitForm() {
 // ── Modal chrome buttons ──────────────────────────────────────
 document.getElementById('modal').insertAdjacentHTML('beforeend', `
   <div class="modal-actions">
-    <button type="button" class="btn danger" id="cancelFormBtn">Cancel</button>
+    <button type="button" class="btn danger" id="cancelFormBtn">cancel</button>
     <div class="right">
       <button type="button" class="btn primary" id="submitFormBtn"><span class="material-symbols-rounded">check</span> Save item</button>
     </div>
@@ -909,7 +909,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.clas
 function setTab(tabId) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
   activeTab = tabId;
-  document.getElementById('listTitle').textContent = tabId === 'articles' ? 'Articles' : 'Downloads';
+  document.getElementById('listTitle').textContent = tabId === 'articles' ? 'articles' : 'downloads';
   renderList();
   refreshFileBar();
 }

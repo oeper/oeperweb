@@ -238,7 +238,7 @@
 <div class="page">
   <header class="header">
 
-    <h1>Files</h1>
+    <h1>files</h1>
   </header>
 
   <div class="anon-panel" id="anonPanel" style="display:none;">
@@ -257,15 +257,15 @@
   <div class="toolbar" id="toolbar" style="display:none;">
     <div class="search-wrap">
       <span class="material-symbols-rounded">search</span>
-      <input class="search-input" type="text" placeholder="Search your files…" id="searchInput">
+      <input class="search-input" type="text" placeholder="search your files…" id="searchInput">
     </div>
     <div class="controls-row">
       <div class="pill-row" id="scopePills">
         <button class="pill active" data-scope="mine">
-          <span class="material-symbols-rounded">person</span> My files
+          <span class="material-symbols-rounded">person</span> my files
         </button>
         <button class="pill" data-scope="all" id="allScopePill" style="display:none;">
-          <span class="material-symbols-rounded">groups</span> Everyone's
+          <span class="material-symbols-rounded">groups</span> everyone's
         </button>
       </div>
       <button type="button" class="toolbar-btn" id="newFolderBtn">
@@ -298,31 +298,31 @@
 
 <div class="modal-overlay" id="folderModalOverlay"></div>
 <div class="modal-box" id="folderModal">
-  <h3>New folder</h3>
-  <input type="text" id="folderNameInput" maxlength="40" placeholder="Folder name">
+  <h3>new folder</h3>
+  <input type="text" id="folderNameInput" maxlength="40" placeholder="folder name">
   <div class="modal-actions">
-    <button type="button" class="toolbar-btn" id="folderCancelBtn">Cancel</button>
-    <button type="button" class="upload-btn" id="folderCreateBtn" style="border-radius:100px;">Create</button>
+    <button type="button" class="toolbar-btn" id="folderCancelBtn">cancel</button>
+    <button type="button" class="upload-btn" id="folderCreateBtn" style="border-radius:100px;">create</button>
   </div>
 </div>
 
 <div class="modal-overlay" id="renameModalOverlay"></div>
 <div class="modal-box" id="renameModal">
-  <h3>Rename</h3>
-  <input type="text" id="renameInput" maxlength="200" placeholder="File name">
+  <h3>rename</h3>
+  <input type="text" id="renameInput" maxlength="200" placeholder="file name">
   <div class="modal-actions">
-    <button type="button" class="toolbar-btn" id="renameCancelBtn">Cancel</button>
-    <button type="button" class="upload-btn" id="renameSaveBtn" style="border-radius:100px;">Save</button>
+    <button type="button" class="toolbar-btn" id="renameCancelBtn">cancel</button>
+    <button type="button" class="upload-btn" id="renameSaveBtn" style="border-radius:100px;">save</button>
   </div>
 </div>
 
 <div class="modal-overlay" id="moveModalOverlay"></div>
 <div class="modal-box" id="moveModal">
-  <h3>Move to folder</h3>
+  <h3>move to folder</h3>
   <div id="moveFolderSlot"></div>
   <div class="modal-actions">
-    <button type="button" class="toolbar-btn" id="moveCancelBtn">Cancel</button>
-    <button type="button" class="upload-btn" id="moveConfirmBtn" style="border-radius:100px;">Move</button>
+    <button type="button" class="toolbar-btn" id="moveCancelBtn">cancel</button>
+    <button type="button" class="upload-btn" id="moveConfirmBtn" style="border-radius:100px;">move</button>
   </div>
 </div>
 
@@ -406,9 +406,9 @@ function hideUploadProgress(prefix) {
 }
 function copyToClipboard(text) {
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(() => showToast('Link copied')).catch(() => showToast('Copy failed — copy manually: ' + text));
+    navigator.clipboard.writeText(text).then(() => showToast('link copied')).catch(() => showToast('copy failed — copy manually: ' + text));
   } else {
-    showToast('Copy manually: ' + text);
+    showToast('copy manually: ' + text);
   }
 }
 
@@ -437,7 +437,7 @@ function buildKebabMenu(items) {
   const wrap = document.createElement('div');
   wrap.className = 'kebab-wrap';
   wrap.innerHTML = `
-    <button type="button" class="icon-btn" title="More options"><span class="material-symbols-rounded">more_vert</span></button>
+    <button type="button" class="icon-btn" title="more options"><span class="material-symbols-rounded">more_vert</span></button>
     <div class="kebab-menu">
       ${items.map((it, i) => `<button type="button" class="kebab-item ${it.dangerous ? 'dangerous' : ''}" data-idx="${i}"><span class="material-symbols-rounded">${it.icon}</span>${escHtml(it.label)}</button>`).join('')}
     </div>
@@ -521,22 +521,22 @@ document.getElementById('folderCreateBtn').addEventListener('click', async () =>
   try {
     await apiCall('/folders', { path });
     closeModal('folderModalOverlay', 'folderModal');
-    showToast('Folder created');
+    showToast('folder created');
     loadList();
   } catch (err) {
-    showToast('Could not create folder: ' + err.message);
+    showToast('could not create folder: ' + err.message);
   }
 });
 document.getElementById('folderNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('folderCreateBtn').click(); });
 
 async function deleteFolder(path) {
-  if (!(await oeConfirm(`Delete the folder "${path.split('/').pop()}"? It must be empty.`, { danger: true }))) return;
+  if (!(await oeConfirm(`delete the folder "${path.split('/').pop()}"? it must be empty.`, { danger: true }))) return;
   try {
     await apiDelete('/folders', { path, email: spaceEmail() });
-    showToast('Folder deleted');
+    showToast('folder deleted');
     loadList();
   } catch (err) {
-    showToast('Could not delete folder: ' + err.message);
+    showToast('could not delete folder: ' + err.message);
   }
 }
 
@@ -553,10 +553,10 @@ document.getElementById('renameSaveBtn').addEventListener('click', async () => {
   try {
     await apiCall('/rename-file', { filename: renamingFilename, name });
     closeModal('renameModalOverlay', 'renameModal');
-    showToast('Renamed');
+    showToast('renamed');
     loadList();
   } catch (err) {
-    showToast('Could not rename: ' + err.message);
+    showToast('could not rename: ' + err.message);
   }
 });
 document.getElementById('renameInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('renameSaveBtn').click(); });
@@ -580,10 +580,10 @@ document.getElementById('moveConfirmBtn').addEventListener('click', async () => 
   try {
     await apiCall('/move-file', { filename: movingFilename, folder });
     closeModal('moveModalOverlay', 'moveModal');
-    showToast('Moved');
+    showToast('moved');
     loadList();
   } catch (err) {
-    showToast('Could not move: ' + err.message);
+    showToast('could not move: ' + err.message);
   }
 });
 
@@ -625,7 +625,7 @@ async function loadList() {
     files = data.files || [];
     folders = data.folders || [];
   } catch (err) {
-    showToast('Could not load files: ' + err.message);
+    showToast('could not load files: ' + err.message);
     files = [];
     folders = [];
   }
@@ -701,7 +701,7 @@ function render() {
       : files === null
         ? ['cloud_off', "Files aren't set up yet."]
         : q
-          ? ['search_off', 'No files match your search.']
+          ? ['search_off', 'no files match your search.']
           : ['folder_open', "Nothing here yet."];
     document.getElementById('emptyIcon').textContent = icon;
     document.getElementById('emptyText').textContent = text;
@@ -742,7 +742,7 @@ function renderUserList() {
   empty.style.display = rows.length === 0 ? 'block' : 'none';
   if (rows.length === 0) {
     document.getElementById('emptyIcon').textContent = q ? 'search_off' : 'groups';
-    document.getElementById('emptyText').textContent = q ? 'No users match your search.' : 'No files uploaded yet.';
+    document.getElementById('emptyText').textContent = q ? 'no users match your search.' : 'no files uploaded yet.';
   }
 }
 
@@ -789,8 +789,8 @@ function buildCard(f) {
       ${isAudio(f.name) ? `<audio class="file-audio-player" controls preload="metadata" src="${f.url}"></audio>` : ''}
     </div>
     <div class="file-actions">
-      <button class="icon-btn" data-copy title="Copy link"><span class="material-symbols-rounded">link</span></button>
-      <a class="icon-btn" href="${f.url}" target="_blank" rel="noopener" download title="Download"><span class="material-symbols-rounded">download</span></a>
+      <button class="icon-btn" data-copy title="copy link"><span class="material-symbols-rounded">link</span></button>
+      <a class="icon-btn" href="${f.url}" target="_blank" rel="noopener" download title="download"><span class="material-symbols-rounded">download</span></a>
     </div>
   `;
 
@@ -811,7 +811,7 @@ function buildCard(f) {
 async function deleteFile(filename) {
   const user = getCurrentUser();
   if (!user) return;
-  if (!(await oeConfirm('Delete this file? This cannot be undone.', { danger: true }))) return;
+  if (!(await oeConfirm('delete this file? this cannot be undone.', { danger: true }))) return;
   try {
     const idToken = await user.getIdToken();
     const res = await fetch(SERVER_ENDPOINT + '/docs/' + encodeURIComponent(filename), {
@@ -823,10 +823,10 @@ async function deleteFile(filename) {
       try { msg = (await res.json()).error || msg; } catch {}
       throw new Error(msg);
     }
-    showToast('Deleted');
+    showToast('deleted');
     loadList();
   } catch (err) {
-    showToast('Could not delete: ' + err.message);
+    showToast('could not delete: ' + err.message);
   }
 }
 
@@ -845,7 +845,7 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
   e.target.value = '';
   if (!picked.length) return;
   const user = getCurrentUser();
-  if (!user) { showToast('Sign in to upload'); return; }
+  if (!user) { showToast('sign in to upload'); return; }
 
   // Owners have no size cap and no temporary-file expiry on files.html —
   // both enforced server-side too, this just keeps the client's own
@@ -875,11 +875,11 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
   if (uploaded) loadList();
   const tempNote = temporaryCount ? ` ${temporaryCount === uploaded ? 'Over 50MB' : `${temporaryCount} over 50MB`} — auto-deletes in 2 hours.` : '';
   if (uploaded === picked.length) {
-    showToast((uploaded === 1 ? 'Uploaded!' : `Uploaded ${uploaded} files!`) + tempNote);
+    showToast((uploaded === 1 ? 'uploaded!' : `uploaded ${uploaded} files!`) + tempNote);
   } else if (uploaded > 0) {
-    showToast(`Uploaded ${uploaded} of ${picked.length} — ${firstError}` + tempNote);
+    showToast(`uploaded ${uploaded} of ${picked.length} — ${firstError}` + tempNote);
   } else {
-    showToast('Could not upload: ' + firstError);
+    showToast('could not upload: ' + firstError);
   }
 });
 
@@ -911,8 +911,8 @@ function addAnonResultRow(url, temporary) {
     <div class="search-wrap" style="flex:1;">
       <input class="search-input" value="${escHtml(url)}" readonly>
     </div>
-    <button class="icon-btn" title="Copy link"><span class="material-symbols-rounded">content_copy</span></button>
-    ${temporary ? '<span class="temp-badge" title="Over 25MB — deletes automatically 2 hours after upload">2h</span>' : ''}
+    <button class="icon-btn" title="copy link"><span class="material-symbols-rounded">content_copy</span></button>
+    ${temporary ? '<span class="temp-badge" title="over 25MB — deletes automatically 2 hours after upload">2h</span>' : ''}
   `;
   row.querySelector('.icon-btn').addEventListener('click', () => copyToClipboard(url));
   list.appendChild(row);
@@ -923,9 +923,9 @@ document.getElementById('anonUploadInput').addEventListener('change', async e =>
   e.target.value = '';
   if (!picked.length) return;
   const remaining = ANON_MAX_FILES - anonUploadedCount;
-  if (remaining <= 0) { showToast(`Anonymous uploads are limited to ${ANON_MAX_FILES} files per person — sign in to upload more.`); return; }
+  if (remaining <= 0) { showToast(`anonymous uploads are limited to ${ANON_MAX_FILES} files per person — sign in to upload more.`); return; }
   const files = picked.slice(0, remaining);
-  if (picked.length > files.length) showToast(`Only uploading ${files.length} of ${picked.length} — that's the anonymous limit.`);
+  if (picked.length > files.length) showToast(`only uploading ${files.length} of ${picked.length} — that's the anonymous limit.`);
 
   let uploaded = 0;
   let temporaryCount = 0;
@@ -951,11 +951,11 @@ document.getElementById('anonUploadInput').addEventListener('change', async e =>
 
   const tempNote = temporaryCount ? ` ${temporaryCount === uploaded ? 'Over 25MB' : `${temporaryCount} over 25MB`} — auto-deletes in 2 hours.` : '';
   if (uploaded === files.length) {
-    showToast((uploaded === 1 ? 'Uploaded!' : `Uploaded ${uploaded} files!`) + tempNote);
+    showToast((uploaded === 1 ? 'uploaded!' : `uploaded ${uploaded} files!`) + tempNote);
   } else if (uploaded > 0) {
-    showToast(`Uploaded ${uploaded} of ${files.length} — ${firstError}` + tempNote);
+    showToast(`uploaded ${uploaded} of ${files.length} — ${firstError}` + tempNote);
   } else {
-    showToast('Could not upload: ' + firstError);
+    showToast('could not upload: ' + firstError);
   }
 });
 
