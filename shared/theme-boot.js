@@ -925,6 +925,26 @@
   ].join('\n');
   document.head.appendChild(spinnerStyle);
 
+  // Cross-document view transitions: every page here is a separate static
+  // .html file, so normal <a href> navigation is a full document load, not
+  // an SPA route change. The `@view-transition { navigation: auto }` at-rule
+  // (Chrome/Edge 126+; no-ops elsewhere, so this is pure enhancement) makes
+  // the browser itself snapshot the old and new page and cross-fade between
+  // them instead of a hard cut — Material/Android "fade through" style:
+  // the old page fades and settles slightly inward, the new one fades in
+  // from slightly enlarged. Skipped entirely for prefers-reduced-motion.
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    var transitionStyle = document.createElement('style');
+    transitionStyle.textContent = [
+      '@view-transition { navigation: auto; }',
+      '::view-transition-old(root) { animation: 160ms cubic-bezier(0.4, 0, 1, 1) both oe-page-out; }',
+      '::view-transition-new(root) { animation: 220ms cubic-bezier(0, 0, 0.2, 1) both oe-page-in; }',
+      '@keyframes oe-page-out { to { opacity: 0; transform: scale(0.98); } }',
+      '@keyframes oe-page-in { from { opacity: 0; transform: scale(1.02); } }',
+    ].join('\n');
+    document.head.appendChild(transitionStyle);
+  }
+
   var saved = localStorage.getItem(window.OE_THEME_KEY) || 'material-dark';
   var savedFlip = localStorage.getItem(window.OE_THEME_FLIP_KEY) === '1';
   window.applyOeTheme(saved, savedFlip);
