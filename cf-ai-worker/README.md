@@ -38,6 +38,24 @@ all. It doesn't go down when your PC or tunnel does.
    comment near the top of the script in `ai.html`) to whatever URL you got
    from step 2 or 3, then commit/push as usual.
 
+5. **Web search needs a Brave Search API key.** Without one, `search_web`
+   just tells the model search isn't configured — everything else still
+   works.
+
+   - Sign up at https://api.search.brave.com/register (free tier is fine —
+     2,000 queries/month) and grab an API key.
+   - Store it as a Worker secret (never put it in code or `wrangler.toml`):
+
+     ```bash
+     npx wrangler secret put BRAVE_API_KEY
+     ```
+
+     Paste the key when prompted, then redeploy so the Worker picks it up:
+
+     ```bash
+     npx wrangler deploy
+     ```
+
 ## Local dev
 
 ```bash
@@ -68,10 +86,20 @@ actual AI service, not a local model) — useful for testing changes to
   "keep casual overuse in check," not a hard global limit. Fine for a
   personal site's AI page; would need Durable Objects or KV for anything
   stronger.
-- **No tool use.** ai-proxy.js had a get_current_datetime / calculate /
-  search_oeper_dev tool-calling loop; this is a deliberately minimal
-  prompt-in, response-out relay instead — no multi-round tool loop, no
-  translation of the model's output at all, `/api/chat` just pipes
-  `env.AI.run()`'s stream straight back to the client. Can be added back
-  later if wanted, but it was the least-tested, most complex part of the
-  old proxy and wasn't worth carrying over on a straight port.
+- **Tool use is back, but web search only.** ai-proxy.js had
+  get_current_datetime / calculate / search_oeper_dev; this has just
+  `search_web`, backed by the Brave Search API (see setup step 5 above),
+  run through a small hand-rolled loop in `src/index.js` (call the model,
+  execute anything it asks for via `tool_calls`, feed the result back in,
+  repeat up to `MAX_TOOL_ROUNDS`). `@cloudflare/ai-utils`'s `runWithTools`
+  was tried first — dropped after testing showed it never actually
+  surfaced the tool definitions to the model, even though the exact same
+  tools passed straight to `env.AI.run()` worked correctly.
+- **No more live token-by-token streaming.** Each round of the tool loop is
+  a plain non-streaming call so the response can be inspected before
+  deciding whether to continue, so `/api/chat` now generates the whole
+  answer (after however many tool round-trips it takes) and sends it as one
+  SSE chunk in the same shape a real stream used to send incrementally —
+  `ai.html` doesn't need to know the difference. The trade-off is the
+  typing effect is gone; replies just appear once fully generated instead
+  of word-by-word.

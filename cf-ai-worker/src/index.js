@@ -6,11 +6,33 @@
 // own infrastructure end to end, so it doesn't go down when a PC or tunnel
 // does.
 //
-// Deliberately minimal: prompt in, straight to Workers AI, response back
-// out. No tool-calling, no multi-round loop — ai-proxy.js's version of this
-// had a get_current_datetime/calculate/search_oeper_dev tool-use loop, cut
-// here since it was the least-tested, most complex part and not what this
-// was asked to do. Can be added back later if wanted.
+// Web search via a hand-rolled tool-calling loop, backed by the Brave
+// Search API — needs a BRAVE_API_KEY secret (see README). This replaces
+// ai-proxy.js's old get_current_datetime/calculate/search_oeper_dev loop,
+// which an earlier version of this file deliberately left out as "the
+// least-tested, most complex part" of a straight port — added back now,
+// search only, once actually asked for.
+//
+// Originally tried @cloudflare/ai-utils' runWithTools() for this instead of
+// hand-rolling it — abandoned after testing showed it never actually
+// surfaced the tool definitions to the model at all (its own reasoning
+// said outright "I do not have access to tools by default", even though
+// the exact same tools array passed straight to the raw env.AI.run()
+// binding worked correctly and triggered a real tool_calls response). The
+// loop below drives env.AI.run() directly instead: call the model, check
+// message.tool_calls, execute anything requested via TOOL_FUNCTIONS, feed
+// the result back in as a 'tool' message, repeat.
+//
+// That loop isn't stream-compatible (each round is a plain non-streaming
+// call so the tool_calls / tool-result messages can be read and appended
+// before the next round), so unlike the no-tools version this file used to
+// be, the model's whole answer is generated up front and then wrapped as a
+// single SSE chunk in the same data:{"choices":[{"delta":{"content":...}}]}
+// shape a real stream used to send incrementally — ai.html's parser doesn't
+// know the difference, it just gets the text as one chunk instead of many.
+// Trade-off: no more live token-by-token typing effect, since there's no
+// way to reveal a partial answer before generation is fully done anyway
+// (it might still trigger another tool call).
 //
 // This endpoint is intentionally open to anyone, no sign-in — same as
 // before. The limits below exist purely to keep usage (and cost) sane, not
@@ -70,6 +92,75 @@ function json(data, status, request) {
   });
 }
 
+// Packages one complete answer (plus, if present, its reasoning) as SSE
+// chunks in the same shape a real stream:true response from env.AI.run()
+// sends incrementally — see the file header for why this can't be
+// genuinely progressive when tools are involved. ai.html's reader loop
+// (which already separately handles delta.reasoning_content vs
+// delta.content, feeding its collapsible "thinking" block) just sees it as
+// a very short stream instead of a long one.
+function fakeStreamFromMessage(message) {
+  const encoder = new TextEncoder();
+  return new ReadableStream({
+    start(controller) {
+      const send = obj => controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+      if (message.reasoning_content) send({ choices: [{ delta: { reasoning_content: message.reasoning_content } }] });
+      send({ choices: [{ delta: { content: message.content || '' } }] });
+      controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+      controller.close();
+    },
+  });
+}
+
+const SEARCH_RESULT_COUNT = 5;
+
+async function searchWeb(args, env) {
+  if (!env.BRAVE_API_KEY) return JSON.stringify({ error: 'web search is not configured on this deployment' });
+  const query = (args && args.query || '').trim();
+  if (!query) return JSON.stringify({ error: 'empty query' });
+  try {
+    const res = await fetch(
+      `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${SEARCH_RESULT_COUNT}`,
+      { headers: { Accept: 'application/json', 'X-Subscription-Token': env.BRAVE_API_KEY } }
+    );
+    if (!res.ok) return JSON.stringify({ error: `search request failed (HTTP ${res.status})` });
+    const data = await res.json();
+    const results = ((data.web && data.web.results) || []).slice(0, SEARCH_RESULT_COUNT).map(r => ({
+      title: r.title,
+      url: r.url,
+      snippet: r.description,
+    }));
+    return JSON.stringify({ results });
+  } catch (err) {
+    return JSON.stringify({ error: 'search request failed: ' + err.message });
+  }
+}
+
+// Plain schema only — no executable `function` field. @cloudflare/ai-utils'
+// runWithTools() takes tools in that combined shape and is supposed to
+// dispatch to the function itself, but empirically it never actually
+// surfaced these tool definitions to Gemma at all (the model's own
+// reasoning said outright "I do not have access to ... tools by default" —
+// tried, confirmed broken). The raw env.AI.run() binding handles tool
+// calling correctly on its own, so the loop below drives it directly
+// instead: TOOL_FUNCTIONS maps a tool name to its handler for manual
+// dispatch once a tool_calls response comes back.
+const TOOLS = [
+  {
+    name: 'search_web',
+    description: 'Search the live web for current information — news, recent events, facts that may have changed since training, or anything the user explicitly asks to look up. Returns up to 5 results, each with a title, url, and short snippet.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'The search query' },
+      },
+      required: ['query'],
+    },
+  },
+];
+const TOOL_FUNCTIONS = { search_web: searchWeb };
+const MAX_TOOL_ROUNDS = 3;
+
 async function handleChat(request, env) {
   let body;
   try {
@@ -107,16 +198,37 @@ async function handleChat(request, env) {
     return json({ error: 'Too many requests — please slow down and try again in a few minutes.' }, 429, request);
   }
 
-  let stream;
-  try {
-    // stream:true already gets back a ReadableStream in the same
-    // data:{"choices":[{"delta":{"content":...}}]} SSE shape ai.html's
-    // fetch/reader loop already parses — no translation needed, just
-    // pass it straight through.
-    stream = await env.AI.run(MODEL, { messages, stream: true, max_tokens: MAX_TOKENS });
-  } catch (err) {
-    return json({ error: 'Could not reach the model: ' + err.message }, 502, request);
+  // Manual tool loop: call the model, and if it asks to call a tool,
+  // execute it and feed the result back in as a 'tool' message, repeating
+  // until it answers in plain text or MAX_TOOL_ROUNDS is hit (a model stuck
+  // calling tools forever shouldn't hang the request indefinitely).
+  let workingMessages = messages;
+  let message = {};
+  for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
+    let result;
+    try {
+      result = await env.AI.run(MODEL, { messages: workingMessages, tools: TOOLS, max_tokens: MAX_TOKENS });
+    } catch (err) {
+      return json({ error: 'Could not reach the model: ' + err.message }, 502, request);
+    }
+    message = (result && result.choices && result.choices[0] && result.choices[0].message) || {};
+    if (!message.tool_calls || message.tool_calls.length === 0 || round === MAX_TOOL_ROUNDS) break;
+
+    workingMessages = [...workingMessages, { role: 'assistant', content: message.content || '', tool_calls: message.tool_calls }];
+    for (const call of message.tool_calls) {
+      const fn = TOOL_FUNCTIONS[call.function && call.function.name];
+      let toolResult;
+      if (!fn) {
+        toolResult = JSON.stringify({ error: 'unknown tool' });
+      } else {
+        let args = {};
+        try { args = JSON.parse(call.function.arguments || '{}'); } catch {}
+        try { toolResult = await fn(args, env); } catch (err) { toolResult = JSON.stringify({ error: err.message }); }
+      }
+      workingMessages.push({ role: 'tool', tool_call_id: call.id, name: call.function && call.function.name, content: toolResult });
+    }
   }
+  const stream = fakeStreamFromMessage(message);
 
   return new Response(stream, {
     status: 200,
