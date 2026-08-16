@@ -6,33 +6,40 @@
 // own infrastructure end to end, so it doesn't go down when a PC or tunnel
 // does.
 //
-// Web search via a hand-rolled tool-calling loop, backed by the Brave
-// Search API — needs a BRAVE_API_KEY secret (see README). This replaces
-// ai-proxy.js's old get_current_datetime/calculate/search_oeper_dev loop,
-// which an earlier version of this file deliberately left out as "the
-// least-tested, most complex part" of a straight port — added back now,
-// search only, once actually asked for.
+// Web search via a hand-rolled, streaming tool-calling loop, backed by the
+// Brave Search API — needs a BRAVE_API_KEY secret (see README). This
+// replaces ai-proxy.js's old get_current_datetime/calculate/
+// search_oeper_dev loop, which an earlier version of this file deliberately
+// left out as "the least-tested, most complex part" of a straight port —
+// added back now, search only, once actually asked for.
 //
-// Originally tried @cloudflare/ai-utils' runWithTools() for this instead of
-// hand-rolling it — abandoned after testing showed it never actually
-// surfaced the tool definitions to the model at all (its own reasoning
-// said outright "I do not have access to tools by default", even though
-// the exact same tools array passed straight to the raw env.AI.run()
-// binding worked correctly and triggered a real tool_calls response). The
-// loop below drives env.AI.run() directly instead: call the model, check
-// message.tool_calls, execute anything requested via TOOL_FUNCTIONS, feed
-// the result back in as a 'tool' message, repeat.
+// Originally tried @cloudflare/ai-utils' runWithTools() for the loop —
+// abandoned after testing showed it never actually surfaced the tool
+// definitions to the model at all (its own reasoning said outright "I do
+// not have access to tools by default", even though the exact same tools
+// array passed straight to the raw env.AI.run() binding worked correctly).
+// A hand-rolled non-streaming loop replaced it next, which worked but lost
+// live token-by-token streaming entirely — each round had to be a plain
+// response so tool_calls could be read before deciding whether to
+// continue, so the whole answer generated silently and arrived as one
+// chunk. streamToolLoop() below is the third version: still hand-rolled,
+// but now reads each round's response as an actual stream (env.AI.run()
+// does support stream:true + tools together, confirmed by testing —
+// Cloudflare's docs just don't say either way) and forwards
+// reasoning/content deltas to the client AS THEY ARRIVE. Tool-call deltas
+// arrive incrementally too (a model can't emit real content and a tool
+// call in the same turn, so nothing meaningful is ever thrown away) —
+// those get accumulated silently instead of forwarded, since raw partial
+// JSON fragments aren't something a viewer should see. Once a round's
+// stream ends, either it had no tool calls (answer's already fully
+// streamed to the client, done) or it did (execute them, append results,
+// start the next round's stream the same way).
 //
-// That loop isn't stream-compatible (each round is a plain non-streaming
-// call so the tool_calls / tool-result messages can be read and appended
-// before the next round), so unlike the no-tools version this file used to
-// be, the model's whole answer is generated up front and then wrapped as a
-// single SSE chunk in the same data:{"choices":[{"delta":{"content":...}}]}
-// shape a real stream used to send incrementally — ai.html's parser doesn't
-// know the difference, it just gets the text as one chunk instead of many.
-// Trade-off: no more live token-by-token typing effect, since there's no
-// way to reveal a partial answer before generation is fully done anyway
-// (it might still trigger another tool call).
+// One more wrinkle worth flagging: reasoning arrives under different field
+// names depending on which backend variant serves the request — some
+// responses use delta.reasoning_content, others delta.reasoning. Both get
+// normalized to reasoning_content before forwarding, since that's the only
+// name ai.html's parser recognizes.
 //
 // This endpoint is intentionally open to anyone, no sign-in — same as
 // before. The limits below exist purely to keep usage (and cost) sane, not
@@ -92,20 +99,109 @@ function json(data, status, request) {
   });
 }
 
-// Packages one complete answer (plus, if present, its reasoning) as SSE
-// chunks in the same shape a real stream:true response from env.AI.run()
-// sends incrementally — see the file header for why this can't be
-// genuinely progressive when tools are involved. ai.html's reader loop
-// (which already separately handles delta.reasoning_content vs
-// delta.content, feeding its collapsible "thinking" block) just sees it as
-// a very short stream instead of a long one.
-function fakeStreamFromMessage(message) {
+// Reads one round's raw SSE stream from env.AI.run(), forwarding
+// reasoning/content deltas to `send` as they arrive and silently
+// accumulating any tool_calls deltas (which stream in fragments — an id +
+// name in one chunk, then the arguments string built up piece by piece
+// across several more, correlated by `index`) instead of forwarding them.
+// Returns { finishedWithToolCalls, toolCalls, assistantContent } once the
+// round's stream ends, so the caller can decide whether to execute tools
+// and start another round, or stop (the round already streamed its full
+// answer to the client if it didn't call any tools).
+async function streamOneRound(upstream, send) {
+  const reader = upstream.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  const toolCallAcc = []; // sparse array indexed by the stream's own `index`
+  let assistantContent = '';
+  let sawToolCall = false;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('data:')) continue;
+      const payload = trimmed.slice(5).trim();
+      if (!payload || payload === '[DONE]') continue;
+      let evt;
+      try { evt = JSON.parse(payload); } catch { continue; }
+      const choice = evt.choices && evt.choices[0];
+      if (!choice) continue;
+      const delta = choice.delta || {};
+
+      if (delta.tool_calls) {
+        sawToolCall = true;
+        for (const tc of delta.tool_calls) {
+          const idx = tc.index || 0;
+          if (!toolCallAcc[idx]) toolCallAcc[idx] = { id: '', name: '', arguments: '' };
+          if (tc.id) toolCallAcc[idx].id = tc.id;
+          if (tc.function) {
+            if (tc.function.name) toolCallAcc[idx].name = tc.function.name;
+            if (tc.function.arguments) toolCallAcc[idx].arguments += tc.function.arguments;
+          }
+        }
+        continue;
+      }
+
+      // Field name varies by backend — normalize both to reasoning_content,
+      // the only name ai.html's client-side parser looks for.
+      const reasoning = delta.reasoning_content || delta.reasoning;
+      if (reasoning) send({ choices: [{ delta: { reasoning_content: reasoning } }] });
+      if (delta.content) {
+        assistantContent += delta.content;
+        send({ choices: [{ delta: { content: delta.content } }] });
+      }
+    }
+  }
+
+  return {
+    finishedWithToolCalls: sawToolCall && toolCallAcc.length > 0,
+    toolCalls: toolCallAcc.filter(Boolean).map((tc, i) => ({
+      id: tc.id || `call_${i}`,
+      type: 'function',
+      function: { name: tc.name, arguments: tc.arguments },
+    })),
+    assistantContent,
+  };
+}
+
+// Drives the whole tool-calling conversation: streams each round straight
+// to the client, and between rounds — invisibly to the client — executes
+// any tool calls the model made and feeds the results back in, up to
+// MAX_TOOL_ROUNDS.
+function streamToolLoop(env, initialMessages) {
   const encoder = new TextEncoder();
   return new ReadableStream({
-    start(controller) {
+    async start(controller) {
       const send = obj => controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
-      if (message.reasoning_content) send({ choices: [{ delta: { reasoning_content: message.reasoning_content } }] });
-      send({ choices: [{ delta: { content: message.content || '' } }] });
+      let workingMessages = initialMessages;
+      try {
+        for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
+          const upstream = await env.AI.run(MODEL, { messages: workingMessages, tools: TOOLS, stream: true, max_tokens: MAX_TOKENS });
+          const { finishedWithToolCalls, toolCalls, assistantContent } = await streamOneRound(upstream, send);
+          if (!finishedWithToolCalls || round === MAX_TOOL_ROUNDS) break;
+
+          workingMessages = [...workingMessages, { role: 'assistant', content: assistantContent, tool_calls: toolCalls }];
+          for (const call of toolCalls) {
+            const fn = TOOL_FUNCTIONS[call.function.name];
+            let toolResult;
+            if (!fn) {
+              toolResult = JSON.stringify({ error: 'unknown tool' });
+            } else {
+              let args = {};
+              try { args = JSON.parse(call.function.arguments || '{}'); } catch {}
+              try { toolResult = await fn(args, env); } catch (err) { toolResult = JSON.stringify({ error: err.message }); }
+            }
+            workingMessages.push({ role: 'tool', tool_call_id: call.id, name: call.function.name, content: toolResult });
+          }
+        }
+      } catch (err) {
+        send({ choices: [{ delta: { content: `\n\n[error: ${err.message}]` } }] });
+      }
       controller.enqueue(encoder.encode('data: [DONE]\n\n'));
       controller.close();
     },
@@ -198,37 +294,7 @@ async function handleChat(request, env) {
     return json({ error: 'Too many requests — please slow down and try again in a few minutes.' }, 429, request);
   }
 
-  // Manual tool loop: call the model, and if it asks to call a tool,
-  // execute it and feed the result back in as a 'tool' message, repeating
-  // until it answers in plain text or MAX_TOOL_ROUNDS is hit (a model stuck
-  // calling tools forever shouldn't hang the request indefinitely).
-  let workingMessages = messages;
-  let message = {};
-  for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-    let result;
-    try {
-      result = await env.AI.run(MODEL, { messages: workingMessages, tools: TOOLS, max_tokens: MAX_TOKENS });
-    } catch (err) {
-      return json({ error: 'Could not reach the model: ' + err.message }, 502, request);
-    }
-    message = (result && result.choices && result.choices[0] && result.choices[0].message) || {};
-    if (!message.tool_calls || message.tool_calls.length === 0 || round === MAX_TOOL_ROUNDS) break;
-
-    workingMessages = [...workingMessages, { role: 'assistant', content: message.content || '', tool_calls: message.tool_calls }];
-    for (const call of message.tool_calls) {
-      const fn = TOOL_FUNCTIONS[call.function && call.function.name];
-      let toolResult;
-      if (!fn) {
-        toolResult = JSON.stringify({ error: 'unknown tool' });
-      } else {
-        let args = {};
-        try { args = JSON.parse(call.function.arguments || '{}'); } catch {}
-        try { toolResult = await fn(args, env); } catch (err) { toolResult = JSON.stringify({ error: err.message }); }
-      }
-      workingMessages.push({ role: 'tool', tool_call_id: call.id, name: call.function && call.function.name, content: toolResult });
-    }
-  }
-  const stream = fakeStreamFromMessage(message);
+  const stream = streamToolLoop(env, messages);
 
   return new Response(stream, {
     status: 200,

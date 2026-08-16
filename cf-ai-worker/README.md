@@ -86,20 +86,27 @@ actual AI service, not a local model) — useful for testing changes to
   "keep casual overuse in check," not a hard global limit. Fine for a
   personal site's AI page; would need Durable Objects or KV for anything
   stronger.
-- **Tool use is back, but web search only.** ai-proxy.js had
-  get_current_datetime / calculate / search_oeper_dev; this has just
-  `search_web`, backed by the Brave Search API (see setup step 5 above),
-  run through a small hand-rolled loop in `src/index.js` (call the model,
-  execute anything it asks for via `tool_calls`, feed the result back in,
-  repeat up to `MAX_TOOL_ROUNDS`). `@cloudflare/ai-utils`'s `runWithTools`
-  was tried first — dropped after testing showed it never actually
-  surfaced the tool definitions to the model, even though the exact same
-  tools passed straight to `env.AI.run()` worked correctly.
-- **No more live token-by-token streaming.** Each round of the tool loop is
-  a plain non-streaming call so the response can be inspected before
-  deciding whether to continue, so `/api/chat` now generates the whole
-  answer (after however many tool round-trips it takes) and sends it as one
-  SSE chunk in the same shape a real stream used to send incrementally —
-  `ai.html` doesn't need to know the difference. The trade-off is the
-  typing effect is gone; replies just appear once fully generated instead
-  of word-by-word.
+- **Tool use is back, but web search only, and it still streams.**
+  ai-proxy.js had get_current_datetime / calculate / search_oeper_dev; this
+  has just `search_web`, backed by the Brave Search API (see setup step 5
+  above). `src/index.js`'s `streamToolLoop()` reads each round of the
+  conversation as an actual SSE stream from `env.AI.run(..., {tools,
+  stream: true})` — confirmed working despite Cloudflare's docs not saying
+  either way — and forwards reasoning/content deltas to the client live as
+  they arrive. Tool-call deltas (which stream in as fragments: an id+name,
+  then the arguments string built up piece by piece) get accumulated
+  silently instead of forwarded, since raw partial JSON isn't something a
+  viewer should see; once a round's stream ends with tool calls pending,
+  they're executed and their results appended before starting the next
+  round's stream. `@cloudflare/ai-utils`'s `runWithTools` was tried first —
+  dropped after testing showed it never actually surfaced the tool
+  definitions to the model at all, even though the exact same tools passed
+  straight to `env.AI.run()` worked correctly.
+- **Tool-using replies are noticeably slower and more variable.** A search
+  reply needs two full model generations back to back (deciding to search,
+  then writing the actual answer) instead of one, and this model is very
+  verbose with its reasoning on both — observed anywhere from ~8s to over a
+  minute for the same query on different runs. That's inherent generation-
+  time variance, not a stuck request; the client (`ai.html`) only aborts on
+  45 seconds of total silence, not total duration, and tokens keep
+  trickling in throughout in every case tested.
