@@ -1298,7 +1298,7 @@
     if (s < 2592000) return Math.floor(s / 86400) + 'd ago';
     return date.toLocaleDateString();
   }
-  const TAG_LABELS = { general: 'General', showcase: 'Showcase', help: 'Help', feedback: 'Feedback' };
+  const TAG_LABELS = { general: 'general', showcase: 'showcase', help: 'help', feedback: 'feedback' };
   function firstImageUrl(p) {
     const urls = p.imageUrls && p.imageUrls.length ? p.imageUrls : (p.imageUrl ? [p.imageUrl] : []);
     const url = urls[0];
@@ -1381,7 +1381,7 @@
           ${handle ? `<a href="/profile?u=${encodeURIComponent(handle)}">${avatar}</a>` : avatar}
           <div class="ig-header-text">
             <div class="ig-username">${authorNameHtml(email, profile)}</div>
-            <div class="ig-subtag">${subtag}</div>
+            ${subtag ? `<div class="ig-subtag">${subtag}</div>` : ''}
           </div>
         </div>
       `;
@@ -1416,7 +1416,7 @@
         // engagement moved below as a lighter-weight footer.
         return `
           <div class="ig-card text-only" data-kind="post" data-id="${p.id}" data-href="https://oeper.dev/feed?post=${p.id}">
-            ${cardHeaderHtml(p.authorEmail, profile, tag ? escHtml(TAG_LABELS[tag] || tag) : 'oeper.dev')}
+            ${cardHeaderHtml(p.authorEmail, profile, tag ? escHtml(TAG_LABELS[tag] || tag) : null)}
             <div class="ig-text-post-title">${linkify(p.title)}</div>
             ${bodyHtml}
             ${actionsHtml}
@@ -1427,7 +1427,7 @@
       }
       return `
         <div class="ig-card" data-kind="post" data-id="${p.id}" data-href="https://oeper.dev/feed?post=${p.id}">
-          ${cardHeaderHtml(p.authorEmail, profile, tag ? escHtml(TAG_LABELS[tag] || tag) : 'oeper.dev')}
+          ${cardHeaderHtml(p.authorEmail, profile, tag ? escHtml(TAG_LABELS[tag] || tag) : null)}
           ${img ? `<div class="ig-media"><img src="${img}" alt="" loading="lazy"></div>` : ''}
           ${vid ? `<div class="ig-media"><video src="${vid}" muted preload="metadata"></video></div>` : ''}
           ${aud ? `<div class="ig-audio-attach" onclick="event.stopPropagation()"><span class="material-symbols-rounded">music_note</span><audio controls preload="metadata" src="${aud}"></audio></div>` : ''}
@@ -1446,7 +1446,7 @@
       const score = (v.upvoters || []).length - (v.downvoters || []).length;
       return `
         <div class="ig-card" data-kind="video" data-id="${v.id}" data-href="https://oeper.dev/videos?video=${v.id}">
-          ${cardHeaderHtml(v.authorEmail, profile, 'Video')}
+          ${cardHeaderHtml(v.authorEmail, profile, 'video')}
           <div class="ig-media" data-video-media>
             <video src="${v.url}" muted preload="metadata"></video>
             <div class="ig-play-overlay"><span class="material-symbols-rounded">play_arrow</span></div>
@@ -1529,6 +1529,7 @@
     function postContentHtml(item, kind) {
       const profile = getProfile(item.authorEmail, item.authorName, item.authorPhoto);
       const score = (item.upvoters || []).length - (item.downvoters || []).length;
+      const tag = kind === 'video' ? null : (item.tags || [])[0];
       const user = getCurrentUser();
       const up = user && (item.upvoters || []).includes(user.uid);
       const down = user && (item.downvoters || []).includes(user.uid);
@@ -1545,7 +1546,7 @@
       }
       const body = kind === 'video' ? item.description : item.body;
       return `
-        ${cardHeaderHtml(item.authorEmail, profile, kind === 'video' ? 'Video' : 'oeper.dev')}
+        ${cardHeaderHtml(item.authorEmail, profile, kind === 'video' ? 'video' : (tag ? escHtml(TAG_LABELS[tag] || tag) : null))}
         ${mediaHtml}
         <div class="ig-actions">
           <button type="button" class="ig-vote-btn ${up ? 'upvoted' : ''}" data-modal-vote-up title="Like">
