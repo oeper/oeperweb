@@ -16,7 +16,14 @@
 // before. The limits below exist purely to keep usage (and cost) sane, not
 // to gate who can use it.
 
-const MODEL = '@cf/google/gemma-4-26b-a4b-it';
+// Gemini isn't in Workers AI's own catalog (env.AI only serves open-weight
+// models like Gemma natively) — Cloudflare lists Gemini as a third-party
+// model reachable through the unified AI Gateway catalog instead, which
+// normally needs its own provider API key/setup, not just the env.AI
+// binding this Worker uses. Untested whether env.AI.run() accepts this ID
+// as-is; if a chat request 502s with a model/auth error, switch back to
+// '@cf/google/gemma-4-26b-a4b-it' (confirmed working) and redeploy.
+const MODEL = 'google/gemini-3.7-flash';
 
 const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765'];
 
