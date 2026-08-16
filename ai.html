@@ -24,7 +24,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :focus { outline: none; }
-  :focus-visible { outline: none; box-shadow: 0 0 0 2px var(--md-sys-color-primary, #a8c7fa); }
+  :focus-visible { outline: none; }
 
   :root {
     --md-sys-color-background: #111318;
@@ -460,11 +460,17 @@ function splitThinking(reasoningBuf, contentBuf, done) {
 
 // Custom-animated collapse (see .thinking-content-wrap's grid-rows trick in
 // the CSS) instead of native <details>, which has no animation hook in any
-// browser. Open state is tracked via a class we control, so it can be
-// forced open while actively streaming reasoning, default to collapsed
-// once the answer starts, and still respect a manual click in between —
-// re-rendering the bubble's innerHTML on every streamed chunk would
-// otherwise reset a native <details>'s open attribute every time too.
+// browser. Open state is tracked via a class we control, so it can still
+// respect a manual click across re-renders — re-rendering the bubble's
+// innerHTML on every streamed chunk would otherwise reset a native
+// <details>'s open attribute every time too.
+//
+// Stays collapsed by default even while actively streaming reasoning — it
+// used to force itself open for the duration of the "thinking" phase, but
+// since bubble.innerHTML gets fully replaced on every streamed token, that
+// re-created the thinking-content-wrap (and its fade-in) on every single
+// token, which just looked like flickering text. Only a manual click opens
+// it now, live-streaming reasoning included.
 function renderAssistantContent(bubble, reasoningBuf, contentBuf, done) {
   const { thinking, answer, stillThinking } = splitThinking(reasoningBuf, contentBuf, done);
   let html = '';
@@ -472,7 +478,7 @@ function renderAssistantContent(bubble, reasoningBuf, contentBuf, done) {
     const existing = bubble.querySelector('.thinking-block');
     const userToggled = existing && existing.dataset.userToggled === '1';
     const wasOpen = existing ? existing.classList.contains('open') : false;
-    const isOpen = stillThinking || (userToggled && wasOpen);
+    const isOpen = userToggled && wasOpen;
     html += `
       <div class="thinking-block${isOpen ? ' open' : ''}" data-user-toggled="${userToggled ? '1' : '0'}">
         <div class="thinking-summary"><span class="material-symbols-rounded thinking-caret">expand_more</span>${stillThinking ? 'Thinking…' : 'Show thinking'}</div>
@@ -515,12 +521,19 @@ onSnapshot(doc(db, 'config', 'aiModels'), snap => {
   renderModelSelect();
 });
 
+// The worker returns its raw model catalog id (e.g. '@cf/google/gemma-4-26b-a4b-it'),
+// which reads as backend implementation detail, not something to show a
+// visitor. Falls back to the raw id for anything not in this list, so a
+// future model swap never goes silently blank.
+const FRIENDLY_MODEL_NAMES = {
+  '@cf/google/gemma-4-26b-a4b-it': 'Gemma 4',
+};
 async function loadModelName() {
   try {
     const res = await fetch(AI_ENDPOINT + '/api/model');
     if (!res.ok) return;
     const data = await res.json();
-    if (data.model) defaultModelName = data.model;
+    if (data.model) defaultModelName = FRIENDLY_MODEL_NAMES[data.model] || data.model;
   } catch {}
   renderModelSelect();
 }
