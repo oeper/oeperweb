@@ -1,0 +1,17 @@
+name = "oeper-ai"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# Grants this Worker the `env.AI` binding used in src/index.js — this is
+# what actually lets it call Workers AI, no API token/account ID needed in
+# code (the binding is authenticated by Cloudflare at the platform level).
+[ai]
+binding = "AI"
+
+# Uncomment and set to your own domain once you've added a DNS route for it
+# in the Cloudflare dashboard (Workers & Pages -> oeper-ai -> Triggers ->
+# Custom Domains). Until then, the workers.dev URL wrangler prints after
+# `wrangler deploy` works fine as AI_ENDPOINT in ai.html.
+# routes = [
+#   { pattern = "ai3.oeper.dev", custom_domain = true }
+# ]

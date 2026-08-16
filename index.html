@@ -2085,7 +2085,7 @@ PAGES.forEach((page, index) => {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000);
-    const res = await fetch('https://ai2.oeper.dev/api/model', { signal: controller.signal });
+    const res = await fetch('https://oeper-ai.oeper.workers.dev/api/model', { signal: controller.signal });
     clearTimeout(timer);
     if (res.ok) {
       dot.classList.add('online');
