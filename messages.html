@@ -196,6 +196,15 @@
   .msg-action-btn .material-symbols-rounded { font-size: 15px; }
   .msg-image { max-width: 240px; max-height: 320px; border-radius: 14px; display: block; cursor: zoom-in; }
   .msg-video { max-width: 260px; max-height: 320px; border-radius: 14px; display: block; }
+  .msg-file {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px;
+    background: var(--md-sys-color-surface-variant); color: inherit; text-decoration: none; max-width: 240px;
+  }
+  .msg.mine .msg-file { background: color-mix(in srgb, var(--md-sys-color-on-primary) 18%, transparent); }
+  .msg-file .material-symbols-rounded { font-size: 26px; flex-shrink: 0; }
+  .msg-file-info { min-width: 0; }
+  .msg-file-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .msg-file-size { font-size: 11px; opacity: 0.75; }
   .msg-seen { font-size: 10px; color: var(--md-sys-color-on-surface-variant); }
 
   .msg-reply-quote {
@@ -368,7 +377,7 @@ import { mountTopNav } from './shared/topnav.js?v=22';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
   loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions,
-} from './shared/account.js?v=27';
+} from './shared/account.js?v=28';
 import { mountFooter } from './shared/footer.js?v=5';
 import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
@@ -1219,12 +1228,12 @@ async function openThread(otherEmail, user) {
         <button type="button" id="cancelReplyBtn" title="cancel reply"><span class="material-symbols-rounded">close</span></button>
       </div>
       <div class="edit-indicator" id="editIndicator" style="display:none;">
-        <span>Editing message</span>
+        <span>editing message</span>
         <button type="button" id="cancelEditBtn" title="cancel edit"><span class="material-symbols-rounded">close</span></button>
       </div>
       <div class="thread-inputbar">
         <div class="input-normal" id="inputNormal">
-          <label class="attach-btn" title="send a photo or video"><span class="material-symbols-rounded">image</span><input type="file" id="imageInput" accept="image/*,video/*"></label>
+          <label class="attach-btn" title="send a file"><span class="material-symbols-rounded">attach_file</span><input type="file" id="imageInput"></label>
           <textarea id="msgInput" placeholder="message…" rows="1"></textarea>
           <button class="mic-btn" id="micBtn" title="record voice message"><span class="material-symbols-rounded">mic</span></button>
           <button class="send-btn" id="sendMsgBtn" title="send"><span class="material-symbols-rounded" id="sendMsgIcon">arrow_upward</span></button>
@@ -1283,24 +1292,44 @@ async function openThread(otherEmail, user) {
     return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }
 
+  function formatFileSize(bytes) {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  }
+  function fileBubbleHtml(m) {
+    return `
+      <a class="msg-file" href="${escHtml(m.fileUrl)}" download="${escHtml(m.fileName || '')}" target="_blank" rel="noopener">
+        <span class="material-symbols-rounded">description</span>
+        <div class="msg-file-info">
+          <div class="msg-file-name">${escHtml(m.fileName || 'file')}</div>
+          ${m.fileSize ? `<div class="msg-file-size">${formatFileSize(m.fileSize)}</div>` : ''}
+        </div>
+      </a>
+    `;
+  }
+
   function bubbleInnerHtml(m) {
     if (m.audioUrl) return audioBubbleHtml(m);
     if (m.videoUrl) return `<video class="msg-video" src="${escHtml(m.videoUrl)}" controls playsinline></video>`;
     if (m.imageUrl) return `<img class="msg-image" src="${escHtml(m.imageUrl)}" alt="" onclick="openImageLightbox('${escHtml(m.imageUrl)}')">`;
+    if (m.fileUrl) return fileBubbleHtml(m);
     return parseMsgMarkdown(m.text || '');
   }
 
   function replySnippet(m) {
-    if (m.audioUrl) return '🎤 Voice message';
-    if (m.videoUrl) return '🎥 Video';
-    if (m.imageUrl) return '📷 Photo';
+    if (m.audioUrl) return '🎤 voice message';
+    if (m.videoUrl) return '🎥 video';
+    if (m.imageUrl) return '📷 photo';
+    if (m.fileUrl) return '📎 ' + (m.fileName || 'file');
     return (m.text || '').slice(0, 80);
   }
 
   function startReply(m) {
     cancelEdit();
     replyingTo = { id: m.id, senderEmail: m.senderEmail, text: replySnippet(m) };
-    replyIndicatorText.textContent = `Replying to ${m.senderEmail === user.email ? 'yourself' : getProfile(otherEmail, null, null).name}: ${replySnippet(m)}`;
+    replyIndicatorText.textContent = `replying to ${m.senderEmail === user.email ? 'yourself' : getProfile(otherEmail, null, null).name}: ${replySnippet(m)}`;
     replyIndicator.style.display = 'flex';
     msgInput.focus();
   }
@@ -1364,7 +1393,7 @@ async function openThread(otherEmail, user) {
             <div class="msg-meta-row">
               <div class="msg-actions">
                 <button class="msg-action-btn" data-reply-id="${escHtml(m.id)}" title="reply"><span class="material-symbols-rounded">reply</span></button>
-                ${mine(m) && !m.audioUrl && !m.imageUrl ? `<button class="msg-action-btn" data-edit-id="${escHtml(m.id)}" title="edit"><span class="material-symbols-rounded">edit</span></button>` : ''}
+                ${mine(m) && !m.audioUrl && !m.imageUrl && !m.videoUrl && !m.fileUrl ? `<button class="msg-action-btn" data-edit-id="${escHtml(m.id)}" title="edit"><span class="material-symbols-rounded">edit</span></button>` : ''}
                 ${mine(m) ? `<button class="msg-action-btn danger" data-delete-id="${escHtml(m.id)}" title="delete"><span class="material-symbols-rounded">delete</span></button>` : ''}
               </div>
               <span class="msg-time">${time}</span>
@@ -1543,30 +1572,51 @@ async function openThread(otherEmail, user) {
     if (e.key === 'Escape' && replyingTo) cancelReply();
   });
 
-  imageInput.addEventListener('change', async () => {
-    const file = imageInput.files[0];
-    imageInput.value = '';
-    if (!file) return;
+  async function sendMediaFile(file) {
     const isVideo = file.type.startsWith('video/');
+    const isImage = file.type.startsWith('image/');
+    const kind = isVideo ? 'video' : isImage ? 'image' : 'file';
     // /upload-message's own server-side cap (MAX_MESSAGE_BYTES) is 20MB —
     // checking client-side too just gives a faster, friendlier error than
     // waiting for the upload to fail partway through.
-    if (file.size > MAX_MESSAGE_MEDIA_BYTES) { showToast(`File must be under ${Math.round(MAX_MESSAGE_MEDIA_BYTES / 1024 / 1024)}MB`); return; }
+    if (file.size > MAX_MESSAGE_MEDIA_BYTES) { showToast(`file must be under ${Math.round(MAX_MESSAGE_MEDIA_BYTES / 1024 / 1024)}MB`); return; }
     sendBtn.disabled = true;
     try {
-      const url = await uploadFile(file, '/upload-message', undefined, frac => showUploadToast(`Uploading ${isVideo ? 'video' : 'image'}… ${Math.round(frac * 100)}%`));
-      await touchConversation(isVideo ? '🎥 Video' : '📷 Photo');
+      const url = await uploadFile(file, '/upload-message', undefined, frac => showUploadToast(`uploading ${kind}… ${Math.round(frac * 100)}%`));
+      await touchConversation(isVideo ? '🎥 video' : isImage ? '📷 photo' : '📎 ' + file.name);
       await addDoc(collection(db, 'conversations', convoId, 'messages'), {
         senderEmail: user.email,
-        ...(isVideo ? { videoUrl: url } : { imageUrl: url }),
+        ...(isVideo ? { videoUrl: url } : isImage ? { imageUrl: url } : { fileUrl: url, fileName: file.name, fileSize: file.size }),
         createdAt: serverTimestamp(),
       });
       playSendSound();
     } catch (err) {
-      showToast(`Could not send ${isVideo ? 'video' : 'image'}: ` + err.message);
+      showToast(`could not send ${kind}: ` + err.message);
     } finally {
       hideUploadToast();
       sendBtn.disabled = false;
+    }
+  }
+  imageInput.addEventListener('change', async () => {
+    const file = imageInput.files[0];
+    imageInput.value = '';
+    if (!file) return;
+    await sendMediaFile(file);
+  });
+  // Paste an image straight from the clipboard (screenshot, copied image,
+  // etc.) instead of only being able to attach via the file picker.
+  msgInput.addEventListener('paste', async e => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          await sendMediaFile(file);
+        }
+        break;
+      }
     }
   });
 
