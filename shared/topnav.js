@@ -61,8 +61,15 @@ function injectStyles() {
     }
     .oe-navbar-bg {
       position: absolute; inset: 0; z-index: -1;
+      /* blur(12px) here was a real, measurable source of scroll jank —
+         backdrop-filter forces the browser to recompute the blur over
+         whatever's newly visible behind this bar on every scroll frame,
+         and cost scales up sharply with radius. 6px is roughly a quarter
+         the compute of 12px and still reads as frosted, especially backed
+         by an already-fairly-opaque background color doing most of the
+         legibility work on its own. */
       background-color: rgba(var(--md-sys-color-background-rgb, 17, 19, 24), 0.8);
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
       border-bottom: 1px solid rgba(var(--md-sys-color-outline-rgb, 67, 71, 78), 0.4);
     }
     .oe-nav-logo {
@@ -371,7 +378,10 @@ function injectStyles() {
       .oe-bottom-nav {
         display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 140;
         background-color: rgba(var(--md-sys-color-background-rgb, 17, 19, 24), 0.92);
-        backdrop-filter: blur(12px);
+        /* Same blur-radius cost issue as .oe-navbar-bg above, and this one's
+           arguably worse for scroll FPS since it's fixed (not sticky) and
+           always on screen at the bottom of every mobile page. */
+        backdrop-filter: blur(6px);
         border-top: 1px solid rgba(var(--md-sys-color-outline-rgb, 67, 71, 78), 0.4);
         padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px));
       }

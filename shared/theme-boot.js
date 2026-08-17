@@ -427,7 +427,7 @@
       name: 'light glass',
       swatch: '#1c1f26',
       dark: false,
-      glassBlur: 'blur(24px) saturate(1.2)',
+      glassBlur: 'blur(10px) saturate(1.15)',
       bgImage: 'radial-gradient(circle at 15% 20%, rgba(255,255,255,0.7) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(0,0,0,0.05) 0%, transparent 45%), radial-gradient(circle at 50% 90%, rgba(255,255,255,0.5) 0%, transparent 50%)',
       vars: {
         '--md-sys-color-background': '#f2f2f2',
@@ -453,7 +453,7 @@
       name: 'dark glass',
       swatch: '#f0f0f0',
       dark: true,
-      glassBlur: 'blur(24px) saturate(1.2)',
+      glassBlur: 'blur(10px) saturate(1.15)',
       bgImage: 'radial-gradient(circle at 15% 20%, rgba(255,255,255,0.09) 0%, transparent 45%), radial-gradient(circle at 85% 15%, rgba(255,255,255,0.05) 0%, transparent 45%), radial-gradient(circle at 50% 90%, rgba(0,0,0,0.3) 0%, transparent 50%)',
       vars: {
         '--md-sys-color-background': '#161616',
@@ -857,6 +857,16 @@
   // var(--md-sys-color-surface) as its background, so it's the full set of
   // "card-like" surfaces across the site, not a guess. If a new page adds
   // another surface-colored component, add its selector here too.
+  //
+  // glassBlur was originally blur(24px) saturate(1.2) — real scroll jank on
+  // these two themes specifically, and worse than the navbar's own blur
+  // (see topnav.js): this selector list includes every feed-card class
+  // (.ig-card, .post-card, .video-card, .comment, ...), so scrolling any
+  // feed means several of these are simultaneously visible and each pays
+  // its own blur-recompute cost every frame. Cut to blur(10px) saturate
+  // (1.15) — still reads as glass, much cheaper per element, and the
+  // saving compounds since it's now cheaper times however many cards are
+  // on screen at once instead of just once.
   var GLASS_SELECTORS = [
     '.anon-panel', '.article-card', '.card', '.chat-inputbar', '.comment',
     '.comment-form textarea', '.comment-form-locked', '.convo-row', '.file-card',
