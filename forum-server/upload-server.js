@@ -258,9 +258,25 @@ function optionalAuth(req, res, next) {
   });
 }
 
+// The unique prefix (base36 timestamp + a few random chars) is still what
+// actually guarantees no collisions and keeps a file unguessable when it's
+// not otherwise indexed anywhere (see the /upload comment below) — that
+// property matters and isn't going away. What used to happen on top of it
+// was throwing the original filename away entirely, so "vacation-photo.jpg"
+// became indistinguishable noise like "1786889001234-x7f2a9.jpg" in every
+// URL, download, and file listing. Now the slugified original name rides
+// along after the unique prefix instead, so the same upload becomes
+// something like "m5k2p1x9-vacation-photo.jpg" — still can't collide or be
+// guessed, but at least reads as what it is.
 function makeFilename(originalname) {
   const ext = path.extname(originalname).slice(0, 10).replace(/[^a-zA-Z0-9.]/g, '');
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+  const base = path.basename(originalname, path.extname(originalname))
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  const unique = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  return (base ? `${unique}-${base}` : unique) + ext;
 }
 
 // ── Forum post/comment attachments — any signed-in user, any file type. ──
