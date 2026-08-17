@@ -240,7 +240,8 @@
   }
 
   /* Explicitly re-enable text selection rules on user narrative copy blocks */
-  .hero-section h1, .hero-section p, .interactive-card h3, .interactive-card p, .nav-logo span {
+  .hero-section h1, .hero-section p, .interactive-card h3, .interactive-card p, .nav-logo span,
+  .ig-caption, .ig-text-post-title, .ig-description, .ig-modal-full-body, .ig-comment-body-wrap {
     -webkit-user-select: text;
     -ms-user-select: text;
     user-select: text;
@@ -593,8 +594,35 @@
   .ig-comment-avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
   .ig-comment-body-wrap { flex: 1; min-width: 0; font-size: 13px; line-height: 1.4; }
   .ig-comment-body-wrap strong { font-weight: 600; margin-right: 6px; }
-  .ig-comment-time { font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; }
+  .ig-comment-reply-quote {
+    display: block; border-left: 2px solid var(--md-sys-color-outline); opacity: 0.75; padding: 2px 8px; margin-bottom: 4px;
+    font-size: 11px; color: var(--md-sys-color-on-surface-variant);
+  }
+  .ig-comment-meta-row { display: flex; align-items: center; gap: 12px; margin-top: 3px; }
+  .ig-comment-time { font-size: 11px; color: var(--md-sys-color-on-surface-variant); }
+  .ig-comment-like-count { font-size: 11px; color: var(--md-sys-color-on-surface-variant); font-weight: 500; }
+  .ig-comment-reply-btn {
+    background: none; border: none; color: var(--md-sys-color-on-surface-variant); font-size: 11px; font-weight: 600;
+    cursor: pointer; font-family: inherit; padding: 0;
+  }
+  .ig-comment-reply-btn:hover { color: var(--md-sys-color-on-surface); }
+  .ig-comment-like-btn {
+    background: none; border: none; color: var(--md-sys-color-on-surface-variant); cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 4px; align-self: flex-start;
+  }
+  .ig-comment-like-btn .material-symbols-rounded { font-size: 16px; }
+  .ig-comment-like-btn.liked { color: #ff3040; }
   .ig-comment-empty { text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; padding: 30px 0; }
+  .ig-comment-reply-indicator {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: var(--md-sys-color-surface-variant); border-radius: 12px; padding: 8px 12px; font-size: 12px;
+    margin: 0 20px 10px;
+  }
+  .ig-comment-reply-indicator button {
+    width: 22px; height: 22px; border-radius: 50%; border: none; background: none; color: inherit; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .ig-comment-reply-indicator button:hover { background: var(--md-sys-state-hover); }
   .ig-comment-form { display: flex; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--md-sys-color-outline-variant); flex-shrink: 0; }
   .ig-comment-input {
     flex: 1; background: var(--md-sys-color-surface-variant); border: none; border-radius: 20px;
@@ -683,11 +711,15 @@
   <div class="ig-comment-modal" id="igCommentModal">
     <div class="ig-comment-modal-header">
       <h3 id="igModalTitle">post</h3>
-      <button class="ig-comment-close-btn" id="igCommentCloseBtn" title="Close"><span class="material-symbols-rounded">close</span></button>
+      <button class="ig-comment-close-btn" id="igCommentCloseBtn" title="close"><span class="material-symbols-rounded">close</span></button>
     </div>
     <div class="ig-modal-scroll" id="igModalScroll">
       <div id="igPostContent"></div>
       <div class="ig-comment-list" id="igCommentList"></div>
+    </div>
+    <div class="ig-comment-reply-indicator" id="igCommentReplyIndicator" style="display:none;">
+      <span id="igCommentReplyIndicatorText"></span>
+      <button type="button" id="igCommentReplyCancelBtn" title="cancel reply"><span class="material-symbols-rounded">close</span></button>
     </div>
     <form class="ig-comment-form" id="igCommentForm">
       <textarea class="ig-comment-input" id="igCommentInput" rows="1" placeholder="add a comment…" maxlength="2000"></textarea>
@@ -738,7 +770,7 @@
   import {
     db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser, sendNotification,
     onAccountChange, SERVER_ENDPOINT, MAX_IMAGE_BYTES, uploadFile, linkifyMentions,
-  } from './shared/account.js?v=27';
+  } from './shared/account.js?v=28';
   import { mountTopNav } from './shared/topnav.js?v=22';
   import { mountFooter } from './shared/footer.js?v=5';
   import { createDropdown } from './shared/dropdown.js?v=2';
@@ -1516,6 +1548,8 @@
     let openItemId = null;
     let openItemKind = null;
     let unsubComments = null;
+    let replyingToComment = null; // { id, authorName } | null
+    let lastRenderedComments = [];
     const commentOverlay = document.getElementById('igCommentOverlay');
     const commentModal = document.getElementById('igCommentModal');
     const modalTitle = document.getElementById('igModalTitle');
@@ -1525,6 +1559,35 @@
     const commentForm = document.getElementById('igCommentForm');
     const commentInput = document.getElementById('igCommentInput');
     const commentSendBtn = document.getElementById('igCommentSendBtn');
+    const commentReplyIndicator = document.getElementById('igCommentReplyIndicator');
+    const commentReplyIndicatorText = document.getElementById('igCommentReplyIndicatorText');
+
+    function startCommentReply(comment, authorName) {
+      replyingToComment = { id: comment.id, authorName };
+      commentReplyIndicatorText.textContent = `replying to ${authorName}`;
+      commentReplyIndicator.style.display = 'flex';
+      commentInput.focus();
+    }
+    function cancelCommentReply() {
+      replyingToComment = null;
+      commentReplyIndicator.style.display = 'none';
+    }
+    document.getElementById('igCommentReplyCancelBtn').addEventListener('click', cancelCommentReply);
+
+    async function toggleCommentLike(kind, itemId, commentId, comment) {
+      const user = getCurrentUser();
+      if (!user) { showToast('sign in to like'); return; }
+      const uid = user.uid;
+      const liked = (comment.upvoters || []).includes(uid);
+      try {
+        await updateDoc(
+          doc(db, kind === 'video' ? 'videos' : 'posts', itemId, 'comments', commentId),
+          { upvoters: liked ? arrayRemove(uid) : arrayUnion(uid) }
+        );
+      } catch (err) {
+        showToast('could not like: ' + err.message);
+      }
+    }
 
     function postContentHtml(item, kind) {
       const profile = getProfile(item.authorEmail, item.authorName, item.authorPhoto);
@@ -1620,24 +1683,51 @@
     }
 
     function renderComments(comments) {
+      lastRenderedComments = comments;
       if (comments.length === 0) {
-        commentList.innerHTML = '<div class="ig-comment-empty">No comments yet. Be the first!</div>';
+        commentList.innerHTML = '<div class="ig-comment-empty">no comments yet. be the first!</div>';
         return;
       }
+      const user = getCurrentUser();
       commentList.innerHTML = comments.map(c => {
         const profile = getProfile(c.authorEmail, c.authorName, c.authorPhoto);
+        const liked = user && (c.upvoters || []).includes(user.uid);
+        const likeCount = (c.upvoters || []).length;
         return `
-          <div class="ig-comment-row">
+          <div class="ig-comment-row" data-comment-id="${escHtml(c.id)}">
             <img class="ig-comment-avatar" src="${profile.photo || ''}" alt="">
             <div class="ig-comment-body-wrap">
+              ${c.replyToId ? `<span class="ig-comment-reply-quote">replying to ${escHtml(c.replyToAuthorName || 'a comment')}</span>` : ''}
               <div><strong>${escHtml(profile.name)}${officialBadgeHtml(c.authorEmail)}</strong>${linkify(c.body)}</div>
-              <div class="ig-comment-time">${timeAgo(c._date)}</div>
+              <div class="ig-comment-meta-row">
+                <span class="ig-comment-time">${timeAgo(c._date)}</span>
+                ${likeCount > 0 ? `<span class="ig-comment-like-count">${likeCount} like${likeCount === 1 ? '' : 's'}</span>` : ''}
+                <button type="button" class="ig-comment-reply-btn" data-comment-reply="${escHtml(c.id)}" data-comment-author="${escHtml(profile.name)}">reply</button>
+              </div>
             </div>
+            <button type="button" class="ig-comment-like-btn ${liked ? 'liked' : ''}" data-comment-like="${escHtml(c.id)}" title="${liked ? 'unlike' : 'like'}">
+              <span class="material-symbols-rounded">${liked ? 'favorite' : 'favorite_border'}</span>
+            </button>
           </div>
         `;
       }).join('');
       commentList.scrollTop = commentList.scrollHeight;
     }
+    commentList.addEventListener('click', e => {
+      const likeBtn = e.target.closest('[data-comment-like]');
+      if (likeBtn) {
+        const row = likeBtn.closest('[data-comment-id]');
+        const commentId = row.dataset.commentId;
+        const comment = lastRenderedComments.find(c => c.id === commentId);
+        if (comment) toggleCommentLike(openItemKind, openItemId, commentId, comment);
+        return;
+      }
+      const replyBtn = e.target.closest('[data-comment-reply]');
+      if (replyBtn) {
+        startCommentReply({ id: replyBtn.dataset.commentReply }, replyBtn.dataset.commentAuthor);
+        return;
+      }
+    });
 
     function renderModalPostContent() {
       const item = (openItemKind === 'video' ? latestVideos : latestPosts).find(x => x.id === openItemId);
@@ -1670,9 +1760,10 @@
     function openComments(kind, itemId) {
       openItemKind = kind;
       openItemId = itemId;
+      cancelCommentReply();
       commentOverlay.classList.add('open');
       commentModal.classList.add('open');
-      commentList.innerHTML = '<div class="ig-comment-empty">Loading…</div>';
+      commentList.innerHTML = '<div class="ig-comment-empty">loading…</div>';
 
       renderModalPostContent();
 
@@ -1687,7 +1778,7 @@
           await Promise.all(comments.map(c => ensureProfileLoaded(c.authorEmail)));
           if (openItemId === itemId) renderComments(comments);
         },
-        () => { commentList.innerHTML = '<div class="ig-comment-empty">Could not load comments.</div>'; }
+        () => { commentList.innerHTML = '<div class="ig-comment-empty">could not load comments.</div>'; }
       );
     }
 
@@ -1719,6 +1810,8 @@
           authorPhoto: user.photoURL,
           upvoters: [],
           downvoters: [],
+          replyToId: replyingToComment ? replyingToComment.id : null,
+          replyToAuthorName: replyingToComment ? replyingToComment.authorName : null,
           createdAt: serverTimestamp(),
         });
         const list = openItemKind === 'video' ? latestVideos : latestPosts;
@@ -1726,6 +1819,7 @@
         await updateDoc(doc(db, collectionName, openItemId), { commentCount: (item?.commentCount || 0) + 1 });
         if (item) sendNotification({ recipientEmail: item.authorEmail, type: 'comment', targetKind: openItemKind, targetId: openItemId, preview: body.slice(0, 120) });
         commentInput.value = '';
+        cancelCommentReply();
       } catch (err) {
         showToast('could not comment: ' + err.message);
       } finally {
