@@ -1041,13 +1041,66 @@ function resetNewGroupModalChrome() {
 newGroupOverlay.addEventListener('click', resetNewGroupModalChrome);
 document.getElementById('newGroupCancelBtn').addEventListener('click', resetNewGroupModalChrome);
 
-// Group threads are text-only for now (no voice/image attach, editing, or
-// reply-threading yet) — those are tightly coupled to openThread's DM-only
-// closures below, and duplicating that much complexity for a first pass
-// risked more bugs than it was worth. Core messaging + admin management
-// first; can layer the rest on once this is solid.
+// Shared with openThread's DM bubbles below — hoisted to module scope
+// since neither closes over anything DM-specific.
+function formatFileSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+function fileBubbleHtml(m) {
+  return `
+    <a class="msg-file" href="${escHtml(m.fileUrl)}" download="${escHtml(m.fileName || '')}" target="_blank" rel="noopener">
+      <span class="material-symbols-rounded">description</span>
+      <div class="msg-file-info">
+        <div class="msg-file-name">${escHtml(m.fileName || 'file')}</div>
+        ${m.fileSize ? `<div class="msg-file-size">${formatFileSize(m.fileSize)}</div>` : ''}
+      </div>
+    </a>
+  `;
+}
+function mediaBubbleHtml(m) {
+  if (m.videoUrl) return `<video class="msg-video" src="${escHtml(m.videoUrl)}" controls playsinline></video>`;
+  if (m.imageUrl) return `<img class="msg-image" src="${escHtml(m.imageUrl)}" alt="" onclick="openImageLightbox('${escHtml(m.imageUrl)}')">`;
+  if (m.fileUrl) return fileBubbleHtml(m);
+  return null;
+}
+
+// Group threads now share image/video/file attach with the DM thread
+// (sendMediaFileTo below is generic over which collection to post into),
+// but still no voice messages, editing, or reply-threading — those stay
+// tightly coupled to openThread's DM-only closures, and duplicating that
+// much complexity risked more bugs than it was worth for a first pass.
 function formatClockTimeGroup(date) {
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+// Generic over DM vs group: posts a media/file message into whatever
+// messages subcollection + conversation-preview doc the caller points at,
+// so both openThread and openGroupThread can share one upload/send path
+// instead of two near-identical copies.
+async function sendMediaFileTo(file, { messagesRef, sendBtn, user, touchPreview }) {
+  const isVideo = file.type.startsWith('video/');
+  const isImage = file.type.startsWith('image/');
+  const kind = isVideo ? 'video' : isImage ? 'image' : 'file';
+  if (file.size > MAX_MESSAGE_MEDIA_BYTES) { showToast(`file must be under ${Math.round(MAX_MESSAGE_MEDIA_BYTES / 1024 / 1024)}MB`); return; }
+  sendBtn.disabled = true;
+  try {
+    const url = await uploadFile(file, '/upload-message', undefined, frac => showUploadToast(`uploading ${kind}… ${Math.round(frac * 100)}%`));
+    await touchPreview(isVideo ? '🎥 video' : isImage ? '📷 photo' : '📎 ' + file.name);
+    await addDoc(messagesRef, {
+      senderEmail: user.email,
+      ...(isVideo ? { videoUrl: url } : isImage ? { imageUrl: url } : { fileUrl: url, fileName: file.name, fileSize: file.size }),
+      createdAt: serverTimestamp(),
+    });
+    playSendSound();
+  } catch (err) {
+    showToast(`could not send ${kind}: ` + err.message);
+  } finally {
+    hideUploadToast();
+    sendBtn.disabled = false;
+  }
 }
 
 async function openGroupThread(groupId, user) {
@@ -1084,6 +1137,7 @@ async function openGroupThread(groupId, user) {
       <div class="msg-list" id="msgList"></div>
       <div class="thread-inputbar">
         <div class="input-normal" id="inputNormal">
+          <label class="attach-btn" title="send a file"><span class="material-symbols-rounded">attach_file</span><input type="file" id="groupImageInput"></label>
           <textarea id="msgInput" placeholder="message…" rows="1"></textarea>
           <button class="send-btn" id="sendMsgBtn" title="send"><span class="material-symbols-rounded">arrow_upward</span></button>
         </div>
@@ -1107,6 +1161,40 @@ async function openGroupThread(groupId, user) {
   msgInput.addEventListener('input', autoGrowGroupInput);
   const sendBtn = document.getElementById('sendMsgBtn');
 
+  async function touchGroupPreview(text) {
+    await updateDoc(doc(db, 'groups', groupId), {
+      lastMessage: text,
+      lastMessageSenderEmail: user.email,
+      lastMessageAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  }
+  const sendGroupMediaFile = file => sendMediaFileTo(file, {
+    messagesRef: collection(db, 'groups', groupId, 'messages'),
+    sendBtn, user, touchPreview: touchGroupPreview,
+  });
+  const groupImageInput = document.getElementById('groupImageInput');
+  groupImageInput.addEventListener('change', async () => {
+    const file = groupImageInput.files[0];
+    groupImageInput.value = '';
+    if (!file) return;
+    await sendGroupMediaFile(file);
+  });
+  msgInput.addEventListener('paste', async e => {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          await sendGroupMediaFile(file);
+        }
+        break;
+      }
+    }
+  });
+
   function markGroupRead() {
     setDoc(doc(db, 'groups', groupId, 'reads', user.email), { readAt: serverTimestamp() }).catch(() => {});
     localStorage.setItem('oe-group-read-' + groupId, String(Date.now()));
@@ -1114,7 +1202,7 @@ async function openGroupThread(groupId, user) {
   markGroupRead();
 
   async function deleteGroupMessage(m) {
-    if (!(await oeConfirm('Delete this message?', { danger: true }))) return;
+    if (!(await oeConfirm('delete this message?', { danger: true }))) return;
     try {
       await deleteDoc(doc(db, 'groups', groupId, 'messages', m.id));
     } catch (err) {
@@ -1134,7 +1222,7 @@ async function openGroupThread(groupId, user) {
           <div class="msg ${mine(m) ? 'mine' : ''}">
             <div class="msg-col">
               ${!mine(m) ? `<div class="msg-sender-name">${escHtml(senderProfile.name)}</div>` : ''}
-              <div class="msg-bubble">${parseMsgMarkdown(m.text || '')}</div>
+              <div class="msg-bubble">${mediaBubbleHtml(m) ?? parseMsgMarkdown(m.text || '')}</div>
               <div class="msg-meta-row">
                 ${mine(m) ? `
                   <div class="msg-actions">
@@ -1180,12 +1268,7 @@ async function openGroupThread(groupId, user) {
         text,
         createdAt: serverTimestamp(),
       });
-      await updateDoc(doc(db, 'groups', groupId), {
-        lastMessage: text.slice(0, 200),
-        lastMessageSenderEmail: user.email,
-        lastMessageAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      await touchGroupPreview(text.slice(0, 200));
     } catch (err) {
       showToast('could not send: ' + err.message);
     } finally {
@@ -1292,30 +1375,9 @@ async function openThread(otherEmail, user) {
     return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }
 
-  function formatFileSize(bytes) {
-    if (!bytes) return '';
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
-    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
-  }
-  function fileBubbleHtml(m) {
-    return `
-      <a class="msg-file" href="${escHtml(m.fileUrl)}" download="${escHtml(m.fileName || '')}" target="_blank" rel="noopener">
-        <span class="material-symbols-rounded">description</span>
-        <div class="msg-file-info">
-          <div class="msg-file-name">${escHtml(m.fileName || 'file')}</div>
-          ${m.fileSize ? `<div class="msg-file-size">${formatFileSize(m.fileSize)}</div>` : ''}
-        </div>
-      </a>
-    `;
-  }
-
   function bubbleInnerHtml(m) {
     if (m.audioUrl) return audioBubbleHtml(m);
-    if (m.videoUrl) return `<video class="msg-video" src="${escHtml(m.videoUrl)}" controls playsinline></video>`;
-    if (m.imageUrl) return `<img class="msg-image" src="${escHtml(m.imageUrl)}" alt="" onclick="openImageLightbox('${escHtml(m.imageUrl)}')">`;
-    if (m.fileUrl) return fileBubbleHtml(m);
-    return parseMsgMarkdown(m.text || '');
+    return mediaBubbleHtml(m) ?? parseMsgMarkdown(m.text || '');
   }
 
   function replySnippet(m) {
@@ -1572,31 +1634,10 @@ async function openThread(otherEmail, user) {
     if (e.key === 'Escape' && replyingTo) cancelReply();
   });
 
-  async function sendMediaFile(file) {
-    const isVideo = file.type.startsWith('video/');
-    const isImage = file.type.startsWith('image/');
-    const kind = isVideo ? 'video' : isImage ? 'image' : 'file';
-    // /upload-message's own server-side cap (MAX_MESSAGE_BYTES) is 20MB —
-    // checking client-side too just gives a faster, friendlier error than
-    // waiting for the upload to fail partway through.
-    if (file.size > MAX_MESSAGE_MEDIA_BYTES) { showToast(`file must be under ${Math.round(MAX_MESSAGE_MEDIA_BYTES / 1024 / 1024)}MB`); return; }
-    sendBtn.disabled = true;
-    try {
-      const url = await uploadFile(file, '/upload-message', undefined, frac => showUploadToast(`uploading ${kind}… ${Math.round(frac * 100)}%`));
-      await touchConversation(isVideo ? '🎥 video' : isImage ? '📷 photo' : '📎 ' + file.name);
-      await addDoc(collection(db, 'conversations', convoId, 'messages'), {
-        senderEmail: user.email,
-        ...(isVideo ? { videoUrl: url } : isImage ? { imageUrl: url } : { fileUrl: url, fileName: file.name, fileSize: file.size }),
-        createdAt: serverTimestamp(),
-      });
-      playSendSound();
-    } catch (err) {
-      showToast(`could not send ${kind}: ` + err.message);
-    } finally {
-      hideUploadToast();
-      sendBtn.disabled = false;
-    }
-  }
+  const sendMediaFile = file => sendMediaFileTo(file, {
+    messagesRef: collection(db, 'conversations', convoId, 'messages'),
+    sendBtn, user, touchPreview: touchConversation,
+  });
   imageInput.addEventListener('change', async () => {
     const file = imageInput.files[0];
     imageInput.value = '';

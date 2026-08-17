@@ -190,9 +190,12 @@ service cloud.firestore {
             ||
             (request.resource.data.videoUrl is string
               && request.resource.data.videoUrl.size() > 0)
+            ||
+            (request.resource.data.fileUrl is string
+              && request.resource.data.fileUrl.size() > 0)
           );
-        // Only the sender can edit (text messages only — voice/image/video
-        // attachments stay immutable) or delete their own message.
+        // Only the sender can edit (text messages only — voice/image/video/
+        // file attachments stay immutable) or delete their own message.
         allow update: if isSignedIn() && request.auth.token.email == resource.data.senderEmail
           && onlyChanged(['text', 'edited', 'editedAt'])
           && request.resource.data.text is string
@@ -260,6 +263,8 @@ service cloud.firestore {
             (request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000)
             || (request.resource.data.audioUrl is string && request.resource.data.audioUrl.size() > 0 && request.resource.data.audioDuration is number)
             || (request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() > 0)
+            || (request.resource.data.videoUrl is string && request.resource.data.videoUrl.size() > 0)
+            || (request.resource.data.fileUrl is string && request.resource.data.fileUrl.size() > 0)
           );
         allow update: if isSignedIn() && request.auth.token.email == resource.data.senderEmail
           && onlyChanged(['text', 'edited', 'editedAt'])
