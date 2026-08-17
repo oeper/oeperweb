@@ -59,7 +59,14 @@ const MAX_MESSAGE_CHARS = 4000;
 // of plain text — sized for one resized image with comfortable margin, not
 // a whole conversation's worth.
 const MAX_IMAGE_CONTENT_CHARS = 6 * 1024 * 1024;
-const MAX_TOKENS = 1024;
+// Was 1024 — way too small: this model's reasoning alone regularly runs
+// several hundred tokens (sometimes over a thousand for anything requiring
+// back-and-forth deliberation, e.g. refusal decisions), and max_tokens caps
+// reasoning + answer combined per round. Cut off mid-reasoning before any
+// real answer, that ate the whole budget. Context window is 256k so there's
+// no real ceiling pushing back — chose 4096 as a generous-but-not-reckless
+// number for a personal site's usage.
+const MAX_TOKENS = 4096;
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const RATE_LIMIT_MAX = 20; // requests per IP per window, per isolate
 
@@ -115,6 +122,7 @@ async function streamOneRound(upstream, send) {
   const toolCallAcc = []; // sparse array indexed by the stream's own `index`
   let assistantContent = '';
   let sawToolCall = false;
+  let finishReason = null;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -131,6 +139,7 @@ async function streamOneRound(upstream, send) {
       try { evt = JSON.parse(payload); } catch { continue; }
       const choice = evt.choices && evt.choices[0];
       if (!choice) continue;
+      if (choice.finish_reason) finishReason = choice.finish_reason;
       const delta = choice.delta || {};
 
       if (delta.tool_calls) {
@@ -158,8 +167,20 @@ async function streamOneRound(upstream, send) {
     }
   }
 
+  const finishedWithToolCalls = sawToolCall && toolCallAcc.length > 0;
+  // Ran out of max_tokens (finish_reason 'length') without ever calling a
+  // tool or producing any real answer text — the whole budget went to
+  // reasoning. Rather than leave the client staring at a reasoning trace
+  // that just stops mid-sentence with no explanation (what prompted this),
+  // surface it as an actual, if apologetic, answer.
+  if (!finishedWithToolCalls && finishReason === 'length' && !assistantContent) {
+    const note = "(ran out of room to answer that — could you try rephrasing, or asking something more specific?)";
+    assistantContent = note;
+    send({ choices: [{ delta: { content: note } }] });
+  }
+
   return {
-    finishedWithToolCalls: sawToolCall && toolCallAcc.length > 0,
+    finishedWithToolCalls,
     toolCalls: toolCallAcc.filter(Boolean).map((tc, i) => ({
       id: tc.id || `call_${i}`,
       type: 'function',
