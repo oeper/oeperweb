@@ -114,9 +114,22 @@
   .msg-bubble ul { margin: 4px 0; padding-left: 20px; }
   .msg-bubble li { margin-bottom: 3px; }
   .msg-bubble code { background: rgba(127,127,127,0.2); border-radius: 4px; padding: 1px 5px; font-size: 0.9em; }
+  .msg-bubble .code-block-wrap {
+    background: rgba(0,0,0,0.25); border-radius: 10px; margin: 8px 0; overflow: hidden;
+  }
+  .msg-bubble .code-block-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 6px 8px 6px 14px; background: rgba(0,0,0,0.18); font-size: 12px;
+  }
+  .msg-bubble .code-block-lang { opacity: 0.7; text-transform: lowercase; }
+  .msg-bubble .code-block-copy-btn {
+    display: inline-flex; align-items: center; gap: 4px; border: none; background: none; color: inherit;
+    opacity: 0.7; cursor: pointer; font: inherit; font-size: 12px; padding: 4px 8px; border-radius: 6px;
+  }
+  .msg-bubble .code-block-copy-btn:hover { opacity: 1; background: rgba(127,127,127,0.2); }
+  .msg-bubble .code-block-copy-btn .material-symbols-rounded { font-size: 15px; }
   .msg-bubble pre.code-block {
-    background: rgba(0,0,0,0.25); border-radius: 10px; padding: 12px 14px; margin: 8px 0;
-    overflow-x: auto; font-size: 13px; line-height: 1.5;
+    padding: 12px 14px; margin: 0; overflow-x: auto; font-size: 13px; line-height: 1.5;
   }
   .msg-bubble pre.code-block code { background: none; padding: 0; }
   .msg-bubble a.md-btn {
@@ -141,10 +154,15 @@
   .thinking-block { margin-bottom: 8px; font-size: 13px; white-space: normal; }
   .thinking-summary {
     cursor: pointer; color: var(--md-sys-color-on-surface-variant); font-weight: 500;
-    display: inline-flex; align-items: center; gap: 4px; user-select: none;
+    display: inline-flex; align-items: center; gap: 4px; user-select: none; line-height: 1.2;
   }
   .thinking-summary:hover { color: var(--md-sys-color-on-surface); }
-  .thinking-caret { font-size: 18px; transition: transform 0.2s ease; }
+  /* Material Symbols glyphs carry a much taller line-height than their
+     font-size implies (the font's own internal metrics, not something
+     font-size alone controls) — without line-height:1 here this icon alone
+     was stretching the whole summary row noticeably taller than the text
+     next to it needed. */
+  .thinking-caret { font-size: 18px; line-height: 1; transition: transform 0.2s ease; }
   .thinking-block.open .thinking-caret { transform: rotate(180deg); }
   /* Used to animate open/close via the CSS grid 0fr->1fr row trick, but
      that collapsed unreliably in practice — the wrap/content elements
@@ -326,7 +344,7 @@
 </div>
 
 <script type="module">
-import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange } from './shared/account.js?v=27';
+import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange } from './shared/account.js?v=28';
 import { mountTopNav } from './shared/topnav.js?v=22';
 import { mountFooter } from './shared/footer.js?v=5';
 import { createDropdown } from './shared/dropdown.js?v=2';
@@ -365,7 +383,15 @@ function parseAiMarkdown(text) {
   const codeBlocks = [];
   const withPlaceholders = String(text || '').replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => {
     const idx = codeBlocks.length;
-    codeBlocks.push(`<pre class="code-block"><code>${escHtml(code.replace(/\n$/, ''))}</code></pre>`);
+    codeBlocks.push(`
+      <div class="code-block-wrap">
+        <div class="code-block-header">
+          <span class="code-block-lang">${escHtml(lang || 'text')}</span>
+          <button type="button" class="code-block-copy-btn" data-copy-code><span class="material-symbols-rounded">content_copy</span>copy</button>
+        </div>
+        <pre class="code-block"><code>${escHtml(code.replace(/\n$/, ''))}</code></pre>
+      </div>
+    `);
     return `OEPERAICODEBLOCK${idx}ENDBLOCK`;
   });
 
@@ -596,6 +622,16 @@ const sendBtn = document.getElementById('sendBtn');
 // replaced on every streamed chunk, which would drop a directly-attached
 // listener each time.
 messagesEl.addEventListener('click', e => {
+  const copyBtn = e.target.closest('[data-copy-code]');
+  if (copyBtn) {
+    const code = copyBtn.closest('.code-block-wrap').querySelector('code').textContent;
+    navigator.clipboard.writeText(code).then(() => {
+      const original = copyBtn.innerHTML;
+      copyBtn.innerHTML = '<span class="material-symbols-rounded">check</span>copied';
+      setTimeout(() => { copyBtn.innerHTML = original; }, 1500);
+    });
+    return;
+  }
   const summary = e.target.closest('.thinking-summary');
   if (!summary) return;
   const block = summary.closest('.thinking-block');
@@ -873,11 +909,8 @@ async function resizeImage(file, maxDim = 1024, quality = 0.85) {
   return new File([blob], 'image.jpg', { type: 'image/jpeg' });
 }
 
-attachInput.addEventListener('change', async () => {
-  const file = attachInput.files[0];
-  attachInput.value = '';
-  if (!file) return;
-  if (!file.type.startsWith('image/')) { await oeAlert('Only images are supported right now'); return; }
+async function handleAttachedImage(file) {
+  if (!file.type.startsWith('image/')) { await oeAlert('only images are supported right now'); return; }
   try {
     pendingImageFile = await resizeImage(file);
   } catch {
@@ -885,11 +918,37 @@ attachInput.addEventListener('change', async () => {
   }
   attachPreviewImg.src = URL.createObjectURL(pendingImageFile);
   attachPreview.style.display = 'flex';
+}
+
+attachInput.addEventListener('change', async () => {
+  const file = attachInput.files[0];
+  attachInput.value = '';
+  if (!file) return;
+  await handleAttachedImage(file);
 });
 document.getElementById('attachRemoveBtn').addEventListener('click', () => {
   pendingImageFile = null;
   attachPreview.style.display = 'none';
   attachPreviewImg.src = '';
+});
+
+// Paste an image straight from the clipboard (screenshot, copied image,
+// etc.) instead of only being able to attach via the file picker — the
+// textarea still gets whatever pasted text there is normally, this just
+// also catches an image if the clipboard has one.
+inputEl.addEventListener('paste', async e => {
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.kind === 'file' && item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      if (file) {
+        e.preventDefault();
+        await handleAttachedImage(file);
+      }
+      break;
+    }
+  }
 });
 
 async function uploadAnonImage(file) {
