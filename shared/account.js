@@ -523,11 +523,23 @@ async function ensureProfileSeeded(user) {
   if ((!profile || !profile.photoURL) && user.photoURL) patch.photoURL = user.photoURL;
   if (!profile || !profile.createdAt) patch.createdAt = serverTimestamp();
   if (Object.keys(patch).length === 0) return;
-  try {
-    await setDoc(doc(db, 'users', user.email), patch, { merge: true });
-    delete profileCache[user.email]; // force a fresh read so serverTimestamp-resolved fields populate correctly
-    notify();
-  } catch {}
+  // One retry on top of the original attempt — a transient failure here
+  // (network blip mid-sign-in, tab closed right after) used to just leave
+  // the account permanently missing its join date/handle/avatar until the
+  // user happened to sign in again, since nothing else ever retries this
+  // write. Two tries in the same page load catches most one-off hiccups
+  // without needing a return visit.
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      await setDoc(doc(db, 'users', user.email), patch, { merge: true });
+      delete profileCache[user.email]; // force a fresh read so serverTimestamp-resolved fields populate correctly
+      notify();
+      return;
+    } catch (err) {
+      if (attempt === 2) console.error('ensureProfileSeeded failed after retry:', err);
+      else await new Promise(r => setTimeout(r, 800));
+    }
+  }
 }
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
