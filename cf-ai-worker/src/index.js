@@ -253,6 +253,77 @@ async function searchWeb(args, env) {
   }
 }
 
+// ── Live oeper.dev user lookups ──────────────────────────────────────
+// Firestore's REST API respects the project's own security rules, and
+// users/{email} + handles/{handle} are both public-read (allow read: if
+// true) — see firestore.rules — so this works with a plain unauthenticated
+// GET, no service account or Admin SDK needed. handles/{handle} maps a
+// @handle to the email it belongs to; users/{email} is the actual profile.
+//
+// OWNER_EMAILS mirrors shared/account.js's list of the same name — not a
+// secret either way, since that file ships to every browser as plain JS.
+// Needed here only to reproduce officialBadgeHtml()'s badge logic (owners
+// show badgeOverride, everyone else shows badge) — raw emails are never
+// part of what this tool returns to the model, only handle/displayName/
+// bio/badge/memberSince, matching the site's own "never show a raw email"
+// rule in getProfile().
+const FIREBASE_PROJECT_ID = 'oepernet-1683535959256';
+const OWNER_EMAILS = ['sanhackerman@gmail.com', 'taejiding@gmail.com'];
+
+function parseFirestoreValue(v) {
+  if (!v) return null;
+  if ('stringValue' in v) return v.stringValue;
+  if ('integerValue' in v) return Number(v.integerValue);
+  if ('doubleValue' in v) return v.doubleValue;
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('timestampValue' in v) return v.timestampValue;
+  if ('mapValue' in v) return parseFirestoreFields((v.mapValue && v.mapValue.fields) || {});
+  if ('arrayValue' in v) return ((v.arrayValue && v.arrayValue.values) || []).map(parseFirestoreValue);
+  return null;
+}
+function parseFirestoreFields(fields) {
+  const out = {};
+  for (const [k, v] of Object.entries(fields || {})) out[k] = parseFirestoreValue(v);
+  return out;
+}
+async function firestoreGetDoc(path) {
+  const res = await fetch(`https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/${path}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Firestore lookup failed (HTTP ${res.status})`);
+  const data = await res.json();
+  return parseFirestoreFields(data.fields || {});
+}
+
+function resolveBadgeLabel(profile, email) {
+  if (OWNER_EMAILS.includes(email)) {
+    const override = profile.badgeOverride;
+    if (override && override.hidden) return null;
+    if (override && override.label) return override.label;
+    return 'OFFICIAL';
+  }
+  return (profile.badge && profile.badge.label) || null;
+}
+
+async function lookupOeperUser(args) {
+  const handle = String((args && args.handle) || '').trim().replace(/^@/, '').toLowerCase();
+  if (!handle) return JSON.stringify({ error: 'no handle given' });
+  try {
+    const handleDoc = await firestoreGetDoc(`handles/${encodeURIComponent(handle)}`);
+    if (!handleDoc || !handleDoc.email) return JSON.stringify({ error: `no oeper.dev user found with handle @${handle}` });
+    const profile = await firestoreGetDoc(`users/${encodeURIComponent(handleDoc.email)}`);
+    if (!profile) return JSON.stringify({ error: `@${handle} exists but has no profile data yet` });
+    return JSON.stringify({
+      handle,
+      displayName: profile.displayName || null,
+      bio: profile.bio || null,
+      badge: resolveBadgeLabel(profile, handleDoc.email),
+      memberSince: profile.createdAt || null,
+    });
+  } catch (err) {
+    return JSON.stringify({ error: 'lookup failed: ' + err.message });
+  }
+}
+
 // Plain schema only — no executable `function` field. @cloudflare/ai-utils'
 // runWithTools() takes tools in that combined shape and is supposed to
 // dispatch to the function itself, but empirically it never actually
@@ -274,8 +345,19 @@ const TOOLS = [
       required: ['query'],
     },
   },
+  {
+    name: 'lookup_oeper_user',
+    description: 'Look up real, live data about a specific oeper.dev user by their @handle — display name, bio, badge, and member-since date. Use this whenever someone asks about a specific @handle rather than guessing.',
+    parameters: {
+      type: 'object',
+      properties: {
+        handle: { type: 'string', description: 'The handle to look up, with or without the leading @' },
+      },
+      required: ['handle'],
+    },
+  },
 ];
-const TOOL_FUNCTIONS = { search_web: searchWeb };
+const TOOL_FUNCTIONS = { search_web: searchWeb, lookup_oeper_user: lookupOeperUser };
 const MAX_TOOL_ROUNDS = 3;
 
 async function handleChat(request, env) {

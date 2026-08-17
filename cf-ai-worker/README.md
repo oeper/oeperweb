@@ -86,10 +86,14 @@ actual AI service, not a local model) — useful for testing changes to
   "keep casual overuse in check," not a hard global limit. Fine for a
   personal site's AI page; would need Durable Objects or KV for anything
   stronger.
-- **Tool use is back, but web search only, and it still streams.**
-  ai-proxy.js had get_current_datetime / calculate / search_oeper_dev; this
-  has just `search_web`, backed by the Brave Search API (see setup step 5
-  above). `src/index.js`'s `streamToolLoop()` reads each round of the
+- **Tool use is back — web search and live oeper.dev user lookups, both
+  streaming.** ai-proxy.js had get_current_datetime / calculate /
+  search_oeper_dev; this has `search_web` (Brave Search API, see setup step
+  5 above) and `lookup_oeper_user` (real profile data — display name, bio,
+  badge, member-since — for a given @handle, straight from Firestore's
+  public-read REST API, no service account needed since users/{email} and
+  handles/{handle} are both `allow read: if true` in firestore.rules).
+  `src/index.js`'s `streamToolLoop()` reads each round of the
   conversation as an actual SSE stream from `env.AI.run(..., {tools,
   stream: true})` — confirmed working despite Cloudflare's docs not saying
   either way — and forwards reasoning/content deltas to the client live as

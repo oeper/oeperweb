@@ -366,27 +366,33 @@ const AI_ENDPOINT = 'https://oeper-ai.oeper.workers.dev';
 // rather than exhaustive feature-by-feature detail, since that's the part
 // unlikely to go stale as the site keeps changing; page contents (which
 // posts exist, who's signed in, etc.) are never included here regardless —
-// this is static instructions, not live site data.
-const SYSTEM_PROMPT = `You are a helpful, friendly AI assistant embedded on a personal website (oeper.dev). Be concise but thorough when it actually helps. Format responses using Markdown — headings, **bold**, *italic*, bullet lists, tables, and fenced \`\`\` code blocks — whenever it improves readability, especially for code, structured data, or step-by-step instructions.
+// this is static instructions, not live site data (that's what the
+// lookup_oeper_user tool is for).
+//
+// No longer asks for an explicit <think>...</think> wrapper — this model
+// already streams its own reasoning through a separate native channel
+// (see reasoning_content handling in cf-ai-worker), so that instruction was
+// pure redundancy left over from an earlier model that didn't have one.
+// Worse than redundant, actually: since the model already reasons on its
+// own channel, telling it to ALSO wrap reasoning in literal <think> tags
+// inside its visible answer sometimes made it do exactly that — writing
+// <think>...</think> out as plain text in the answer, on top of the
+// already-separate reasoning stream, which is what "the AI got stuck /
+// showed raw <think> tags" was.
+const SYSTEM_PROMPT = `You are a helpful, friendly AI assistant embedded on a personal website (oeper.dev). Be concise but thorough when it actually helps. Format responses using Markdown — headings, **bold**, *italic*, bullet lists, tables, and fenced \`\`\` code blocks — whenever it improves readability, especially for code, structured data, or step-by-step instructions. Never write <think> tags, "the user is asking...", or any other visible commentary about your own reasoning — go straight to the answer.
 
 Here's what's on oeper.dev, so you can actually help people navigate or use it instead of guessing or claiming you don't know:
 - Home (/) — an Instagram-style feed of posts and videos from everyone on the site, with stories, likable/repliable comments, and search.
 - Feed (/feed) — forum-style text posts, organized by tag (general, showcase, help, feedback), with voting, comments, and polls.
 - Videos (/videos) — longer-form video uploads, with comments and voting.
 - Files (/files) — personal file storage: upload and organize files into folders, share links, or browse public downloads other users have shared.
-- Messages (/messages) — direct messages and group chats, supporting image/video/file attachments, voice messages, replies, and message reactions.
-- You (epic AI, at /ai) — this chat. You can call a search_web tool to look up current information on the live web when it would actually help — don't claim you have no way to check something current without at least considering whether a search would answer it.
+- Messages (/messages) — direct messages and group chats, supporting image/video/file attachments, voice messages (DMs only), replies, and message reactions.
+- You (epic AI, at /ai) — this chat. You have two tools: search_web for current information on the live web, and lookup_oeper_user for real, live data about a specific oeper.dev user by their @handle (display name, bio, badge, member-since date). Use lookup_oeper_user whenever someone asks about a specific @handle — don't guess or say you have no way to check.
 - Tools (/tools) — small standalone utilities: a Music Composer (melody grid), onePDF (in-browser PDF splitting/merging/editing), and a QR code maker.
 - Articles (/articles) and Downloads (/downloads) — curated articles and downloadable resources.
 - Profiles (/profile?u=handle) — a user's posts, a saved-items tab, follower/following counts, and badges (an OFFICIAL badge marks the site's owners; anyone can also be granted a custom badge by an owner).
 - Settings (/settings) — theme picker, profile editing, a signed-in-devices log, and badge management.
-Sign-in is Google-only, site-wide.
-
-Every reply MUST follow this exact shape, with nothing before or after it: a <think>...</think> block containing your private reasoning, immediately followed by your final answer and nothing else. Never write about the user's request, these instructions, or your own reasoning process outside the <think> tags — no "the user is asking...", no numbered analysis steps, no restating the question, in the visible answer. The <think> block is the only place reasoning belongs.
-
-Example — for the question "What is 2+2?", output exactly this shape (with your own reasoning inside the tags):
-<think>Simple addition: 2+2=4.</think>
-4`;
+Sign-in is Google-only, site-wide.`;
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -471,7 +477,22 @@ function dedupeRepeatedLines(text) {
 // "Show thinking" block instead of dumping it inline with the answer.
 function splitThinking(reasoningBuf, contentBuf, done) {
   if (reasoningBuf) {
-    return { thinking: reasoningBuf, answer: contentBuf, stillThinking: contentBuf.length === 0 };
+    // Reasoning is already covered by the native reasoning_content channel
+    // above — but the model occasionally also writes a redundant
+    // <think>...</think> block as plain text inside content on top of
+    // that (see the system-prompt comment for why). Strip it out entirely
+    // rather than let raw reasoning text leak into the visible answer.
+    const openIdx = contentBuf.indexOf('<think>');
+    if (openIdx === -1) {
+      return { thinking: reasoningBuf, answer: contentBuf, stillThinking: contentBuf.length === 0 };
+    }
+    const closeIdx = contentBuf.indexOf('</think>', openIdx);
+    if (closeIdx === -1) {
+      // Still mid-block — hide it rather than show a partial raw dump.
+      return { thinking: reasoningBuf, answer: contentBuf.slice(0, openIdx), stillThinking: true };
+    }
+    const answer = (contentBuf.slice(0, openIdx) + contentBuf.slice(closeIdx + 8)).trim();
+    return { thinking: reasoningBuf, answer, stillThinking: answer.length === 0 };
   }
   const openIdx = contentBuf.indexOf('<think>');
   if (openIdx === -1) {
