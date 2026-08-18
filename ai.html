@@ -60,12 +60,28 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  .page { position: relative; max-width: 760px; margin: 0 auto; padding: 40px 24px 24px; min-height: 100vh; display: flex; flex-direction: column; }
+  /* Gemini-style shell: a chats sidebar next to the main chat column. The
+     sidebar (#chatsPanel) is a fixed-position off-canvas drawer at narrow
+     widths (unchanged interaction from before, just moved to the left) and
+     becomes a permanently-visible in-flow column at >=900px — see the
+     media query near .chats-panel below. .ai-shell only actually matters
+     as a flex row on desktop; on mobile the drawer is position:fixed and
+     doesn't participate in flex layout, so .page fills the width either way. */
+  .ai-shell { display: flex; align-items: flex-start; }
 
-  .header { margin-bottom: 20px; }
-  .header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .page { position: relative; flex: 1; min-width: 0; max-width: 760px; margin: 0 auto; padding: 40px 24px 24px; min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* Sticky so the sidebar toggle/new-chat shortcut stay reachable without
+     scrolling back to the top of a long conversation — this is what "i
+     dont wanna have to scroll all the way up to look at my chats" was
+     about. Sticks right below the sitewide topnav (72px, see topnav.js). */
+  .header {
+    position: sticky; top: 72px; z-index: 90; margin: -10px -24px 10px; padding: 10px 24px;
+    background: var(--md-sys-color-background);
+  }
+  .header-row { display: flex; align-items: center; gap: 12px; }
   .header h1 {
-    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 400;
+    flex: 1; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 400;
     letter-spacing: -0.5px;
     background: linear-gradient(90deg, var(--md-sys-color-primary), var(--md-sys-color-on-secondary-container));
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
@@ -75,6 +91,10 @@
     color: var(--md-sys-color-on-surface); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
   .header-icon-btn:hover { background-color: var(--md-sys-state-hover); }
+  /* Only meaningful on mobile, where the sidebar is a drawer someone has to
+     open — hidden at the desktop breakpoint since the sidebar's always
+     visible there and its own "new chat" button already covers this. */
+  .sidebar-toggle-group { display: flex; gap: 8px; }
 
   .chat-shell { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .chat-messages { flex: 1; display: flex; flex-direction: column; padding-bottom: 16px; transition: opacity 0.15s ease; }
@@ -293,12 +313,17 @@
     font-family: inherit; cursor: pointer; text-decoration: underline; padding: 0;
   }
 
-  /* Chats panel */
+  /* Chats sidebar — an off-canvas drawer on the left below ~900px (open via
+     #chatsBtn, closed via the backdrop or #chatsCloseBtn), and a permanent
+     in-flow sidebar next to .page above that, Gemini-style. Same DOM/JS
+     either way (openChatsPanel/closeChatsPanel just toggle the .open class,
+     which is harmless-but-irrelevant once the desktop rule below forces it
+     visible) — only the CSS positioning changes per breakpoint. */
   .chats-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
   .chats-overlay.open { opacity: 1; pointer-events: all; }
   .chats-panel {
-    position: fixed; top: 0; right: 0; bottom: 0; width: min(340px, 88vw); background: var(--md-sys-color-background);
-    box-shadow: -12px 0 32px rgba(0,0,0,0.4); z-index: 201; transform: translateX(100%);
+    position: fixed; top: 0; left: 0; bottom: 0; width: min(300px, 84vw); background: var(--md-sys-color-background);
+    box-shadow: 12px 0 32px rgba(0,0,0,0.4); z-index: 201; transform: translateX(-100%);
     transition: transform 0.25s; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px;
   }
   .chats-panel.open { transform: translateX(0); }
@@ -325,61 +350,77 @@
   }
   .chat-row-delete:hover { opacity: 1; background: rgba(0,0,0,0.15); }
   .chat-row-delete .material-symbols-rounded { font-size: 16px; }
+
+  @media (min-width: 900px) {
+    .chats-panel {
+      position: sticky; top: 72px; height: calc(100vh - 72px); flex-shrink: 0;
+      transform: none; box-shadow: none; border-right: 1px solid var(--md-sys-color-outline-variant);
+    }
+    .chats-overlay { display: none; }
+    .chats-panel-header, #chatsCloseBtn { display: none; }
+    .sidebar-toggle-group { display: none; }
+  }
 </style>
 </head>
 <body>
 
-<div class="page">
-  <header class="header">
-    <div class="header-row">
-      <h1>epic AI</h1>
-      <button id="chatsBtn" class="header-icon-btn" title="chats"><span class="material-symbols-rounded">forum</span></button>
+<div class="ai-shell">
+  <div class="chats-panel" id="chatsPanel">
+    <div class="chats-panel-header">
+      <h3>chats</h3>
+      <button id="chatsCloseBtn" class="header-icon-btn" title="close" style="width:36px;height:36px;"><span class="material-symbols-rounded">close</span></button>
     </div>
-  </header>
+    <button id="newChatBtn" class="new-chat-btn"><span class="material-symbols-rounded">add</span> new chat</button>
+    <div class="chats-list" id="chatsList"></div>
+  </div>
 
-  <div class="chat-shell">
-    <div class="chat-messages" id="chatMessages">
-      <div class="chat-empty" id="chatEmpty">
-        <span class="material-symbols-rounded">auto_awesome</span>
-        <p>ask epic AI anything.</p>
+  <div class="page">
+    <header class="header">
+      <div class="header-row">
+        <div class="sidebar-toggle-group">
+          <button id="chatsBtn" class="header-icon-btn" title="chats"><span class="material-symbols-rounded">menu</span></button>
+          <button id="newChatHeaderBtn" class="header-icon-btn" title="new chat"><span class="material-symbols-rounded">add</span></button>
+        </div>
+        <h1>epic AI</h1>
       </div>
-    </div>
+    </header>
 
-    <div class="chat-input-area">
-      <div class="attach-preview" id="attachPreview" style="display:none;">
-        <div class="attach-preview-item">
-          <img id="attachPreviewImg" src="" alt="">
-          <button id="attachRemoveBtn" class="attach-remove-btn" title="remove"><span class="material-symbols-rounded">close</span></button>
+    <div class="chat-shell">
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-empty" id="chatEmpty">
+          <span class="material-symbols-rounded">auto_awesome</span>
+          <p>ask epic AI anything.</p>
         </div>
       </div>
 
-      <div class="model-bar" id="modelBar"></div>
+      <div class="chat-input-area">
+        <div class="attach-preview" id="attachPreview" style="display:none;">
+          <div class="attach-preview-item">
+            <img id="attachPreviewImg" src="" alt="">
+            <button id="attachRemoveBtn" class="attach-remove-btn" title="remove"><span class="material-symbols-rounded">close</span></button>
+          </div>
+        </div>
 
-      <div class="chat-inputbar">
-        <label class="attach-btn" title="attach an image">
-          <span class="material-symbols-rounded">add_photo_alternate</span>
-          <input type="file" id="attachInput" accept="image/*">
-        </label>
-        <textarea id="chatInput" placeholder="message…" rows="1"></textarea>
-        <button id="sendBtn" class="send-btn" title="send"><span class="material-symbols-rounded">arrow_upward</span></button>
+        <div class="model-bar" id="modelBar"></div>
+
+        <div class="chat-inputbar">
+          <label class="attach-btn" title="attach an image">
+            <span class="material-symbols-rounded">add_photo_alternate</span>
+            <input type="file" id="attachInput" accept="image/*">
+          </label>
+          <textarea id="chatInput" placeholder="message…" rows="1"></textarea>
+          <button id="sendBtn" class="send-btn" title="send"><span class="material-symbols-rounded">arrow_upward</span></button>
+        </div>
       </div>
+      <p class="chat-footnote">
+        runs on a small on-device model over my home network — replies can be slow, or briefly unavailable if the host is offline.
+        <button id="clearBtn" class="link-btn">clear chat</button>
+      </p>
     </div>
-    <p class="chat-footnote">
-      runs on a small on-device model over my home network — replies can be slow, or briefly unavailable if the host is offline.
-      <button id="clearBtn" class="link-btn">clear chat</button>
-    </p>
   </div>
 </div>
 
 <div class="chats-overlay" id="chatsOverlay"></div>
-<div class="chats-panel" id="chatsPanel">
-  <div class="chats-panel-header">
-    <h3>chats</h3>
-    <button id="chatsCloseBtn" class="header-icon-btn" title="close" style="width:36px;height:36px;"><span class="material-symbols-rounded">close</span></button>
-  </div>
-  <button id="newChatBtn" class="new-chat-btn"><span class="material-symbols-rounded">add</span> new chat</button>
-  <div class="chats-list" id="chatsList"></div>
-</div>
 
 <script type="module">
 import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange } from './shared/account.js?v=28';
@@ -969,6 +1010,11 @@ async function regenerateResponse(index) {
   if (chat.messages.length > index) renderChatFromHistory();
 }
 renderChatFromHistory();
+// The sidebar used to only get populated when the drawer was opened — fine
+// when it was purely an on-demand overlay, but now it's permanently visible
+// at the desktop breakpoint (see .chats-panel's media query), where nothing
+// ever calls openChatsPanel() to trigger that lazy render.
+renderChatsList();
 
 function renderChatsList() {
   const list = document.getElementById('chatsList');
@@ -1033,6 +1079,7 @@ document.getElementById('chatsBtn').addEventListener('click', openChatsPanel);
 document.getElementById('chatsCloseBtn').addEventListener('click', closeChatsPanel);
 chatsOverlay.addEventListener('click', closeChatsPanel);
 document.getElementById('newChatBtn').addEventListener('click', startNewChat);
+document.getElementById('newChatHeaderBtn').addEventListener('click', startNewChat);
 
 // ── Cross-device sync (Firestore, signed-in only) ──────────────────────
 // Last-write-wins per chat (by updatedAt), not a full CRDT merge — good
