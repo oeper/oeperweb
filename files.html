@@ -166,8 +166,50 @@
   .modal-box .oe-dropdown-btn { background: var(--md-sys-color-surface-variant); border-radius: 12px; padding: 12px 14px; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
-  .stats { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 24px; padding-left: 4px; }
+  .stats { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 24px; padding-left: 4px; display: flex; gap: 16px; flex-wrap: wrap; }
   .stats strong { color: var(--md-sys-color-primary); font-weight: 500; }
+
+  /* Drag-and-drop upload — a full-page overlay shown only while a file drag
+     is over the window, per document-level dragenter/dragleave counting
+     (see the JS) rather than per-element, so the overlay doesn't flicker
+     as the drag crosses child element boundaries inside the page. */
+  .drop-overlay {
+    position: fixed; inset: 0; z-index: 300; display: none;
+    align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+    background: color-mix(in srgb, var(--md-sys-color-background) 85%, transparent);
+    border: 3px dashed var(--md-sys-color-primary); margin: 16px; border-radius: 24px;
+    pointer-events: none; color: var(--md-sys-color-primary);
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 18px; font-weight: 500;
+  }
+  .drop-overlay.active { display: flex; }
+  .drop-overlay .material-symbols-rounded { font-size: 48px; }
+
+  /* Bulk selection */
+  .file-checkbox {
+    width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--md-sys-color-outline);
+    flex-shrink: 0; cursor: pointer; background: none; display: flex; align-items: center; justify-content: center;
+    color: transparent; transition: background-color 0.15s, border-color 0.15s;
+  }
+  .file-checkbox .material-symbols-rounded { font-size: 16px; }
+  .file-checkbox.checked { background: var(--md-sys-color-primary); border-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .file-card.dragging { opacity: 0.4; }
+  .folder-card.drop-target { box-shadow: 0 0 0 2px var(--md-sys-color-primary); background-color: var(--md-sys-color-hover-surface); }
+  .breadcrumb-item.drop-target { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+
+  .bulk-bar {
+    position: sticky; top: 0; z-index: 30; display: none; align-items: center; gap: 12px;
+    background-color: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);
+    border-radius: 16px; padding: 10px 10px 10px 18px; margin-bottom: 16px;
+  }
+  .bulk-bar.active { display: flex; }
+  .bulk-bar-count { font-size: 14px; font-weight: 500; flex: 1; }
+  .bulk-bar button {
+    display: inline-flex; align-items: center; gap: 6px; border: none; background: none; color: inherit;
+    cursor: pointer; font: inherit; font-size: 13px; font-weight: 500; padding: 8px 12px; border-radius: 100px;
+  }
+  .bulk-bar button:hover { background: rgba(0,0,0,0.1); }
+  .bulk-bar button.dangerous:hover { background: color-mix(in srgb, var(--md-sys-color-error) 25%, transparent); color: var(--md-sys-color-error); }
+  .bulk-bar button .material-symbols-rounded { font-size: 18px; }
 
   .file-list { display: flex; flex-direction: column; gap: 12px; }
   .file-card {
@@ -242,9 +284,9 @@
   </header>
 
   <div class="anon-panel" id="anonPanel" style="display:none;">
-    <p class="anon-hint">Upload without signing in — up to 10 files, up to 1GB each. Files over 25MB are temporary and get deleted 2 hours after upload. Each link below is the only way to get back to that file afterward, so save them somewhere.</p>
+    <p class="anon-hint">upload without signing in — up to 10 files, up to 1GB each. files over 25MB are temporary and get deleted 2 hours after upload. each link below is the only way to get back to that file afterward, so save them somewhere.</p>
     <label class="upload-btn" style="align-self:flex-start;">
-      <span class="material-symbols-rounded">upload</span> Upload files
+      <span class="material-symbols-rounded">upload</span> upload files
       <input type="file" id="anonUploadInput" multiple>
     </label>
     <div class="upload-progress" id="anonUploadProgress" style="display:none;">
@@ -269,10 +311,10 @@
         </button>
       </div>
       <button type="button" class="toolbar-btn" id="newFolderBtn">
-        <span class="material-symbols-rounded">create_new_folder</span> New folder
+        <span class="material-symbols-rounded">create_new_folder</span> new folder
       </button>
       <label class="upload-btn">
-        <span class="material-symbols-rounded">upload</span> Upload
+        <span class="material-symbols-rounded">upload</span> upload
         <input type="file" id="uploadInput" multiple>
       </label>
     </div>
@@ -282,19 +324,35 @@
     </div>
   </div>
 
+  <div class="bulk-bar" id="bulkBar">
+    <span class="bulk-bar-count" id="bulkBarCount"></span>
+    <button type="button" id="bulkMoveBtn"><span class="material-symbols-rounded">drive_file_move</span>move</button>
+    <button type="button" id="bulkDownloadBtn"><span class="material-symbols-rounded">download</span>download</button>
+    <button type="button" class="dangerous" id="bulkDeleteBtn"><span class="material-symbols-rounded">delete</span>delete</button>
+    <button type="button" id="bulkCancelBtn"><span class="material-symbols-rounded">close</span></button>
+  </div>
+
   <div class="breadcrumb-row" id="breadcrumbRow" style="display:none;"></div>
 
-  <div class="stats" id="stats" style="display:none;"><span>total: <strong id="visibleCount">0</strong> items</span></div>
+  <div class="stats" id="stats" style="display:none;">
+    <span>total: <strong id="visibleCount">0</strong> items</span>
+    <span id="storageStats" style="display:none;"><strong id="storageUsed">0 B</strong> used across <strong id="storageFileCount">0</strong> files</span>
+  </div>
 
   <div class="file-list" id="fileList"></div>
 
   <div class="empty" id="emptyState">
     <span class="material-symbols-rounded" id="emptyIcon">login</span>
-    <p id="emptyText">Sign in to view and upload your files.</p>
+    <p id="emptyText">sign in to view and upload your files.</p>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="drop-overlay" id="dropOverlay">
+  <span class="material-symbols-rounded">upload_file</span>
+  drop to upload
+</div>
 
 <div class="modal-overlay" id="folderModalOverlay"></div>
 <div class="modal-box" id="folderModal">
@@ -357,6 +415,7 @@ let folders = []; // { email, path }[]
 let scope = 'mine'; // 'mine' | 'all' (owners only)
 let currentFolder = ''; // path within the space currently being browsed
 let currentOwnerEmail = null; // scope 'all' only: null = "pick a user" screen, else whose space we're in
+const selectedFiles = new Set(); // filenames — bulk-select, current folder view only
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function isImage(name) { return /\.(jpe?g|png|gif|webp|bmp|svg|avif)$/i.test(name); }
@@ -479,7 +538,7 @@ document.getElementById('moveCancelBtn').addEventListener('click', () => closeMo
 
 async function apiCall(path, body) {
   const user = getCurrentUser();
-  if (!user) throw new Error('Sign in first');
+  if (!user) throw new Error('sign in first');
   const idToken = await user.getIdToken();
   const res = await fetch(SERVER_ENDPOINT + path, {
     method: body ? 'POST' : 'GET',
@@ -495,7 +554,7 @@ async function apiCall(path, body) {
 }
 async function apiDelete(path, body) {
   const user = getCurrentUser();
-  if (!user) throw new Error('Sign in first');
+  if (!user) throw new Error('sign in first');
   const idToken = await user.getIdToken();
   const res = await fetch(SERVER_ENDPOINT + path, {
     method: 'DELETE',
@@ -562,11 +621,23 @@ document.getElementById('renameSaveBtn').addEventListener('click', async () => {
 });
 document.getElementById('renameInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('renameSaveBtn').click(); });
 
+async function moveFileTo(filename, folder) {
+  try {
+    await apiCall('/move-file', { filename, folder: folder || '' });
+    return true;
+  } catch (err) {
+    showToast('could not move: ' + err.message);
+    return false;
+  }
+}
+
 let movingFilename = null;
+let bulkMovingFilenames = null; // set instead of movingFilename when the bulk-bar's "move" opened this same modal
 const moveFolderDropdown = createDropdown([], { value: '', block: true });
 document.getElementById('moveFolderSlot').appendChild(moveFolderDropdown.el);
 function openMoveModal(f) {
   movingFilename = f.filename;
+  bulkMovingFilenames = null;
   const mine = folders.filter(x => x.email === spaceEmail());
   moveFolderDropdown.setOptions([
     { value: '', label: '(root — no folder)' },
@@ -576,15 +647,23 @@ function openMoveModal(f) {
   openModal('moveModalOverlay', 'moveModal');
 }
 document.getElementById('moveConfirmBtn').addEventListener('click', async () => {
-  if (!movingFilename) return;
   const folder = moveFolderDropdown.getValue();
-  try {
-    await apiCall('/move-file', { filename: movingFilename, folder });
+  if (bulkMovingFilenames) {
+    const filenames = bulkMovingFilenames;
+    bulkMovingFilenames = null;
+    const results = await Promise.all(filenames.map(fn => moveFileTo(fn, folder)));
+    const okCount = results.filter(Boolean).length;
+    closeModal('moveModalOverlay', 'moveModal');
+    showToast(okCount === filenames.length ? `moved ${okCount} file${okCount === 1 ? '' : 's'}` : `moved ${okCount} of ${filenames.length}`);
+    selectedFiles.clear();
+    loadList();
+    return;
+  }
+  if (!movingFilename) return;
+  if (await moveFileTo(movingFilename, folder)) {
     closeModal('moveModalOverlay', 'moveModal');
     showToast('moved');
     loadList();
-  } catch (err) {
-    showToast('could not move: ' + err.message);
   }
 });
 
@@ -639,17 +718,20 @@ function renderBreadcrumb() {
   if (files === null || inUserList) { row.style.display = 'none'; return; }
   row.style.display = 'flex';
 
+  // dropPath: undefined for crumbs that aren't a real folder in the current
+  // space (the "go back to the user list" crumb in scope 'all') — those get
+  // no drop-target wiring below, since there's no valid move destination.
   const crumbs = [];
   if (scope === 'all') {
-    crumbs.push({ label: 'Everyone', onClick: () => { currentOwnerEmail = null; currentFolder = ''; render(); } });
-    crumbs.push({ label: currentOwnerEmail, onClick: () => { currentFolder = ''; render(); } });
+    crumbs.push({ label: 'everyone', onClick: () => { currentOwnerEmail = null; currentFolder = ''; render(); } });
+    crumbs.push({ label: currentOwnerEmail, dropPath: '', onClick: () => { currentFolder = ''; render(); } });
   } else {
-    crumbs.push({ label: 'My files', onClick: () => { currentFolder = ''; render(); } });
+    crumbs.push({ label: 'my files', dropPath: '', onClick: () => { currentFolder = ''; render(); } });
   }
   const segments = currentFolder ? currentFolder.split('/') : [];
   segments.forEach((seg, i) => {
     const path = segments.slice(0, i + 1).join('/');
-    crumbs.push({ label: seg, onClick: () => { currentFolder = path; render(); } });
+    crumbs.push({ label: seg, dropPath: path, onClick: () => { currentFolder = path; render(); } });
   });
 
   row.innerHTML = crumbs.map((c, i) => `
@@ -657,8 +739,13 @@ function renderBreadcrumb() {
     <button type="button" class="breadcrumb-item${i === crumbs.length - 1 ? ' current' : ''}" data-idx="${i}">${escHtml(c.label)}</button>
   `).join('');
   row.querySelectorAll('.breadcrumb-item').forEach((el, i) => {
-    if (i === crumbs.length - 1) return; // current location, not clickable
-    el.addEventListener('click', crumbs[i].onClick);
+    // The current (last) crumb is still a valid drop target — dragging a
+    // file "up" from a subfolder while viewing its own parent folder means
+    // dropping right onto this bar's last segment, not an ancestor of it.
+    if (i !== crumbs.length - 1) el.addEventListener('click', crumbs[i].onClick);
+    if (isOwnSpace() && crumbs[i].dropPath !== undefined && crumbs[i].dropPath !== currentFolder) {
+      makeDropTarget(el, () => crumbs[i].dropPath);
+    }
   });
 }
 
@@ -671,6 +758,8 @@ function render() {
   const list = document.getElementById('fileList');
   observeList(list);
   const empty = document.getElementById('emptyState');
+  selectedFiles.clear();
+  updateBulkBar();
 
   if (scope === 'all' && currentOwnerEmail === null) {
     renderUserList();
@@ -695,16 +784,30 @@ function render() {
   filesHere.forEach(f => list.appendChild(buildCard(f)));
   document.getElementById('visibleCount').textContent = folderChildren.length + filesHere.length;
 
+  // Storage total is across the whole space (every folder), not just what's
+  // visible in the current folder/search — "how much am I using overall"
+  // is the useful number here, not a per-folder count.
+  const storageStatsEl = document.getElementById('storageStats');
+  if (files !== null && space) {
+    const spaceFiles = (files || []).filter(f => f.email === space);
+    const totalBytes = spaceFiles.reduce((sum, f) => sum + (f.size || 0), 0);
+    document.getElementById('storageUsed').textContent = formatSize(totalBytes);
+    document.getElementById('storageFileCount').textContent = spaceFiles.length;
+    storageStatsEl.style.display = '';
+  } else {
+    storageStatsEl.style.display = 'none';
+  }
+
   const totalEmpty = folderChildren.length === 0 && filesHere.length === 0;
   empty.style.display = totalEmpty ? 'block' : 'none';
   if (totalEmpty) {
     const [icon, text] = !user
-      ? ['login', 'Sign in to view and upload your files.']
+      ? ['login', 'sign in to view and upload your files.']
       : files === null
-        ? ['cloud_off', "Files aren't set up yet."]
+        ? ['cloud_off', "files aren't set up yet."]
         : q
           ? ['search_off', 'no files match your search.']
-          : ['folder_open', "Nothing here yet."];
+          : ['folder_open', "nothing here yet."];
     document.getElementById('emptyIcon').textContent = icon;
     document.getElementById('emptyText').textContent = text;
   }
@@ -749,6 +852,31 @@ function renderUserList() {
   }
 }
 
+// Drag-and-drop relocation: a file card being dragged carries its filename
+// as plain text (see buildCard) — folder cards and breadcrumb segments both
+// accept the drop, since either is a valid "move it here" target. Shares
+// the same moveFileTo() the kebab-menu "move to folder" modal uses, so
+// there's exactly one place that actually calls /move-file.
+function makeDropTarget(el, getTargetPath) {
+  el.addEventListener('dragover', e => {
+    if (!Array.from(e.dataTransfer.types || []).includes('text/plain')) return;
+    e.preventDefault();
+    el.classList.add('drop-target');
+  });
+  el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
+  el.addEventListener('drop', async e => {
+    if (!Array.from(e.dataTransfer.types || []).includes('text/plain')) return;
+    e.preventDefault();
+    el.classList.remove('drop-target');
+    const filename = e.dataTransfer.getData('text/plain');
+    if (!filename) return;
+    if (await moveFileTo(filename, getTargetPath())) {
+      showToast('moved');
+      loadList();
+    }
+  });
+}
+
 function buildFolderCard(fo) {
   const card = document.createElement('div');
   card.className = 'folder-card';
@@ -765,9 +893,10 @@ function buildFolderCard(fo) {
   card.addEventListener('click', () => { currentFolder = fo.path; render(); });
   if (isOwnSpace()) {
     card.appendChild(buildKebabMenu([
-      { label: 'Delete folder', icon: 'delete', dangerous: true, onClick: () => deleteFolder(fo.path) },
+      { label: 'delete folder', icon: 'delete', dangerous: true, onClick: () => deleteFolder(fo.path) },
     ]));
     card.querySelector('.kebab-wrap').addEventListener('click', e => e.stopPropagation());
+    makeDropTarget(card, () => fo.path);
   }
   return card;
 }
@@ -777,6 +906,7 @@ function buildCard(f) {
   card.className = 'file-card';
   const user = getCurrentUser();
   const mineOrOwner = user && (f.email === user.email || currentIsOwner());
+  const movable = mineOrOwner && !f.untracked;
 
   let thumbHtml;
   if (isImage(f.name)) thumbHtml = `<img class="file-thumb" src="${f.url}" alt="" loading="lazy">`;
@@ -785,13 +915,14 @@ function buildCard(f) {
   else thumbHtml = `<div class="file-thumb"><span class="material-symbols-rounded">${iconFor(f.name)}</span></div>`;
 
   card.innerHTML = `
+    ${mineOrOwner ? `<button type="button" class="file-checkbox" data-checkbox draggable="false" title="select"><span class="material-symbols-rounded">check</span></button>` : ''}
     ${thumbHtml}
     <div class="file-main">
       <div class="file-name">${escHtml(f.name)}</div>
-      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.untracked ? ' · Unknown owner' : ''}${f.expiresAt ? ` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
+      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.untracked ? ' · unknown owner' : ''}${f.expiresAt ? ` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
       ${isAudio(f.name) ? `<audio class="file-audio-player" controls preload="metadata" src="${f.url}"></audio>` : ''}
     </div>
-    <div class="file-actions">
+    <div class="file-actions" draggable="false">
       <button class="icon-btn" data-copy title="copy link"><span class="material-symbols-rounded">link</span></button>
       <a class="icon-btn" href="${f.url}" target="_blank" rel="noopener" download title="download"><span class="material-symbols-rounded">download</span></a>
     </div>
@@ -799,12 +930,34 @@ function buildCard(f) {
 
   card.querySelector('[data-copy]').addEventListener('click', () => copyToClipboard(f.url));
 
+  const checkbox = card.querySelector('[data-checkbox]');
+  if (checkbox) {
+    checkbox.classList.toggle('checked', selectedFiles.has(f.filename));
+    checkbox.addEventListener('click', e => {
+      e.stopPropagation();
+      if (selectedFiles.has(f.filename)) selectedFiles.delete(f.filename);
+      else selectedFiles.add(f.filename);
+      checkbox.classList.toggle('checked', selectedFiles.has(f.filename));
+      updateBulkBar();
+    });
+  }
+
+  if (movable) {
+    card.draggable = true;
+    card.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', f.filename);
+      e.dataTransfer.effectAllowed = 'move';
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  }
+
   if (mineOrOwner) {
     const menuItems = [
-      { label: 'Rename', icon: 'edit', onClick: () => openRenameModal(f) },
+      { label: 'rename', icon: 'edit', onClick: () => openRenameModal(f) },
     ];
-    if (!f.untracked) menuItems.push({ label: 'Move to folder', icon: 'drive_file_move', onClick: () => openMoveModal(f) });
-    menuItems.push({ label: 'Delete', icon: 'delete', dangerous: true, onClick: () => deleteFile(f.filename) });
+    if (!f.untracked) menuItems.push({ label: 'move to folder', icon: 'drive_file_move', onClick: () => openMoveModal(f) });
+    menuItems.push({ label: 'delete', icon: 'delete', dangerous: true, onClick: () => deleteFile(f.filename) });
     const kebab = buildKebabMenu(menuItems);
     card.querySelector('.file-actions').appendChild(kebab);
   }
@@ -833,6 +986,73 @@ async function deleteFile(filename) {
   }
 }
 
+// ── Bulk selection bar ──────────────────────────────────────
+function updateBulkBar() {
+  const count = selectedFiles.size;
+  document.getElementById('bulkBar').classList.toggle('active', count > 0);
+  document.getElementById('bulkBarCount').textContent = `${count} selected`;
+}
+document.getElementById('bulkCancelBtn').addEventListener('click', () => {
+  selectedFiles.clear();
+  render();
+});
+document.getElementById('bulkDeleteBtn').addEventListener('click', async () => {
+  const filenames = [...selectedFiles];
+  if (!filenames.length) return;
+  if (!(await oeConfirm(`delete ${filenames.length} file${filenames.length === 1 ? '' : 's'}? this cannot be undone.`, { danger: true }))) return;
+  const user = getCurrentUser();
+  if (!user) return;
+  const idToken = await user.getIdToken();
+  let failed = 0;
+  await Promise.all(filenames.map(async filename => {
+    try {
+      const res = await fetch(SERVER_ENDPOINT + '/docs/' + encodeURIComponent(filename), {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + idToken },
+      });
+      if (!res.ok) failed++;
+    } catch {
+      failed++;
+    }
+  }));
+  showToast(failed ? `deleted ${filenames.length - failed} of ${filenames.length} — ${failed} failed` : `deleted ${filenames.length} file${filenames.length === 1 ? '' : 's'}`);
+  selectedFiles.clear();
+  loadList();
+});
+document.getElementById('bulkDownloadBtn').addEventListener('click', () => {
+  const filenames = [...selectedFiles];
+  if (!filenames.length) return;
+  // No server-side zip, so this is sequential single-file downloads rather
+  // than one bundle — spaced out a little since browsers tend to block a
+  // burst of simultaneous auto-downloads (often silently, sometimes with a
+  // "this site is trying to download multiple files" prompt instead).
+  const urls = filenames.map(fn => (files || []).find(f => f.filename === fn)).filter(Boolean).map(f => f.url);
+  urls.forEach((url, i) => {
+    setTimeout(() => {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }, i * 400);
+  });
+  showToast(`downloading ${urls.length} file${urls.length === 1 ? '' : 's'} — your browser may ask to allow multiple downloads`);
+});
+document.getElementById('bulkMoveBtn').addEventListener('click', () => {
+  const filenames = [...selectedFiles];
+  if (!filenames.length) return;
+  movingFilename = null;
+  bulkMovingFilenames = filenames;
+  const mine = folders.filter(x => x.email === spaceEmail());
+  moveFolderDropdown.setOptions([
+    { value: '', label: '(root — no folder)' },
+    ...mine.map(x => ({ value: x.path, label: x.path })),
+  ]);
+  moveFolderDropdown.setValue(currentFolder);
+  openModal('moveModalOverlay', 'moveModal');
+});
+
 document.querySelectorAll('#scopePills .pill').forEach(pill => {
   pill.addEventListener('click', () => {
     document.querySelectorAll('#scopePills .pill').forEach(p => p.classList.toggle('active', p === pill));
@@ -843,12 +1063,13 @@ document.querySelectorAll('#scopePills .pill').forEach(pill => {
   });
 });
 
-document.getElementById('uploadInput').addEventListener('change', async e => {
-  const picked = Array.from(e.target.files);
-  e.target.value = '';
+// Shared by the file-picker input and drag-and-drop below — same upload
+// loop either way, just a different source for the FileList.
+async function uploadFilesTo(picked) {
   if (!picked.length) return;
   const user = getCurrentUser();
   if (!user) { showToast('sign in to upload'); return; }
+  if (!isOwnSpace()) { showToast('switch to "my files" to upload here'); return; }
 
   // Owners have no size cap and no temporary-file expiry on files.html —
   // both enforced server-side too, this just keeps the client's own
@@ -864,7 +1085,7 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
       firstError = firstError || `${file.name}: must be under ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024 / 1024)}GB`;
       continue;
     }
-    showUploadProgress('upload', picked.length > 1 ? `Uploading ${file.name} (${i + 1}/${picked.length})…` : `Uploading ${file.name}…`);
+    showUploadProgress('upload', picked.length > 1 ? `uploading ${file.name} (${i + 1}/${picked.length})…` : `uploading ${file.name}…`);
     try {
       await uploadFile(file, '/upload-file', currentFolder ? { folder: currentFolder } : undefined, frac => updateUploadProgress('upload', frac));
       uploaded++;
@@ -876,7 +1097,7 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
   hideUploadProgress('upload');
 
   if (uploaded) loadList();
-  const tempNote = temporaryCount ? ` ${temporaryCount === uploaded ? 'Over 50MB' : `${temporaryCount} over 50MB`} — auto-deletes in 2 hours.` : '';
+  const tempNote = temporaryCount ? ` ${temporaryCount === uploaded ? 'over 50MB' : `${temporaryCount} over 50MB`} — auto-deletes in 2 hours.` : '';
   if (uploaded === picked.length) {
     showToast((uploaded === 1 ? 'uploaded!' : `uploaded ${uploaded} files!`) + tempNote);
   } else if (uploaded > 0) {
@@ -884,11 +1105,49 @@ document.getElementById('uploadInput').addEventListener('change', async e => {
   } else {
     showToast('could not upload: ' + firstError);
   }
+}
+document.getElementById('uploadInput').addEventListener('change', e => {
+  const picked = Array.from(e.target.files);
+  e.target.value = '';
+  uploadFilesTo(picked);
+});
+
+// ── Drag-and-drop upload ────────────────────────────────────
+// A dragenter/dragleave counter (rather than checking per-element) since
+// dragleave fires when the drag crosses ANY child element boundary inside
+// the page, not just when it actually leaves the window — without the
+// counter the overlay would flicker on/off constantly while dragging over
+// nested elements. Gated on dataTransfer.types including 'Files' so this
+// never fires for the internal file-card drag (relocation, see
+// buildCard/makeDropTarget above), which only carries 'text/plain'.
+let dragCounter = 0;
+function dragHasFiles(e) {
+  return !!(e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files'));
+}
+const dropOverlay = document.getElementById('dropOverlay');
+window.addEventListener('dragenter', e => {
+  if (!dragHasFiles(e) || !getCurrentUser() || !isOwnSpace()) return;
+  dragCounter++;
+  dropOverlay.classList.add('active');
+});
+window.addEventListener('dragleave', e => {
+  if (!dragHasFiles(e)) return;
+  dragCounter = Math.max(0, dragCounter - 1);
+  if (dragCounter === 0) dropOverlay.classList.remove('active');
+});
+window.addEventListener('dragover', e => { if (dragHasFiles(e)) e.preventDefault(); });
+window.addEventListener('drop', e => {
+  if (!dragHasFiles(e)) return;
+  e.preventDefault();
+  dragCounter = 0;
+  dropOverlay.classList.remove('active');
+  if (!getCurrentUser() || !isOwnSpace()) return;
+  uploadFilesTo(Array.from(e.dataTransfer.files || []));
 });
 
 function uploadAnon(file, onProgress) {
   return new Promise((resolve, reject) => {
-    if (!SERVER_ENDPOINT) { reject(new Error('Server not configured')); return; }
+    if (!SERVER_ENDPOINT) { reject(new Error('server not configured')); return; }
     const fd = new FormData();
     fd.append('file', file);
     const xhr = new XMLHttpRequest();
