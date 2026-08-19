@@ -718,6 +718,22 @@ function initSearch(navEl) {
     return 12 - Math.min(hits, 10);
   }
 
+  // Pages that exist but are deliberately unlinked anywhere in the site's
+  // nav/create-drawer/bottom-nav — the only way to find them is to already
+  // know (or guess) what to search for. Add more here as more of these
+  // show up; each just needs something worth matching against.
+  const HIDDEN_PAGES = [
+    { keywords: ['leaderboard', 'leaderboards', 'rankings', 'ranking', 'most viewed', 'most liked', 'most followed', 'karma'], name: 'leaderboard', url: '/leaderboard', icon: 'leaderboard' },
+  ];
+  function hiddenPageRank(page, q) {
+    let best = -1;
+    page.keywords.forEach(k => {
+      const tier = k === q ? 0 : k.startsWith(q) ? 1 : k.includes(q) ? 2 : -1;
+      if (tier !== -1 && (best === -1 || tier < best)) best = tier;
+    });
+    return best;
+  }
+
   async function runSearch(qRaw) {
     const q = qRaw.trim().toLowerCase();
     if (!q) { closeDropdown(); return; }
@@ -729,6 +745,10 @@ function initSearch(navEl) {
     if (searchInput.value.trim().toLowerCase() !== q) return;
 
     const results = [];
+    HIDDEN_PAGES.forEach(page => {
+      const rank = hiddenPageRank(page, q);
+      if (rank !== -1) results.push({ rank, name: page.name, sub: 'page', url: page.url, icon: page.icon });
+    });
     corpus.users.forEach(u => {
       if (!u.handle) return;
       const name = u.displayName || u.handle;

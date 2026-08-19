@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leaderboard — oeper.dev</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
+<script src="./shared/theme-boot.js?v=14"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.cdnfonts.com">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :focus { outline: none; }
+  :focus-visible { outline: none; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    background-image: var(--oe-bg-image, none);
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 640px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 24px; }
+  .header h1 {
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2.2rem, 6vw, 3rem); font-weight: 400;
+    margin-bottom: 8px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px;
+  }
+  .header h1 .material-symbols-rounded { font-size: 0.8em; color: var(--md-sys-color-primary); }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--md-sys-color-surface-variant); border: none;
+    border-radius: 100px; padding: 9px 18px; font-family: inherit; font-size: 14px; font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer;
+  }
+  .tab .material-symbols-rounded { font-size: 18px; }
+  .tab:hover { background: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
+  .tab.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+
+  .tab-note { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 16px; }
+
+  .row-list { display: flex; flex-direction: column; gap: 8px; }
+  .row {
+    display: flex; align-items: center; gap: 14px; background: var(--md-sys-color-surface);
+    border-radius: 16px; padding: 12px 18px; text-decoration: none; color: inherit;
+  }
+  a.row:hover { background: var(--md-sys-color-hover-surface); }
+  .row-rank {
+    width: 28px; flex-shrink: 0; text-align: center; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
+    font-size: 15px; font-weight: 500; color: var(--md-sys-color-on-surface-variant);
+  }
+  .row-rank.medal { font-size: 20px; }
+  .row-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
+  .row-icon-box {
+    width: 40px; height: 40px; border-radius: 50%; background: var(--md-sys-color-surface-variant); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface-variant);
+  }
+  .row-main { flex: 1; min-width: 0; }
+  .row-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-sub { font-size: 12px; color: var(--md-sys-color-on-surface-variant); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .row-value { display: flex; align-items: center; gap: 4px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 15px; font-weight: 500; color: var(--md-sys-color-primary); flex-shrink: 0; }
+  .row-value .material-symbols-rounded { font-size: 16px; }
+
+  .empty-note { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 60px 0; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <h1><span class="material-symbols-rounded">leaderboard</span>leaderboard</h1>
+  </header>
+
+  <div class="tabs">
+    <button type="button" class="tab active" data-tab="mostViewed"><span class="material-symbols-rounded">visibility</span>most viewed</button>
+    <button type="button" class="tab" data-tab="mostLiked"><span class="material-symbols-rounded">favorite</span>most liked</button>
+    <button type="button" class="tab" data-tab="mostDisliked"><span class="material-symbols-rounded">heart_broken</span>most disliked</button>
+    <button type="button" class="tab" data-tab="mostFollowed"><span class="material-symbols-rounded">group</span>most followed</button>
+    <button type="button" class="tab" data-tab="leastFollowed"><span class="material-symbols-rounded">person_remove</span>least followed</button>
+    <button type="button" class="tab" data-tab="bestKarma"><span class="material-symbols-rounded">trending_up</span>best karma</button>
+    <button type="button" class="tab" data-tab="worstKarma"><span class="material-symbols-rounded">trending_down</span>worst karma</button>
+  </div>
+  <div class="tab-note" id="tabNote"></div>
+
+  <div class="row-list" id="rowList"><div class="empty-note">loading…</div></div>
+</div>
+
+<script type="module">
+import { mountTopNav } from './shared/topnav.js?v=26';
+import { mountFooter } from './shared/footer.js?v=5';
+import { db, getProfile, ensureProfileLoaded, handleOf, officialBadgeHtml } from './shared/account.js?v=29';
+import {
+  collection, collectionGroup, query, orderBy, limit, getDocs,
+} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+
+mountTopNav();
+mountFooter();
+
+function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+const MEDALS = ['🥇', '🥈', '🥉'];
+const rowList = document.getElementById('rowList');
+const tabNote = document.getElementById('tabNote');
+const tabCache = {}; // tab -> resolved entries, so switching back and forth doesn't re-render from scratch
+
+// User rows link to the profile and show avatar/name/badge; post rows link
+// to the post and show its title + author instead. Both share the same
+// rank/medal column and trailing value.
+async function renderEntries(entries) {
+  if (!entries.length) { rowList.innerHTML = '<div class="empty-note">nothing to rank yet.</div>'; return; }
+  const emails = [...new Set(entries.map(e => e.kind === 'post' ? e.authorEmail : e.email).filter(Boolean))];
+  await Promise.all(emails.map(e => ensureProfileLoaded(e)));
+  rowList.innerHTML = entries.map((e, i) => {
+    const rank = `<div class="row-rank ${i < 3 ? 'medal' : ''}">${i < 3 ? MEDALS[i] : i + 1}</div>`;
+    const value = `<div class="row-value"><span class="material-symbols-rounded">${e.icon}</span>${e.value.toLocaleString()}</div>`;
+    if (e.kind === 'post') {
+      const authorProfile = getProfile(e.authorEmail, null, null);
+      const inner = `
+        ${rank}
+        <div class="row-icon-box"><span class="material-symbols-rounded">forum</span></div>
+        <div class="row-main">
+          <div class="row-name">${escHtml(e.title || '(untitled)')}</div>
+          <div class="row-sub">by ${escHtml(authorProfile.name)}</div>
+        </div>
+        ${value}
+      `;
+      return `<a class="row" href="/feed?post=${e.id}">${inner}</a>`;
+    }
+    const profile = getProfile(e.email, null, null);
+    const handle = handleOf(e.email);
+    const inner = `
+      ${rank}
+      <img class="row-avatar" src="${profile.photo || ''}" alt="">
+      <div class="row-main"><div class="row-name">${escHtml(profile.name)}${officialBadgeHtml(e.email)}</div></div>
+      ${value}
+    `;
+    return handle
+      ? `<a class="row" href="/profile?u=${encodeURIComponent(handle)}">${inner}</a>`
+      : `<div class="row">${inner}</div>`;
+  }).join('');
+}
+
+// ── Shared, memoized fetches — several tabs are just two different sorts
+// of the same underlying data, so each of these only ever hits Firestore
+// once regardless of how many of its tabs get visited. ────────────────
+
+// Bounded to the most recent 300 posts rather than the whole collection —
+// same reasoning as topnav.js's own search corpus: an unbounded fetch
+// doesn't stay fast as the site grows. Most-viewed doesn't need this (views
+// is a plain field Firestore can orderBy server-side across everything),
+// but vote counts are array lengths, which Firestore can't orderBy at all —
+// this batch gets fetched once and liked/disliked each just re-sort it.
+let recentPostsPromise = null;
+function loadRecentPosts() {
+  if (!recentPostsPromise) {
+    recentPostsPromise = getDocs(query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(300)))
+      .then(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }
+  return recentPostsPromise;
+}
+
+// Follower counts aren't a stored field on the user doc — aggregated here
+// from a bounded slice of the follows collection instead, once, shared by
+// both the most- and least-followed tabs.
+let followCountsPromise = null;
+function loadFollowCounts() {
+  if (!followCountsPromise) {
+    followCountsPromise = getDocs(query(collection(db, 'follows'), limit(1000))).then(snap => {
+      const counts = new Map();
+      snap.docs.forEach(d => {
+        const email = d.data().followeeEmail;
+        if (email) counts.set(email, (counts.get(email) || 0) + 1);
+      });
+      return counts;
+    });
+  }
+  return followCountsPromise;
+}
+
+// Karma has never been a stored total anywhere (profile.html computes it
+// on the fly per-profile too) — aggregated here across a bounded recent
+// slice of posts, videos, and comments, shared by best- and worst-karma.
+let karmaPromise = null;
+function loadKarmaTotals() {
+  if (!karmaPromise) {
+    karmaPromise = Promise.allSettled([
+      loadRecentPosts(),
+      getDocs(query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(300))).then(s => s.docs.map(d => d.data())),
+      getDocs(query(collectionGroup(db, 'comments'), limit(500))).then(s => s.docs.map(d => d.data())),
+    ]).then(([postsR, videosR, commentsR]) => {
+      const totals = new Map();
+      function add(items) {
+        items.forEach(data => {
+          if (!data.authorEmail) return;
+          const score = (data.upvoters || []).length - (data.downvoters || []).length;
+          totals.set(data.authorEmail, (totals.get(data.authorEmail) || 0) + score);
+        });
+      }
+      if (postsR.status === 'fulfilled') add(postsR.value);
+      if (videosR.status === 'fulfilled') add(videosR.value);
+      if (commentsR.status === 'fulfilled') add(commentsR.value);
+      return totals;
+    });
+  }
+  return karmaPromise;
+}
+
+const LOADERS = {
+  mostViewed: {
+    note: '',
+    load: async () => {
+      const snap = await getDocs(query(collection(db, 'posts'), orderBy('views', 'desc'), limit(50)));
+      return snap.docs.map(d => ({ kind: 'post', id: d.id, title: d.data().title, authorEmail: d.data().authorEmail, value: d.data().views || 0, icon: 'visibility' }))
+        .filter(e => e.value > 0);
+    },
+  },
+  mostLiked: {
+    note: 'based on the most recent posts — not the full history.',
+    load: async () => {
+      const posts = await loadRecentPosts();
+      return posts.map(p => ({ kind: 'post', id: p.id, title: p.title, authorEmail: p.authorEmail, value: (p.upvoters || []).length, icon: 'favorite' }))
+        .filter(e => e.value > 0).sort((a, b) => b.value - a.value).slice(0, 50);
+    },
+  },
+  mostDisliked: {
+    note: 'based on the most recent posts — not the full history.',
+    load: async () => {
+      const posts = await loadRecentPosts();
+      return posts.map(p => ({ kind: 'post', id: p.id, title: p.title, authorEmail: p.authorEmail, value: (p.downvoters || []).length, icon: 'heart_broken' }))
+        .filter(e => e.value > 0).sort((a, b) => b.value - a.value).slice(0, 50);
+    },
+  },
+  mostFollowed: {
+    note: '',
+    load: async () => {
+      const counts = await loadFollowCounts();
+      return [...counts.entries()].map(([email, value]) => ({ kind: 'user', email, value, icon: 'group' }))
+        .sort((a, b) => b.value - a.value).slice(0, 50);
+    },
+  },
+  leastFollowed: {
+    note: 'only counts people with at least one follower — everyone else ties at zero.',
+    load: async () => {
+      const counts = await loadFollowCounts();
+      return [...counts.entries()].map(([email, value]) => ({ kind: 'user', email, value, icon: 'person_remove' }))
+        .sort((a, b) => a.value - b.value).slice(0, 50);
+    },
+  },
+  bestKarma: {
+    note: 'based on the most recent posts, videos, and comments — not full account history.',
+    load: async () => {
+      const totals = await loadKarmaTotals();
+      return [...totals.entries()].map(([email, value]) => ({ kind: 'user', email, value, icon: 'trending_up' }))
+        .sort((a, b) => b.value - a.value).slice(0, 50);
+    },
+  },
+  worstKarma: {
+    note: 'based on the most recent posts, videos, and comments — not full account history.',
+    load: async () => {
+      const totals = await loadKarmaTotals();
+      return [...totals.entries()].map(([email, value]) => ({ kind: 'user', email, value, icon: 'trending_down' }))
+        .sort((a, b) => a.value - b.value).slice(0, 50);
+    },
+  },
+};
+
+async function showTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  tabNote.textContent = LOADERS[tab].note;
+  if (tabCache[tab]) { renderEntries(tabCache[tab]); return; }
+  rowList.innerHTML = '<div class="empty-note">loading…</div>';
+  try {
+    const entries = await LOADERS[tab].load();
+    tabCache[tab] = entries;
+    renderEntries(entries);
+  } catch (err) {
+    rowList.innerHTML = `<div class="empty-note">could not load: ${escHtml(err.message)}</div>`;
+  }
+}
+
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
+showTab('mostViewed');
+</script>
+</body>
+</html>
