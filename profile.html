@@ -237,12 +237,12 @@
 </div>
 
 <script type="module">
-import { mountTopNav, setProfileMenuVisible } from './shared/topnav.js?v=24';
+import { mountTopNav, setProfileMenuVisible } from './shared/topnav.js?v=25';
 import {
   getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
   openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setUserBadge, sendNotification, linkifyMentions,
-  getBadgeOverride, setOwnBadgeOverride,
-} from './shared/account.js?v=28';
+  getBadgeOverride, setOwnBadgeOverride, grantCredits, CREDITS_ICON,
+} from './shared/account.js?v=29';
 import { mountFooter } from './shared/footer.js?v=5';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
 import { observeList } from './shared/motion.js?v=1';
@@ -802,6 +802,7 @@ async function init() {
       menuItems.push({ label: 'your activity', icon: 'insights', onClick: () => { window.location.href = '/activity'; } });
     }
     if (user && !isOwn) {
+      menuItems.push({ label: 'send credits', icon: CREDITS_ICON, onClick: () => { window.location.href = '/credits?to=' + encodeURIComponent(handle); } });
       menuItems.push({ label: 'report', icon: 'flag', dangerous: true, onClick: reportProfile });
     }
     // Owner viewing their own profile: their badge isn't the granted
@@ -842,6 +843,7 @@ async function init() {
         onClick: toggleBioMarkdown,
       });
       menuItems.push({ label: 'edit this profile', icon: 'manage_accounts', onClick: editOtherProfile });
+      menuItems.push({ label: 'grant credits', icon: CREDITS_ICON, onClick: grantCreditsToProfile });
     }
     const kebabBtn = document.getElementById('profileKebabBtn');
     const kebabMenu = document.getElementById('profileKebabMenu');
@@ -949,6 +951,19 @@ async function init() {
       render();
     } catch (err) {
       showToast('could not update profile: ' + err.message);
+    }
+  }
+
+  async function grantCreditsToProfile() {
+    const raw = await oePrompt(`credits to grant @${handle} (negative to deduct):`, { defaultValue: '' });
+    if (raw === null) return;
+    const amount = Number(raw);
+    if (!Number.isFinite(amount) || amount === 0) { showToast('enter a non-zero whole number'); return; }
+    try {
+      await grantCredits(viewedEmail, amount);
+      showToast(`${amount > 0 ? 'granted' : 'deducted'} ${Math.abs(Math.floor(amount))} credits`);
+    } catch (err) {
+      showToast('could not update credits: ' + err.message);
     }
   }
 

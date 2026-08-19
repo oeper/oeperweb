@@ -8,7 +8,10 @@
 // behavior change needs its `?v=N` bumped on every `from './shared/topnav.js?v=N'`
 // import across the site (grep for it) — otherwise visitors can sit on a
 // stale cached copy for hours after a deploy.
-import { mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange, signIn } from './account.js?v=27';
+import {
+  mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange, signIn,
+  onCreditsChange, CREDITS_ICON,
+} from './account.js?v=29';
 import {
   collection, query, orderBy, limit, getDocs, onSnapshot, where, doc, updateDoc, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -191,6 +194,18 @@ function injectStyles() {
     .oe-nav-icon-link .material-symbols-rounded { font-size: 24px; }
     .oe-nav-icon-link:hover { color: var(--md-sys-color-on-surface); }
 
+    /* Credits balance chip — sits between the Settings icon and the account
+       chip, desktop only (mobile reaches credits.html via the Create
+       drawer instead, same split as Settings/the account chip below). */
+    .oe-credits-chip {
+      display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; text-decoration: none;
+      background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);
+      font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 13px; font-weight: 500;
+      padding: 6px 12px 6px 10px; border-radius: 100px; transition: opacity 0.15s;
+    }
+    .oe-credits-chip:hover { opacity: 0.85; }
+    .oe-credits-chip .material-symbols-rounded { font-size: 16px; }
+
     .oe-nav-hamburger {
       display: none; align-items: center; justify-content: center; width: 40px; height: 40px;
       border-radius: 50%; border: none; background: transparent; color: var(--md-sys-color-on-surface);
@@ -325,7 +340,7 @@ function injectStyles() {
       .oe-nav-mobile-search-btn { display: flex; order: 1; }
       .oe-nav-logo { order: 2; flex: 1; justify-content: center; }
       .oe-nav-right { order: 3; gap: 10px; margin-left: 0; }
-      .oe-nav-icon-link[title="Settings"], #oeNavAccountBar { display: none; }
+      .oe-nav-icon-link[title="Settings"], #oeNavAccountBar, .oe-credits-chip { display: none; }
       /* The chat icon and this menu trade places with mobile's bottom nav:
          Chat/Messages moves down there (see .oe-bottom-nav-item[data-id=
          "messages"]), and this trigger takes roughly where Chat used to
@@ -435,6 +450,9 @@ export function mountTopNav(container) {
         </div>
         <a href="/messages" class="oe-nav-icon-link oe-nav-chat-link" title="Chat"><span class="material-symbols-rounded" id="oeNavChatIcon">chat_bubble</span></a>
         <a href="/settings" class="oe-nav-icon-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
+        <a href="/credits" class="oe-credits-chip" id="oeNavCreditsChip" title="credits" style="display:none;">
+          <span class="material-symbols-rounded">${CREDITS_ICON}</span><span id="oeNavCreditsValue">0</span>
+        </a>
         <div id="oeNavAccountBar"></div>
       </div>
     </nav>
@@ -442,6 +460,7 @@ export function mountTopNav(container) {
       <a href="/feed" class="oe-create-item"><span class="material-symbols-rounded">forum</span>new post</a>
       <a href="/videos" class="oe-create-item"><span class="material-symbols-rounded">smart_display</span>new video</a>
       <a href="/files" class="oe-create-item"><span class="material-symbols-rounded">folder</span>new file</a>
+      <a href="/credits" class="oe-create-item"><span class="material-symbols-rounded">${CREDITS_ICON}</span>credits</a>
     </div>
     <div class="oe-profile-menu-sheet" id="oeProfileMenuSheet">
       <a href="/settings" class="oe-create-item"><span class="material-symbols-rounded">settings</span>settings</a>
@@ -580,6 +599,14 @@ export function mountTopNav(container) {
   initSearch(navEl);
   initNotifications(navEl);
   initChatUnread(navEl);
+
+  // Credits chip: hidden entirely signed-out (onCreditsChange fires 0 for
+  // a signed-out visitor same as an empty balance, so visibility has to
+  // key off account state, not the balance itself).
+  const creditsChip = navEl.querySelector('#oeNavCreditsChip');
+  const creditsValue = navEl.querySelector('#oeNavCreditsValue');
+  onAccountChange(user => { creditsChip.style.display = user ? '' : 'none'; });
+  onCreditsChange(balance => { creditsValue.textContent = balance.toLocaleString(); });
 }
 
 // Called from profile.html once it knows whether the signed-in viewer is
@@ -779,11 +806,14 @@ function notifText(n) {
   if (n.type === 'comment') return `${name} commented on your ${target}${n.preview ? ': ' + escHtml(n.preview) : ''}`;
   if (n.type === 'follow') return `${name} started following you`;
   if (n.type === 'badge') return `you were given a badge${n.preview ? ': ' + escHtml(n.preview) : ''}`;
+  if (n.type === 'credits') return `${name} sent you ${n.preview ? escHtml(n.preview) : 'some'} credits`;
+  if (n.type === 'creditsGrant') return `you were granted ${n.preview ? escHtml(n.preview) : 'some'} credits`;
   return name;
 }
 function notifUrl(n) {
   if (n.type === 'follow') { const h = handleOf(n.actorEmail); return h ? `/profile?u=${encodeURIComponent(h)}` : '/'; }
   if (n.type === 'badge') return '/settings';
+  if (n.type === 'credits' || n.type === 'creditsGrant') return '/credits';
   if (n.targetKind === 'post') return `/feed?post=${n.targetId}`;
   if (n.targetKind === 'video') return `/videos?video=${n.targetId}`;
   return '/';
@@ -801,10 +831,10 @@ function initNotifications(navEl) {
 
   function rowHtml(n) {
     const profile = getProfile(n.actorEmail, n.actorName, n.actorPhoto);
-    const icon = { upvote: 'favorite', comment: 'mode_comment', follow: 'person_add', badge: 'verified' }[n.type] || 'notifications';
+    const icon = { upvote: 'favorite', comment: 'mode_comment', follow: 'person_add', badge: 'verified', credits: CREDITS_ICON, creditsGrant: CREDITS_ICON }[n.type] || 'notifications';
     return `
       <a class="oe-notif-row ${n.read ? '' : 'unread'}" href="${notifUrl(n)}" data-id="${n.id}">
-        ${n.type === 'badge'
+        ${n.type === 'badge' || n.type === 'creditsGrant'
           ? `<div class="oe-notif-icon"><span class="material-symbols-rounded">${icon}</span></div>`
           : `<img class="oe-notif-avatar" src="${profile.photo || ''}" alt="">`}
         <div class="oe-notif-main">

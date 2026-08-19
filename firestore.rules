@@ -19,6 +19,63 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/bans/$(request.auth.token.email));
     }
 
+    // ── Credits currency ────────────────────────────────────────────────
+    // A peer-to-peer transfer is a single batched write touching BOTH the
+    // sender's and recipient's users/{email} doc at once (plus a
+    // creditTransfers audit-log doc — see below). Per-document security
+    // rules can't natively cross-check two documents against each other,
+    // but getAfter()/get() can: the sender's rule uses getAfter() to
+    // confirm the recipient's doc, in this SAME batch, ends up with
+    // exactly the amount the sender is giving up, and the recipient's
+    // rule mirrors that check back at the sender's doc. Batched writes are
+    // all-or-nothing and every touched document's rule must independently
+    // pass, so satisfying only one side's condition can never be enough on
+    // its own to move a balance — both sides of the ledger are verified in
+    // the same atomic operation. No credits field means a balance of 0.
+    function creditsOf(data) {
+      return ('credits' in data) ? data.credits : 0;
+    }
+    // Peer-to-peer transfers carry a 5% tax, burned rather than routed
+    // anywhere (recipient simply gets less than the sender paid) — except
+    // when the sender is an owner, who sends tax-free. The sender's own
+    // rule is what actually enforces this (net <= 95% of gross for a
+    // non-owner); the recipient's rule just has to receive whatever the
+    // sender's doc says it sent, so it doesn't need to know about the tax
+    // rate itself at all.
+    function validTransferSender(email) {
+      let to = request.resource.data.lastTransferTo;
+      let amount = request.resource.data.lastTransferAmount;
+      let net = request.resource.data.lastTransferNet;
+      let toBefore = get(/databases/$(database)/documents/users/$(to)).data;
+      let toAfter = getAfter(/databases/$(database)/documents/users/$(to)).data;
+      return isSignedIn() && !isBanned()
+        && request.auth.token.email == email
+        && onlyChanged(['credits', 'lastTransferTo', 'lastTransferAmount', 'lastTransferNet', 'lastTransferAt'])
+        && amount is number && amount > 0
+        && net is number && net > 0 && net <= amount
+        && (isOwner() ? net == amount : net * 100 <= amount * 95)
+        && to is string && to != email
+        && request.resource.data.credits is number
+        && request.resource.data.credits == creditsOf(resource.data) - amount
+        && request.resource.data.credits >= 0
+        && creditsOf(toAfter) == creditsOf(toBefore) + net;
+    }
+    function validTransferRecipient(email) {
+      let from = request.resource.data.lastReceivedFrom;
+      let amount = request.resource.data.lastReceivedAmount;
+      let fromBefore = get(/databases/$(database)/documents/users/$(from)).data;
+      let fromAfter = getAfter(/databases/$(database)/documents/users/$(from)).data;
+      return isSignedIn()
+        && onlyChanged(['credits', 'lastReceivedFrom', 'lastReceivedAmount', 'lastReceivedAt'])
+        && amount is number && amount > 0
+        && from is string && from != email
+        && request.resource.data.credits is number
+        && request.resource.data.credits == creditsOf(resource.data) + amount
+        && fromAfter.lastTransferTo == email
+        && fromAfter.lastTransferNet == amount
+        && creditsOf(fromBefore) - creditsOf(fromAfter) == fromAfter.lastTransferAmount;
+    }
+
     // Grants read access for collectionGroup('comments') queries (profile.html's
     // comment count/karma stats). The nested rule under posts/{postId}/comments
     // only covers reads scoped to one post; a collection-group query spanning
@@ -133,6 +190,18 @@ service cloud.firestore {
           && request.resource.data.label is string
           && request.resource.data.label.size() <= 100;
       }
+
+      // Credits: owners can grant (mint) any non-negative balance directly —
+      // this is the only way to ever increase a total anyone holds without
+      // it coming from someone else's balance (see the peer-to-peer transfer
+      // functions above, which only ever move an existing balance, never
+      // create one). onlyChanged(['credits']) alone is what distinguishes a
+      // grant from a transfer, which always also touches the breadcrumb
+      // fields those functions check.
+      allow update: if isOwner() && onlyChanged(['credits'])
+        && request.resource.data.credits is number && request.resource.data.credits >= 0;
+      allow update: if validTransferSender(email);
+      allow update: if validTransferRecipient(email);
     }
 
     // Ban list, keyed by email. Public read so the client can show "you're
@@ -140,6 +209,27 @@ service cloud.firestore {
     match /bans/{email} {
       allow read: if true;
       allow write: if isOwner();
+    }
+
+    // Credit transfer history — purely an audit log for credits.html's
+    // "sent/received" list. The actual balance-security guarantees all live
+    // in the users/{email} rules above (validTransferSender/Recipient);
+    // this doc doesn't need to re-derive them, just record who/what/when
+    // for display. Immutable once created — a transfer either happened or
+    // it didn't, nothing here should ever change afterward.
+    match /creditTransfers/{transferId} {
+      allow read: if isSignedIn() && (
+        request.auth.token.email == resource.data.fromEmail
+        || request.auth.token.email == resource.data.toEmail
+        || isOwner()
+      );
+      allow create: if isSignedIn() && !isBanned()
+        && request.resource.data.fromEmail == request.auth.token.email
+        && request.resource.data.toEmail is string
+        && request.resource.data.toEmail != request.auth.token.email
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0;
+      allow update, delete: if false;
     }
 
     // @handle -> email lookup, so profile URLs never contain a real email
