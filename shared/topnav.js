@@ -694,7 +694,7 @@ function initSearch(navEl) {
   async function runSearch(qRaw) {
     const q = qRaw.trim().toLowerCase();
     if (!q) { closeDropdown(); return; }
-    dropdown.innerHTML = '<div class="oe-spinner-row"><span class="oe-spinner small"></span>Searching…</div>';
+    dropdown.innerHTML = '<div class="oe-spinner-row"><span class="oe-loading-indicator small"></span>Searching…</div>';
     dropdown.classList.add('open');
 
     let corpus;

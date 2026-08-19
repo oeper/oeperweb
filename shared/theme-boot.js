@@ -885,53 +885,141 @@
     ' {\n  backdrop-filter: var(--oe-glass-blur, none);\n  -webkit-backdrop-filter: var(--oe-glass-blur, none);\n}';
   document.head.appendChild(glassStyle);
 
-  // Material-style loading indicators, available sitewide with no import —
-  // this file is already loaded via a classic <script> in every page's
-  // <head>. `.oe-spinner` is a circular indeterminate spinner (add `.small`
-  // for 16px or `.large` for 40px; default is 24px); `.oe-loading-bar` is a
-  // linear indeterminate bar meant to sit at the top of a panel/list while
-  // it loads. Both are theme-aware via the existing color role variables.
+  // Material 3 loading indicators, available sitewide with no import — this
+  // file is already loaded via a classic <script> in every page's <head>.
+  // Modeled directly on the M3 spec (m3.material.io/components/
+  // progress-indicators and .../loading-indicator):
+  //   .oe-spinner            — circular progress indicator (track + active
+  //                            arc). Indeterminate by default; add
+  //                            .determinate and set --oe-progress (0–1) for
+  //                            a real percentage, e.g. upload progress.
+  //   .oe-loading-bar         — linear progress indicator, same
+  //                            indeterminate/.determinate split.
+  //   .oe-loading-indicator   — the newer M3 Expressive "loading indicator":
+  //                            a single shape that continuously morphs
+  //                            between rounded silhouettes while rotating.
+  //                            Per spec this is indeterminate-only (never
+  //                            used for a process that becomes determinate)
+  //                            and is the recommended replacement for a
+  //                            plain spinner in short (<5s) wait states —
+  //                            use .oe-spinner instead when you actually
+  //                            have a percentage to show.
+  // All three take .small/.large size modifiers and are theme-aware via the
+  // existing color role variables. This design system has no
+  // primary-container/on-primary-container tokens (only secondary-container
+  // exists across all themes), so the "contained" loading-indicator variant
+  // and the progress-indicator track both use secondary-container instead
+  // of the M3 spec's literal primary-container — same container role, this
+  // codebase's actual token for it.
   var spinnerStyle = document.createElement('style');
   spinnerStyle.textContent = [
-    // `.oe-spinner` mimics Material/Android's indeterminate circular
-    // progress indicator: the ring rotates continuously (oe-spin-rotate)
-    // while its arc independently grows and shrinks (oe-spin-arc), giving
-    // the "chasing tail" look instead of a static spinning quarter-circle.
-    // The arc shape is a conic-gradient masked down to a ring; --oe-spin-a0/
-    // --oe-spin-a1 are registered via @property so the angles interpolate
-    // smoothly instead of snapping between keyframes.',
+    // --oe-spin-a0/--oe-spin-a1 (the arc's start/end angle) are registered
+    // via @property so they interpolate smoothly instead of snapping
+    // between keyframes — used by both the indeterminate "chasing tail"
+    // animation and the determinate mode's fixed sweep.
     '@property --oe-spin-a0 { syntax: "<angle>"; inherits: false; initial-value: 0deg; }',
     '@property --oe-spin-a1 { syntax: "<angle>"; inherits: false; initial-value: 10deg; }',
+    '@property --oe-progress { syntax: "<number>"; inherits: false; initial-value: 0; }',
+
+    // ── .oe-spinner — circular progress indicator ──────────────────────
+    // The element itself is the track (a solid ring via border); ::before
+    // is the active indicator, a conic-gradient masked down to a matching
+    // ring and layered exactly on top. ::after is the stop indicator, only
+    // shown in determinate mode (marking the fixed end point a perpetually-
+    // cycling indeterminate arc has no equivalent of).
     '.oe-spinner {',
-    '  display: inline-block; width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;',
+    '  position: relative; display: inline-block; width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;',
+    '  border: 3px solid var(--md-sys-color-secondary-container);',
+    '}',
+    '.oe-spinner::before {',
+    '  content: ""; position: absolute; inset: -3px; border-radius: 50%;',
     '  background: conic-gradient(from var(--oe-spin-a0), var(--md-sys-color-primary) 0deg, var(--md-sys-color-primary) calc(var(--oe-spin-a1) - var(--oe-spin-a0)), transparent calc(var(--oe-spin-a1) - var(--oe-spin-a0)));',
     '  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));',
     '  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));',
     '  animation: oe-spin-rotate 2s linear infinite, oe-spin-arc 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;',
     '}',
-    '.oe-spinner.small { width: 16px; height: 16px; -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px)); mask-image: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px)); }',
-    '.oe-spinner.large { width: 40px; height: 40px; -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px)); mask-image: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px)); }',
+    '.oe-spinner.determinate::before {',
+    '  animation: none; --oe-spin-a0: 0deg; --oe-spin-a1: calc(var(--oe-progress, 0) * 360deg); transition: --oe-progress 0.15s ease;',
+    '}',
+    // Dot center must land on the ring's centerline, which sits half a
+    // border-width in from the outer edge — i.e. offset by the FULL border
+    // width from the padding box (::after is positioned relative to that
+    // padding box, same as ::before's inset above), not half of it.
+    '.oe-spinner.determinate::after {',
+    '  content: ""; position: absolute; top: -3px; left: 50%; width: 3px; height: 3px; margin-left: -1.5px;',
+    '  border-radius: 50%; background: var(--md-sys-color-primary);',
+    '}',
+    '.oe-spinner.small { width: 16px; height: 16px; border-width: 2px; }',
+    '.oe-spinner.small::before { inset: -2px; -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px)); mask-image: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px)); }',
+    '.oe-spinner.small.determinate::after { top: -2px; width: 2px; height: 2px; margin-left: -1px; }',
+    '.oe-spinner.large { width: 40px; height: 40px; border-width: 4px; }',
+    '.oe-spinner.large::before { inset: -4px; -webkit-mask-image: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px)); mask-image: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px)); }',
+    '.oe-spinner.large.determinate::after { top: -4px; width: 4px; height: 4px; margin-left: -2px; }',
     '@keyframes oe-spin-rotate { to { transform: rotate(360deg); } }',
     '@keyframes oe-spin-arc {',
     '  0%   { --oe-spin-a0: 0deg;   --oe-spin-a1: 10deg; }',
     '  50%  { --oe-spin-a0: 90deg;  --oe-spin-a1: 270deg; }',
     '  100% { --oe-spin-a0: 360deg; --oe-spin-a1: 370deg; }',
     '}',
+
+    // ── .oe-loading-bar — linear progress indicator ────────────────────
+    // ::before is the stop indicator (a fixed dot at the track's end —
+    // present in both modes here, since unlike the circular case the
+    // track itself has a fixed direction/end regardless of behavior).
+    // ::after is the active indicator: sliding when indeterminate, a
+    // left-anchored fill driven by --oe-progress when .determinate.
     '.oe-loading-bar {',
     '  position: relative; width: 100%; height: 4px; border-radius: 100px;',
     '  background: var(--md-sys-color-secondary-container); overflow: hidden;',
     '}',
+    '.oe-loading-bar::before {',
+    '  content: ""; position: absolute; top: 50%; right: 2px; width: 4px; height: 4px; margin-top: -2px;',
+    '  border-radius: 50%; background: var(--md-sys-color-primary); z-index: 2;',
+    '}',
     '.oe-loading-bar::after {',
-    '  content: ""; position: absolute; top: 0; left: -40%; height: 100%; width: 40%;',
+    '  content: ""; position: absolute; top: 0; left: -40%; height: 100%; width: 40%; z-index: 1;',
     '  background: var(--md-sys-color-primary); border-radius: 100px;',
     '  animation: oe-loading-bar-slide 1.3s cubic-bezier(0.4,0,0.2,1) infinite;',
+    '}',
+    '.oe-loading-bar.determinate::after {',
+    '  animation: none; left: 0; width: calc(var(--oe-progress, 0) * 100%); transition: width 0.15s ease;',
     '}',
     '@keyframes oe-loading-bar-slide {',
     '  0% { left: -40%; width: 40%; }',
     '  50% { left: 30%; width: 55%; }',
     '  100% { left: 100%; width: 40%; }',
     '}',
+
     '.oe-spinner-row { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 24px 0; color: var(--md-sys-color-on-surface-variant); font-size: 13px; }',
+
+    // ── .oe-loading-indicator — M3 Expressive loading indicator ────────
+    // A single shape morphs between five hand-computed 16-point blob
+    // silhouettes (near-circle, 3/4/5-lobe "cookie" shapes, and a soft
+    // oval) via clip-path polygon interpolation, while rotating
+    // independently — clip-path polygons only interpolate smoothly when
+    // every keyframe has the same point count, hence 16 points even for
+    // the rounder shapes. Sizing follows the spec's "48dp container /
+    // 38dp shape" ratio.
+    '.oe-loading-indicator {',
+    '  display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; flex-shrink: 0;',
+    '}',
+    '.oe-loading-indicator::before {',
+    '  content: ""; display: block; width: 38px; height: 38px; background: var(--md-sys-color-primary);',
+    '  animation: oe-loading-blob-morph 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite, oe-spin-rotate 3.6s linear infinite;',
+    '}',
+    '.oe-loading-indicator.small { width: 32px; height: 32px; }',
+    '.oe-loading-indicator.small::before { width: 25px; height: 25px; }',
+    '.oe-loading-indicator.large { width: 64px; height: 64px; }',
+    '.oe-loading-indicator.large::before { width: 50px; height: 50px; }',
+    '.oe-loading-indicator.contained { background: var(--md-sys-color-secondary-container); border-radius: 50%; }',
+    '.oe-loading-indicator.contained::before { background: var(--md-sys-color-on-secondary-container); }',
+    '@keyframes oe-loading-blob-morph {',
+    '  0%   { clip-path: polygon(95.0% 50.0%, 91.6% 67.2%, 81.8% 81.8%, 67.2% 91.6%, 50.0% 95.0%, 32.8% 91.6%, 18.2% 81.8%, 8.4% 67.2%, 5.0% 50.0%, 8.4% 32.8%, 18.2% 18.2%, 32.8% 8.4%, 50.0% 5.0%, 67.2% 8.4%, 81.8% 18.2%, 91.6% 32.8%); }',
+    '  25%  { clip-path: polygon(101.3% 50.0%, 89.3% 66.3%, 78.7% 78.7%, 69.4% 97.0%, 50.0% 95.0%, 35.0% 86.2%, 15.0% 85.0%, 6.2% 68.1%, 11.3% 50.0%, 6.2% 31.9%, 15.0% 15.0%, 35.0% 13.8%, 50.0% 5.0%, 69.4% 3.0%, 78.7% 21.3%, 89.3% 33.7%); }',
+    '  50%  { clip-path: polygon(102.2% 50.0%, 91.6% 67.2%, 76.7% 76.7%, 67.2% 91.6%, 50.0% 102.2%, 32.8% 91.6%, 23.3% 76.7%, 8.4% 67.2%, -2.2% 50.0%, 8.4% 32.8%, 23.3% 23.3%, 32.8% 8.4%, 50.0% -2.2%, 67.2% 8.4%, 76.7% 23.3%, 91.6% 32.8%); }',
+    '  75%  { clip-path: polygon(103.1% 50.0%, 94.4% 68.4%, 77.8% 77.8%, 64.4% 84.7%, 50.0% 95.0%, 29.9% 98.5%, 14.1% 85.9%, 11.3% 66.0%, 13.1% 50.0%, 11.3% 34.0%, 14.1% 14.1%, 29.9% 1.5%, 50.0% 5.0%, 64.4% 15.3%, 77.8% 22.2%, 94.4% 31.6%); }',
+    '  100% { clip-path: polygon(95.0% 50.0%, 91.6% 67.2%, 81.8% 81.8%, 67.2% 91.6%, 50.0% 95.0%, 32.8% 91.6%, 18.2% 81.8%, 8.4% 67.2%, 5.0% 50.0%, 8.4% 32.8%, 18.2% 18.2%, 32.8% 8.4%, 50.0% 5.0%, 67.2% 8.4%, 81.8% 18.2%, 91.6% 32.8%); }',
+    '}',
   ].join('\n');
   document.head.appendChild(spinnerStyle);
 

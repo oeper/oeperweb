@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js?v=13"></script>
+<script src="./shared/theme-boot.js?v=14"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -313,8 +313,7 @@
     font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .upload-progress-track { height: 6px; border-radius: 3px; background: var(--md-sys-color-surface-variant); overflow: hidden; }
-  .upload-progress-fill { height: 100%; width: 0%; border-radius: 3px; background: var(--md-sys-color-primary); transition: width 0.15s ease; }
+  .upload-progress .oe-loading-bar { height: 6px; }
 
   .temp-tag { color: var(--md-sys-color-error); font-weight: 500; }
 
@@ -350,7 +349,7 @@
     </label>
     <div class="upload-progress" id="anonUploadProgress" style="display:none;">
       <div class="upload-progress-label" id="anonUploadProgressLabel"></div>
-      <div class="upload-progress-track"><div class="upload-progress-fill" id="anonUploadProgressFill"></div></div>
+      <div class="oe-loading-bar determinate" id="anonUploadProgressFill"></div>
     </div>
     <div class="anon-result-list" id="anonResultList"></div>
   </div>
@@ -386,7 +385,7 @@
     </div>
     <div class="upload-progress" id="uploadProgress" style="display:none;">
       <div class="upload-progress-label" id="uploadProgressLabel"></div>
-      <div class="upload-progress-track"><div class="upload-progress-fill" id="uploadProgressFill"></div></div>
+      <div class="oe-loading-bar determinate" id="uploadProgressFill"></div>
     </div>
   </div>
 
@@ -451,7 +450,7 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=23';
+import { mountTopNav } from './shared/topnav.js?v=24';
 import {
   SERVER_ENDPOINT, getCurrentUser, onAccountChange, isOwnerEmail, uploadFile,
 } from './shared/account.js?v=28';
@@ -540,10 +539,10 @@ function expiryLabel(expiresAt) {
 function showUploadProgress(prefix, label) {
   document.getElementById(prefix + 'Progress').style.display = '';
   document.getElementById(prefix + 'ProgressLabel').textContent = label;
-  document.getElementById(prefix + 'ProgressFill').style.width = '0%';
+  document.getElementById(prefix + 'ProgressFill').style.setProperty('--oe-progress', 0);
 }
 function updateUploadProgress(prefix, frac) {
-  document.getElementById(prefix + 'ProgressFill').style.width = Math.round(frac * 100) + '%';
+  document.getElementById(prefix + 'ProgressFill').style.setProperty('--oe-progress', frac);
 }
 function hideUploadProgress(prefix) {
   document.getElementById(prefix + 'Progress').style.display = 'none';
