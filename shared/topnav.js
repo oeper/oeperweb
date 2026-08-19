@@ -21,6 +21,25 @@ import {
 // icon.svg at the repo root if that ever changes.
 export const LOGO_SVG = `<svg viewBox="0 0 98 118" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M97.21 104.246C99.8214 110.812 94.9842 117.941 87.918 117.941H10.0098C2.94348 117.941 -1.89373 110.812 0.717769 104.246L24.9966 43.2019C25.2993 42.4406 26.0357 41.941 26.855 41.941H71.0728C71.892 41.941 72.6284 42.4406 72.9312 43.2019L97.21 104.246ZM39.6719 6.30428C43.0151 -2.10143 54.9127 -2.10143 58.2559 6.30428L65.3744 24.2018C65.8967 25.515 64.9293 26.941 63.516 26.941H34.4117C32.9985 26.941 32.031 25.515 32.5533 24.2018L39.6719 6.30428Z"/></svg>`;
 
+// Pages that exist but are deliberately unlinked anywhere in the site's
+// nav/create-drawer/bottom-nav — the only way to find them is to already
+// know (or guess) what to search for. Matched the same way as real search
+// results, both in the topnav dropdown and on search.html's full results
+// page (which imports this directly rather than keeping its own copy).
+// Add more here as more of these show up; each just needs something worth
+// matching against.
+export const HIDDEN_PAGES = [
+  { keywords: ['leaderboard', 'leaderboards', 'rankings', 'ranking', 'most viewed', 'most liked', 'most followed', 'karma'], name: 'leaderboard', url: '/leaderboard', icon: 'leaderboard' },
+];
+export function hiddenPageRank(page, q) {
+  let best = -1;
+  page.keywords.forEach(k => {
+    const tier = k === q ? 0 : k.startsWith(q) ? 1 : k.includes(q) ? 2 : -1;
+    if (tier !== -1 && (best === -1 || tier < best)) best = tier;
+  });
+  return best;
+}
+
 const NAV_ITEMS = [
   { id: 'home', title: 'home', icon: 'home', url: 'https://oeper.dev/', path: '/' },
   { id: 'feed', title: 'feed', icon: 'forum', url: 'https://oeper.dev/feed', path: '/feed' },
@@ -125,6 +144,9 @@ function injectStyles() {
     .oe-nsd-name { font-weight: 500; }
     .oe-nsd-cat { color: var(--md-sys-color-on-surface-variant); font-weight: 400; }
     .oe-nsd-empty { padding: 18px; text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; }
+    .oe-nsd-see-all { margin-top: 4px; border-top: 1px solid var(--md-sys-color-outline-variant); border-radius: 0; padding-top: 14px; }
+    .oe-nsd-see-all .oe-nsd-icon { background: none; }
+    .oe-nsd-see-all .oe-nsd-name { color: var(--md-sys-color-primary); font-weight: 500; }
 
     .oe-nav-mobile-search-btn {
       display: none; align-items: center; justify-content: center; width: 40px; height: 40px;
@@ -718,22 +740,6 @@ function initSearch(navEl) {
     return 12 - Math.min(hits, 10);
   }
 
-  // Pages that exist but are deliberately unlinked anywhere in the site's
-  // nav/create-drawer/bottom-nav — the only way to find them is to already
-  // know (or guess) what to search for. Add more here as more of these
-  // show up; each just needs something worth matching against.
-  const HIDDEN_PAGES = [
-    { keywords: ['leaderboard', 'leaderboards', 'rankings', 'ranking', 'most viewed', 'most liked', 'most followed', 'karma'], name: 'leaderboard', url: '/leaderboard', icon: 'leaderboard' },
-  ];
-  function hiddenPageRank(page, q) {
-    let best = -1;
-    page.keywords.forEach(k => {
-      const tier = k === q ? 0 : k.startsWith(q) ? 1 : k.includes(q) ? 2 : -1;
-      if (tier !== -1 && (best === -1 || tier < best)) best = tier;
-    });
-    return best;
-  }
-
   async function runSearch(qRaw) {
     const q = qRaw.trim().toLowerCase();
     if (!q) { closeDropdown(); return; }
@@ -770,9 +776,15 @@ function initSearch(navEl) {
 
     results.sort((a, b) => a.rank - b.rank);
     const top = results.slice(0, 8);
+    const seeAllRow = `
+      <a class="oe-nsd-row oe-nsd-see-all" href="/search?q=${encodeURIComponent(qRaw.trim())}">
+        <div class="oe-nsd-icon"><span class="material-symbols-rounded">search</span></div>
+        <div class="oe-nsd-main"><span class="oe-nsd-name">see all results for "${escHtml(qRaw.trim())}"</span></div>
+      </a>
+    `;
 
     if (top.length === 0) {
-      dropdown.innerHTML = `<div class="oe-nsd-empty">no results for "${escHtml(qRaw.trim())}"</div>`;
+      dropdown.innerHTML = `<div class="oe-nsd-empty">no results for "${escHtml(qRaw.trim())}"</div>` + seeAllRow;
       return;
     }
     dropdown.innerHTML = top.map(r => `
@@ -780,7 +792,7 @@ function initSearch(navEl) {
         <div class="oe-nsd-icon">${r.photo ? `<img src="${r.photo}" alt="">` : `<span class="material-symbols-rounded">${r.icon}</span>`}</div>
         <div class="oe-nsd-main"><span class="oe-nsd-name">${escHtml(r.name)}</span> <span class="oe-nsd-cat">${r.sub}</span></div>
       </a>
-    `).join('');
+    `).join('') + seeAllRow;
   }
 
   let debounceTimer = null;
@@ -796,8 +808,11 @@ function initSearch(navEl) {
   searchInput.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeDropdown();
     if (e.key === 'Enter') {
-      const first = dropdown.querySelector('.oe-nsd-row');
-      if (first) window.location.href = first.getAttribute('href');
+      // Enter always goes to the full results page (search.html), same as
+      // Google itself — clicking an actual suggestion in the dropdown is
+      // the way to jump straight to one specific thing instead.
+      const q = searchInput.value.trim();
+      if (q) window.location.href = `/search?q=${encodeURIComponent(q)}`;
     }
   });
   document.addEventListener('click', e => {
