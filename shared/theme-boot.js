@@ -26,6 +26,25 @@
 // version (e.g. the frosted navbar background) needs the triplet form to
 // plug into rgba(var(--md-sys-color-background-rgb), 0.8).
 (function () {
+  // Belt-and-suspenders against a flash of the wrong (hardcoded fallback)
+  // theme before this script finishes applying the real one: this script
+  // being a render-blocking classic <script> (not a module) at the very
+  // top of <head>, before any stylesheet, is *supposed* to already
+  // guarantee that — nothing after it parses until it's done — but that
+  // guarantee turned out not to hold in practice (reported: a visible
+  // flash of the default theme on every page, corrected a split second
+  // later). Rather than trust the "shouldn't be able to paint yet"
+  // reasoning a second time, make it structurally impossible: hide <html>
+  // immediately, and only reveal it once the real theme is actually set,
+  // a few lines from the end of this file. The DOMContentLoaded fallback
+  // guards the one bad failure mode this introduces on its own — if
+  // anything above threw partway through, the page would otherwise stay
+  // blank forever instead of just briefly showing the wrong theme.
+  document.documentElement.style.visibility = 'hidden';
+  document.addEventListener('DOMContentLoaded', function () {
+    document.documentElement.style.visibility = '';
+  }, { once: true });
+
   window.OE_THEME_KEY = 'oe-theme';
 
   window.OE_THEMES = {
@@ -1046,4 +1065,8 @@
   var saved = localStorage.getItem(window.OE_THEME_KEY) || 'material-dark';
   var savedFlip = localStorage.getItem(window.OE_THEME_FLIP_KEY) === '1';
   window.applyOeTheme(saved, savedFlip);
+
+  // The real theme is applied — safe to reveal now, well before
+  // DOMContentLoaded would otherwise do it.
+  document.documentElement.style.visibility = '';
 })();
