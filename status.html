@@ -56,8 +56,11 @@
   }
   .header-link:hover { opacity: 0.8; }
   .header-link:visited { color: var(--md-sys-color-primary); }
-  .header h1 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400; margin-bottom: 12px; letter-spacing: -0.5px; }
-  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 15px; max-width: 500px; line-height: 1.5; }
+  .header h1 {
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400;
+    margin-bottom: 12px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px;
+  }
+  .header h1 .material-symbols-rounded { font-size: 0.8em; color: var(--md-sys-color-primary); }
 
   .status-list { display: flex; flex-direction: column; gap: 12px; }
   .status-card { display: flex; align-items: center; gap: 16px; background: var(--md-sys-color-surface); border-radius: 20px; padding: 18px 22px; }
@@ -90,7 +93,7 @@
 
 <div class="page">
   <header class="header">
-    <h1>server status</h1>
+    <h1><span class="material-symbols-rounded">dns</span>server status</h1>
   </header>
 
   <div class="status-list" id="statusList"></div>

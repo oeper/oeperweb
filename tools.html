@@ -61,8 +61,11 @@
   }
   .header-link:hover { opacity: 0.8; }
   .header-link:visited { color: var(--md-sys-color-primary); }
-  .header h1 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400; margin-bottom: 12px; letter-spacing: -0.5px; }
-  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 16px; max-width: 540px; line-height: 1.5; }
+  .header h1 {
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400;
+    margin-bottom: 12px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 12px;
+  }
+  .header h1 .material-symbols-rounded { font-size: 0.8em; color: var(--md-sys-color-primary); }
 
   .grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
 
@@ -86,7 +89,7 @@
 
 <div class="page">
   <header class="header">
-    <h1>tools</h1>
+    <h1><span class="material-symbols-rounded">build</span>tools</h1>
   </header>
 
   <div class="grid-layout">

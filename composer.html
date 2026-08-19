@@ -54,7 +54,11 @@
   .page { position: relative; max-width: 720px; margin: 0 auto; padding: 56px 24px 100px; }
 
   .header { margin-bottom: 24px; }
-  .header h1 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2.2rem, 6vw, 3rem); font-weight: 400; margin-bottom: 8px; letter-spacing: -0.5px; }
+  .header h1 {
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2.2rem, 6vw, 3rem); font-weight: 400;
+    margin-bottom: 8px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px;
+  }
+  .header h1 .material-symbols-rounded { font-size: 0.8em; color: var(--md-sys-color-primary); }
   .header p { color: var(--md-sys-color-on-surface-variant); font-size: 14px; max-width: 560px; line-height: 1.5; }
   .header p a { color: var(--md-sys-color-primary); }
 
@@ -109,7 +113,7 @@
 
 <div class="page">
   <header class="header">
-    <h1>melody maker</h1>
+    <h1><span class="material-symbols-rounded">piano</span>melody maker</h1>
     <p>click a tile in each column to place a note — one note per column, top is highest. based on <a href="https://github.com/googlecreativelab/chrome-music-lab/tree/master/melodymaker" target="_blank" rel="noopener">Chrome Music Lab's Melody Maker</a> (Google Creative Lab, Apache-2.0).</p>
   </header>
 

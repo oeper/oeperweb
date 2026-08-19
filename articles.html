@@ -68,14 +68,18 @@
   }
   .header-link:hover { opacity: 0.8; }
   .header-link:visited { color: var(--md-sys-color-primary); }
-  .header h1 { 
+  .header h1 {
     font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: clamp(2.5rem, 6vw, 3.5rem);
-    font-weight: 400; 
+    font-weight: 400;
     color: var(--md-sys-color-on-surface);
-    margin-bottom: 12px; 
+    margin-bottom: 12px;
     letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
+  .header h1 .material-symbols-rounded { font-size: 0.8em; color: var(--md-sys-color-primary); }
   .header p { 
     color: var(--md-sys-color-on-surface-variant);
     font-size: 16px;
@@ -468,7 +472,7 @@
 
 <div class="page">
   <header class="header">
-    <h1>articles</h1>
+    <h1><span class="material-symbols-rounded">article</span>articles</h1>
   </header>
 
   <div class="toolbar">

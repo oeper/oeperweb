@@ -49,8 +49,11 @@
   .page { position: relative; max-width: 720px; margin: 0 auto; padding: 56px 24px 100px; }
 
   .header { margin-bottom: 28px; }
-  .header h1 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 400; margin-bottom: 8px; }
-  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 14px; line-height: 1.5; }
+  .header h1 {
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 400;
+    margin-bottom: 8px; display: flex; align-items: center; gap: 10px;
+  }
+  .header h1 .material-symbols-rounded { font-size: 0.85em; color: var(--md-sys-color-primary); }
 
   .signin-note { background: var(--md-sys-color-surface); border-radius: 20px; padding: 40px 24px; text-align: center; color: var(--md-sys-color-on-surface-variant); }
   .signin-note .material-symbols-rounded { font-size: 40px; opacity: 0.6; margin-bottom: 12px; display: block; }
@@ -108,8 +111,7 @@
 
 <div class="page">
   <div class="header">
-    <h1>your activity</h1>
-    <p>everything you've posted, commented on, liked, and saved — in one place.</p>
+    <h1><span class="material-symbols-rounded">insights</span>your activity</h1>
   </div>
   <div id="content"><div class="loading-note">Loading…</div></div>
 </div>

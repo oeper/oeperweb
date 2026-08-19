@@ -81,10 +81,18 @@
   }
   .header-row { display: flex; align-items: center; gap: 12px; }
   .header h1 {
-    flex: 1; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 400;
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 400;
     letter-spacing: -0.5px;
     background: linear-gradient(90deg, var(--md-sys-color-primary), var(--md-sys-color-on-secondary-container));
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  /* The gradient text-fill above would otherwise apply to the icon glyph
+     too (it's just another text glyph as far as background-clip:text is
+     concerned), rendering it with a half-transparent gradient instead of
+     a normal filled icon — reset both back to a plain solid color. */
+  .header h1 .material-symbols-rounded {
+    font-size: 0.8em; background: none; -webkit-text-fill-color: var(--md-sys-color-primary); color: var(--md-sys-color-primary);
   }
   .header-icon-btn {
     width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--md-sys-color-surface-variant);
@@ -381,7 +389,7 @@
           <button id="chatsBtn" class="header-icon-btn" title="chats"><span class="material-symbols-rounded">menu</span></button>
           <button id="newChatHeaderBtn" class="header-icon-btn" title="new chat"><span class="material-symbols-rounded">add</span></button>
         </div>
-        <h1>epic AI</h1>
+        <h1><span class="material-symbols-rounded">auto_awesome</span>epic AI</h1>
       </div>
     </header>
 

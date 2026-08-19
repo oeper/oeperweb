@@ -60,9 +60,9 @@
   .header h1 {
     font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400;
-    margin-bottom: 8px; letter-spacing: -0.5px;
+    margin-bottom: 8px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px;
   }
-  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 15px; line-height: 1.5; max-width: 560px; }
+  .header h1 .material-symbols-rounded { font-size: 0.8em; color: var(--md-sys-color-primary); }
 
   .notice {
     display: none;
@@ -250,8 +250,7 @@
 
 <div class="page" id="appRoot" style="display:none;">
   <header class="header">
-    <h1>content manager</h1>
-    <p>add, edit and publish articles &amp; downloads without touching code.</p>
+    <h1><span class="material-symbols-rounded">admin_panel_settings</span>content manager</h1>
     <a href="/files" class="header-link" style="margin-top:12px;">
       <span class="material-symbols-rounded">folder</span>
       <span>manage shared files</span>
