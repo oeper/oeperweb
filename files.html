@@ -239,6 +239,65 @@
   .icon-btn.danger:hover { color: var(--md-sys-color-error); }
   .icon-btn .material-symbols-rounded { font-size: 20px; }
 
+  /* List/grid view toggle + sort control — Drive's two most recognizable
+     file-browser affordances. View mode and sort choice are independent of
+     each other (both apply regardless of which view is active) and persist
+     across visits via localStorage. */
+  .view-toggle { display: inline-flex; background: var(--md-sys-color-surface-variant); border-radius: 100px; padding: 3px; gap: 2px; flex-shrink: 0; }
+  .view-toggle-btn {
+    width: 36px; height: 36px; border-radius: 100px; border: none; background: none;
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .view-toggle-btn.active { background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); }
+  .view-toggle-btn .material-symbols-rounded { font-size: 20px; }
+
+  .sort-control { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .sort-control .oe-dropdown-btn { padding: 8px 14px; font-size: 13px; }
+  .sort-dir-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .sort-dir-btn:hover { background-color: var(--md-sys-state-hover); }
+  .sort-dir-btn .material-symbols-rounded { font-size: 18px; transition: transform 0.15s; }
+  .sort-dir-btn.desc .material-symbols-rounded { transform: scaleY(-1); }
+
+  /* Grid view — folders as a wrapped row of compact chips (Drive's
+     "Folders" section), files as a responsive thumbnail grid below, in
+     place of list view's single column of full-width rows. */
+  .folder-chip-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+  .folder-chip {
+    display: flex; align-items: center; gap: 8px; background-color: var(--md-sys-color-surface);
+    border-radius: 12px; padding: 10px 10px 10px 14px; cursor: pointer; max-width: 240px; transition: background-color 0.2s;
+  }
+  .folder-chip:hover { background-color: var(--md-sys-color-hover-surface); }
+  .folder-chip.drop-target { box-shadow: 0 0 0 2px var(--md-sys-color-primary); background-color: var(--md-sys-color-hover-surface); }
+  .folder-chip > .material-symbols-rounded { color: var(--md-sys-color-primary); font-size: 20px; flex-shrink: 0; }
+  .folder-chip-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .folder-chip .icon-btn { width: 28px; height: 28px; flex-shrink: 0; }
+
+  .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+  .file-tile {
+    display: flex; flex-direction: column; background-color: var(--md-sys-color-surface); border-radius: 16px;
+    overflow: hidden; transition: background-color 0.2s;
+  }
+  .file-tile:hover, .file-tile.selected { background-color: var(--md-sys-color-hover-surface); }
+  .file-tile.dragging { opacity: 0.4; }
+  .file-tile-thumb {
+    position: relative; aspect-ratio: 1; background: var(--md-sys-color-surface-variant);
+    display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-on-surface-variant); font-size: 40px; overflow: hidden;
+  }
+  .file-tile-thumb img, .file-tile-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .file-tile-info { padding: 10px 12px 12px; }
+  .file-tile-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-tile-meta { font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Always visible (not hover-revealed) — a hover-only reveal would leave
+     touch/mobile users with no way to select or open the menu at all. */
+  .tile-checkbox { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.45); border-color: transparent; }
+  .tile-checkbox.checked { background: var(--md-sys-color-primary); }
+  .tile-actions { position: absolute; top: 4px; right: 4px; }
+  .tile-actions .icon-btn { background: rgba(0,0,0,0.45); width: 30px; height: 30px; color: #fff; }
+  .tile-actions .icon-btn:hover { background: rgba(0,0,0,0.65); }
+
   .anon-panel { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; background-color: var(--md-sys-color-surface); border-radius: 20px; padding: 24px; }
   .anon-hint { font-size: 14px; color: var(--md-sys-color-on-surface-variant); line-height: 1.5; }
   .anon-result-list { display: flex; flex-direction: column; gap: 8px; }
@@ -309,6 +368,13 @@
         <button class="pill" data-scope="all" id="allScopePill" style="display:none;">
           <span class="material-symbols-rounded">groups</span> everyone's
         </button>
+      </div>
+      <div class="sort-control" id="sortSlot">
+        <button type="button" class="sort-dir-btn" id="sortDirBtn" title="reverse sort order"><span class="material-symbols-rounded">arrow_upward</span></button>
+      </div>
+      <div class="view-toggle" id="viewToggle">
+        <button type="button" class="view-toggle-btn" data-view="list" title="list view"><span class="material-symbols-rounded">view_list</span></button>
+        <button type="button" class="view-toggle-btn" data-view="grid" title="grid view"><span class="material-symbols-rounded">grid_view</span></button>
       </div>
       <button type="button" class="toolbar-btn" id="newFolderBtn">
         <span class="material-symbols-rounded">create_new_folder</span> new folder
@@ -416,6 +482,24 @@ let scope = 'mine'; // 'mine' | 'all' (owners only)
 let currentFolder = ''; // path within the space currently being browsed
 let currentOwnerEmail = null; // scope 'all' only: null = "pick a user" screen, else whose space we're in
 const selectedFiles = new Set(); // filenames — bulk-select, current folder view only
+
+// View mode and sort choice are both persisted across visits, like Drive
+// remembering your last-used layout. Folders have no size/mtime in this
+// app's data model, so sortKey only ever reorders files — folders stay
+// alphabetical regardless (see render()).
+let viewMode = localStorage.getItem('oe-files-view') === 'grid' ? 'grid' : 'list';
+let sortKey = ['name', 'size', 'modified'].includes(localStorage.getItem('oe-files-sort')) ? localStorage.getItem('oe-files-sort') : 'name';
+let sortDir = localStorage.getItem('oe-files-sort-dir') === 'desc' ? -1 : 1;
+function sortFilesArray(arr) {
+  arr.sort((a, b) => {
+    let cmp;
+    if (sortKey === 'size') cmp = (a.size || 0) - (b.size || 0);
+    else if (sortKey === 'modified') cmp = (a.mtime || 0) - (b.mtime || 0);
+    else cmp = a.name.localeCompare(b.name);
+    return cmp * sortDir;
+  });
+  return arr;
+}
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function isImage(name) { return /\.(jpe?g|png|gif|webp|bmp|svg|avif)$/i.test(name); }
@@ -635,6 +719,40 @@ let movingFilename = null;
 let bulkMovingFilenames = null; // set instead of movingFilename when the bulk-bar's "move" opened this same modal
 const moveFolderDropdown = createDropdown([], { value: '', block: true });
 document.getElementById('moveFolderSlot').appendChild(moveFolderDropdown.el);
+
+// ── Sort control + view toggle ───────────────────────────────
+const sortDropdown = createDropdown([
+  { value: 'name', label: 'name' },
+  { value: 'size', label: 'size' },
+  { value: 'modified', label: 'modified' },
+], {
+  value: sortKey,
+  onChange: v => { sortKey = v; localStorage.setItem('oe-files-sort', v); render(); },
+});
+document.getElementById('sortSlot').prepend(sortDropdown.el);
+
+const sortDirBtn = document.getElementById('sortDirBtn');
+function updateSortDirBtn() { sortDirBtn.classList.toggle('desc', sortDir === -1); }
+updateSortDirBtn();
+sortDirBtn.addEventListener('click', () => {
+  sortDir = sortDir === 1 ? -1 : 1;
+  localStorage.setItem('oe-files-sort-dir', sortDir === -1 ? 'desc' : 'asc');
+  updateSortDirBtn();
+  render();
+});
+
+function updateViewToggle() {
+  document.querySelectorAll('.view-toggle-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.view === viewMode));
+}
+updateViewToggle();
+document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    viewMode = btn.dataset.view;
+    localStorage.setItem('oe-files-view', viewMode);
+    updateViewToggle();
+    render();
+  });
+});
 function openMoveModal(f) {
   movingFilename = f.filename;
   bulkMovingFilenames = null;
@@ -768,20 +886,38 @@ function render() {
 
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
   const space = spaceEmail();
-  const folderChildren = q ? [] : folders.filter(f => {
+  // Folders always sort alphabetically — they have no size/mtime in this
+  // app's data model, so the sort dropdown only ever reorders files.
+  const folderChildren = (q ? [] : folders.filter(f => {
     if (f.email !== space) return false;
     const parent = f.path.includes('/') ? f.path.slice(0, f.path.lastIndexOf('/')) : '';
     return parent === currentFolder;
-  });
-  const filesHere = (files || []).filter(f => {
+  })).sort((a, b) => a.path.split('/').pop().localeCompare(b.path.split('/').pop()));
+  const filesHere = sortFilesArray((files || []).filter(f => {
     if (f.email !== space) return false;
     if (!q && (f.folder || '') !== currentFolder) return false;
     return !q || f.name.toLowerCase().includes(q);
-  });
+  }));
 
+  list.className = 'file-list view-' + viewMode;
   list.innerHTML = '';
-  folderChildren.forEach(fo => list.appendChild(buildFolderCard(fo)));
-  filesHere.forEach(f => list.appendChild(buildCard(f)));
+  if (viewMode === 'grid') {
+    if (folderChildren.length) {
+      const row = document.createElement('div');
+      row.className = 'folder-chip-row';
+      folderChildren.forEach(fo => row.appendChild(buildFolderChip(fo)));
+      list.appendChild(row);
+    }
+    if (filesHere.length) {
+      const grid = document.createElement('div');
+      grid.className = 'file-grid';
+      filesHere.forEach(f => grid.appendChild(buildFileTile(f)));
+      list.appendChild(grid);
+    }
+  } else {
+    folderChildren.forEach(fo => list.appendChild(buildFolderCard(fo)));
+    filesHere.forEach(f => list.appendChild(buildCard(f)));
+  }
   document.getElementById('visibleCount').textContent = folderChildren.length + filesHere.length;
 
   // Storage total is across the whole space (every folder), not just what's
@@ -899,6 +1035,95 @@ function buildFolderCard(fo) {
     makeDropTarget(card, () => fo.path);
   }
   return card;
+}
+
+// Grid view's compact equivalents of buildFolderCard/buildCard — same
+// click/drag/kebab/checkbox behavior, just laid out as a chip and a
+// thumbnail tile instead of a full-width row, matching Drive's grid.
+function buildFolderChip(fo) {
+  const chip = document.createElement('div');
+  chip.className = 'folder-chip';
+  const fileCount = (files || []).filter(f => f.email === fo.email && f.folder === fo.path).length;
+  const subCount = folders.filter(f => f.email === fo.email && f.path !== fo.path && f.path.startsWith(fo.path + '/')).length;
+  const name = fo.path.split('/').pop();
+  chip.title = `${fileCount + subCount} item${(fileCount + subCount) === 1 ? '' : 's'}`;
+  chip.innerHTML = `<span class="material-symbols-rounded">folder</span><span class="folder-chip-name">${escHtml(name)}</span>`;
+  chip.addEventListener('click', () => { currentFolder = fo.path; render(); });
+  if (isOwnSpace()) {
+    const kebab = buildKebabMenu([
+      { label: 'delete folder', icon: 'delete', dangerous: true, onClick: () => deleteFolder(fo.path) },
+    ]);
+    kebab.addEventListener('click', e => e.stopPropagation());
+    chip.appendChild(kebab);
+    makeDropTarget(chip, () => fo.path);
+  }
+  return chip;
+}
+
+function buildFileTile(f) {
+  const tile = document.createElement('div');
+  tile.className = 'file-tile' + (selectedFiles.has(f.filename) ? ' selected' : '');
+  const user = getCurrentUser();
+  const mineOrOwner = user && (f.email === user.email || currentIsOwner());
+  const movable = mineOrOwner && !f.untracked;
+
+  let thumbHtml;
+  if (isImage(f.name)) thumbHtml = `<img src="${f.url}" alt="" loading="lazy">`;
+  else if (isVideo(f.name)) thumbHtml = `<video src="${f.url}" preload="metadata"></video>`;
+  else thumbHtml = `<span class="material-symbols-rounded">${isAudio(f.name) ? 'music_note' : iconFor(f.name)}</span>`;
+
+  tile.innerHTML = `
+    <div class="file-tile-thumb">
+      ${thumbHtml}
+      ${mineOrOwner ? `<button type="button" class="file-checkbox tile-checkbox${selectedFiles.has(f.filename) ? ' checked' : ''}" data-checkbox draggable="false" title="select"><span class="material-symbols-rounded">check</span></button>` : ''}
+      <div class="file-actions tile-actions" draggable="false"></div>
+    </div>
+    <div class="file-tile-info">
+      <div class="file-tile-name" title="${escHtml(f.name)}">${escHtml(f.name)}</div>
+      <div class="file-tile-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.expiresAt ? ` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
+    </div>
+  `;
+
+  const checkbox = tile.querySelector('[data-checkbox]');
+  if (checkbox) {
+    checkbox.addEventListener('click', e => {
+      e.stopPropagation();
+      if (selectedFiles.has(f.filename)) selectedFiles.delete(f.filename);
+      else selectedFiles.add(f.filename);
+      checkbox.classList.toggle('checked', selectedFiles.has(f.filename));
+      tile.classList.toggle('selected', selectedFiles.has(f.filename));
+      updateBulkBar();
+    });
+  }
+
+  if (movable) {
+    tile.draggable = true;
+    tile.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', f.filename);
+      e.dataTransfer.effectAllowed = 'move';
+      tile.classList.add('dragging');
+    });
+    tile.addEventListener('dragend', () => tile.classList.remove('dragging'));
+  }
+
+  // Unlike the row view's separate always-visible copy/download icon
+  // buttons, the tile only has room for one kebab — copy link and download
+  // move in as menu items instead (still available to everyone, not just
+  // mineOrOwner, matching the row view's permission model).
+  const menuItems = [{ label: 'copy link', icon: 'link', onClick: () => copyToClipboard(f.url) }];
+  if (mineOrOwner) menuItems.push({ label: 'rename', icon: 'edit', onClick: () => openRenameModal(f) });
+  if (mineOrOwner && !f.untracked) menuItems.push({ label: 'move to folder', icon: 'drive_file_move', onClick: () => openMoveModal(f) });
+  menuItems.push({ label: 'download', icon: 'download', onClick: () => {
+    const a = document.createElement('a');
+    a.href = f.url; a.download = ''; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+  } });
+  if (mineOrOwner) menuItems.push({ label: 'delete', icon: 'delete', dangerous: true, onClick: () => deleteFile(f.filename) });
+  const kebab = buildKebabMenu(menuItems);
+  kebab.addEventListener('click', e => e.stopPropagation());
+  tile.querySelector('.tile-actions').appendChild(kebab);
+
+  return tile;
 }
 
 function buildCard(f) {
