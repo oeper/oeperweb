@@ -473,13 +473,13 @@
 </div>
 
 <script type="module">
-import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange } from './shared/account.js?v=32';
+import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf } from './shared/account.js?v=32';
 import { mountTopNav } from './shared/topnav.js?v=29';
 import { mountFooter } from './shared/footer.js?v=5';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=1';
-import { doc, onSnapshot, setDoc, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { doc, onSnapshot, setDoc, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 mountFooter();
 
@@ -516,7 +516,7 @@ Here's what's on oeper.dev, so you can actually help people navigate or use it i
 - Videos (/videos) — longer-form video uploads, with comments and voting.
 - Files (/files) — personal file storage: upload and organize files into folders, share links, or browse public downloads other users have shared.
 - Messages (/messages) — direct messages and group chats, supporting image/video/file attachments, voice messages (DMs only), replies, and message reactions.
-- You (epic AI, at /ai) — this chat. You have three tools: search_web for current information on the live web, lookup_oeper_user for real, live data about a specific oeper.dev user by their @handle (display name, bio, badge, member-since date), and remember_fact to save something worth recalling in future conversations with this user. Use lookup_oeper_user whenever someone asks about a specific @handle — don't guess or say you have no way to check. Use remember_fact when the user shares a genuinely useful fact or preference (has no effect if they're not signed in) — see the tool's own description for what's worth remembering.
+- You (epic AI, at /ai) — this chat. If they're signed in, you're told who you're talking to at the start of the conversation (their name, @handle, bio, and recent post titles) — you already know this, don't ask them to introduce themselves. You have five tools: search_web for current information on the live web; lookup_oeper_user for real, live data about a specific oeper.dev user by their @handle (display name, bio, badge, member-since date) — use it whenever someone asks about a handle other than their own, don't guess; remember_fact to save something worth recalling in future conversations (has no effect if they're not signed in — see the tool's own description for what's worth remembering); update_memory to correct something you already remember instead of leaving both the old and new versions saved; and forget_fact to remove something that's no longer true or that they've asked you to forget. Keep what you remember accurate — if the user corrects something, use update_memory or forget_fact rather than just adding a new, conflicting fact on top.
 - Tools (/tools) — small standalone utilities: a Music Composer (melody grid), onePDF (in-browser PDF splitting/merging/editing), and a QR code maker.
 - Articles (/articles) and Downloads (/downloads) — curated articles and downloadable resources.
 - Profiles (/profile?u=handle) — a user's posts, a saved-items tab, follower/following counts, and badges (an OFFICIAL badge marks the site's owners; anyone can also be granted a custom badge by an owner).
@@ -1266,6 +1266,22 @@ async function forgetFact(fact) {
   try { await setDoc(doc(db, 'aiMemory', user.email), { facts: arrayRemove(fact) }, { merge: true }); }
   catch (err) { console.error('Could not remove AI memory:', err); }
 }
+// Firestore has no single atomic "replace this array element" operation —
+// arrayRemove and arrayUnion on the same field can't be combined into one
+// write, so this is two sequential writes. A listener could in theory
+// observe the fact briefly missing between them, but for a personal
+// memory list that's an acceptable tradeoff against the complexity of
+// anything fancier (a transaction reading-then-writing the whole array
+// would work but isn't worth it here).
+async function updateMemoryFact(oldFact, newFact) {
+  const user = getCurrentUser();
+  const trimmedNew = String(newFact || '').trim().slice(0, 300);
+  if (!user || !oldFact || !trimmedNew) return;
+  try {
+    await setDoc(doc(db, 'aiMemory', user.email), { facts: arrayRemove(oldFact) }, { merge: true });
+    await setDoc(doc(db, 'aiMemory', user.email), { facts: arrayUnion(trimmedNew) }, { merge: true });
+  } catch (err) { console.error('Could not update AI memory:', err); }
+}
 
 onAccountChange(user => {
   if (memoryUnsub) { memoryUnsub(); memoryUnsub = null; }
@@ -1278,6 +1294,43 @@ onAccountChange(user => {
   } else {
     renderMemoryPanel();
   }
+});
+
+// ── Self-context (who's actually signed in) ─────────────────────────────
+// Separate from aiMemory above — this isn't something the model chooses to
+// remember over time, it's just telling it who it's talking to right now,
+// the same way a human assistant would already know your name without you
+// introducing yourself every message. Refetched on every sign-in change,
+// not live-subscribed — a stale post list for the rest of one session is a
+// fine tradeoff against an onSnapshot listener for something this
+// low-stakes. Posts only (not videos/files/etc.) for now, capped at 5 and
+// sorted client-side like profile.html's own posts query, to avoid needing
+// a composite Firestore index for authorEmail + createdAt together.
+let selfContext = '';
+onAccountChange(user => {
+  selfContext = '';
+  if (!user) return;
+  (async () => {
+    await ensureProfileLoaded(user.email);
+    const profile = getProfile(user.email, user.displayName, user.photoURL);
+    const handle = handleOf(user.email);
+    let postsLine = '';
+    try {
+      const snap = await getDocs(query(collection(db, 'posts'), where('authorEmail', '==', user.email)));
+      const titles = snap.docs
+        .map(d => ({ title: d.data().title, date: d.data().createdAt && d.data().createdAt.toDate ? d.data().createdAt.toDate() : new Date(0) }))
+        .sort((a, b) => b.date - a.date)
+        .slice(0, 5)
+        .map(p => p.title)
+        .filter(Boolean);
+      if (titles.length) postsLine = `Their most recent post title(s), newest first: ${titles.map(t => `"${t}"`).join(', ')}.`;
+    } catch {}
+    selfContext = [
+      `You're talking to ${profile.name}${handle ? ` (@${handle} on oeper.dev)` : ''}, who is signed in right now.`,
+      profile.bio ? `Their profile bio: "${profile.bio}"` : '',
+      postsLine,
+    ].filter(Boolean).join(' ');
+  })();
 });
 
 onAccountChange(user => {
@@ -1478,9 +1531,11 @@ async function toWireMessages(msgs) {
     }
     return { role: m.role, content: m.content };
   }));
-  const systemContent = memoryFacts.length
-    ? `${SYSTEM_PROMPT}\n\nThings you remember about this user from past conversations (use naturally where relevant, don't just recite the list back at them):\n${memoryFacts.map(f => '- ' + f).join('\n')}`
-    : SYSTEM_PROMPT;
+  let systemContent = SYSTEM_PROMPT;
+  if (selfContext) systemContent += `\n\n${selfContext}`;
+  if (memoryFacts.length) {
+    systemContent += `\n\nThings you remember about this user from past conversations (use naturally where relevant, don't just recite the list back at them):\n${memoryFacts.map(f => '- ' + f).join('\n')}`;
+  }
   return [{ role: 'system', content: systemContent }, ...wire];
 }
 
@@ -1615,6 +1670,8 @@ async function sendToModel(chat) {
         try {
           const json = JSON.parse(payload);
           if (json.remember) { rememberFact(json.remember); continue; }
+          if (json.updateMemory) { updateMemoryFact(json.updateMemory.old, json.updateMemory.new); continue; }
+          if (json.forget) { forgetFact(json.forget); continue; }
           const delta = json.choices?.[0]?.delta || {};
           if (delta.reasoning_content) reasoningBuf += delta.reasoning_content;
           if (delta.content) contentBuf += delta.content;

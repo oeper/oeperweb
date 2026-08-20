@@ -220,19 +220,24 @@ function streamToolLoop(env, initialMessages) {
             let toolResult;
             let args = {};
             try { args = JSON.parse(call.function.arguments || '{}'); } catch {}
-            // remember_fact has nowhere to actually persist to — this Worker
-            // has no Firestore write credentials, deliberately (see the
-            // firestoreGetDoc comment above: reads work unauthenticated
-            // against public-read rules, writes never will without a
-            // service account this Worker doesn't hold). Instead of writing
-            // anything itself, it streams the fact to the client as its own
-            // SSE event, and ai.html does the actual write under the
-            // signed-in user's own auth — same as every other Firestore
-            // write on this site. If nobody's signed in, ai.html just drops
-            // the event; the model still gets a normal-looking tool result
-            // either way so it doesn't get confused mid-conversation.
+            // None of the memory tools have anywhere to actually persist to
+            // — this Worker has no Firestore write credentials, deliberately
+            // (see the firestoreGetDoc comment above: reads work
+            // unauthenticated against public-read rules, writes never will
+            // without a service account this Worker doesn't hold). Instead
+            // of writing anything itself, it streams the change to the
+            // client as its own SSE event, and ai.html does the actual
+            // write under the signed-in user's own auth — same as every
+            // other Firestore write on this site. If nobody's signed in,
+            // ai.html just drops the event; the model still gets a normal-
+            // looking tool result either way so it doesn't get confused
+            // mid-conversation.
             if (call.function.name === 'remember_fact' && args.fact) {
               send({ remember: String(args.fact).slice(0, 300) });
+            } else if (call.function.name === 'update_memory' && args.old_fact && args.new_fact) {
+              send({ updateMemory: { old: String(args.old_fact).slice(0, 300), new: String(args.new_fact).slice(0, 300) } });
+            } else if (call.function.name === 'forget_fact' && args.fact) {
+              send({ forget: String(args.fact).slice(0, 300) });
             }
             if (!fn) {
               toolResult = JSON.stringify({ error: 'unknown tool' });
@@ -389,12 +394,43 @@ const TOOLS = [
       required: ['fact'],
     },
   },
+  {
+    name: 'update_memory',
+    description: "Correct or revise something you already remember about this user, in place — the fact changed or you got it wrong the first time (e.g. they were learning Rust, now they've said they've moved on to Zig). old_fact must match one of the facts listed under \"Things you remember about this user\" verbatim, word for word — if you're not certain of the exact wording, use forget_fact and remember_fact separately instead of guessing at a match.",
+    parameters: {
+      type: 'object',
+      properties: {
+        old_fact: { type: 'string', description: 'The exact existing fact to replace, copied verbatim from the remembered-facts list' },
+        new_fact: { type: 'string', description: 'The corrected/updated fact, written the same way remember_fact expects' },
+      },
+      required: ['old_fact', 'new_fact'],
+    },
+  },
+  {
+    name: 'forget_fact',
+    description: 'Remove something you currently remember about this user — it turned out wrong, is no longer true, or they asked you to forget it. fact must match one of the facts listed under "Things you remember about this user" verbatim, word for word.',
+    parameters: {
+      type: 'object',
+      properties: {
+        fact: { type: 'string', description: 'The exact existing fact to remove, copied verbatim from the remembered-facts list' },
+      },
+      required: ['fact'],
+    },
+  },
 ];
-// remember_fact's actual persistence happens client-side (see the
-// streamToolLoop comment above) — this handler exists only so the
+// These three tools' actual persistence happens client-side (see the
+// streamToolLoop comment above) — these handlers exist only so the
 // tool-calling protocol gets a normal result to feed back to the model.
 async function rememberFact() { return JSON.stringify({ ok: true }); }
-const TOOL_FUNCTIONS = { search_web: searchWeb, lookup_oeper_user: lookupOeperUser, remember_fact: rememberFact };
+async function updateMemory() { return JSON.stringify({ ok: true }); }
+async function forgetFact() { return JSON.stringify({ ok: true }); }
+const TOOL_FUNCTIONS = {
+  search_web: searchWeb,
+  lookup_oeper_user: lookupOeperUser,
+  remember_fact: rememberFact,
+  update_memory: updateMemory,
+  forget_fact: forgetFact,
+};
 const MAX_TOOL_ROUNDS = 3;
 
 async function handleChat(request, env) {
