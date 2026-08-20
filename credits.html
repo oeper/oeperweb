@@ -117,8 +117,9 @@
   .pkg-buy {
     width: auto; flex-shrink: 0; padding: 10px 18px; font-size: 13px;
     background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);
+    transition: opacity 0.15s;
   }
-  .pkg-buy:hover { opacity: 0.9; }
+  .pkg-buy:hover { opacity: 0.85; }
   .pkg-note { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 4px; }
 
   .history-row {
@@ -191,20 +192,51 @@ function timeAgo(date) {
   return date.toLocaleDateString();
 }
 
-// Purchasable credit packages — placeholder pricing, easy to retune once
-// real billing (Stripe/whatever) is actually wired up. `base` is what the
-// credits would cost with no bonus, shown struck-through next to the
-// actual (bonus-included) total so bigger packages visibly look like the
-// better deal; `bonus` is just base * some larger-package discount, baked
-// in ahead of time rather than computed. Purchasing is gated off below
-// (buyPackage) until there's an actual payment processor behind this.
+// Purchasable credit packages, priced in MYR (the actual currency being
+// charged, once billing exists) — `base` is what the credits would cost
+// with no bonus, shown struck-through next to the actual (bonus-included)
+// total so bigger packages visibly look like the better deal. Purchasing
+// is gated off below (buyPackage) until there's an actual payment
+// processor behind this.
 const CREDIT_PACKAGES = [
-  { credits: 500,   bonus: 0,    price: 2.99 },
-  { credits: 1000,  bonus: 150,  price: 5.99 },
-  { credits: 2200,  bonus: 400,  price: 11.99 },
-  { credits: 5000,  bonus: 1000, price: 24.99 },
-  { credits: 12000, bonus: 3000, price: 54.99 },
+  { credits: 10,  bonus: 0,   priceMYR: 0.99 },
+  { credits: 45,  bonus: 5,   priceMYR: 4.49 },
+  { credits: 100, bonus: 25,  priceMYR: 9.99 },
+  { credits: 250, bonus: 50,  priceMYR: 24.99 },
+  { credits: 800, bonus: 200, priceMYR: 79.99 },
 ];
+
+// Approximate, static MYR -> other-currency rates, just for previewing
+// prices in the visitor's own currency ahead of real billing — nowhere
+// near precise enough to actually charge against. Once a real payment
+// processor is wired up, use its currency handling (Stripe etc. do this
+// properly with live rates) instead of this table. Falls back to USD for
+// any region not listed.
+const MYR_RATES = {
+  MYR: 1, USD: 0.21, EUR: 0.20, GBP: 0.17, SGD: 0.29, AUD: 0.33, CAD: 0.30,
+  INR: 18.0, IDR: 3400, PHP: 12.4, THB: 7.7, VND: 5500, JPY: 33, CNY: 1.55,
+  KRW: 300, NZD: 0.36, HKD: 1.66, BRL: 1.28, MXN: 4.3, ZAR: 3.9,
+};
+const REGION_CURRENCY = {
+  MY: 'MYR', US: 'USD', GB: 'GBP', SG: 'SGD', AU: 'AUD', CA: 'CAD',
+  IN: 'INR', ID: 'IDR', PH: 'PHP', TH: 'THB', VN: 'VND', JP: 'JPY',
+  CN: 'CNY', KR: 'KRW', NZ: 'NZD', HK: 'HKD', BR: 'BRL', MX: 'MXN',
+  ZA: 'ZAR', DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR',
+  IE: 'EUR', PT: 'EUR', AT: 'EUR', FI: 'EUR', BE: 'EUR', GR: 'EUR',
+};
+function localeCurrency() {
+  const region = (navigator.language || 'en-US').split('-')[1];
+  return (region && REGION_CURRENCY[region.toUpperCase()]) || 'USD';
+}
+function formatPrice(priceMYR) {
+  const currency = localeCurrency();
+  const rate = MYR_RATES[currency] != null ? MYR_RATES[currency] : MYR_RATES.USD;
+  try {
+    return new Intl.NumberFormat(navigator.language || 'en-US', { style: 'currency', currency }).format(priceMYR * rate);
+  } catch {
+    return `RM${priceMYR.toFixed(2)}`;
+  }
+}
 
 function packagesHtml() {
   return CREDIT_PACKAGES.map((pkg, i) => {
@@ -216,7 +248,7 @@ function packagesHtml() {
           <span class="pkg-amount">${total.toLocaleString()}</span>
           ${pkg.bonus > 0 ? `<span class="pkg-base">${pkg.credits.toLocaleString()}</span><span class="pkg-bonus">+${pkg.bonus.toLocaleString()} more</span>` : ''}
         </div>
-        <button type="button" class="btn pkg-buy" data-pkg="${i}">$${pkg.price.toFixed(2)}</button>
+        <button type="button" class="btn pkg-buy" data-pkg="${i}">${formatPrice(pkg.priceMYR)}</button>
       </div>
     `;
   }).join('');
@@ -277,7 +309,7 @@ function render() {
     <div class="card">
       <div class="section-heading">buy credits</div>
       ${packagesHtml()}
-      <div class="pkg-note">payments aren't set up yet — pricing shown is a preview.</div>
+      <div class="pkg-note">payments aren't set up yet — pricing shown is a preview, converted to your currency at an approximate rate.</div>
     </div>
 
     <div class="card">
