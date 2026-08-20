@@ -486,8 +486,8 @@ const selectedFiles = new Set(); // filenames — bulk-select, current folder vi
 // app's data model, so sortKey only ever reorders files — folders stay
 // alphabetical regardless (see render()).
 let viewMode = localStorage.getItem('oe-files-view') === 'grid' ? 'grid' : 'list';
-let sortKey = ['name', 'size', 'modified'].includes(localStorage.getItem('oe-files-sort')) ? localStorage.getItem('oe-files-sort') : 'name';
-let sortDir = localStorage.getItem('oe-files-sort-dir') === 'desc' ? -1 : 1;
+let sortKey = ['name', 'size', 'modified'].includes(localStorage.getItem('oe-files-sort')) ? localStorage.getItem('oe-files-sort') : 'modified';
+let sortDir = localStorage.getItem('oe-files-sort-dir') === 'asc' ? 1 : -1;
 function sortFilesArray(arr) {
   arr.sort((a, b) => {
     let cmp;
@@ -1103,6 +1103,10 @@ function buildFileTile(f) {
     });
     tile.addEventListener('dragend', () => tile.classList.remove('dragging'));
   }
+  tile.addEventListener('dblclick', e => {
+    if (e.target.closest('button, a')) return;
+    window.open(f.url, '_blank', 'noopener');
+  });
 
   // Unlike the row view's separate always-visible copy/download icon
   // buttons, the tile only has room for one kebab — copy link and download
@@ -1174,6 +1178,10 @@ function buildCard(f) {
     });
     card.addEventListener('dragend', () => card.classList.remove('dragging'));
   }
+  card.addEventListener('dblclick', e => {
+    if (e.target.closest('button, a, audio')) return;
+    window.open(f.url, '_blank', 'noopener');
+  });
 
   if (mineOrOwner) {
     const menuItems = [

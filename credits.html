@@ -148,6 +148,14 @@
     font-size: 14px; color: #e3e2e6; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 100; white-space: nowrap;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* shared/topnav.js's mobile bottom nav bar sits fixed at the very bottom
+     of the screen below 600px, above the toast's own z-index — without
+     this, it painted over (cut off) the bottom of the toast instead of
+     the toast sitting above it. Same offset ai.html uses for its own
+     bottom-fixed input bar. */
+  @media (max-width: 600px) {
+    .toast { bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 32px); }
+  }
 </style>
 </head>
 <body>
