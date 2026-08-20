@@ -822,29 +822,55 @@ function splitThinking(reasoningBuf, contentBuf, done) {
 // innerHTML on every streamed chunk would otherwise reset a native
 // <details>'s open attribute every time too.
 //
-// Stays collapsed by default even while actively streaming reasoning — it
-// used to force itself open for the duration of the "thinking" phase, but
-// since bubble.innerHTML gets fully replaced on every streamed token, that
-// re-created the thinking-content-wrap (and its fade-in) on every single
-// token, which just looked like flickering text. Only a manual click opens
-// it now, live-streaming reasoning included.
+// Stays collapsed by default even while actively streaming reasoning —
+// only a manual click opens it, live-streaming reasoning included.
+//
+// Used to rebuild via bubble.innerHTML = html on every single streamed
+// token — simple, but that fully destroyed and recreated the thinking
+// block's DOM every time, including .thinking-content-wrap, whose CSS
+// fade-in (.thinking-block.open .thinking-content-wrap { animation:
+// thinkingFadeIn ... }) got RESTARTED from scratch on every one of those
+// recreations. Tokens can easily arrive faster than the 0.2s fade
+// duration, so an opened block never actually finished fading in — it
+// just kept snapping back toward transparent, which is what "the ai's
+// texts aren't animated" and "thinking is still too tall" both actually
+// were: real reasoning text, correctly sized, rendering behind an
+// animation that could never settle. Updating the existing elements'
+// text in place instead — rather than replacing them — lets the block
+// (and its animation) actually persist across chunks like any other DOM
+// node would.
 function renderAssistantContent(bubble, reasoningBuf, contentBuf, done) {
   const { thinking, answer, stillThinking } = splitThinking(reasoningBuf, contentBuf, done);
-  let html = '';
+
   if (thinking) {
-    const existing = bubble.querySelector('.thinking-block');
-    const userToggled = existing && existing.dataset.userToggled === '1';
-    const wasOpen = existing ? existing.classList.contains('open') : false;
-    const isOpen = userToggled && wasOpen;
-    html += `
-      <div class="thinking-block${isOpen ? ' open' : ''}" data-user-toggled="${userToggled ? '1' : '0'}">
-        <div class="thinking-summary"><span class="material-symbols-rounded thinking-caret">expand_more</span>${stillThinking ? 'Thinking…' : 'Show thinking'}</div>
-        <div class="thinking-content-wrap"><div class="thinking-content"><div class="thinking-content-inner">${escHtml(thinking)}</div></div></div>
-      </div>
-    `;
+    let block = bubble.querySelector('.thinking-block');
+    if (!block) {
+      block = document.createElement('div');
+      block.className = 'thinking-block';
+      block.dataset.userToggled = '0';
+      block.innerHTML = `
+        <div class="thinking-summary"><span class="material-symbols-rounded thinking-caret">expand_more</span><span class="thinking-label"></span></div>
+        <div class="thinking-content-wrap"><div class="thinking-content"><div class="thinking-content-inner"></div></div></div>
+      `;
+      bubble.insertBefore(block, bubble.firstChild);
+    }
+    block.querySelector('.thinking-label').textContent = stillThinking ? 'Thinking…' : 'Show thinking';
+    block.querySelector('.thinking-content-inner').textContent = thinking;
+  } else {
+    bubble.querySelector('.thinking-block')?.remove();
   }
-  if (answer) html += `<div class="answer-content">${parseAiMarkdown(answer)}</div>`;
-  bubble.innerHTML = html;
+
+  let answerEl = bubble.querySelector('.answer-content');
+  if (answer) {
+    if (!answerEl) {
+      answerEl = document.createElement('div');
+      answerEl.className = 'answer-content';
+      bubble.appendChild(answerEl);
+    }
+    answerEl.innerHTML = parseAiMarkdown(answer);
+  } else {
+    answerEl?.remove();
+  }
 }
 
 // ── Model dropdown ───────────────────────────────────────────
