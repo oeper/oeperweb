@@ -430,8 +430,8 @@
 <div class="chats-overlay" id="chatsOverlay"></div>
 
 <script type="module">
-import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange } from './shared/account.js?v=30';
-import { mountTopNav } from './shared/topnav.js?v=27';
+import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange } from './shared/account.js?v=31';
+import { mountTopNav } from './shared/topnav.js?v=28';
 import { mountFooter } from './shared/footer.js?v=5';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
@@ -905,6 +905,29 @@ function getCurrentChat() { return chats.find(c => c.id === currentChatId); }
 const messagesEl = document.getElementById('chatMessages');
 const inputEl = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
+
+// The page itself scrolls (chat-messages has no overflow of its own), so
+// streaming used to call bubble.scrollIntoView() on every single SSE
+// chunk — tens of times a second while a response streams in, each one
+// an instant jump that fought any attempt to scroll up and read earlier
+// messages while the reply was still coming in. isNearBottom() is
+// checked BEFORE each render (against the *pre*-update scrollHeight) so
+// scrolling only auto-follows when the reader was already at the bottom,
+// same as any chat app's "stick to bottom unless you've scrolled away"
+// behavior; scheduleScroll() then coalesces however many chunks land
+// within one frame into a single scrollIntoView call via rAF, instead of
+// one per chunk.
+function isNearBottom() {
+  return window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 120;
+}
+let scrollRAF = null;
+function scheduleScroll(bubble) {
+  if (scrollRAF) return;
+  scrollRAF = requestAnimationFrame(() => {
+    scrollRAF = null;
+    bubble.scrollIntoView({ block: 'end' });
+  });
+}
 
 // Delegated once (not per-render) since bubbles get their innerHTML
 // replaced on every streamed chunk, which would drop a directly-attached
@@ -1460,8 +1483,9 @@ async function sendToModel(chat) {
           if (delta.content) contentBuf += delta.content;
           if (delta.reasoning_content || delta.content) {
             if (first) { bubble.classList.remove('thinking'); first = false; }
+            const stick = isNearBottom();
             renderAssistantContent(bubble, reasoningBuf, contentBuf);
-            bubble.scrollIntoView({ block: 'end' });
+            if (stick) scheduleScroll(bubble);
           }
         } catch {}
       }

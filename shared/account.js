@@ -781,11 +781,27 @@ function injectStyles() {
 
 function ensureFontsAndIcons() {
   const need = [
-    ['https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap', 'stylesheet'],
-    ['https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200', 'stylesheet'],
+    ['family=Google+Sans', 'https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap'],
+    ['family=Material+Symbols+Rounded', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200'],
   ];
-  need.forEach(([href]) => {
-    if (!document.querySelector(`link[href="${href}"]`)) {
+  // Most pages already load both fonts themselves, bundled into one
+  // combined-family URL (family=Google+Sans...&family=Material+Symbols+
+  // Rounded...&family=...), which never string-matches either of the
+  // single-family URLs above. An exact href match missed that every time,
+  // so this always injected a second, separate Material Symbols
+  // stylesheet — and that stylesheet ships its own bare
+  // `.material-symbols-rounded { font-size: 24px }` base rule, landing
+  // later in the cascade than the page's own <style> block (this runs
+  // after page parse) and silently winning any specificity tie against a
+  // single-class icon-size override elsewhere on the page (e.g.
+  // `.thinking-caret`, unlike a descendant selector like `.msg-avatar
+  // .material-symbols-rounded` which still safely outranks it). Matching
+  // on the family= param instead of the full URL correctly recognizes an
+  // already-loaded combined link and skips the redundant injection.
+  need.forEach(([familyParam, href]) => {
+    const already = [...document.querySelectorAll('link[href*="fonts.googleapis.com/css2"]')]
+      .some(link => link.href.includes(familyParam));
+    if (!already) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = href;

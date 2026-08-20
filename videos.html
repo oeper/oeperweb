@@ -290,13 +290,13 @@ import {
   auth, db, SERVER_ENDPOINT, isOwnerEmail, officialBadgeHtml, getCurrentUser, onAccountChange,
   getProfile, handleOf, uploadFile, ensureProfileLoaded, sendNotification, linkifyMentions, resolveUidsToEmails,
   loadFollowRelationships,
-} from './shared/account.js?v=30';
-import { mountTopNav } from './shared/topnav.js?v=27';
+} from './shared/account.js?v=31';
+import { mountTopNav } from './shared/topnav.js?v=28';
 import { mountFooter } from './shared/footer.js?v=5';
-import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=2';
+import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=3';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=1';
-import { reportContent } from './shared/report.js?v=1';
+import { reportContent } from './shared/report.js?v=2';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
   arrayUnion, arrayRemove, increment, query, orderBy,

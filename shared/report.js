@@ -11,7 +11,7 @@
 // or behavior change needs its `?v=N` bumped on every
 // `from './shared/report.js?v=N'` import across the site (grep for it).
 
-import { getCurrentUser, SERVER_ENDPOINT, getProfile } from './account.js?v=30';
+import { getCurrentUser, SERVER_ENDPOINT, getProfile } from './account.js?v=31';
 import { oeReport } from './dialog.js?v=4';
 
 let toastStylesInjected = false;

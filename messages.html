@@ -393,15 +393,15 @@
 </div>
 
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=27';
+import { mountTopNav } from './shared/topnav.js?v=28';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
   loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions, CREDITS_ICON,
-} from './shared/account.js?v=30';
+} from './shared/account.js?v=31';
 import { mountFooter } from './shared/footer.js?v=5';
-import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=2';
+import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=3';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
-import { reportContent } from './shared/report.js?v=1';
+import { reportContent } from './shared/report.js?v=2';
 import { observeList } from './shared/motion.js?v=1';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,

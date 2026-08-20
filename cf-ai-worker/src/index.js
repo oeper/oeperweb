@@ -168,14 +168,22 @@ async function streamOneRound(upstream, send) {
   }
 
   const finishedWithToolCalls = sawToolCall && toolCallAcc.length > 0;
-  // Ran out of max_tokens (finish_reason 'length') without ever calling a
-  // tool or producing any real answer text — the whole budget went to
-  // reasoning. Rather than leave the client staring at a reasoning trace
-  // that just stops mid-sentence with no explanation (what prompted this),
-  // surface it as an actual, if apologetic, answer.
-  if (!finishedWithToolCalls && finishReason === 'length' && !assistantContent) {
-    const note = "(ran out of room to answer that — could you try rephrasing, or asking something more specific?)";
-    assistantContent = note;
+  // Ran out of max_tokens (finish_reason 'length') without calling a tool.
+  // finish_reason never used to reach the client at all, so a response
+  // that got cut off mid-sentence looked identical to a normal, complete
+  // one — "the AI gets cut off sometimes, any idea why?" with nothing in
+  // the UI hinting it was truncated rather than just... finished talking.
+  // Two distinct cases:
+  //  - no real answer text at all (the whole budget went to reasoning) —
+  //    surface an apologetic placeholder instead of an empty bubble.
+  //  - a partial answer that got cut off mid-thought — append a short,
+  //    visibly different note so it's clear more was coming, instead of
+  //    silently truncating like it used to.
+  if (!finishedWithToolCalls && finishReason === 'length') {
+    const note = assistantContent
+      ? '\n\n*(cut off — hit the response length limit. ask it to continue.)*'
+      : "(ran out of room to answer that — could you try rephrasing, or asking something more specific?)";
+    assistantContent += note;
     send({ choices: [{ delta: { content: note } }] });
   }
 
