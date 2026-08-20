@@ -255,15 +255,21 @@ signed-in; both share `MAX_UPLOAD_BYTES` (1GB) and `ANON_PERMANENT_BYTES`
 above). There's no env var for any of these — edit the constants directly
 if you want different limits.
 
-## Changing the Discord report webhook
+## Setting the Discord report webhook
 
-`DISCORD_REPORT_WEBHOOK` in `upload-server.js` is hardcoded as a fallback,
-but you can override it without editing the file by setting an environment
-variable instead:
+`DISCORD_REPORT_WEBHOOK` is **not** hardcoded anywhere in `upload-server.js`
+— it only ever comes from the environment (a real webhook URL used to sit
+in the source as a fallback default, which meant it was sitting in this
+repo's public git history the whole time; if that's how you found this
+note, that webhook is burned — delete it in Discord's channel integration
+settings and create a fresh one). Set it via `.env` (see above) or inline:
 
 ```sh
 DISCORD_REPORT_WEBHOOK=https://discord.com/api/webhooks/... PUBLIC_BASE_URL=https://your-tunnel-url node upload-server.js
 ```
+
+Without it set, `/report` responds with a clean 503 instead of posting
+anywhere — the server logs this plainly on startup too.
 
 ## Putting it all together
 

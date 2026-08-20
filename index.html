@@ -774,8 +774,9 @@
   import { mountTopNav } from './shared/topnav.js?v=27';
   import { mountFooter } from './shared/footer.js?v=5';
   import { createDropdown } from './shared/dropdown.js?v=2';
-  import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
+  import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
   import { observeList } from './shared/motion.js?v=1';
+  import { reportContent } from './shared/report.js?v=1';
   import {
     collection, query, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp,
     getDocs, where, setDoc, Timestamp,
@@ -848,31 +849,6 @@
       await oePrompt('Copy this link:', { defaultValue: url });
     }
   }
-  async function reportItem(type, itemId, contentPreview, aboutHandleOrEmail, url) {
-    const u = getCurrentUser();
-    if (!u) { showToast('sign in to report'); return; }
-    if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
-    const reason = await oePrompt('Why are you reporting this?');
-    if (!reason || !reason.trim()) return;
-    try {
-      const idToken = await u.getIdToken();
-      const res = await fetch(SERVER_ENDPOINT + '/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
-        body: JSON.stringify({
-          type, reason: reason.trim(), itemId,
-          url: url || `About: ${aboutHandleOrEmail}${contentPreview ? ` — "${contentPreview.slice(0, 200)}"` : ''}`,
-        }),
-      });
-      if (!res.ok) {
-        let msg = `HTTP ${res.status}`;
-        try { msg = (await res.json()).error || msg; } catch {}
-        throw new Error(msg);
-      }
-      showToast('report sent — thank you');
-    } catch (err) { showToast('could not send report: ' + err.message); }
-  }
-
   // ── Stories ──────────────────────────────────────────────────
   const STORY_LIFETIME_MS = 24 * 60 * 60 * 1000;
   const STORY_SEEN_KEY = 'oe-seen-stories';
@@ -1105,7 +1081,10 @@
     });
     document.getElementById('storyReportBtn').addEventListener('click', () => {
       const s = currentSet[currentIndex];
-      if (s) reportItem('story', s.id, null, s.authorEmail, storyUrl(s.id));
+      if (s) reportContent({
+        type: 'story', subject: 'this story', itemId: s.id, url: storyUrl(s.id),
+        contentAuthorEmail: s.authorEmail, contentPreview: s.mediaType === 'video' ? 'video story' : 'photo story',
+      });
     });
 
     document.getElementById('storyViewerClose').addEventListener('click', closeStoryViewer);
@@ -1178,7 +1157,9 @@
         if (reportBtn) reportBtn.addEventListener('click', e => {
           e.stopPropagation();
           const n = notes.find(x => x.email === el.dataset.email);
-          if (n) reportItem('note', el.dataset.email, n.text, el.dataset.handle || el.dataset.email);
+          if (n) reportContent({
+            type: 'note', subject: 'this note', itemId: n.email, contentAuthorEmail: n.email, contentPreview: n.text,
+          });
         });
       });
     }

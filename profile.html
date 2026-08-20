@@ -244,8 +244,9 @@ import {
   getBadgeOverride, setOwnBadgeOverride, grantCredits, CREDITS_ICON,
 } from './shared/account.js?v=29';
 import { mountFooter } from './shared/footer.js?v=5';
-import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=1';
+import { reportContent } from './shared/report.js?v=1';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
   arrayUnion, arrayRemove,
@@ -861,26 +862,14 @@ async function init() {
     document.getElementById('followingStat').addEventListener('click', () => openFollowList('following', viewedEmail));
   }
 
-  async function reportProfile() {
-    const user = getCurrentUser();
-    if (!user) { showToast('sign in to report'); return; }
-    if (!SERVER_ENDPOINT) { showToast("reporting isn't set up yet"); return; }
-    const reason = await oePrompt(`Why are you reporting @${handle}?`);
-    if (!reason || !reason.trim()) return;
-    try {
-      const idToken = await user.getIdToken();
-      const res = await fetch(SERVER_ENDPOINT + '/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
-        body: JSON.stringify({ type: 'profile', reason: reason.trim(), itemId: viewedEmail, url: window.location.href }),
-      });
-      if (!res.ok) {
-        let msg = `HTTP ${res.status}`;
-        try { msg = (await res.json()).error || msg; } catch {}
-        throw new Error(msg);
-      }
-      showToast('report sent — thank you');
-    } catch (err) { showToast('could not send report: ' + err.message); }
+  function reportProfile() {
+    reportContent({
+      type: 'profile',
+      subject: `@${handle}'s profile`,
+      url: window.location.href,
+      contentPreview: bio || null,
+      contentAuthorEmail: viewedEmail,
+    });
   }
 
   async function editBadge() {

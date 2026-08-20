@@ -73,10 +73,16 @@ const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765'];
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || 'http://localhost:8787';
 
 // Discord webhook for the forum's Report button. Kept server-side on purpose —
-// this URL grants posting rights to your Discord channel to anyone who has it,
-// so it must never be embedded in forum.html's public source.
-const DISCORD_REPORT_WEBHOOK = process.env.DISCORD_REPORT_WEBHOOK
-  || 'https://discord.com/api/webhooks/1534200247218339930/OQcrikaqx3xXssspH5ytq0M0AetTsHZrL_8qGwXTgI2vb71yem4GHPNYM0v48FUpZzM3';
+// this URL grants posting rights to your Discord channel to anyone who has
+// it, so it must never be embedded in any page's public source. Env-var
+// only, no hardcoded fallback — a literal webhook URL used to sit right
+// here as a fallback default, which meant it was sitting in this
+// repo's public git history the whole time. If you're reading this after
+// that fallback existed: that webhook is burned — delete it in Discord's
+// channel integration settings and create a fresh one, then set its URL
+// via DISCORD_REPORT_WEBHOOK below (or in your .env). /report degrades to
+// a clear "not configured" error instead of a crash if this is unset.
+const DISCORD_REPORT_WEBHOOK = process.env.DISCORD_REPORT_WEBHOOK || null;
 
 // Minimum seconds between reports from the same signed-in user, to keep one
 // person from flooding your Discord channel.
@@ -600,7 +606,35 @@ app.delete('/docs/:filename', verifyFirebaseToken, (req, res) => {
 
 const lastReportAt = new Map(); // email -> timestamp, simple per-user cooldown
 
+// Every reportable content type on the site: forum posts/comments, long-form
+// videos, Stories, Notes, chat messages/conversations, and profiles.
+const REPORT_TYPE_META = {
+  post: { emoji: '📝', label: 'Post' },
+  comment: { emoji: '💬', label: 'Comment' },
+  video: { emoji: '🎥', label: 'Video' },
+  story: { emoji: '📔', label: 'Story' },
+  note: { emoji: '🗒️', label: 'Note' },
+  message: { emoji: '✉️', label: 'Message' },
+  conversation: { emoji: '👥', label: 'Conversation' },
+  profile: { emoji: '👤', label: 'Profile' },
+};
+// Color-coded by severity rather than content type, since that's what
+// actually matters for triage — a harassment report on a comment is more
+// urgent than a spam report on a video. Kept in sync with
+// shared/dialog.js's REPORT_CATEGORIES (same list, same order); validated
+// independently here rather than trusting whatever category string the
+// client happens to send, same as REPORT_TYPE_META above.
+const REPORT_CATEGORY_COLORS = {
+  'spam': 0xf5a623,
+  'harassment or bullying': 0xe74c3c,
+  'hate speech': 0xc0392b,
+  'nudity or sexual content': 0x9b59b6,
+  'violence or illegal content': 0x8b0000,
+  'something else': 0x7f8c8d,
+};
+
 app.post('/report', verifyFirebaseToken, async (req, res) => {
+  if (!DISCORD_REPORT_WEBHOOK) return res.status(503).json({ error: 'Reporting is not configured on this server yet.' });
   const email = req.user.email || req.user.user_id || req.user.sub;
   const now = Date.now();
   const last = lastReportAt.get(email) || 0;
@@ -608,31 +642,54 @@ app.post('/report', verifyFirebaseToken, async (req, res) => {
     return res.status(429).json({ error: `Please wait a few seconds before reporting again` });
   }
 
-  const { type, reason, postId, commentId, itemId, url } = req.body || {};
-  if (!reason || typeof reason !== 'string' || !reason.trim()) {
-    return res.status(400).json({ error: 'A reason is required' });
+  const {
+    type, category, reason, postId, commentId, itemId, url,
+    contentPreview, contentAuthorEmail, reporterName,
+  } = req.body || {};
+  const typeMeta = REPORT_TYPE_META[type];
+  if (!typeMeta) return res.status(400).json({ error: 'Invalid report type' });
+  const categoryColor = REPORT_CATEGORY_COLORS[category];
+  if (categoryColor === undefined) return res.status(400).json({ error: 'Invalid report category' });
+
+  // reason is optional now that category carries the primary signal (a
+  // report of "harassment or bullying" is already actionable on its own —
+  // requiring verbose text on top of that just added friction for no real
+  // gain). Everything free-text is still length-capped before it ever
+  // reaches Discord's own field-length limits.
+  const fields = [
+    { name: 'Reported by', value: String(email).slice(0, 200), inline: true },
+    { name: 'Category', value: String(category), inline: true },
+  ];
+  if (contentAuthorEmail && typeof contentAuthorEmail === 'string') {
+    fields.push({ name: 'Content author', value: contentAuthorEmail.slice(0, 200), inline: true });
   }
-  // Every reportable content type on the site: forum posts/comments, long-form
-  // videos, Stories, Notes, chat messages/conversations, and profiles.
-  if (!['post', 'comment', 'video', 'story', 'note', 'message', 'conversation', 'profile'].includes(type)) {
-    return res.status(400).json({ error: 'Invalid report type' });
+  if (contentPreview && typeof contentPreview === 'string' && contentPreview.trim()) {
+    fields.push({ name: 'Content preview', value: contentPreview.trim().slice(0, 400), inline: false });
   }
+  if (reason && typeof reason === 'string' && reason.trim()) {
+    fields.push({ name: 'Additional details', value: reason.trim().slice(0, 800), inline: false });
+  }
+  if (url && typeof url === 'string') fields.push({ name: 'Link', value: url.slice(0, 300), inline: false });
+  const ids = [
+    postId ? `post: ${postId}` : null,
+    commentId ? `comment: ${commentId}` : null,
+    itemId ? `item: ${itemId}` : null,
+  ].filter(Boolean).join(' · ');
+  if (ids) fields.push({ name: 'IDs', value: ids.slice(0, 300), inline: false });
+
+  const embed = {
+    title: `${typeMeta.emoji} ${typeMeta.label} reported`,
+    color: categoryColor,
+    author: reporterName && typeof reporterName === 'string' ? { name: reporterName.slice(0, 200) } : undefined,
+    fields,
+    timestamp: new Date().toISOString(),
+  };
 
   try {
     const discordRes = await fetch(DISCORD_REPORT_WEBHOOK, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        content: [
-          `**New report** (${type})`,
-          `Reported by: ${email}`,
-          `Reason: ${reason.trim().slice(0, 1000)}`,
-          url ? `Link: ${url}` : null,
-          postId ? `Post ID: ${postId}` : null,
-          commentId ? `Comment ID: ${commentId}` : null,
-          itemId ? `Item ID: ${itemId}` : null,
-        ].filter(Boolean).join('\n'),
-      }),
+      body: JSON.stringify({ embeds: [embed] }),
     });
     if (!discordRes.ok) throw new Error(`Discord webhook responded ${discordRes.status}`);
     lastReportAt.set(email, now);
@@ -663,5 +720,8 @@ app.listen(PORT, () => console.log(
   `  personal files     -> ${path.resolve(USER_FILES_DIR)} (${Object.keys(loadMeta()).length} tracked files, from ${path.resolve(META_FILE)})\n` +
   `  videos             -> ${path.resolve(VIDEO_DIR)}\n` +
   `  projects           -> ${path.resolve(PROJECT_DIR)}\n` +
-  `  chat attachments   -> ${path.resolve(MESSAGE_DIR)}`
+  `  chat attachments   -> ${path.resolve(MESSAGE_DIR)}\n` +
+  (DISCORD_REPORT_WEBHOOK
+    ? '  reporting          -> Discord webhook configured'
+    : '  reporting          -> DISCORD_REPORT_WEBHOOK not set — /report will return 503 until it is')
 ));

@@ -400,7 +400,8 @@ import {
 } from './shared/account.js?v=29';
 import { mountFooter } from './shared/footer.js?v=5';
 import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=2';
-import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
+import { reportContent } from './shared/report.js?v=1';
 import { observeList } from './shared/motion.js?v=1';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
@@ -499,30 +500,6 @@ document.getElementById('imgLightboxClose').addEventListener('click', closeImage
 document.getElementById('imgLightbox').addEventListener('click', e => { if (e.target.id === 'imgLightbox') closeImageLightbox(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeImageLightbox(); });
 
-async function reportItem(type, itemId, contentPreview, aboutHandleOrEmail) {
-  const user = getCurrentUser();
-  if (!user) { showToast('sign in to report'); return; }
-  if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
-  const reason = await oePrompt('Why are you reporting this?');
-  if (!reason || !reason.trim()) return;
-  try {
-    const idToken = await user.getIdToken();
-    const res = await fetch(SERVER_ENDPOINT + '/report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
-      body: JSON.stringify({
-        type, reason: reason.trim(), itemId,
-        url: `About: ${aboutHandleOrEmail}${contentPreview ? ` — "${contentPreview.slice(0, 200)}"` : ''}`,
-      }),
-    });
-    if (!res.ok) {
-      let msg = `HTTP ${res.status}`;
-      try { msg = (await res.json()).error || msg; } catch {}
-      throw new Error(msg);
-    }
-    showToast('report sent — thank you');
-  } catch (err) { showToast('could not send report: ' + err.message); }
-}
 function showToast(msg) {
   const el = document.createElement('div');
   el.textContent = msg;
@@ -624,7 +601,9 @@ function initNotes() {
       if (reportBtn) reportBtn.addEventListener('click', e => {
         e.stopPropagation();
         const n = notes.find(x => x.email === el.dataset.email);
-        if (n) reportItem('note', el.dataset.email, n.text, el.dataset.handle || el.dataset.email);
+        if (n) reportContent({
+          type: 'note', subject: 'this note', itemId: n.email, contentAuthorEmail: n.email, contentPreview: n.text,
+        });
       });
     });
   }
@@ -679,9 +658,13 @@ onAccountChange(user => {
   }
   const params = new URLSearchParams(window.location.search);
   const toHandle = params.get('to');
+  const groupId = params.get('group');
   if (toHandle) {
     window.history.replaceState({}, '', '/messages');
     openByHandle(toHandle, user);
+  } else if (groupId) {
+    window.history.replaceState({}, '', '/messages');
+    openGroupThread(groupId, user);
   } else {
     showInbox(user);
   }
@@ -1315,7 +1298,11 @@ async function openGroupThread(groupId, user) {
       msgList.querySelectorAll('.msg-report-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const m = msgs.find(x => x.id === btn.dataset.id);
-          if (m) reportItem('message', m.id, m.text, group.name);
+          if (m) reportContent({
+            type: 'message', subject: 'this message', itemId: m.id,
+            contentAuthorEmail: m.senderEmail, contentPreview: m.audioUrl ? '🎤 voice message' : (m.text || null),
+            url: `https://oeper.dev/messages?group=${encodeURIComponent(group.id)}`,
+          });
         });
       });
       msgList.scrollIntoView({ block: 'end' });
@@ -1540,7 +1527,11 @@ async function openThread(otherEmail, user) {
     msgList.querySelectorAll('.msg-report-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const m = msgs.find(x => x.id === btn.dataset.id);
-        if (m) reportItem('message', m.id, m.audioUrl ? '🎤 Voice message' : m.text, otherEmail);
+        if (m) reportContent({
+          type: 'message', subject: 'this message', itemId: m.id,
+          contentAuthorEmail: otherEmail, contentPreview: m.audioUrl ? '🎤 voice message' : (m.text || null),
+          url: `https://oeper.dev/messages?to=${encodeURIComponent(handleOf(otherEmail) || otherEmail)}`,
+        });
       });
     });
     msgList.querySelectorAll('[data-reply-id]').forEach(btn => {

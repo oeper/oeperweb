@@ -294,8 +294,9 @@ import {
 import { mountTopNav } from './shared/topnav.js?v=27';
 import { mountFooter } from './shared/footer.js?v=5';
 import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=2';
-import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=3';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=1';
+import { reportContent } from './shared/report.js?v=1';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
   arrayUnion, arrayRemove, increment, query, orderBy,
@@ -320,27 +321,6 @@ function videoUrl(id) {
 async function copyLink(url, label) {
   try { await navigator.clipboard.writeText(url); showToast((label || 'Link') + ' copied to clipboard'); }
   catch { await oePrompt('Copy this link:', { defaultValue: url }); }
-}
-async function reportItem(type, itemId, url) {
-  const user = getCurrentUser();
-  if (!user) { showToast('sign in to report'); return; }
-  if (!SERVER_ENDPOINT) { showToast("Reporting isn't set up yet"); return; }
-  const reason = await oePrompt('Why are you reporting this?');
-  if (!reason || !reason.trim()) return;
-  try {
-    const idToken = await user.getIdToken();
-    const res = await fetch(SERVER_ENDPOINT + '/report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
-      body: JSON.stringify({ type, reason: reason.trim(), itemId, url }),
-    });
-    if (!res.ok) {
-      let msg = `HTTP ${res.status}`;
-      try { msg = (await res.json()).error || msg; } catch {}
-      throw new Error(msg);
-    }
-    showToast('report sent — thank you');
-  } catch (err) { showToast('Could not send report: ' + err.message); }
 }
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -643,7 +623,10 @@ function openWatch(v) {
   document.getElementById('watchSaveBtn').addEventListener('click', () => toggleSave(v));
   document.querySelector('[data-voters-id]')?.addEventListener('click', () => openVotersModal(v));
   document.getElementById('shareBtn').addEventListener('click', () => copyLink(videoUrl(v.id), 'Video link'));
-  document.getElementById('reportBtn').addEventListener('click', () => reportItem('video', v.id, videoUrl(v.id)));
+  document.getElementById('reportBtn').addEventListener('click', () => reportContent({
+    type: 'video', subject: 'this video', itemId: v.id, url: videoUrl(v.id),
+    contentAuthorEmail: v.authorEmail, contentPreview: [v.title, v.description].filter(Boolean).join(' — ').slice(0, 200),
+  }));
   const delBtn = document.getElementById('deleteBtn');
   if (delBtn) delBtn.addEventListener('click', async () => {
     if (!(await oeConfirm('Delete this video? This cannot be undone.', { danger: true }))) return;
