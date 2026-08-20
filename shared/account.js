@@ -780,27 +780,35 @@ function injectStyles() {
 }
 
 function ensureFontsAndIcons() {
+  // Google Sans is self-hosted (see shared/fonts.css — fonts.googleapis.com
+  // can go silently unreachable on some real mobile networks in a way
+  // desktop testing never reproduces, confirmed by a user report of the
+  // font not applying anywhere on their phone), so its check here looks
+  // for that stylesheet rather than an external URL, and its fallback
+  // points at the same self-hosted file rather than back out to Google —
+  // no reason to reintroduce the exact dependency this was meant to
+  // remove just because some future page forgot to add its own <link>.
   const need = [
-    ['family=Google+Sans', 'https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap'],
+    ['shared/fonts.css', './shared/fonts.css?v=1'],
     ['family=Material+Symbols+Rounded', 'https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200'],
   ];
-  // Most pages already load both fonts themselves, bundled into one
+  // Most pages already load Material Symbols themselves, bundled into one
   // combined-family URL (family=Google+Sans...&family=Material+Symbols+
-  // Rounded...&family=...), which never string-matches either of the
-  // single-family URLs above. An exact href match missed that every time,
-  // so this always injected a second, separate Material Symbols
-  // stylesheet — and that stylesheet ships its own bare
-  // `.material-symbols-rounded { font-size: 24px }` base rule, landing
-  // later in the cascade than the page's own <style> block (this runs
-  // after page parse) and silently winning any specificity tie against a
-  // single-class icon-size override elsewhere on the page (e.g.
-  // `.thinking-caret`, unlike a descendant selector like `.msg-avatar
-  // .material-symbols-rounded` which still safely outranks it). Matching
-  // on the family= param instead of the full URL correctly recognizes an
-  // already-loaded combined link and skips the redundant injection.
-  need.forEach(([familyParam, href]) => {
-    const already = [...document.querySelectorAll('link[href*="fonts.googleapis.com/css2"]')]
-      .some(link => link.href.includes(familyParam));
+  // Rounded...&family=...), which never string-matches the single-family
+  // URL above. An exact href match missed that every time, so this always
+  // injected a second, separate Material Symbols stylesheet — and that
+  // stylesheet ships its own bare `.material-symbols-rounded { font-size:
+  // 24px }` base rule, landing later in the cascade than the page's own
+  // <style> block (this runs after page parse) and silently winning any
+  // specificity tie against a single-class icon-size override elsewhere
+  // on the page (e.g. `.thinking-caret`, unlike a descendant selector
+  // like `.msg-avatar .material-symbols-rounded` which still safely
+  // outranks it). Matching on the family= param instead of the full URL
+  // correctly recognizes an already-loaded combined link and skips the
+  // redundant injection.
+  need.forEach(([marker, href]) => {
+    const already = [...document.querySelectorAll('link[rel="stylesheet"]')]
+      .some(link => link.href.includes(marker));
     if (!already) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';

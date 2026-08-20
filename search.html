@@ -12,7 +12,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://fonts.cdnfonts.com">
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./shared/fonts.css?v=1">
 <link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
 
 <style>
@@ -101,9 +102,9 @@
 </div>
 
 <script type="module">
-import { mountTopNav, HIDDEN_PAGES, hiddenPageRank } from './shared/topnav.js?v=28';
+import { mountTopNav, HIDDEN_PAGES, hiddenPageRank } from './shared/topnav.js?v=29';
 import { mountFooter } from './shared/footer.js?v=5';
-import { db } from './shared/account.js?v=31';
+import { db } from './shared/account.js?v=32';
 import {
   collection, query, orderBy, limit, getDocs,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
