@@ -224,9 +224,48 @@ const REGION_CURRENCY = {
   ZA: 'ZAR', DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR',
   IE: 'EUR', PT: 'EUR', AT: 'EUR', FI: 'EUR', BE: 'EUR', GR: 'EUR',
 };
-function localeCurrency() {
+// Timezones for each currency we support above — the OS timezone is a far
+// more reliable "where is this visitor" signal than navigator.language,
+// which is a language preference, not a location (a Malaysia-based
+// browser very commonly reports "en-US" as its language). No permission
+// prompt needed, unlike navigator.geolocation.
+const TZ_REGION = {
+  'Asia/Kuala_Lumpur': 'MY',
+  'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Los_Angeles': 'US', 'America/Anchorage': 'US', 'Pacific/Honolulu': 'US',
+  'Europe/London': 'GB',
+  'Asia/Singapore': 'SG',
+  'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU', 'Australia/Brisbane': 'AU', 'Australia/Perth': 'AU', 'Australia/Adelaide': 'AU', 'Australia/Darwin': 'AU',
+  'America/Toronto': 'CA', 'America/Vancouver': 'CA', 'America/Edmonton': 'CA', 'America/Winnipeg': 'CA', 'America/Halifax': 'CA', 'America/St_Johns': 'CA',
+  'Asia/Kolkata': 'IN', 'Asia/Calcutta': 'IN',
+  'Asia/Jakarta': 'ID',
+  'Asia/Manila': 'PH',
+  'Asia/Bangkok': 'TH',
+  'Asia/Ho_Chi_Minh': 'VN',
+  'Asia/Tokyo': 'JP',
+  'Asia/Shanghai': 'CN', 'Asia/Chongqing': 'CN', 'Asia/Urumqi': 'CN',
+  'Asia/Seoul': 'KR',
+  'Pacific/Auckland': 'NZ',
+  'Asia/Hong_Kong': 'HK',
+  'America/Sao_Paulo': 'BR',
+  'America/Mexico_City': 'MX',
+  'Africa/Johannesburg': 'ZA',
+  'Europe/Berlin': 'DE', 'Europe/Paris': 'FR', 'Europe/Madrid': 'ES', 'Europe/Rome': 'IT', 'Europe/Amsterdam': 'NL',
+  'Europe/Dublin': 'IE', 'Europe/Lisbon': 'PT', 'Europe/Vienna': 'AT', 'Europe/Helsinki': 'FI', 'Europe/Brussels': 'BE', 'Europe/Athens': 'GR',
+};
+function guessRegion() {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz && TZ_REGION[tz]) return TZ_REGION[tz];
+    // Most euro-zone cities not explicitly listed still price in EUR.
+    if (tz && tz.startsWith('Europe/')) return 'DE';
+  } catch {}
+  // Timezone lookup failed (very old browser) — fall back to the language
+  // tag's region subtag, then to US.
   const region = (navigator.language || 'en-US').split('-')[1];
-  return (region && REGION_CURRENCY[region.toUpperCase()]) || 'USD';
+  return (region && region.toUpperCase()) || 'US';
+}
+function localeCurrency() {
+  return REGION_CURRENCY[guessRegion()] || 'USD';
 }
 function formatPrice(priceMYR) {
   const currency = localeCurrency();
