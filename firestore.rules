@@ -244,6 +244,19 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // epic AI's cross-conversation memory — facts the model decided were
+    // worth remembering, written client-side (see ai.html) after the
+    // cf-ai-worker Worker signals a remember_fact tool call over SSE; the
+    // Worker itself has no Firestore write credentials, so this is the
+    // only place these actually get persisted. Private to the account
+    // they're about — unlike users/{email}, nobody else (not even other
+    // signed-in users) has any reason to read someone else's remembered
+    // facts, so this skips the public-read most other collections here
+    // have.
+    match /aiMemory/{email} {
+      allow read, write: if isSignedIn() && request.auth.token.email == email;
+    }
+
     // @handle -> email lookup, so profile URLs never contain a real email
     // address. Create-only and only for your own account — once a handle
     // is claimed it's permanent (no update/delete), so links never break.

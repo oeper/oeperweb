@@ -368,6 +368,36 @@
     .chats-panel-header, #chatsCloseBtn { display: none; }
     .sidebar-toggle-group { display: none; }
   }
+
+  /* Memory viewer — a centered modal (not a drawer like the chats sidebar
+     above) since it's just a short, flat list to skim and prune, not
+     something worth a whole permanent sidebar slot. */
+  .memory-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 220; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .memory-overlay.open { opacity: 1; pointer-events: all; }
+  .memory-box {
+    width: min(420px, 100%); max-height: 80vh; background: var(--md-sys-color-surface); border-radius: 20px;
+    padding: 20px; display: flex; flex-direction: column; gap: 14px; transform: scale(0.95); transition: transform 0.2s;
+  }
+  .memory-overlay.open .memory-box { transform: scale(1); }
+  .memory-box-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .memory-box-header h3 {
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 18px; font-weight: 500;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .memory-box-hint { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: -8px; }
+  #memoryList { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .memory-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--md-sys-color-surface-variant); }
+  .memory-fact { flex: 1; font-size: 13px; line-height: 1.4; }
+  .memory-forget-btn {
+    width: 26px; height: 26px; border-radius: 50%; border: none; background: none; color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.15s;
+  }
+  .memory-forget-btn:hover { background: rgba(0,0,0,0.15); color: var(--md-sys-color-error); }
+  .memory-forget-btn .material-symbols-rounded { font-size: 16px; }
+  .memory-empty { color: var(--md-sys-color-on-surface-variant); font-size: 13px; text-align: center; padding: 20px 0; }
 </style>
 </head>
 <body>
@@ -390,6 +420,7 @@
           <button id="newChatHeaderBtn" class="header-icon-btn" title="new chat"><span class="material-symbols-rounded">add</span></button>
         </div>
         <h1><span class="material-symbols-rounded">auto_awesome</span>epic AI</h1>
+        <button id="memoryBtn" class="header-icon-btn" title="what epic AI remembers about you"><span class="material-symbols-rounded">psychology</span></button>
       </div>
     </header>
 
@@ -429,6 +460,17 @@
 
 <div class="chats-overlay" id="chatsOverlay"></div>
 
+<div class="memory-overlay" id="memoryOverlay">
+  <div class="memory-box">
+    <div class="memory-box-header">
+      <h3><span class="material-symbols-rounded">psychology</span>what I remember</h3>
+      <button type="button" id="memoryCloseBtn" class="header-icon-btn" title="close"><span class="material-symbols-rounded">close</span></button>
+    </div>
+    <div class="memory-box-hint">epic AI saves things worth recalling as you chat — tap × to make it forget something.</div>
+    <div id="memoryList"></div>
+  </div>
+</div>
+
 <script type="module">
 import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange } from './shared/account.js?v=31';
 import { mountTopNav } from './shared/topnav.js?v=28';
@@ -436,7 +478,7 @@ import { mountFooter } from './shared/footer.js?v=5';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=1';
-import { doc, onSnapshot, setDoc } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { doc, onSnapshot, setDoc, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 mountFooter();
 
@@ -473,7 +515,7 @@ Here's what's on oeper.dev, so you can actually help people navigate or use it i
 - Videos (/videos) — longer-form video uploads, with comments and voting.
 - Files (/files) — personal file storage: upload and organize files into folders, share links, or browse public downloads other users have shared.
 - Messages (/messages) — direct messages and group chats, supporting image/video/file attachments, voice messages (DMs only), replies, and message reactions.
-- You (epic AI, at /ai) — this chat. You have two tools: search_web for current information on the live web, and lookup_oeper_user for real, live data about a specific oeper.dev user by their @handle (display name, bio, badge, member-since date). Use lookup_oeper_user whenever someone asks about a specific @handle — don't guess or say you have no way to check.
+- You (epic AI, at /ai) — this chat. You have three tools: search_web for current information on the live web, lookup_oeper_user for real, live data about a specific oeper.dev user by their @handle (display name, bio, badge, member-since date), and remember_fact to save something worth recalling in future conversations with this user. Use lookup_oeper_user whenever someone asks about a specific @handle — don't guess or say you have no way to check. Use remember_fact when the user shares a genuinely useful fact or preference (has no effect if they're not signed in) — see the tool's own description for what's worth remembering.
 - Tools (/tools) — small standalone utilities: a Music Composer (melody grid), onePDF (in-browser PDF splitting/merging/editing), and a QR code maker.
 - Articles (/articles) and Downloads (/downloads) — curated articles and downloadable resources.
 - Profiles (/profile?u=handle) — a user's posts, a saved-items tab, follower/following counts, and badges (an OFFICIAL badge marks the site's owners; anyone can also be granted a custom badge by an owner).
@@ -1109,6 +1151,20 @@ document.getElementById('chatsBtn').addEventListener('click', openChatsPanel);
 document.getElementById('chatsCloseBtn').addEventListener('click', closeChatsPanel);
 chatsOverlay.addEventListener('click', closeChatsPanel);
 document.getElementById('newChatBtn').addEventListener('click', startNewChat);
+
+const memoryOverlay = document.getElementById('memoryOverlay');
+function openMemoryPanel() { renderMemoryPanel(); memoryOverlay.classList.add('open'); }
+function closeMemoryPanel() { memoryOverlay.classList.remove('open'); }
+document.getElementById('memoryBtn').addEventListener('click', () => {
+  if (!getCurrentUser()) { oeAlert('sign in to see what epic AI remembers about you.'); return; }
+  openMemoryPanel();
+});
+document.getElementById('memoryCloseBtn').addEventListener('click', closeMemoryPanel);
+memoryOverlay.addEventListener('click', e => { if (e.target === memoryOverlay) closeMemoryPanel(); });
+document.getElementById('memoryList').addEventListener('click', e => {
+  const btn = e.target.closest('.memory-forget-btn');
+  if (btn) forgetFact(btn.dataset.fact);
+});
 document.getElementById('newChatHeaderBtn').addEventListener('click', startNewChat);
 
 // ── Cross-device sync (Firestore, signed-in only) ──────────────────────
@@ -1146,6 +1202,56 @@ function pushChatsToCloud() {
     console.error('Could not push chats to cloud:', err);
   }
 }
+
+// ── Cross-conversation memory (Firestore, signed-in only) ──────────────
+// The model decides what's worth remembering (via the remember_fact tool
+// — see cf-ai-worker) and streams it back as a {remember} SSE event; this
+// file does the actual write, since the Worker itself holds no Firestore
+// write credentials (see the streamToolLoop comment in cf-ai-worker for
+// why). memoryFacts is kept live via onSnapshot, same pattern as the
+// chats cloud-sync above, so a fact remembered from a "remember this"
+// moment applies starting with the very next message, not just future
+// sessions.
+let memoryFacts = [];
+let memoryUnsub = null;
+function renderMemoryPanel() {
+  const list = document.getElementById('memoryList');
+  if (!list) return;
+  list.innerHTML = memoryFacts.length
+    ? memoryFacts.map(f => `
+      <div class="memory-row">
+        <span class="memory-fact">${escHtml(f)}</span>
+        <button type="button" class="memory-forget-btn" data-fact="${escHtml(f)}" title="forget this"><span class="material-symbols-rounded">close</span></button>
+      </div>
+    `).join('')
+    : '<div class="memory-empty">nothing remembered yet — epic AI saves things worth recalling as you chat.</div>';
+}
+async function rememberFact(fact) {
+  const user = getCurrentUser();
+  const trimmed = String(fact || '').trim().slice(0, 300);
+  if (!user || !trimmed) return;
+  try { await setDoc(doc(db, 'aiMemory', user.email), { facts: arrayUnion(trimmed) }, { merge: true }); }
+  catch (err) { console.error('Could not save AI memory:', err); }
+}
+async function forgetFact(fact) {
+  const user = getCurrentUser();
+  if (!user) return;
+  try { await setDoc(doc(db, 'aiMemory', user.email), { facts: arrayRemove(fact) }, { merge: true }); }
+  catch (err) { console.error('Could not remove AI memory:', err); }
+}
+
+onAccountChange(user => {
+  if (memoryUnsub) { memoryUnsub(); memoryUnsub = null; }
+  memoryFacts = [];
+  if (user) {
+    memoryUnsub = onSnapshot(doc(db, 'aiMemory', user.email), snap => {
+      memoryFacts = (snap.exists() && Array.isArray(snap.data().facts)) ? snap.data().facts : [];
+      renderMemoryPanel();
+    }, () => { memoryFacts = []; renderMemoryPanel(); });
+  } else {
+    renderMemoryPanel();
+  }
+});
 
 onAccountChange(user => {
   if (cloudUnsub) { cloudUnsub(); cloudUnsub = null; }
@@ -1345,7 +1451,10 @@ async function toWireMessages(msgs) {
     }
     return { role: m.role, content: m.content };
   }));
-  return [{ role: 'system', content: SYSTEM_PROMPT }, ...wire];
+  const systemContent = memoryFacts.length
+    ? `${SYSTEM_PROMPT}\n\nThings you remember about this user from past conversations (use naturally where relevant, don't just recite the list back at them):\n${memoryFacts.map(f => '- ' + f).join('\n')}`
+    : SYSTEM_PROMPT;
+  return [{ role: 'system', content: systemContent }, ...wire];
 }
 
 let controller = null;
@@ -1478,6 +1587,7 @@ async function sendToModel(chat) {
         if (!payload || payload === '[DONE]') continue;
         try {
           const json = JSON.parse(payload);
+          if (json.remember) { rememberFact(json.remember); continue; }
           const delta = json.choices?.[0]?.delta || {};
           if (delta.reasoning_content) reasoningBuf += delta.reasoning_content;
           if (delta.content) contentBuf += delta.content;

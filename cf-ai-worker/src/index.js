@@ -218,11 +218,25 @@ function streamToolLoop(env, initialMessages) {
           for (const call of toolCalls) {
             const fn = TOOL_FUNCTIONS[call.function.name];
             let toolResult;
+            let args = {};
+            try { args = JSON.parse(call.function.arguments || '{}'); } catch {}
+            // remember_fact has nowhere to actually persist to — this Worker
+            // has no Firestore write credentials, deliberately (see the
+            // firestoreGetDoc comment above: reads work unauthenticated
+            // against public-read rules, writes never will without a
+            // service account this Worker doesn't hold). Instead of writing
+            // anything itself, it streams the fact to the client as its own
+            // SSE event, and ai.html does the actual write under the
+            // signed-in user's own auth — same as every other Firestore
+            // write on this site. If nobody's signed in, ai.html just drops
+            // the event; the model still gets a normal-looking tool result
+            // either way so it doesn't get confused mid-conversation.
+            if (call.function.name === 'remember_fact' && args.fact) {
+              send({ remember: String(args.fact).slice(0, 300) });
+            }
             if (!fn) {
               toolResult = JSON.stringify({ error: 'unknown tool' });
             } else {
-              let args = {};
-              try { args = JSON.parse(call.function.arguments || '{}'); } catch {}
               try { toolResult = await fn(args, env); } catch (err) { toolResult = JSON.stringify({ error: err.message }); }
             }
             workingMessages.push({ role: 'tool', tool_call_id: call.id, name: call.function.name, content: toolResult });
@@ -364,8 +378,23 @@ const TOOLS = [
       required: ['handle'],
     },
   },
+  {
+    name: 'remember_fact',
+    description: "Save something worth recalling in future conversations with this user — a stated preference, an ongoing project, a fact about their situation, anything that would genuinely help you help them better next time. Only call this for things actually worth carrying forward, not routine conversational detail (don't remember 'the user said hi', do remember 'the user is learning Rust' or 'the user's dog is named Waffles'). Has no effect if nobody's signed in.",
+    parameters: {
+      type: 'object',
+      properties: {
+        fact: { type: 'string', description: 'The fact to remember, written as a short, self-contained statement (it will be read back to you verbatim in future conversations, with no other context)' },
+      },
+      required: ['fact'],
+    },
+  },
 ];
-const TOOL_FUNCTIONS = { search_web: searchWeb, lookup_oeper_user: lookupOeperUser };
+// remember_fact's actual persistence happens client-side (see the
+// streamToolLoop comment above) — this handler exists only so the
+// tool-calling protocol gets a normal result to feed back to the model.
+async function rememberFact() { return JSON.stringify({ ok: true }); }
+const TOOL_FUNCTIONS = { search_web: searchWeb, lookup_oeper_user: lookupOeperUser, remember_fact: rememberFact };
 const MAX_TOOL_ROUNDS = 3;
 
 async function handleChat(request, env) {
