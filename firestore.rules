@@ -232,6 +232,18 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Real-money credit purchase history — audit log for credits.html's
+    // "purchase history" list. Nothing writes here from the client yet
+    // (billing isn't built), so `allow write: if false` for now; the
+    // eventual payment webhook will write via the admin SDK, which
+    // bypasses these rules entirely, same as every other server-issued
+    // write in this app. Exists now so the read path and collection shape
+    // don't need to change later.
+    match /creditPurchases/{purchaseId} {
+      allow read: if isSignedIn() && (request.auth.token.email == resource.data.email || isOwner());
+      allow write: if false;
+    }
+
     // @handle -> email lookup, so profile URLs never contain a real email
     // address. Create-only and only for your own account — once a handle
     // is claimed it's permanent (no update/delete), so links never break.

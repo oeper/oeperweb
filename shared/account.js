@@ -383,6 +383,27 @@ export async function getCreditHistory(email) {
   }
 }
 
+// Real-money purchase history for credits.html's "purchase history" list.
+// Nothing writes to creditPurchases yet — billing isn't wired up, so this
+// always returns [] for now — but the read path, the Firestore collection,
+// and its rules exist so a future payment webhook (writing via the admin
+// SDK, which bypasses rules entirely) has somewhere to land without a
+// client-side schema change. Newest first, capped at 50.
+export async function getCreditPurchaseHistory(email) {
+  try {
+    const snap = await getDocs(query(collection(db, 'creditPurchases'), where('email', '==', email)));
+    const rows = snap.docs.map(d => {
+      const data = d.data();
+      return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
+    });
+    rows.sort((a, b) => b._date - a._date);
+    return rows.slice(0, 50);
+  } catch (err) {
+    console.warn('Could not load credit purchase history:', err.message);
+    return [];
+  }
+}
+
 // The @handle for a profile, if one's been assigned yet (see ensureHandle).
 // Used to build /profile?u=<handle> links without ever putting a real
 // email in a URL. Returns null if this account hasn't been assigned one

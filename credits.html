@@ -98,6 +98,29 @@
   .owner-card .btn { background: var(--md-sys-color-on-secondary-container); color: var(--md-sys-color-secondary-container); }
   .owner-card .btn:hover { opacity: 0.9; }
 
+  .pkg-row {
+    display: flex; align-items: center; gap: 14px; padding: 14px 0;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  }
+  .pkg-row:last-child { border-bottom: none; }
+  .pkg-icon {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container); display: flex; align-items: center; justify-content: center; font-size: 20px;
+  }
+  .pkg-main { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .pkg-amount { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 19px; font-weight: 500; }
+  .pkg-base { font-size: 13px; color: var(--md-sys-color-on-surface-variant); text-decoration: line-through; }
+  .pkg-bonus {
+    font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 100px;
+    background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant);
+  }
+  .pkg-buy {
+    width: auto; flex-shrink: 0; padding: 10px 18px; font-size: 13px;
+    background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);
+  }
+  .pkg-buy:hover { opacity: 0.9; }
+  .pkg-note { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 4px; }
+
   .history-row {
     display: flex; align-items: center; gap: 12px; padding: 12px 0;
     border-bottom: 1px solid var(--md-sys-color-outline-variant);
@@ -144,8 +167,8 @@
 import { mountTopNav } from './shared/topnav.js?v=27';
 import {
   getCurrentUser, onAccountChange, isOwnerEmail, onCreditsChange, getCredits, CREDITS_ICON,
-  transferCredits, grantCredits, getCreditHistory, creditTransferNet, handleOf, getProfile, ensureProfileLoaded, db,
-} from './shared/account.js?v=29';
+  transferCredits, grantCredits, getCreditHistory, getCreditPurchaseHistory, creditTransferNet, handleOf, getProfile, ensureProfileLoaded, db,
+} from './shared/account.js?v=30';
 import { mountFooter } from './shared/footer.js?v=5';
 import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
@@ -168,6 +191,43 @@ function timeAgo(date) {
   return date.toLocaleDateString();
 }
 
+// Purchasable credit packages — placeholder pricing, easy to retune once
+// real billing (Stripe/whatever) is actually wired up. `base` is what the
+// credits would cost with no bonus, shown struck-through next to the
+// actual (bonus-included) total so bigger packages visibly look like the
+// better deal; `bonus` is just base * some larger-package discount, baked
+// in ahead of time rather than computed. Purchasing is gated off below
+// (buyPackage) until there's an actual payment processor behind this.
+const CREDIT_PACKAGES = [
+  { credits: 500,   bonus: 0,    price: 2.99 },
+  { credits: 1000,  bonus: 150,  price: 5.99 },
+  { credits: 2200,  bonus: 400,  price: 11.99 },
+  { credits: 5000,  bonus: 1000, price: 24.99 },
+  { credits: 12000, bonus: 3000, price: 54.99 },
+];
+
+function packagesHtml() {
+  return CREDIT_PACKAGES.map((pkg, i) => {
+    const total = pkg.credits + pkg.bonus;
+    return `
+      <div class="pkg-row">
+        <div class="pkg-icon"><span class="material-symbols-rounded">${CREDITS_ICON}</span></div>
+        <div class="pkg-main">
+          <span class="pkg-amount">${total.toLocaleString()}</span>
+          ${pkg.bonus > 0 ? `<span class="pkg-base">${pkg.credits.toLocaleString()}</span><span class="pkg-bonus">+${pkg.bonus.toLocaleString()} more</span>` : ''}
+        </div>
+        <button type="button" class="btn pkg-buy" data-pkg="${i}">$${pkg.price.toFixed(2)}</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function buyPackage(i) {
+  const pkg = CREDIT_PACKAGES[i];
+  if (!pkg) return;
+  showToast("buying credits isn't set up yet — check back soon");
+}
+
 // A handle typed into the recipient field (with or without a leading @)
 // resolves to a real email via the same public handles/{handle} lookup
 // profile.html and ai.html's lookup_oeper_user tool both already use.
@@ -188,6 +248,8 @@ const prefillTo = (params.get('to') || '').replace(/^@/, '');
 
 let history = [];
 let historyLoaded = false;
+let purchaseHistory = [];
+let purchaseHistoryLoaded = false;
 
 function render() {
   const user = getCurrentUser();
@@ -210,6 +272,12 @@ function render() {
         <div class="balance-value" id="balanceValue">${balance.toLocaleString()}</div>
         <div class="balance-label">your balance</div>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="section-heading">buy credits</div>
+      ${packagesHtml()}
+      <div class="pkg-note">payments aren't set up yet — pricing shown is a preview.</div>
     </div>
 
     <div class="card">
@@ -251,8 +319,16 @@ function render() {
       <div class="section-heading">history</div>
       <div id="historyList">${historyLoaded ? historyHtml(user.email) : '<div class="empty-note">loading…</div>'}</div>
     </div>
+
+    <div class="card">
+      <div class="section-heading">purchase history</div>
+      <div id="purchaseHistoryList">${purchaseHistoryLoaded ? purchaseHistoryHtml() : '<div class="empty-note">loading…</div>'}</div>
+    </div>
   `;
 
+  content.querySelectorAll('.pkg-buy').forEach(btn => {
+    btn.addEventListener('click', () => buyPackage(Number(btn.dataset.pkg)));
+  });
   document.getElementById('sendBtn').addEventListener('click', () => doSend());
   document.getElementById('sendTo').addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
   document.getElementById('sendAmount').addEventListener('keydown', e => { if (e.key === 'Enter') doSend(); });
@@ -278,6 +354,31 @@ function render() {
       if (list) list.innerHTML = historyHtml(user.email);
     });
   }
+  if (!purchaseHistoryLoaded) {
+    purchaseHistoryLoaded = true;
+    getCreditPurchaseHistory(user.email).then(rows => {
+      purchaseHistory = rows;
+      const list = document.getElementById('purchaseHistoryList');
+      if (list) list.innerHTML = purchaseHistoryHtml();
+    });
+  }
+}
+
+function purchaseHistoryHtml() {
+  if (!purchaseHistory.length) return '<div class="empty-note">no purchases yet.</div>';
+  return purchaseHistory.map(r => `
+    <div class="history-row">
+      <div class="history-dir in"><span class="material-symbols-rounded">add_card</span></div>
+      <div class="history-main">
+        <div class="history-title">${(r.credits || 0).toLocaleString()} credits</div>
+        ${r.price != null ? `<div class="history-note">$${Number(r.price).toFixed(2)}</div>` : ''}
+      </div>
+      <div>
+        <div class="history-amount in">+${(r.credits || 0).toLocaleString()}</div>
+        <div class="history-meta">${timeAgo(r._date)}</div>
+      </div>
+    </div>
+  `).join('');
 }
 
 function historyHtml(myEmail) {
