@@ -473,13 +473,13 @@
 </div>
 
 <script type="module">
-import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf } from './shared/account.js?v=32';
+import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification } from './shared/account.js?v=32';
 import { mountTopNav } from './shared/topnav.js?v=29';
 import { mountFooter } from './shared/footer.js?v=5';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=1';
-import { doc, onSnapshot, setDoc, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { doc, getDoc, onSnapshot, setDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 mountFooter();
 
@@ -516,7 +516,7 @@ Here's what's on oeper.dev, so you can actually help people navigate or use it i
 - Videos (/videos) — longer-form video uploads, with comments and voting.
 - Files (/files) — personal file storage: upload and organize files into folders, share links, or browse public downloads other users have shared.
 - Messages (/messages) — direct messages and group chats, supporting image/video/file attachments, voice messages (DMs only), replies, and message reactions.
-- You (epic AI, at /ai) — this chat. If they're signed in, you're told who you're talking to at the start of the conversation (their name, @handle, bio, and recent post titles) — you already know this, don't ask them to introduce themselves. You have five tools: search_web for current information on the live web; lookup_oeper_user for real, live data about a specific oeper.dev user by their @handle (display name, bio, badge, member-since date) — use it whenever someone asks about a handle other than their own, don't guess; remember_fact to save something worth recalling in future conversations (has no effect if they're not signed in — see the tool's own description for what's worth remembering); update_memory to correct something you already remember instead of leaving both the old and new versions saved; and forget_fact to remove something that's no longer true or that they've asked you to forget. Keep what you remember accurate — if the user corrects something, use update_memory or forget_fact rather than just adding a new, conflicting fact on top.
+- You (epic AI, at /ai) — this chat. If they're signed in, you're told who you're talking to at the start of the conversation (their name, @handle, bio, and recent post titles) — you already know this, don't ask them to introduce themselves. You have six tools: search_web for current information on the live web; lookup_oeper_user for real, live data about a specific oeper.dev user by their @handle (display name, bio, badge, member-since date) — use it whenever someone asks about a handle other than their own, don't guess; remember_fact to save something worth recalling in future conversations (has no effect if they're not signed in — see the tool's own description for what's worth remembering); update_memory to correct something you already remember instead of leaving both the old and new versions saved; forget_fact to remove something that's no longer true or that they've asked you to forget; and set_follow to follow or unfollow another user on their behalf — only when they've clearly asked for it (e.g. "follow @x for me"), never on your own initiative. Keep what you remember accurate — if the user corrects something, use update_memory or forget_fact rather than just adding a new, conflicting fact on top. You can't create or post any content on their behalf (no posts, comments, or messages) — for those, tell them how to do it themselves rather than offering to do it for them.
 - Tools (/tools) — small standalone utilities: a Music Composer (melody grid), onePDF (in-browser PDF splitting/merging/editing), and a QR code maker.
 - Articles (/articles) and Downloads (/downloads) — curated articles and downloadable resources.
 - Profiles (/profile?u=handle) — a user's posts, a saved-items tab, follower/following counts, and badges (an OFFICIAL badge marks the site's owners; anyone can also be granted a custom badge by an owner).
@@ -1283,6 +1283,34 @@ async function updateMemoryFact(oldFact, newFact) {
   } catch (err) { console.error('Could not update AI memory:', err); }
 }
 
+// ── AI-driven actions (write tools beyond memory) ───────────────────────
+// The model only gets to take actions that are reversible, don't create
+// any content on the user's behalf, and reuse the exact same write path a
+// real button click on the site would — set_follow is the first of these
+// (see cf-ai-worker's set_follow tool description: only on an explicit
+// "follow/unfollow @x for me", never on its own initiative). Same
+// followId/follows-collection shape as profile.html's toggleFollow().
+function followId(followerEmail, followeeEmail) { return followerEmail + '__' + followeeEmail; }
+async function aiSetFollow(handleRaw, follow) {
+  const user = getCurrentUser();
+  if (!user) return;
+  const handle = String(handleRaw || '').trim().replace(/^@/, '').toLowerCase();
+  if (!handle) return;
+  try {
+    const handleSnap = await getDoc(doc(db, 'handles', handle));
+    if (!handleSnap.exists()) return;
+    const followeeEmail = handleSnap.data().email;
+    if (!followeeEmail || followeeEmail === user.email) return;
+    const ref = doc(db, 'follows', followId(user.email, followeeEmail));
+    if (follow) {
+      await setDoc(ref, { followerEmail: user.email, followeeEmail, createdAt: serverTimestamp() });
+      sendNotification({ recipientEmail: followeeEmail, type: 'follow' });
+    } else {
+      await deleteDoc(ref);
+    }
+  } catch (err) { console.error('Could not update follow state:', err); }
+}
+
 onAccountChange(user => {
   if (memoryUnsub) { memoryUnsub(); memoryUnsub = null; }
   memoryFacts = [];
@@ -1672,6 +1700,7 @@ async function sendToModel(chat) {
           if (json.remember) { rememberFact(json.remember); continue; }
           if (json.updateMemory) { updateMemoryFact(json.updateMemory.old, json.updateMemory.new); continue; }
           if (json.forget) { forgetFact(json.forget); continue; }
+          if (json.setFollow) { aiSetFollow(json.setFollow.handle, json.setFollow.follow); continue; }
           const delta = json.choices?.[0]?.delta || {};
           if (delta.reasoning_content) reasoningBuf += delta.reasoning_content;
           if (delta.content) contentBuf += delta.content;

@@ -238,6 +238,8 @@ function streamToolLoop(env, initialMessages) {
               send({ updateMemory: { old: String(args.old_fact).slice(0, 300), new: String(args.new_fact).slice(0, 300) } });
             } else if (call.function.name === 'forget_fact' && args.fact) {
               send({ forget: String(args.fact).slice(0, 300) });
+            } else if (call.function.name === 'set_follow' && args.handle && typeof args.follow === 'boolean') {
+              send({ setFollow: { handle: String(args.handle).replace(/^@/, '').trim().slice(0, 50), follow: args.follow } });
             }
             if (!fn) {
               toolResult = JSON.stringify({ error: 'unknown tool' });
@@ -417,19 +419,33 @@ const TOOLS = [
       required: ['fact'],
     },
   },
+  {
+    name: 'set_follow',
+    description: "Follow or unfollow another oeper.dev user on this user's behalf. Only call this when they've clearly asked you to (e.g. \"follow @someone for me\", \"unfollow @someone\") — never on your own initiative just because a handle came up in conversation. Has no effect if nobody's signed in, or if the handle doesn't exist.",
+    parameters: {
+      type: 'object',
+      properties: {
+        handle: { type: 'string', description: 'The handle to follow/unfollow, with or without the leading @' },
+        follow: { type: 'boolean', description: 'true to follow, false to unfollow' },
+      },
+      required: ['handle', 'follow'],
+    },
+  },
 ];
-// These three tools' actual persistence happens client-side (see the
+// These four tools' actual persistence happens client-side (see the
 // streamToolLoop comment above) — these handlers exist only so the
 // tool-calling protocol gets a normal result to feed back to the model.
 async function rememberFact() { return JSON.stringify({ ok: true }); }
 async function updateMemory() { return JSON.stringify({ ok: true }); }
 async function forgetFact() { return JSON.stringify({ ok: true }); }
+async function setFollow() { return JSON.stringify({ ok: true }); }
 const TOOL_FUNCTIONS = {
   search_web: searchWeb,
   lookup_oeper_user: lookupOeperUser,
   remember_fact: rememberFact,
   update_memory: updateMemory,
   forget_fact: forgetFact,
+  set_follow: setFollow,
 };
 const MAX_TOOL_ROUNDS = 3;
 
