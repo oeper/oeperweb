@@ -55,6 +55,17 @@ const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765'];
 
 const MAX_MESSAGES = 40;
 const MAX_MESSAGE_CHARS = 4000;
+// The system message is app-constructed (site description + self-context
+// + remembered facts — see ai.html's toWireMessages), not something a
+// person is typing, so it doesn't need the same tight cap that exists to
+// stop an accidental or malicious huge paste in a user turn. It still
+// needs SOME ceiling for cost/abuse reasons, just a far more generous one
+// — was sharing MAX_MESSAGE_CHARS with user/assistant turns, which broke
+// as soon as self-context + a few remembered facts pushed the base
+// ~3.5k-char system prompt over 4000 ("A message is too long" errors
+// "sometimes" — exactly for signed-in users with enough context to add).
+// 16000 chars is ~4k tokens, trivial against the 256k context window.
+const MAX_SYSTEM_MESSAGE_CHARS = 16000;
 // Vision messages (ai.html's image attach) carry a base64 data URI instead
 // of plain text — sized for one resized image with comfortable margin, not
 // a whole conversation's worth.
@@ -469,8 +480,9 @@ async function handleChat(request, env) {
       return json({ error: 'Invalid message shape' }, 400, request);
     }
     if (typeof m.content === 'string') {
-      if (m.content.length > MAX_MESSAGE_CHARS) {
-        return json({ error: `A message is too long (max ${MAX_MESSAGE_CHARS} characters)` }, 400, request);
+      const limit = m.role === 'system' ? MAX_SYSTEM_MESSAGE_CHARS : MAX_MESSAGE_CHARS;
+      if (m.content.length > limit) {
+        return json({ error: `A message is too long (max ${limit} characters)` }, 400, request);
       }
     } else if (Array.isArray(m.content)) {
       if (m.content.length > 4 || JSON.stringify(m.content).length > MAX_IMAGE_CONTENT_CHARS) {

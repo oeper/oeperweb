@@ -1278,6 +1278,7 @@ function pushChatsToCloud() {
 // chats cloud-sync above, so a fact remembered from a "remember this"
 // moment applies starting with the very next message, not just future
 // sessions.
+const MAX_MEMORY_FACTS_IN_PROMPT = 25;
 let memoryFacts = [];
 let memoryUnsub = null;
 function renderMemoryPanel() {
@@ -1601,7 +1602,20 @@ async function toWireMessages(msgs) {
   let systemContent = SYSTEM_PROMPT;
   if (selfContext) systemContent += `\n\n${selfContext}`;
   if (memoryFacts.length) {
-    systemContent += `\n\nThings you remember about this user from past conversations (use naturally where relevant, don't just recite the list back at them):\n${memoryFacts.map(f => '- ' + f).join('\n')}`;
+    // Capped at the most recent MAX_MEMORY_FACTS_IN_PROMPT (facts are
+    // appended in order, so the array's own order is oldest-first) —
+    // otherwise this grows without bound the longer someone's used epic
+    // AI, and eventually pushes the whole system message over the
+    // Worker's own cap on it (see MAX_SYSTEM_MESSAGE_CHARS in
+    // cf-ai-worker — this was actually happening: "A message is too
+    // long" errors "sometimes", specifically for signed-in users with
+    // enough self-context + remembered facts to tip it over). Trimming
+    // to the most recent facts (rather than erroring, or the server
+    // just rejecting the request outright) means the feature degrades
+    // gracefully — old facts quietly age out of the prompt instead of
+    // the whole chat breaking.
+    const recentFacts = memoryFacts.slice(-MAX_MEMORY_FACTS_IN_PROMPT);
+    systemContent += `\n\nThings you remember about this user from past conversations (use naturally where relevant, don't just recite the list back at them):\n${recentFacts.map(f => '- ' + f).join('\n')}`;
   }
   return [{ role: 'system', content: systemContent }, ...wire];
 }
