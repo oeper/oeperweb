@@ -236,11 +236,23 @@
      measured 0 height on their own, yet .thinking-block (their parent)
      still reserved ~90px of dead space below the "Show thinking" line
      even while fully collapsed, visible as a large empty gap. Plain
-     display:none/block has no such ambiguity; a short fade-in on open
-     is enough of a transition without touching layout height at all. */
-  .thinking-content-wrap { display: none; }
-  .thinking-block.open .thinking-content-wrap { display: block; animation: thinkingFadeIn 0.2s ease; }
-  @keyframes thinkingFadeIn { from { opacity: 0; } to { opacity: 1; } }
+     display:none/block has no such ambiguity.
+     The fade-in itself used to be a plain CSS `animation` triggered by
+     the same .open selector that also flips display:none->block — which
+     turned out to never actually run: an element's `display` and a new
+     `animation` landing in the same style recalculation is a known
+     browser gotcha (the element has no box yet at the instant the
+     animation would need to start), and it reproduced consistently in
+     production — opacity permanently stuck at 0, correctly-sized real
+     content rendering fully invisible, indistinguishable from an empty
+     box. A plain `transition` split across two rAF ticks (JS sets
+     display:block + opacity:0 on frame 1, a real paint happens, then
+     opacity:1 gets set on frame 2) sidesteps that entirely, since a
+     transition only needs its *previous* value to have actually
+     rendered once, which the forced paint in between guarantees. */
+  .thinking-content-wrap { display: none; opacity: 0; transition: opacity 0.2s ease; }
+  .thinking-block.open .thinking-content-wrap { display: block; }
+  .thinking-content-wrap.shown { opacity: 1; }
   .thinking-content {
     color: var(--md-sys-color-on-surface-variant); white-space: pre-wrap; line-height: 1.5;
   }
@@ -1015,8 +1027,35 @@ messagesEl.addEventListener('click', e => {
   const summary = e.target.closest('.thinking-summary');
   if (!summary) return;
   const block = summary.closest('.thinking-block');
+  const opening = !block.classList.contains('open');
   block.classList.toggle('open');
   block.dataset.userToggled = '1';
+  // Only needed the first time this block opens — see the CSS comment
+  // above .thinking-content-wrap for why a plain CSS animation here
+  // never actually ran. Once .shown has been added, closing and
+  // reopening later just shows it instantly (no need to re-fade
+  // something already seen), so this only runs on the open transition,
+  // not every toggle.
+  if (opening) {
+    const wrap = block.querySelector('.thinking-content-wrap');
+    // Forces a synchronous layout right now, so the browser has actually
+    // committed display:block + opacity:0 before 'shown' flips opacity
+    // to 1 — reading any layout property does this because the browser
+    // has to compute it accurately, unlike requestAnimationFrame (which
+    // needs an actual upcoming repaint to fire at all, and doesn't run
+    // reliably in every context this code executes in).
+    void wrap.offsetHeight;
+    wrap.classList.add('shown');
+    // Belt-and-suspenders: force the end state directly, slightly after
+    // the CSS transition's own 0.2s should have finished. A no-op if the
+    // transition already got there on its own — but if it didn't for any
+    // reason (a stalled compositor, reduced-motion quirks, whatever),
+    // this guarantees the actual reasoning text never stays stuck
+    // invisible behind a transition that silently never completed, which
+    // is exactly what real, correctly-sized content rendering at
+    // permanent opacity:0 looks like: a big empty-seeming box.
+    setTimeout(() => { wrap.style.opacity = '1'; }, 250);
+  }
 });
 
 // `index` is this message's position in chat.messages — only known (and
