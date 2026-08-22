@@ -10,6 +10,15 @@
 <meta property="og:image" content="https://oeper.dev/icon.png">
 <meta property="og:url" content="https://oeper.dev/">
 <meta property="og:type" content="website">
+<script data-cfasync="false">
+window.__earlyErrors = [];
+window.onerror = function (message, source, lineno, colno, error) {
+  window.__earlyErrors.push({ message: message, source: source, lineno: lineno, colno: colno, stack: error && error.stack });
+};
+window.onunhandledrejection = function (e) {
+  window.__earlyErrors.push({ message: 'unhandledrejection: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason) });
+};
+</script>
 <script src="./shared/theme-boot.js?v=15" data-cfasync="false"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
