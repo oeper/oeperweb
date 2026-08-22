@@ -1348,9 +1348,22 @@ window.onunhandledrejection = function (e) {
   // actual cause of "posts don't appear" on a fresh production load
   // (confirmed via a cache-busted reload with earliest-possible error
   // capture: zero errors caught, feedEl simply wasn't there yet).
-  function initHomeFeed() {
+  function initHomeFeed(attemptsLeft) {
     const feedEl = document.getElementById('homeFeed');
-    if (!feedEl) return;
+    if (!feedEl) {
+      // The readyState/DOMContentLoaded gating below turned out not to be
+      // enough on its own — something in this production environment
+      // (Rocket Loader is the leading suspect, but never fully confirmed)
+      // meant even a "wait for DOMContentLoaded" listener could end up
+      // never firing, leaving this permanently un-run. A plain polling
+      // retry has no dependency on any particular lifecycle event
+      // actually dispatching correctly — it just keeps checking for the
+      // element itself, the one thing this actually needs. attemptsLeft
+      // caps it around 5s total so a genuinely missing element (a typo,
+      // markup deleted) fails silently instead of polling forever.
+      if ((attemptsLeft ?? 100) > 0) setTimeout(() => initHomeFeed((attemptsLeft ?? 100) - 1), 50);
+      return;
+    }
     observeList(feedEl);
     let latestPosts = [];
     let latestVideos = [];
@@ -1911,11 +1924,7 @@ window.onunhandledrejection = function (e) {
     subscribeFeed();
     window.__feedDiag.push('subscribeFeed() call returned');
   }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initHomeFeed, { once: true });
-  } else {
-    initHomeFeed();
-  }
+  initHomeFeed();
 
   const SEARCH_ENGINES = {
     google: { action: 'https://www.google.com/search', param: 'q' },
