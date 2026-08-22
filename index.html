@@ -1846,39 +1846,50 @@
     let unsubFeedPosts = null;
     let unsubFeedVideos = null;
 
+    window.__feedDiag = ['module reached feedEl block'];
     function subscribeFeed() {
+      window.__feedDiag.push('subscribeFeed() called');
       if (unsubFeedPosts) unsubFeedPosts();
       if (unsubFeedVideos) unsubFeedVideos();
 
+      window.__feedDiag.push('about to call onSnapshot for posts');
       unsubFeedPosts = onSnapshot(
         query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(feedLimit)),
         async snap => {
+          window.__feedDiag.push('posts onSnapshot SUCCESS, ' + snap.docs.length + ' docs');
           latestPosts = snap.docs.map(d => {
             const data = d.data();
             return { _kind: 'post', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
           });
           await Promise.all(latestPosts.map(p => ensureProfileLoaded(p.authorEmail)));
           gotPosts = true;
+          window.__feedDiag.push('about to renderFeed after posts, gotPosts=' + gotPosts + ' gotVideos=' + gotVideos);
           renderFeed();
         },
-        err => { feedEl.innerHTML = `<div class="home-feed-empty">could not load the feed: ${escHtml(err.message)}</div>`; }
+        err => { window.__feedDiag.push('posts onSnapshot ERROR: ' + err.message); feedEl.innerHTML = `<div class="home-feed-empty">could not load the feed: ${escHtml(err.message)}</div>`; }
       );
+      window.__feedDiag.push('posts onSnapshot registered, unsub=' + typeof unsubFeedPosts);
 
+      window.__feedDiag.push('about to call onSnapshot for videos');
       unsubFeedVideos = onSnapshot(
         query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(feedLimit)),
         async snap => {
+          window.__feedDiag.push('videos onSnapshot SUCCESS, ' + snap.docs.length + ' docs');
           latestVideos = snap.docs.map(d => {
             const data = d.data();
             return { _kind: 'video', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
           });
           await Promise.all(latestVideos.map(v => ensureProfileLoaded(v.authorEmail)));
           gotVideos = true;
+          window.__feedDiag.push('about to renderFeed after videos, gotPosts=' + gotPosts + ' gotVideos=' + gotVideos);
           renderFeed();
         },
-        () => { gotVideos = true; renderFeed(); } // videos rules may not be deployed yet on some setups — degrade to posts-only rather than blocking the feed forever
+        err => { window.__feedDiag.push('videos onSnapshot ERROR: ' + err.message); gotVideos = true; renderFeed(); } // videos rules may not be deployed yet on some setups — degrade to posts-only rather than blocking the feed forever
       );
+      window.__feedDiag.push('videos onSnapshot registered, unsub=' + typeof unsubFeedVideos);
     }
     subscribeFeed();
+    window.__feedDiag.push('subscribeFeed() call returned');
   }
 
   const SEARCH_ENGINES = {
