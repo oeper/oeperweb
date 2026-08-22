@@ -10,15 +10,6 @@
 <meta property="og:image" content="https://oeper.dev/icon.png">
 <meta property="og:url" content="https://oeper.dev/">
 <meta property="og:type" content="website">
-<script data-cfasync="false">
-window.__earlyErrors = [];
-window.onerror = function (message, source, lineno, colno, error) {
-  window.__earlyErrors.push({ message: message, source: source, lineno: lineno, colno: colno, stack: error && error.stack });
-};
-window.onunhandledrejection = function (e) {
-  window.__earlyErrors.push({ message: 'unhandledrejection: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason) });
-};
-</script>
 <script src="./shared/theme-boot.js?v=15" data-cfasync="false"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1879,50 +1870,39 @@ window.onunhandledrejection = function (e) {
     let unsubFeedPosts = null;
     let unsubFeedVideos = null;
 
-    window.__feedDiag = ['module reached feedEl block'];
     function subscribeFeed() {
-      window.__feedDiag.push('subscribeFeed() called');
       if (unsubFeedPosts) unsubFeedPosts();
       if (unsubFeedVideos) unsubFeedVideos();
 
-      window.__feedDiag.push('about to call onSnapshot for posts');
       unsubFeedPosts = onSnapshot(
         query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(feedLimit)),
         async snap => {
-          window.__feedDiag.push('posts onSnapshot SUCCESS, ' + snap.docs.length + ' docs');
           latestPosts = snap.docs.map(d => {
             const data = d.data();
             return { _kind: 'post', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
           });
           await Promise.all(latestPosts.map(p => ensureProfileLoaded(p.authorEmail)));
           gotPosts = true;
-          window.__feedDiag.push('about to renderFeed after posts, gotPosts=' + gotPosts + ' gotVideos=' + gotVideos);
           renderFeed();
         },
-        err => { window.__feedDiag.push('posts onSnapshot ERROR: ' + err.message); feedEl.innerHTML = `<div class="home-feed-empty">could not load the feed: ${escHtml(err.message)}</div>`; }
+        err => { feedEl.innerHTML = `<div class="home-feed-empty">could not load the feed: ${escHtml(err.message)}</div>`; }
       );
-      window.__feedDiag.push('posts onSnapshot registered, unsub=' + typeof unsubFeedPosts);
 
-      window.__feedDiag.push('about to call onSnapshot for videos');
       unsubFeedVideos = onSnapshot(
         query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(feedLimit)),
         async snap => {
-          window.__feedDiag.push('videos onSnapshot SUCCESS, ' + snap.docs.length + ' docs');
           latestVideos = snap.docs.map(d => {
             const data = d.data();
             return { _kind: 'video', id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
           });
           await Promise.all(latestVideos.map(v => ensureProfileLoaded(v.authorEmail)));
           gotVideos = true;
-          window.__feedDiag.push('about to renderFeed after videos, gotPosts=' + gotPosts + ' gotVideos=' + gotVideos);
           renderFeed();
         },
-        err => { window.__feedDiag.push('videos onSnapshot ERROR: ' + err.message); gotVideos = true; renderFeed(); } // videos rules may not be deployed yet on some setups — degrade to posts-only rather than blocking the feed forever
+        () => { gotVideos = true; renderFeed(); } // videos rules may not be deployed yet on some setups — degrade to posts-only rather than blocking the feed forever
       );
-      window.__feedDiag.push('videos onSnapshot registered, unsub=' + typeof unsubFeedVideos);
     }
     subscribeFeed();
-    window.__feedDiag.push('subscribeFeed() call returned');
   }
   initHomeFeed();
 
