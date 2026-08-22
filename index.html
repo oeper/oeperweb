@@ -1912,8 +1912,17 @@
     bing: { action: 'https://www.bing.com/search', param: 'q' },
     oeper: { action: '#', param: 'q' },
   };
-  const searchForm = document.getElementById('homeSearchForm');
-  if (searchForm) {
+  // Same fix as initHomeFeed above, same reason: this script tag sits far
+  // earlier in the document than #homeSearchForm itself, and relying on
+  // type="module"'s implicit defer-until-parsed guarantee wasn't safe in
+  // production — polling for the element's actual existence instead of
+  // assuming it's already there when this runs.
+  function initHomeSearch(attemptsLeft) {
+    const searchForm = document.getElementById('homeSearchForm');
+    if (!searchForm) {
+      if ((attemptsLeft ?? 100) > 0) setTimeout(() => initHomeSearch((attemptsLeft ?? 100) - 1), 50);
+      return;
+    }
     const searchInput = document.getElementById('homeSearchInput');
     const engineButtons = document.querySelectorAll('#homeSearchEngines .home-search-engine');
     let engine = localStorage.getItem('oe-search-engine') || 'google';
@@ -2031,6 +2040,7 @@
       if (first) window.location.href = first.getAttribute('href');
     });
   }
+  initHomeSearch();
 </script>
 <script>
 // A varied greeting instead of a single fixed title — mostly just for
@@ -2181,9 +2191,17 @@ PAGES.forEach((page, index) => {
 // Lightweight online/offline check for the "Ask epic AI" button's status
 // dot — a short-timeout fetch against the AI proxy's /api/model, since a
 // dead upstream (home PC offline, tunnel down) shouldn't hang forever.
-(async function checkAiStatus() {
+(async function checkAiStatus(attemptsLeft) {
   const dot = document.getElementById('homeAiStatusDot');
-  if (!dot) return;
+  if (!dot) {
+    // Same class of fix as initHomeFeed/initHomeSearch above (different
+    // <script> tag, same underlying issue: this classic script can run
+    // before #homeAiStatusDot has actually been parsed) — poll instead
+    // of giving up on the first miss, so the status dot doesn't get
+    // stuck on "Checking status…" forever if this race hits.
+    if ((attemptsLeft ?? 100) > 0) setTimeout(() => checkAiStatus((attemptsLeft ?? 100) - 1), 50);
+    return;
+  }
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000);
