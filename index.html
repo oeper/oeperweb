@@ -1338,8 +1338,19 @@ window.onunhandledrejection = function (e) {
     return url && /\.(mp3|wav|ogg|m4a|flac|aac|opus|weba)$/i.test(url) ? url : null;
   }
 
-  const feedEl = document.getElementById('homeFeed');
-  if (feedEl) {
+  // Wrapped in an explicit DOM-readiness check rather than relying on
+  // type="module"'s own implicit defer-until-parsed guarantee — this
+  // script tag sits far earlier in the document than #homeFeed itself
+  // (~1400 lines earlier), and that guarantee turned out not to hold
+  // reliably in production: document.getElementById('homeFeed') was
+  // returning null (the div genuinely not parsed into the DOM yet),
+  // silently skipping this entire block with no error at all — the
+  // actual cause of "posts don't appear" on a fresh production load
+  // (confirmed via a cache-busted reload with earliest-possible error
+  // capture: zero errors caught, feedEl simply wasn't there yet).
+  function initHomeFeed() {
+    const feedEl = document.getElementById('homeFeed');
+    if (!feedEl) return;
     observeList(feedEl);
     let latestPosts = [];
     let latestVideos = [];
@@ -1899,6 +1910,11 @@ window.onunhandledrejection = function (e) {
     }
     subscribeFeed();
     window.__feedDiag.push('subscribeFeed() call returned');
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHomeFeed, { once: true });
+  } else {
+    initHomeFeed();
   }
 
   const SEARCH_ENGINES = {
