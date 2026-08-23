@@ -473,7 +473,12 @@ mountFooter();
 const MAX_UPLOAD_BYTES = 1024 * 1024 * 1024; // 1GB
 const SIGNED_IN_PERMANENT_BYTES = 50 * 1024 * 1024; // 50MB
 const ANON_PERMANENT_BYTES = 25 * 1024 * 1024; // 25MB
-const ANON_MAX_FILES = 10; // also enforced server-side, per IP, forever
+// Was 10, capped server-side too — removed at the user's request after it
+// blocked anonymous ai.html image attachments (same /upload-file endpoint,
+// same per-IP counter) with no way to reset short of signing in. Infinity
+// keeps the rest of this flow's math (remaining, .slice(0, remaining)) as
+// a no-op cap instead of restructuring it to not need a limit at all.
+const ANON_MAX_FILES = Infinity;
 
 let files = [];
 let folders = []; // { email, path }[]

@@ -58,10 +58,19 @@ const SIGNED_IN_PERMANENT_BYTES = 50 * 1024 * 1024; // 50MB
 const ANON_PERMANENT_BYTES = 25 * 1024 * 1024; // 25MB
 const TEMP_FILE_LIFETIME_MS = 2 * 60 * 60 * 1000; // 2 hours
 
-// Anonymous (not signed in) uploads to files.html are allowed, but capped
-// harder: up to ANON_UPLOAD_LIMIT files total per IP address (tracked
-// forever in anon-uploads.json, not per-session).
-const ANON_UPLOAD_LIMIT = 10;
+// Anonymous (not signed in) uploads to files.html AND ai.html's image
+// attach (same /upload-file endpoint, same per-IP counter — see
+// uploadAnonImage in ai.html) used to be capped at 10 files total per IP,
+// ever, tracked forever in anon-uploads.json. That's easy to hit just
+// from attaching a handful of images to epic AI over time, permanently
+// blocking further anonymous uploads from either feature with no way to
+// reset it short of signing in — explicitly removed at the user's
+// request ("set them to unlimited"). Infinity keeps the counter/tracking
+// machinery below intact (anon-uploads.json still records who's
+// uploaded what, useful for diagnostics) without ever actually blocking
+// anyone. Reintroduce a real number here if anonymous upload abuse
+// becomes an actual problem.
+const ANON_UPLOAD_LIMIT = Infinity;
 
 // Origins allowed to call this server. Add more if you test from elsewhere.
 const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765'];
