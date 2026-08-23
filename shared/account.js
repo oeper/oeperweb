@@ -450,13 +450,19 @@ async function ensureHandle(email, displayName) {
 const HANDLE_PATTERN = /^[a-z0-9_.]{3,20}$/;
 export function isValidHandle(h) { return HANDLE_PATTERN.test(h || ''); }
 
-// True if nobody's claimed this handle yet (or it's already yours).
+// True if nobody's claimed this handle yet, or it's already yours — either
+// your current handle, or an old one of yours still sitting orphaned from a
+// previous rename (see changeHandle: the old handles/{oldHandle} doc is
+// left in place pointing at your own email, so reclaiming it later should
+// work instead of permanently reading as "taken" by a claim that's
+// actually still you).
 export async function isHandleAvailable(newHandle) {
   if (!isValidHandle(newHandle)) return false;
   if (currentUser && handleOf(currentUser.email) === newHandle) return true;
   try {
     const snap = await getDoc(doc(db, 'handles', newHandle));
-    return !snap.exists();
+    if (!snap.exists()) return true;
+    return !!currentUser && snap.data().email === currentUser.email;
   } catch {
     return false;
   }
@@ -473,7 +479,14 @@ export async function changeHandle(newHandle) {
   if (handleOf(currentUser.email) === newHandle) return newHandle; // no-op, already yours
   const available = await isHandleAvailable(newHandle);
   if (!available) throw new Error('that username is already taken.');
-  await setDoc(doc(db, 'handles', newHandle), { email: currentUser.email });
+  // Reclaiming an old handle of your own (see isHandleAvailable above)
+  // means handles/{newHandle} already exists — firestore.rules only allows
+  // *create* on this collection, never update, so re-writing an existing
+  // doc would be rejected even though it already points at you.
+  const existing = await getDoc(doc(db, 'handles', newHandle));
+  if (!existing.exists()) {
+    await setDoc(doc(db, 'handles', newHandle), { email: currentUser.email });
+  }
   await setDoc(doc(db, 'users', currentUser.email), { handle: newHandle }, { merge: true });
   profileCache[currentUser.email] = { ...(profileCache[currentUser.email] || {}), handle: newHandle };
   notify();
