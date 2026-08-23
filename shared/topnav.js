@@ -30,6 +30,7 @@ export const LOGO_SVG = `<svg viewBox="0 0 98 118" fill="currentColor" xmlns="ht
 // matching against.
 export const HIDDEN_PAGES = [
   { keywords: ['leaderboard', 'leaderboards', 'rankings', 'ranking', 'most viewed', 'most liked', 'most followed', 'karma'], name: 'leaderboard', url: '/leaderboard', icon: 'leaderboard' },
+  { keywords: ['chess', 'chess game', 'play chess'], name: 'chess', url: '/chess', icon: 'sports_esports' },
 ];
 export function hiddenPageRank(page, q) {
   let best = -1;
@@ -843,12 +844,14 @@ function notifText(n) {
   if (n.type === 'badge') return `you were given a badge${n.preview ? ': ' + escHtml(n.preview) : ''}`;
   if (n.type === 'credits') return `${name} sent you ${n.preview ? escHtml(n.preview) : 'some'} credits`;
   if (n.type === 'creditsGrant') return `you were granted ${n.preview ? escHtml(n.preview) : 'some'} credits`;
+  if (n.type === 'chessChallenge') return `${name} challenged you to a game of chess`;
   return name;
 }
 function notifUrl(n) {
   if (n.type === 'follow') { const h = handleOf(n.actorEmail); return h ? `/profile?u=${encodeURIComponent(h)}` : '/'; }
   if (n.type === 'badge') return '/settings';
   if (n.type === 'credits' || n.type === 'creditsGrant') return '/credits';
+  if (n.type === 'chessChallenge') return `/chess?game=${n.targetId}`;
   if (n.targetKind === 'post') return `/feed?post=${n.targetId}`;
   if (n.targetKind === 'video') return `/videos?video=${n.targetId}`;
   return '/';
@@ -866,7 +869,7 @@ function initNotifications(navEl) {
 
   function rowHtml(n) {
     const profile = getProfile(n.actorEmail, n.actorName, n.actorPhoto);
-    const icon = { upvote: 'favorite', comment: 'mode_comment', follow: 'person_add', badge: 'verified', credits: CREDITS_ICON, creditsGrant: CREDITS_ICON }[n.type] || 'notifications';
+    const icon = { upvote: 'favorite', comment: 'mode_comment', follow: 'person_add', badge: 'verified', credits: CREDITS_ICON, creditsGrant: CREDITS_ICON, chessChallenge: 'sports_esports' }[n.type] || 'notifications';
     return `
       <a class="oe-notif-row ${n.read ? '' : 'unread'}" href="${notifUrl(n)}" data-id="${n.id}">
         ${n.type === 'badge' || n.type === 'creditsGrant'

@@ -512,6 +512,31 @@ service cloud.firestore {
       allow delete: if isSignedIn() && resource.data.followerEmail == request.auth.token.email;
     }
 
+    // chess.html games — a single doc holds the whole game (board as FEN,
+    // whose turn it is, move history), overwritten in place move-by-move
+    // rather than one doc per move, since only the two players ever need
+    // to see it and a live onSnapshot on one small doc is all the realtime
+    // sync this needs. players/playerColors are fixed at creation (not in
+    // onlyChanged below), so neither player can rewrite who's who mid-game;
+    // move *legality* itself isn't re-validated here (same trust level as
+    // this site's other user-generated content, e.g. post bodies) — a
+    // malicious client could in principle submit an illegal board, but
+    // chess.html's own engine is what both players' clients render from,
+    // so this mirrors the rest of the site's threat model rather than
+    // trying to re-implement chess rules in security-rules language.
+    match /chessGames/{gameId} {
+      allow read: if isSignedIn() && (resource == null || request.auth.token.email in resource.data.players);
+      allow create: if isSignedIn() && !isBanned()
+        && request.resource.data.players is list && request.resource.data.players.size() == 2
+        && request.auth.token.email in request.resource.data.players
+        && request.resource.data.status == 'pending'
+        && request.resource.data.board is string
+        && request.resource.data.turn in ['w', 'b'];
+      allow update: if isSignedIn() && request.auth.token.email in resource.data.players
+        && onlyChanged(['status', 'turn', 'board', 'moveHistory', 'winner', 'updatedAt']);
+      allow delete: if isSignedIn() && request.auth.token.email in resource.data.players;
+    }
+
     // uid -> email, so "who liked this" can resolve the Firebase Auth uids
     // stored in upvoters/downvoters back to a real profile via the normal
     // email-keyed users/{email} system. Public read like everything else
