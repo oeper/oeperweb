@@ -506,13 +506,23 @@ function showToast(msg) {
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 2800);
 }
+// Per-conversation send-sound overrides, keyed by the OTHER participant's
+// @handle — a fun customization, not a general feature, so it's just a
+// lookup table rather than any kind of settings UI.
+const CUSTOM_SEND_SOUNDS = {
+  tibzels: 'https://fs.oeper.dev/docs/mt6wpp2c9vgymv-dummy-dababesaba.mp3',
+};
 // Played only from the sender's own send action (not from the message
 // list's onSnapshot re-render, which fires on every update including
 // history just loading) — a fresh Audio() per call so rapid sends don't
 // cut each other off. Wrapped in try/catch since autoplay can still be
 // blocked in some contexts even off a real click/keydown gesture.
-function playSendSound() {
-  try { new Audio('./sounds/message-send.wav').play().catch(() => {}); } catch {}
+// otherHandle (optional): the DM's other participant, so a custom sound
+// in CUSTOM_SEND_SOUNDS can override the default — not meaningful for
+// group chats, which have no single "other" person.
+function playSendSound(otherHandle) {
+  const src = (otherHandle && CUSTOM_SEND_SOUNDS[otherHandle]) || './sounds/message-send.wav';
+  try { new Audio(src).play().catch(() => {}); } catch {}
 }
 
 const NOTE_LIFETIME_MS = 24 * 60 * 60 * 1000;
@@ -1115,7 +1125,7 @@ function formatClockTimeGroup(date) {
 // messages subcollection + conversation-preview doc the caller points at,
 // so both openThread and openGroupThread can share one upload/send path
 // instead of two near-identical copies.
-async function sendMediaFileTo(file, { messagesRef, sendBtn, user, touchPreview }) {
+async function sendMediaFileTo(file, { messagesRef, sendBtn, user, touchPreview, otherHandle }) {
   const isVideo = file.type.startsWith('video/');
   const isImage = file.type.startsWith('image/');
   const kind = isVideo ? 'video' : isImage ? 'image' : 'file';
@@ -1130,7 +1140,7 @@ async function sendMediaFileTo(file, { messagesRef, sendBtn, user, touchPreview 
       ...(isVideo ? { videoUrl: url } : isImage ? { imageUrl: url } : { fileUrl: url, fileName: file.name, fileSize: file.size }),
       createdAt: serverTimestamp(),
     });
-    playSendSound();
+    playSendSound(otherHandle);
   } catch (err) {
     showToast(`could not send ${kind}: ` + err.message);
   }
@@ -1653,7 +1663,7 @@ async function openThread(otherEmail, user) {
         autoGrowMsgInput();
         const reply = replyingTo;
         cancelReply();
-        playSendSound();
+        playSendSound(otherHandle);
         await touchConversation(text.slice(0, 200));
         await addDoc(collection(db, 'conversations', convoId, 'messages'), {
           senderEmail: user.email,
@@ -1678,7 +1688,7 @@ async function openThread(otherEmail, user) {
 
   const sendMediaFile = file => sendMediaFileTo(file, {
     messagesRef: collection(db, 'conversations', convoId, 'messages'),
-    sendBtn, user, touchPreview: touchConversation,
+    sendBtn, user, touchPreview: touchConversation, otherHandle,
   });
   imageInput.addEventListener('change', async () => {
     const file = imageInput.files[0];
