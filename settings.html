@@ -149,6 +149,13 @@
           <div class="row-sub" id="profileRowSub">sign in to edit your display name, bio, and photo.</div>
         </div>
       </a>
+      <button class="row" id="handleRow" style="display:none; width:100%; border:none; background:none; text-align:left; cursor:pointer; font:inherit; color:inherit;">
+        <div class="row-icon"><span class="material-symbols-rounded">alternate_email</span></div>
+        <div class="row-text">
+          <div class="row-title">your handle</div>
+          <div class="row-sub" id="handleRowSub"></div>
+        </div>
+      </button>
     </div>
   </div>
 
@@ -204,8 +211,9 @@
 import {
   onAccountChange, handleOf, signIn, signOutUser,
   isOwnerEmail, listSessions, removeSession, getCurrentDeviceId,
-} from './shared/account.js?v=32';
-import { mountTopNav } from './shared/topnav.js?v=29';
+  getCurrentUser, isHandleAvailable, setMyHandle,
+} from './shared/account.js?v=33';
+import { mountTopNav } from './shared/topnav.js?v=30';
 import { mountThemePicker } from './shared/theme-picker.js?v=4';
 import { mountFooter } from './shared/footer.js?v=5';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
@@ -235,6 +243,49 @@ onAccountChange(user => {
   document.getElementById('accountActionsSection').style.display = user ? '' : 'none';
   initBadgeSection(user);
   initSecuritySection(user);
+  initHandleRow(user, handle);
+});
+
+// ── Your @handle ─────────────────────────────────────────────────────
+// A handle claim is permanent (handles/{h} is create-only in
+// firestore.rules) — this lets someone switch back to an older handle
+// they already own, or claim a fresh one, rather than being stuck with
+// whatever ensureHandle() first assigned them.
+function initHandleRow(user, handle) {
+  const handleRow = document.getElementById('handleRow');
+  const handleSub = document.getElementById('handleRowSub');
+  handleRow.style.display = user ? '' : 'none';
+  if (!user) return;
+  handleSub.textContent = handle ? '@' + handle + ' — tap to change' : 'not set yet — tap to choose one';
+}
+document.getElementById('handleRow').addEventListener('click', async () => {
+  const user = getCurrentUser();
+  if (!user) return;
+  const current = handleOf(user.email);
+  const picked = await oePrompt('choose a handle — lowercase letters, numbers, periods, or underscores, 3–20 characters.', {
+    defaultValue: current || '',
+    placeholder: 'yourhandle',
+    maxLength: 20,
+    okLabel: 'save',
+  });
+  if (picked === null) return;
+  const newHandle = picked.trim().toLowerCase();
+  if (!newHandle || newHandle === current) return;
+  const available = await isHandleAvailable(newHandle);
+  if (!available) { await oeAlert(`@${newHandle} isn't available — try something else.`); return; }
+  try {
+    await setMyHandle(newHandle);
+    initHandleRow(user, newHandle);
+    const row = document.getElementById('profileRow');
+    const title = document.getElementById('profileRowTitle');
+    const sub = document.getElementById('profileRowSub');
+    row.href = '/profile?u=' + encodeURIComponent(newHandle);
+    title.textContent = 'view my profile';
+    sub.textContent = 'see your posts, stats, and edit your bio and photo.';
+    await oeAlert(`your handle is now @${newHandle}.`);
+  } catch (err) {
+    await oeAlert('could not change handle: ' + err.message);
+  }
 });
 
 // ── Security: signed-in-devices log ────────────────────────────────

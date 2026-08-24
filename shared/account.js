@@ -435,8 +435,21 @@ async function ensureHandle(email, displayName) {
   }
 
   try {
-    await setDoc(doc(db, 'handles', candidate), { email });
-    await setDoc(doc(db, 'users', email), { handle: candidate }, { merge: true });
+    // Was two separate setDoc() calls — if the tab closed, navigated away,
+    // or the network dropped between them, the first could land (claiming
+    // the handle permanently, handles/{h} being create-only) while the
+    // second never did, leaving users/{email}.handle unset. The account
+    // then looked handle-less on its next session, ensureHandle() ran
+    // again, and claimed a whole new (permanently unrecoverable) handle —
+    // repeatably, which is exactly how one real account ended up owning
+    // three different handles (oeperdev, oeperdev2, oeperdev3) with only
+    // the last one ever actually recorded as theirs. A batch makes both
+    // writes succeed or fail together, so that specific inconsistent
+    // state can't happen again.
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'handles', candidate), { email });
+    batch.set(doc(db, 'users', email), { handle: candidate }, { merge: true });
+    await batch.commit();
     profileCache[email] = { ...(profileCache[email] || {}), handle: candidate };
     notify();
     return candidate;
@@ -450,16 +463,49 @@ async function ensureHandle(email, displayName) {
 const HANDLE_PATTERN = /^[a-z0-9_.]{3,20}$/;
 export function isValidHandle(h) { return HANDLE_PATTERN.test(h || ''); }
 
-// True if nobody's claimed this handle yet (or it's already yours).
+// True if nobody's claimed this handle yet, or it's already yours — not
+// just your *currently active* one. A handle claim is permanent
+// (handles/{h} is create-only), so an account can end up owning more than
+// one if ensureHandle() ever ran more than once for it (the exact bug
+// just fixed above) — this needs to recognize all of them as "yours",
+// not only whichever one users/{email}.handle currently points at,
+// otherwise switching back to an old one you already own would
+// incorrectly report as unavailable.
 export async function isHandleAvailable(newHandle) {
   if (!isValidHandle(newHandle)) return false;
-  if (currentUser && handleOf(currentUser.email) === newHandle) return true;
   try {
     const snap = await getDoc(doc(db, 'handles', newHandle));
-    return !snap.exists();
+    if (!snap.exists()) return true;
+    return !!(currentUser && snap.data().email === currentUser.email);
   } catch {
     return false;
   }
+}
+
+// Points your account at a handle you already own (reclaiming an older
+// one ensureHandle() previously assigned you, e.g. after the race
+// described above), or claims a brand new one if nobody owns it yet.
+// Rejects anything already claimed by someone else.
+export async function setMyHandle(newHandle) {
+  if (!currentUser) throw new Error('sign in first');
+  const h = String(newHandle || '').trim().toLowerCase();
+  if (!isValidHandle(h)) throw new Error('handles must be 3-20 characters: lowercase letters, numbers, periods, or underscores');
+  const email = currentUser.email;
+  const existing = await getDoc(doc(db, 'handles', h));
+  if (existing.exists()) {
+    if (existing.data().email !== email) throw new Error('that handle is already taken');
+    // Already yours, just not your active one — no new claim needed,
+    // just repoint users/{email}.handle at it.
+    await setDoc(doc(db, 'users', email), { handle: h }, { merge: true });
+  } else {
+    const batch = writeBatch(db);
+    batch.set(doc(db, 'handles', h), { email });
+    batch.set(doc(db, 'users', email), { handle: h }, { merge: true });
+    await batch.commit();
+  }
+  profileCache[email] = { ...(profileCache[email] || {}), handle: h };
+  notify();
+  return h;
 }
 
 // Claims a new handle for the signed-in account, Instagram-style (you can
