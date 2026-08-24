@@ -407,8 +407,7 @@
   <div class="file-list" id="fileList"></div>
 
   <div class="empty" id="emptyState">
-    <span class="material-symbols-rounded" id="emptyIcon">login</span>
-    <p id="emptyText">sign in to view and upload your files.</p>
+    <div class="oe-spinner-row"><span class="oe-loading-indicator small"></span>loading…</div>
   </div>
 </div>
 
@@ -471,6 +470,14 @@ mountFooter();
 // "permanent" threshold is still accepted, but gets auto-deleted 2 hours
 // after upload (server-enforced; these numbers just drive the client's
 // "will be temporary" notice).
+// getCurrentUser() reads null both before Firebase Auth has resolved AND
+// once it's confirmed you're signed out — indistinguishable on their own.
+// This tracks the first onAccountChange firing (which itself only fires
+// once auth genuinely resolves), so the empty state can show a neutral
+// "loading…" placeholder instead of prematurely claiming you're signed
+// out while that's still being checked.
+let authKnown = false;
+
 const MAX_UPLOAD_BYTES = 1024 * 1024 * 1024; // 1GB
 const SIGNED_IN_PERMANENT_BYTES = 50 * 1024 * 1024; // 50MB
 const ANON_PERMANENT_BYTES = 25 * 1024 * 1024; // 25MB
@@ -791,6 +798,7 @@ document.getElementById('moveConfirmBtn').addEventListener('click', async () => 
 });
 
 onAccountChange(user => {
+  authKnown = true;
   const signedIn = !!user;
   document.getElementById('toolbar').style.display = signedIn ? '' : 'none';
   document.getElementById('stats').style.display = signedIn ? '' : 'none';
@@ -942,15 +950,18 @@ function render() {
   const totalEmpty = folderChildren.length === 0 && filesHere.length === 0;
   empty.style.display = totalEmpty ? 'block' : 'none';
   if (totalEmpty) {
-    const [icon, text] = !user
-      ? ['login', 'sign in to view and upload your files.']
-      : files === null
-        ? ['cloud_off', "files aren't set up yet."]
-        : q
-          ? ['search_off', 'no files match your search.']
-          : ['folder_open', "nothing here yet."];
-    document.getElementById('emptyIcon').textContent = icon;
-    document.getElementById('emptyText').textContent = text;
+    if (!authKnown) {
+      empty.innerHTML = '<div class="oe-spinner-row"><span class="oe-loading-indicator small"></span>loading…</div>';
+    } else {
+      const [icon, text] = !user
+        ? ['login', 'sign in to view and upload your files.']
+        : files === null
+          ? ['cloud_off', "files aren't set up yet."]
+          : q
+            ? ['search_off', 'no files match your search.']
+            : ['folder_open', "nothing here yet."];
+      empty.innerHTML = `<span class="material-symbols-rounded">${icon}</span><p>${escHtml(text)}</p>`;
+    }
   }
 }
 
@@ -988,8 +999,9 @@ function renderUserList() {
 
   empty.style.display = rows.length === 0 ? 'block' : 'none';
   if (rows.length === 0) {
-    document.getElementById('emptyIcon').textContent = q ? 'search_off' : 'groups';
-    document.getElementById('emptyText').textContent = q ? 'no users match your search.' : 'no files uploaded yet.';
+    const icon = q ? 'search_off' : 'groups';
+    const text = q ? 'no users match your search.' : 'no files uploaded yet.';
+    empty.innerHTML = `<span class="material-symbols-rounded">${icon}</span><p>${escHtml(text)}</p>`;
   }
 }
 

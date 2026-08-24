@@ -686,6 +686,11 @@ let aiThinking = false;
 let onlineGame = null; // { id, myColor, opponentEmail, opponentName, opponentPhoto, status, winner }
 let onlineUnsub = null;
 let onlineMoveInFlight = false;
+// getCurrentUser() reads null both before auth has resolved AND once
+// confirmed signed-out — indistinguishable on their own. This tracks the
+// first onAccountChange firing so the online tab shows a loading
+// placeholder instead of prematurely claiming you need to sign in.
+let authKnown = false;
 
 function showToast(msg) {
   let el = document.getElementById('chessToast');
@@ -1057,6 +1062,10 @@ function renderModeBody() {
 
 // ── Online multiplayer ───────────────────────────────────────────────
 function renderOnlineModeBody() {
+  if (!authKnown) {
+    modeBody.innerHTML = `<div class="oe-spinner-row"><span class="oe-loading-indicator small"></span>loading…</div>`;
+    return;
+  }
   const user = getCurrentUser();
   if (!user) {
     modeBody.innerHTML = `<div class="status-note">sign in (top right) to challenge another oeper.dev user to a live game.</div>`;
@@ -1293,7 +1302,10 @@ function leaveOnlineGame(resetUrl) {
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────
-onAccountChange(() => { if (mode === 'online') renderModeBody(); });
+onAccountChange(() => {
+  authKnown = true;
+  if (mode === 'online') renderModeBody();
+});
 
 const urlGameId = new URLSearchParams(window.location.search).get('game');
 if (urlGameId) {
