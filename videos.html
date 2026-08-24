@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js?v=15" data-cfasync="false"></script>
+<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -262,8 +262,8 @@
   <div class="field"><label>description</label><textarea id="descInput" maxlength="2000" rows="3"></textarea></div>
   <div class="field"><label>video file</label><input type="file" id="fileInput" accept="video/*"></div>
   <div class="upload-progress" id="uploadProgress" style="display:none;">
-    <div class="upload-progress-label" id="uploadProgressLabel">Uploading…</div>
-    <div class="oe-loading-bar determinate" id="uploadProgressFill"></div>
+    <div class="upload-progress-label" id="uploadProgressLabel">uploading…</div>
+    <div class="oe-loading-bar determinate"><div class="oe-loading-bar-fill" id="uploadProgressFill"></div></div>
   </div>
   <div class="modal-actions">
     <button class="btn danger" id="uploadCancelBtn">cancel</button>
@@ -779,15 +779,15 @@ document.getElementById('uploadSubmitBtn').addEventListener('click', async () =>
   const progressFill = document.getElementById('uploadProgressFill');
   const progressLabel = document.getElementById('uploadProgressLabel');
   btn.disabled = true;
-  btn.textContent = 'Uploading…';
+  btn.textContent = 'uploading…';
   progressEl.style.display = '';
-  progressFill.style.setProperty('--oe-progress', 0);
-  progressLabel.textContent = 'Uploading… 0%';
+  progressFill.style.width = '0%';
+  progressLabel.textContent = 'uploading… 0%';
   try {
     const url = await uploadFile(file, '/upload-video', undefined, frac => {
       const pct = Math.round(frac * 100);
-      progressFill.style.setProperty('--oe-progress', frac);
-      progressLabel.textContent = `Uploading… ${pct}%`;
+      progressFill.style.width = pct + '%';
+      progressLabel.textContent = `uploading… ${pct}%`;
     });
     const profile = getProfile(user.email, user.displayName, user.photoURL);
     await addDoc(collection(db, 'videos'), {

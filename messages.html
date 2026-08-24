@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
 <link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js?v=15" data-cfasync="false"></script>
+<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -399,7 +399,6 @@ import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
   loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions, CREDITS_ICON,
 } from './shared/account.js?v=33';
-import { mountFooter } from './shared/footer.js?v=5';
 import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=5';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { reportContent } from './shared/report.js?v=4';
@@ -410,7 +409,6 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 mountTopNav();
-mountFooter();
 initNotes();
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -961,10 +959,12 @@ async function openGroupInfoModal(groupId) {
           </button>
         </div>
       ` : '';
+      const memberHandle = handleOf(email);
+      const memberPhoto = `<img src="${escHtml(p.photo || '')}" alt="">`;
       return `
         <div class="member-row">
-          <img src="${escHtml(p.photo || '')}" alt="">
-          <div class="member-name">${escHtml(p.name)}${officialBadgeHtml(email)}${isAdmin ? '<span class="member-admin-tag">Admin</span>' : ''}</div>
+          ${memberHandle ? `<a href="/profile?u=${encodeURIComponent(memberHandle)}">${memberPhoto}</a>` : memberPhoto}
+          <div class="member-name">${memberHandle ? `<a href="/profile?u=${encodeURIComponent(memberHandle)}" style="color:inherit;text-decoration:none;">${escHtml(p.name)}</a>` : escHtml(p.name)}${officialBadgeHtml(email)}${isAdmin ? '<span class="member-admin-tag">Admin</span>' : ''}</div>
           ${actions}
         </div>
       `;
@@ -1033,7 +1033,7 @@ document.getElementById('groupIconInput').addEventListener('change', async () =>
   if (!file || !groupInfoGroupId) return;
   if (file.size > MAX_IMAGE_BYTES) { showToast(`File must be under ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)}MB`); return; }
   try {
-    const url = await uploadFile(file, '/upload', undefined, frac => showUploadToast(`Uploading… ${Math.round(frac * 100)}%`));
+    const url = await uploadFile(file, '/upload', undefined, frac => showUploadToast(`uploading… ${Math.round(frac * 100)}%`));
     await updateDoc(doc(db, 'groups', groupInfoGroupId), { icon: url });
     showToast('icon updated');
   } catch (err) {
@@ -1798,7 +1798,7 @@ async function openThread(otherEmail, user) {
 
   async function sendVoiceMessage(file, durationSeconds) {
     try {
-      const audioUrl = await uploadFile(file, '/upload-message', undefined, frac => showUploadToast(`Uploading voice message… ${Math.round(frac * 100)}%`));
+      const audioUrl = await uploadFile(file, '/upload-message', undefined, frac => showUploadToast(`uploading voice message… ${Math.round(frac * 100)}%`));
       await touchConversation('🎤 Voice message');
       await addDoc(collection(db, 'conversations', convoId, 'messages'), {
         senderEmail: user.email,

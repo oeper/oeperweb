@@ -10,7 +10,7 @@
 <meta property="og:image" content="https://oeper.dev/icon.png">
 <meta property="og:url" content="https://oeper.dev/">
 <meta property="og:type" content="website">
-<script src="./shared/theme-boot.js?v=15" data-cfasync="false"></script>
+<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://fonts.cdnfonts.com">
@@ -543,7 +543,7 @@
   .ig-card.text-only .ig-actions {
     margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--md-sys-color-outline-variant);
   }
-  .ig-timestamp { padding: 6px 14px 14px; font-size: 11px; color: var(--md-sys-color-on-surface-variant); text-transform: uppercase; letter-spacing: 0.3px; }
+  .ig-timestamp { padding: 6px 14px 14px; font-size: 11px; color: var(--md-sys-color-on-surface-variant); letter-spacing: 0.3px; }
 
   /* Inline comment modal for the home feed */
   .ig-comment-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 220; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
@@ -979,7 +979,7 @@
       closeStoryVisModal();
       const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
       try {
-        const url = await uploadFile(file, '/upload', undefined, frac => showToast(`Uploading… ${Math.round(frac * 100)}%`));
+        const url = await uploadFile(file, '/upload', undefined, frac => showToast(`uploading… ${Math.round(frac * 100)}%`));
         const profile = getProfile(user.email, user.displayName, user.photoURL);
         await addDoc(collection(db, 'stories'), {
           authorEmail: user.email,

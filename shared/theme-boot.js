@@ -985,8 +985,21 @@
     // ::before is the stop indicator (a fixed dot at the track's end —
     // present in both modes here, since unlike the circular case the
     // track itself has a fixed direction/end regardless of behavior).
-    // ::after is the active indicator: sliding when indeterminate, a
-    // left-anchored fill driven by --oe-progress when .determinate.
+    // ::after is the indeterminate mode's sliding indicator — pure CSS
+    // animation, no JS-driven value, so it's unaffected by the issue
+    // below.
+    //
+    // Determinate mode used to be ::after too, with JS driving its width
+    // via calc(var(--oe-progress, 0) * 100%) and element.style.
+    // setProperty('--oe-progress', frac) — measured correct in a plain
+    // getComputedStyle() check, but a real screenshot showed the fill
+    // never actually appearing: a custom property set via inline style
+    // on an element does not reliably propagate to that SAME element's
+    // own ::before/::after in practice, @property registration or not
+    // (confirmed with and without one — this isn't a syntax/typing
+    // issue, the pseudo-element just never sees the value). Real child
+    // element instead: JS sets its width directly, no custom property,
+    // no pseudo-element, nothing that class of bug can hide behind.
     '.oe-loading-bar {',
     '  position: relative; width: 100%; height: 4px; border-radius: 100px;',
     '  background: var(--md-sys-color-secondary-container); overflow: hidden;',
@@ -1000,8 +1013,10 @@
     '  background: var(--md-sys-color-primary); border-radius: 100px;',
     '  animation: oe-loading-bar-slide 1.3s cubic-bezier(0.4,0,0.2,1) infinite;',
     '}',
-    '.oe-loading-bar.determinate::after {',
-    '  animation: none; left: 0; width: calc(var(--oe-progress, 0) * 100%); transition: width 0.15s ease;',
+    '.oe-loading-bar.determinate::after { display: none; }',
+    '.oe-loading-bar-fill {',
+    '  position: absolute; top: 0; left: 0; height: 100%; width: 0%; z-index: 1;',
+    '  background: var(--md-sys-color-primary); border-radius: 100px; transition: width 0.15s ease;',
     '}',
     '@keyframes oe-loading-bar-slide {',
     '  0% { left: -40%; width: 40%; }',
