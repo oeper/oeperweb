@@ -512,6 +512,15 @@ function showToast(msg) {
 const CUSTOM_SEND_SOUNDS = {
   tibzels: 'https://fs.oeper.dev/docs/mt6wpp2c9vgymv-dummy-dababesaba.mp3',
 };
+// A longer message plays a custom send-sound slower (never faster than
+// its natural speed), so it takes longer to finish — capped so the
+// played-back length never exceeds MAX_SOUND_SECONDS regardless of how
+// long the message or the clip itself is. Only meaningful for a custom
+// sound tied to actual message text; scales up to CHARS_FOR_MAX_SLOWDOWN
+// characters, past which it's fully at the slowest allowed rate.
+const MAX_SOUND_SECONDS = 6;
+const CHARS_FOR_MAX_SLOWDOWN = 300;
+
 // Played only from the sender's own send action (not from the message
 // list's onSnapshot re-render, which fires on every update including
 // history just loading) — a fresh Audio() per call so rapid sends don't
@@ -520,9 +529,25 @@ const CUSTOM_SEND_SOUNDS = {
 // otherHandle (optional): the DM's other participant, so a custom sound
 // in CUSTOM_SEND_SOUNDS can override the default — not meaningful for
 // group chats, which have no single "other" person.
-function playSendSound(otherHandle) {
-  const src = (otherHandle && CUSTOM_SEND_SOUNDS[otherHandle]) || './sounds/message-send.wav';
-  try { new Audio(src).play().catch(() => {}); } catch {}
+// textLength (optional): the sent message's character count, used only
+// to slow down a custom sound for longer messages (see above) — omitted
+// for attachments/voice messages, which have no text to measure.
+function playSendSound(otherHandle, textLength) {
+  const customSrc = otherHandle && CUSTOM_SEND_SOUNDS[otherHandle];
+  const src = customSrc || './sounds/message-send.wav';
+  try {
+    const audio = new Audio(src);
+    if (customSrc && typeof textLength === 'number') {
+      audio.addEventListener('loadedmetadata', () => {
+        const base = audio.duration;
+        if (!base || !isFinite(base) || base <= 0) return;
+        const minRate = Math.min(1, base / MAX_SOUND_SECONDS);
+        const t = Math.max(0, Math.min(1, textLength / CHARS_FOR_MAX_SLOWDOWN));
+        audio.playbackRate = 1 - t * (1 - minRate);
+      }, { once: true });
+    }
+    audio.play().catch(() => {});
+  } catch {}
 }
 
 const NOTE_LIFETIME_MS = 24 * 60 * 60 * 1000;
@@ -1663,7 +1688,7 @@ async function openThread(otherEmail, user) {
         autoGrowMsgInput();
         const reply = replyingTo;
         cancelReply();
-        playSendSound(otherHandle);
+        playSendSound(otherHandle, text.length);
         await touchConversation(text.slice(0, 200));
         await addDoc(collection(db, 'conversations', convoId, 'messages'), {
           senderEmail: user.email,
