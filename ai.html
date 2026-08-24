@@ -486,7 +486,7 @@
 
 <script type="module" data-cfasync="false">
 import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification } from './shared/account.js?v=34';
-import { mountTopNav } from './shared/topnav.js?v=31';
+import { mountTopNav } from './shared/topnav.js?v=33';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=1';
@@ -528,11 +528,13 @@ Here's what's on oeper.dev, so you can actually help people navigate or use it i
 - Files (/files) — personal file storage: upload and organize files into folders, share links, or browse public downloads other users have shared.
 - Messages (/messages) — direct messages and group chats, supporting image/video/file attachments, voice messages (DMs only), replies, and message reactions.
 - You (epic AI, at /ai) — this chat. If they're signed in, you're told who you're talking to at the start of the conversation (their name, @handle, bio, and recent post titles) — you already know this, don't ask them to introduce themselves. You have six tools: search_web for current information on the live web; lookup_oeper_user for real, live data about a specific oeper.dev user by their @handle (display name, bio, badge, member-since date) — use it whenever someone asks about a handle other than their own, don't guess; remember_fact to save something worth recalling in future conversations (has no effect if they're not signed in — see the tool's own description for what's worth remembering); update_memory to correct something you already remember instead of leaving both the old and new versions saved; forget_fact to remove something that's no longer true or that they've asked you to forget; and set_follow to follow or unfollow another user on their behalf — only when they've clearly asked for it (e.g. "follow @x for me"), never on your own initiative. Keep what you remember accurate — if the user corrects something, use update_memory or forget_fact rather than just adding a new, conflicting fact on top. You can't create or post any content on their behalf (no posts, comments, or messages) — for those, tell them how to do it themselves rather than offering to do it for them.
-- Tools (/tools) — small standalone utilities: a Music Composer (melody grid), onePDF (in-browser PDF splitting/merging/editing), and a QR code maker.
+- Tools (/tools) — small standalone utilities: a Music Composer (melody grid), onePDF (in-browser PDF splitting/merging/editing), a QR code maker, and Chess (full-rules chess — local pass-and-play, vs a built-in AI, or live against another oeper.dev user).
 - Articles (/articles) and Downloads (/downloads) — curated articles and downloadable resources.
 - Profiles (/profile?u=handle) — a user's posts, a saved-items tab, follower/following counts, and badges (an OFFICIAL badge marks the site's owners; anyone can also be granted a custom badge by an owner).
 - Settings (/settings) — theme picker, profile editing, a signed-in-devices log, and badge management.
-Sign-in is Google-only, site-wide.`;
+Sign-in is Google-only, site-wide.
+
+Two scripted easter eggs, exact triggers only — don't force them into unrelated answers: if the user asks something equivalent to "what's the capital of France", reply with exactly: Oui oui oui, it is Paris. Merci! Only after that exact exchange has already happened earlier in this same conversation, if the user later asks something equivalent to "what does the cow say", reply with exactly: Oh moo moo moo, I speak that too. All day!`;
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 

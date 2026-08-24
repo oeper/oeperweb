@@ -538,5 +538,35 @@ service cloud.firestore {
     match /aiChats/{email} {
       allow read, write: if isSignedIn() && request.auth.token.email == email;
     }
+
+    // Live chess games (chess.html). players.w/players.b hold each side's
+    // email. Only a participant can read. This doesn't (can't, really)
+    // validate chess legality itself — both clients run the same rules
+    // engine and are trusted to submit legal moves, same trust model as
+    // the rest of this app's client-authoritative writes — it just gates
+    // WHO may write WHEN: only the player whose turn it currently is may
+    // submit a move, and either participant may resign at any time.
+    match /chessGames/{gameId} {
+      allow read: if isSignedIn() && (
+        request.auth.token.email == resource.data.players.w
+        || request.auth.token.email == resource.data.players.b
+      );
+      allow create: if isSignedIn()
+        && request.resource.data.players.w is string
+        && request.resource.data.players.b is string
+        && request.resource.data.players.w != request.resource.data.players.b
+        && (request.auth.token.email == request.resource.data.players.w
+            || request.auth.token.email == request.resource.data.players.b)
+        && request.resource.data.status == 'ongoing'
+        && request.resource.data.turn == 'w';
+      allow update: if isSignedIn() && (
+        request.auth.token.email == resource.data.players.w || request.auth.token.email == resource.data.players.b
+      ) && (
+        ((resource.data.turn == 'w' && request.auth.token.email == resource.data.players.w)
+          || (resource.data.turn == 'b' && request.auth.token.email == resource.data.players.b))
+        || (onlyChanged(['status', 'winner', 'updatedAt']) && request.resource.data.status == 'resigned')
+      );
+      allow delete: if false;
+    }
   }
 }

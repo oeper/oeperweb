@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chess — oeper.dev</title>
-<meta name="description" content="Play chess in your browser — full rules, local two-player">
+<meta name="description" content="Play chess in your browser — local, vs AI, or live against another oeper.dev user">
 <meta property="og:title" content="Chess — oeper.dev">
-<meta property="og:description" content="Play chess in your browser — full rules, local two-player">
+<meta property="og:description" content="Play chess in your browser — local, vs AI, or live against another oeper.dev user">
 <meta property="og:image" content="https://oeper.dev/icon.png">
 <meta property="og:url" content="https://oeper.dev/chess">
 <meta property="og:type" content="website">
@@ -70,34 +70,71 @@
 
   .layout { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
 
-  .board-wrap { flex: 0 0 auto; }
+  .board-wrap { flex: 0 0 auto; position: relative; }
   .board {
+    position: relative;
     display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
     width: min(88vw, 480px); height: min(88vw, 480px); border-radius: 16px; overflow: hidden;
     box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    transition: opacity 0.2s;
   }
+  .board.disabled { opacity: 0.6; }
   .sq {
     position: relative; display: flex; align-items: center; justify-content: center;
-    font-size: min(8.5vw, 42px); line-height: 1; cursor: pointer; user-select: none;
+    cursor: pointer; user-select: none;
+    transition: background-color 0.15s ease;
   }
   .sq.light { background: #3a4352; }
   .sq.dark { background: #262c36; }
   .sq.selected { background: var(--md-sys-color-secondary-container) !important; }
   .sq.last-move { box-shadow: inset 0 0 0 3px rgba(168,199,250,0.55); }
-  .sq.in-check { background: #6b2c2c !important; }
-  .sq .piece { position: relative; z-index: 2; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.5)); }
-  .sq .piece.w { color: #f4f4f4; }
-  .sq .piece.b { color: #1c1c1c; }
+  .sq.in-check { background: #6b2c2c !important; animation: oeCheckPulse 1s ease-in-out infinite; }
+  @keyframes oeCheckPulse {
+    0%, 100% { box-shadow: inset 0 0 0 4px rgba(255,110,110,0.9); }
+    50% { box-shadow: inset 0 0 0 4px rgba(255,110,110,0.25); }
+  }
+  .sq .piece {
+    position: relative; z-index: 2;
+    font-size: min(8.2vw, 40px);
+    font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 40;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.55));
+    will-change: transform;
+  }
+  .sq .piece.w { color: #f5f5f5; }
+  .sq .piece.b { color: #0d0d0d; -webkit-text-stroke: 1px rgba(230,230,230,0.55); }
+  .sq .piece.promo-pop { animation: oePromoPop 0.26s ease; }
+  @keyframes oePromoPop { 0% { transform: scale(0.4); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+  .piece-ghost {
+    position: absolute; z-index: 30; display: flex; align-items: center; justify-content: center;
+    font-size: min(8.2vw, 40px); pointer-events: none;
+    font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 40;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.55));
+    transition: opacity 220ms ease, transform 220ms ease;
+  }
+  .piece-ghost.w { color: #f5f5f5; }
+  .piece-ghost.b { color: #0d0d0d; -webkit-text-stroke: 1px rgba(230,230,230,0.55); }
   .sq .dot {
     position: absolute; width: 26%; height: 26%; border-radius: 50%; background: rgba(168,199,250,0.55); z-index: 1;
+    animation: oeDotIn 0.15s ease;
   }
   .sq .ring {
     position: absolute; inset: 6%; border-radius: 50%; border: 3px solid rgba(168,199,250,0.55); z-index: 1;
+    animation: oeDotIn 0.15s ease;
   }
+  @keyframes oeDotIn { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
   .sq .coord {
     position: absolute; bottom: 2px; left: 4px; font-size: 10px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
     color: rgba(255,255,255,0.35); z-index: 1; pointer-events: none;
   }
+  .thinking-badge {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary);
+    font-size: 12px; font-weight: 500; padding: 6px 14px; border-radius: 100px;
+    display: none; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .thinking-badge.show { display: inline-flex; }
+  .thinking-badge .material-symbols-rounded { font-size: 15px; animation: oeSpin 1.1s linear infinite; }
+  @keyframes oeSpin { to { transform: rotate(360deg); } }
 
   .side-panel { flex: 1 1 280px; min-width: 260px; max-width: 360px; display: flex; flex-direction: column; gap: 16px; }
   .card { background: var(--md-sys-color-surface); border-radius: 20px; padding: 18px 20px; }
@@ -109,7 +146,9 @@
   .status-note { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 6px; }
   .status-note.big { font-size: 15px; font-weight: 500; color: var(--md-sys-color-primary); margin-top: 8px; }
 
-  .captured-row { display: flex; flex-wrap: wrap; gap: 2px; font-size: 20px; min-height: 26px; }
+  .captured-row { display: flex; flex-wrap: wrap; gap: 0px; min-height: 22px; align-items: center; }
+  .captured-row .piece { font-size: 18px; filter: none; }
+  .captured-row .empty-dash { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
   .captured-label { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 6px; }
 
   .btn {
@@ -118,7 +157,9 @@
     color: var(--md-sys-color-on-surface); cursor: pointer; font-family: inherit; transition: opacity 0.15s;
   }
   .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .btn.danger { color: var(--md-sys-color-error); background: color-mix(in srgb, var(--md-sys-color-error) 18%, transparent); }
   .btn-row { display: flex; gap: 10px; }
 
   .move-list { max-height: 220px; overflow-y: auto; font-size: 13px; }
@@ -127,19 +168,58 @@
   .move-row .mv { flex: 1; color: var(--md-sys-color-on-surface); }
   .move-empty { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
 
-  .promo-overlay {
+  .promo-overlay, .picker-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: none;
-    align-items: center; justify-content: center;
+    align-items: center; justify-content: center; padding: 20px;
   }
-  .promo-overlay.open { display: flex; }
+  .promo-overlay.open, .picker-overlay.open { display: flex; }
   .promo-box { background: var(--md-sys-color-surface); border-radius: 20px; padding: 24px; text-align: center; }
   .promo-box .promo-title { font-size: 15px; margin-bottom: 14px; color: var(--md-sys-color-on-surface-variant); }
   .promo-choices { display: flex; gap: 10px; }
   .promo-choice {
     width: 56px; height: 56px; border-radius: 14px; border: none; background: var(--md-sys-color-surface-variant);
-    font-size: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.15s;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.15s;
   }
+  .promo-choice .piece { font-size: 32px; filter: none; }
   .promo-choice:hover { opacity: 0.8; background: var(--md-sys-color-secondary-container); }
+
+  .picker-box { background: var(--md-sys-color-surface); border-radius: 20px; padding: 24px; width: min(420px, 100%); max-height: 80vh; display: flex; flex-direction: column; }
+  .picker-box h3 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 18px; font-weight: 500; margin-bottom: 14px; }
+  .picker-list { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+  .picker-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; }
+  .picker-row img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
+  .picker-row .pr-name { flex: 1; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .picker-row button {
+    padding: 7px 16px; border-radius: 100px; border: none; background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary); font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; flex-shrink: 0;
+  }
+  .picker-close { margin-top: 14px; }
+
+  .mode-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .mode-tab {
+    flex: 1; padding: 9px 6px; border-radius: 100px; border: none; background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface-variant); font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background-color 0.15s, color 0.15s;
+  }
+  .mode-tab.active { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+
+  .field-row { margin-bottom: 12px; }
+  .field-row label { display: block; font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 6px; }
+  .field-row select {
+    width: 100%; padding: 10px 12px; border-radius: 12px; border: none; background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface); font-family: inherit; font-size: 14px;
+  }
+
+  .opp-card { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .opp-card img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
+  .opp-card .opp-name { font-size: 14px; font-weight: 500; }
+  .opp-card .opp-sub { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
+
+  .game-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; cursor: pointer; transition: background-color 0.15s; }
+  .game-row:hover { background: var(--md-sys-color-surface-variant); }
+  .game-row img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
+  .game-row .gr-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .game-row .gr-turn { font-size: 11px; color: var(--md-sys-color-primary); flex-shrink: 0; }
+  .empty-note { font-size: 13px; color: var(--md-sys-color-on-surface-variant); padding: 8px 0; }
 </style>
 </head>
 <body>
@@ -152,10 +232,20 @@
 
   <div class="layout">
     <div class="board-wrap">
+      <div class="thinking-badge" id="thinkingBadge"><span class="material-symbols-rounded">progress_activity</span>thinking…</div>
       <div class="board" id="board"></div>
     </div>
 
     <div class="side-panel">
+      <div class="card mode-card">
+        <div class="mode-tabs">
+          <button type="button" class="mode-tab active" data-mode="local">local</button>
+          <button type="button" class="mode-tab" data-mode="ai">vs AI</button>
+          <button type="button" class="mode-tab" data-mode="online">online</button>
+        </div>
+        <div id="modeBody"></div>
+      </div>
+
       <div class="card">
         <div class="turn-row">
           <div class="turn-dot" id="turnDot"></div>
@@ -172,7 +262,7 @@
       </div>
 
       <div class="card">
-        <div class="btn-row">
+        <div class="btn-row" id="controlBtnRow">
           <button type="button" class="btn" id="undoBtn">undo</button>
           <button type="button" class="btn primary" id="newGameBtn">new game</button>
         </div>
@@ -193,9 +283,25 @@
   </div>
 </div>
 
+<div class="picker-overlay" id="pickerOverlay">
+  <div class="picker-box">
+    <h3>challenge a friend</h3>
+    <div class="picker-list" id="pickerList"></div>
+    <button type="button" class="btn picker-close" id="pickerCloseBtn">cancel</button>
+  </div>
+</div>
+
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=31';
+import { mountTopNav } from './shared/topnav.js?v=33';
 import { mountFooter } from './shared/footer.js?v=5';
+import {
+  db, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile,
+  loadFollowRelationships, sendNotification,
+} from './shared/account.js?v=34';
+import { oeConfirm } from './shared/dialog.js?v=4';
+import {
+  doc, addDoc, updateDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp,
+} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 mountFooter();
 
@@ -419,14 +525,138 @@ function gameStatus(state) {
   return isInCheck(state, state.turn) ? 'check' : 'playing';
 }
 
-// ── UI ───────────────────────────────────────────────────────────────
-const PIECE_GLYPH = {
-  w: { k: '♔', q: '♕', r: '♖', b: '♗', n: '♘', p: '♙' },
-  b: { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' },
+// ── AI: negamax with alpha-beta pruning over the same rules engine ─────
+const PIECE_VALUE = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+// Simplified single-phase piece-square tables (ascending rank order,
+// index 0 = a1 .. index 63 = h8), adapted from the standard chess
+// programming wiki tables. No separate endgame king table — a casual
+// opponent, not a tournament engine.
+const PST = {
+  p: [
+     0,  0,  0,  0,  0,  0,  0,  0,
+     5, 10, 10,-20,-20, 10, 10,  5,
+     5, -5,-10,  0,  0,-10, -5,  5,
+     0,  0,  0, 20, 20,  0,  0,  0,
+     5,  5, 10, 25, 25, 10,  5,  5,
+    10, 10, 20, 30, 30, 20, 10, 10,
+    50, 50, 50, 50, 50, 50, 50, 50,
+     0,  0,  0,  0,  0,  0,  0,  0,
+  ],
+  n: [
+    -50,-40,-30,-30,-30,-30,-40,-50,
+    -40,-20,  0,  5,  5,  0,-20,-40,
+    -30,  5, 10, 15, 15, 10,  5,-30,
+    -30,  0, 15, 20, 20, 15,  0,-30,
+    -30,  5, 15, 20, 20, 15,  5,-30,
+    -30,  0, 10, 15, 15, 10,  0,-30,
+    -40,-20,  0,  0,  0,  0,-20,-40,
+    -50,-40,-30,-30,-30,-30,-40,-50,
+  ],
+  b: [
+    -20,-10,-10,-10,-10,-10,-10,-20,
+    -10,  0,  0,  0,  0,  0,  0,-10,
+    -10,  0,  5, 10, 10,  5,  0,-10,
+    -10,  5,  5, 10, 10,  5,  5,-10,
+    -10,  0, 10, 10, 10, 10,  0,-10,
+    -10, 10, 10, 10, 10, 10, 10,-10,
+    -10,  5,  0,  0,  0,  0,  5,-10,
+    -20,-10,-10,-10,-10,-10,-10,-20,
+  ],
+  r: [
+     0,  0,  0,  0,  0,  0,  0,  0,
+     5, 10, 10, 10, 10, 10, 10,  5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+     0,  0,  0,  5,  5,  0,  0,  0,
+  ],
+  q: [
+    -20,-10,-10, -5, -5,-10,-10,-20,
+    -10,  0,  0,  0,  0,  0,  0,-10,
+    -10,  0,  5,  5,  5,  5,  0,-10,
+     -5,  0,  5,  5,  5,  5,  0, -5,
+      0,  0,  5,  5,  5,  5,  0, -5,
+    -10,  5,  5,  5,  5,  5,  0,-10,
+    -10,  0,  5,  0,  0,  0,  0,-10,
+    -20,-10,-10, -5, -5,-10,-10,-20,
+  ],
+  k: [
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -30,-40,-40,-50,-50,-40,-40,-30,
+    -20,-30,-30,-40,-40,-30,-30,-20,
+    -10,-20,-20,-20,-20,-20,-20,-10,
+     20, 20,  0,  0,  0,  0, 20, 20,
+     20, 30, 10,  0,  0, 10, 30, 20,
+  ],
 };
+function evaluate(state) {
+  let score = 0;
+  for (let i = 0; i < 64; i++) {
+    const p = state.board[i];
+    if (!p) continue;
+    const pstRank = p.color === 'w' ? rankOf(i) : 7 - rankOf(i);
+    const val = PIECE_VALUE[p.type] + PST[p.type][pstRank * 8 + fileOf(i)];
+    score += p.color === 'w' ? val : -val;
+  }
+  return score;
+}
+function orderedMoves(state) {
+  const moves = allLegalMoves(state, state.turn);
+  return moves.sort((a, b) => moveHeuristic(state, b) - moveHeuristic(state, a));
+}
+function moveHeuristic(state, m) {
+  if (m.captured) return PIECE_VALUE[m.captured.type] * 10 - PIECE_VALUE[state.board[m.from].type];
+  if (m.promotion) return 800;
+  return 0;
+}
+function negamax(state, depth, alpha, beta, color) {
+  const moves = orderedMoves(state);
+  if (moves.length === 0) return isInCheck(state, state.turn) ? -100000 - depth : 0;
+  if (depth === 0) return color * evaluate(state);
+  let best = -Infinity;
+  for (const m of moves) {
+    const score = -negamax(applyMove(state, m), depth - 1, -beta, -alpha, -color);
+    if (score > best) best = score;
+    if (best > alpha) alpha = best;
+    if (alpha >= beta) break;
+  }
+  return best;
+}
+const AI_DEPTH = { easy: 1, medium: 2, hard: 3 };
+function getBestMove(state, difficulty) {
+  const depth = AI_DEPTH[difficulty] || 2;
+  const moves = orderedMoves(state);
+  if (!moves.length) return null;
+  // Easy: a chance to skip straight to a random legal move instead of the
+  // engine's pick, so it's actually beatable rather than merely shallow.
+  if (difficulty === 'easy' && Math.random() < 0.35) return moves[Math.floor(Math.random() * moves.length)];
+  const color = state.turn === 'w' ? 1 : -1;
+  let bestMove = moves[0], bestScore = -Infinity, alpha = -Infinity, beta = Infinity;
+  for (const m of moves) {
+    const score = -negamax(applyMove(state, m), depth - 1, -beta, -alpha, -color);
+    if (score > bestScore) { bestScore = score; bestMove = m; }
+    if (bestScore > alpha) alpha = bestScore;
+  }
+  return bestMove;
+}
+
+// ── Board <-> Firestore serialization (compact "wp"/"bk"/null per square) ─
+function serializeBoard(board) { return board.map(p => p ? p.color + p.type : null); }
+function deserializeBoard(arr) { return (arr || []).map(s => s ? { color: s[0], type: s[1] } : null); }
+
+// ── UI ───────────────────────────────────────────────────────────────
+const PIECE_ICON = { k: 'chess_king', q: 'chess_queen', r: 'chess_rook', b: 'chess_bishop', n: 'chess_knight', p: 'chess_pawn' };
 const PIECE_NAME = { k: 'king', q: 'queen', r: 'rook', b: 'bishop', n: 'knight', p: 'pawn' };
+function pieceIconHtml(color, type, extraClass) {
+  return `<span class="material-symbols-rounded piece ${color}${extraClass ? ' ' + extraClass : ''}">${PIECE_ICON[type]}</span>`;
+}
 
 const boardEl = document.getElementById('board');
+const thinkingBadge = document.getElementById('thinkingBadge');
 const turnDot = document.getElementById('turnDot');
 const turnLabel = document.getElementById('turnLabel');
 const statusNote = document.getElementById('statusNote');
@@ -435,13 +665,41 @@ const capturedByBlackEl = document.getElementById('capturedByBlack');
 const moveListEl = document.getElementById('moveList');
 const promoOverlay = document.getElementById('promoOverlay');
 const promoChoices = document.getElementById('promoChoices');
+const modeBody = document.getElementById('modeBody');
+const controlBtnRow = document.getElementById('controlBtnRow');
+const pickerOverlay = document.getElementById('pickerOverlay');
+const pickerList = document.getElementById('pickerList');
 
-let history = []; // { state (before move), move, moveNumber, san-ish label }
+let moveHistory = []; // { move, label } — note: NOT window.history, careful not to shadow-confuse the two
 let current = freshState();
 let selected = null;
 let legalForSelected = [];
 let lastMove = null;
 let status = 'playing';
+let flipped = false;
+
+let mode = 'local'; // 'local' | 'ai' | 'online'
+let aiColor = 'b';
+let aiDifficulty = 'medium';
+let aiThinking = false;
+
+let onlineGame = null; // { id, myColor, opponentEmail, opponentName, opponentPhoto, status, winner }
+let onlineUnsub = null;
+let onlineMoveInFlight = false;
+
+function showToast(msg) {
+  let el = document.getElementById('chessToast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'chessToast';
+    el.style.cssText = 'position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#303034;color:#e3e2e6;padding:12px 22px;border-radius:14px;font-size:14px;z-index:300;box-shadow:0 4px 12px rgba(0,0,0,0.4);max-width:90vw;text-align:center;';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.opacity = '0'; }, 2800);
+}
 
 // Rough algebraic-ish label — not full disambiguation-correct SAN, just
 // enough for a casual move list (piece letter + destination, O-O for
@@ -457,18 +715,66 @@ function moveLabel(state, move) {
   return `${letter}${fromFile}${capture}${algebraic(move.to)}${promo}`;
 }
 
+function squareRect(i) {
+  const el = boardEl.querySelector(`.sq[data-index="${i}"]`);
+  return el ? el.getBoundingClientRect() : null;
+}
+
+const ANIM_MS = 220;
+function animatePieceFromRect(pieceEl, fromRect) {
+  if (!pieceEl || !fromRect) return;
+  const toRect = pieceEl.getBoundingClientRect();
+  const dx = fromRect.left - toRect.left;
+  const dy = fromRect.top - toRect.top;
+  if (!dx && !dy) return;
+  pieceEl.style.transition = 'none';
+  pieceEl.style.zIndex = '50';
+  pieceEl.style.transform = `translate(${dx}px, ${dy}px)`;
+  pieceEl.getBoundingClientRect(); // force reflow so the jump above applies before the transition below
+  requestAnimationFrame(() => {
+    pieceEl.style.transition = `transform ${ANIM_MS}ms cubic-bezier(0.2, 0, 0.2, 1)`;
+    pieceEl.style.transform = 'translate(0, 0)';
+  });
+  setTimeout(() => { pieceEl.style.transition = ''; pieceEl.style.zIndex = ''; pieceEl.style.transform = ''; }, ANIM_MS + 40);
+}
+function spawnCaptureGhost(squareIndex, piece) {
+  if (!piece) return;
+  const rect = squareRect(squareIndex);
+  const boardRect = boardEl.getBoundingClientRect();
+  if (!rect) return;
+  const ghost = document.createElement('div');
+  ghost.className = 'piece-ghost ' + piece.color;
+  ghost.textContent = PIECE_ICON[piece.type];
+  ghost.style.left = (rect.left - boardRect.left) + 'px';
+  ghost.style.top = (rect.top - boardRect.top) + 'px';
+  ghost.style.width = rect.width + 'px';
+  ghost.style.height = rect.height + 'px';
+  boardEl.appendChild(ghost);
+  requestAnimationFrame(() => {
+    ghost.style.opacity = '0';
+    ghost.style.transform = 'scale(0.4)';
+  });
+  setTimeout(() => ghost.remove(), ANIM_MS + 100);
+}
+function popPromotion(toSquare) {
+  const el = boardEl.querySelector(`.sq[data-index="${toSquare}"] .piece`);
+  if (!el) return;
+  el.classList.add('promo-pop');
+  setTimeout(() => el.classList.remove('promo-pop'), 280);
+}
+
 function renderBoard() {
   boardEl.innerHTML = '';
-  for (let rank = 7; rank >= 0; rank--) {
-    for (let file = 0; file < 8; file++) {
+  const ranks = flipped ? [0,1,2,3,4,5,6,7] : [7,6,5,4,3,2,1,0];
+  const files = flipped ? [7,6,5,4,3,2,1,0] : [0,1,2,3,4,5,6,7];
+  for (const rank of ranks) {
+    for (const file of files) {
       const i = sq(file, rank);
       const div = document.createElement('div');
       div.className = 'sq ' + ((file + rank) % 2 === 0 ? 'dark' : 'light');
       div.dataset.index = i;
       const piece = current.board[i];
-      if (piece) {
-        div.innerHTML = `<span class="piece ${piece.color}">${PIECE_GLYPH[piece.color][piece.type]}</span>`;
-      }
+      if (piece) div.innerHTML = pieceIconHtml(piece.color, piece.type);
       if (lastMove && (i === lastMove.from || i === lastMove.to)) div.classList.add('last-move');
       if (selected === i) div.classList.add('selected');
       if (piece && piece.type === 'k' && piece.color === current.turn && (status === 'check' || status === 'checkmate')) {
@@ -479,13 +785,14 @@ function renderBoard() {
         marker.className = current.board[i] ? 'ring' : 'dot';
         div.appendChild(marker);
       }
-      if (file === 0) {
+      if (file === (flipped ? 7 : 0)) {
         const c = document.createElement('span'); c.className = 'coord'; c.textContent = rank + 1;
         div.appendChild(c);
       }
       boardEl.appendChild(div);
     }
   }
+  boardEl.classList.toggle('disabled', !canInteract());
 }
 
 function renderStatus() {
@@ -499,54 +806,102 @@ function renderStatus() {
     turnLabel.textContent = 'draw';
     statusNote.textContent = `stalemate — ${isWhite ? 'white' : 'black'} has no legal moves, but isn't in check.`;
     statusNote.className = 'status-note big';
+  } else if (status === 'resigned') {
+    const winner = onlineGame ? onlineGame.winner : null;
+    const iWon = onlineGame && winner === onlineGame.myColor;
+    turnLabel.textContent = iWon ? 'you win!' : 'game over';
+    statusNote.textContent = winner ? `${winner === 'w' ? 'white' : 'black'} wins — the other side resigned.` : 'the game ended.';
+    statusNote.className = 'status-note big';
   } else {
     turnLabel.textContent = (isWhite ? 'white' : 'black') + ' to move';
-    statusNote.textContent = status === 'check' ? `${isWhite ? 'white' : 'black'} is in check.` : '';
+    let note = status === 'check' ? `${isWhite ? 'white' : 'black'} is in check.` : '';
+    if (mode === 'ai' && current.turn === aiColor && !note) note = "AI's turn.";
+    statusNote.textContent = note;
     statusNote.className = 'status-note';
   }
+  thinkingBadge.classList.toggle('show', aiThinking);
 }
 
 function renderCaptured() {
   const byWhite = [], byBlack = [];
-  for (const h of history) {
+  for (const h of moveHistory) {
     if (!h.move.captured) continue;
-    const glyph = PIECE_GLYPH[h.move.captured.color][h.move.captured.type];
-    if (h.move.captured.color === 'b') byWhite.push(glyph); else byBlack.push(glyph);
+    const html = pieceIconHtml(h.move.captured.color, h.move.captured.type);
+    if (h.move.captured.color === 'b') byWhite.push(html); else byBlack.push(html);
   }
-  capturedByWhiteEl.textContent = byWhite.join(' ') || '—';
-  capturedByBlackEl.textContent = byBlack.join(' ') || '—';
+  capturedByWhiteEl.innerHTML = byWhite.join('') || '<span class="empty-dash">—</span>';
+  capturedByBlackEl.innerHTML = byBlack.join('') || '<span class="empty-dash">—</span>';
 }
 
 function renderMoveList() {
-  if (!history.length) { moveListEl.innerHTML = '<div class="move-empty">no moves yet.</div>'; return; }
+  if (!moveHistory.length) { moveListEl.innerHTML = '<div class="move-empty">no moves yet.</div>'; return; }
   let html = '';
-  for (let i = 0; i < history.length; i += 2) {
+  for (let i = 0; i < moveHistory.length; i += 2) {
     const num = i / 2 + 1;
-    const white = history[i];
-    const black = history[i + 1];
+    const white = moveHistory[i];
+    const black = moveHistory[i + 1];
     html += `<div class="move-row"><span class="num">${num}.</span><span class="mv">${white.label}</span><span class="mv">${black ? black.label : ''}</span></div>`;
   }
   moveListEl.innerHTML = html;
   moveListEl.scrollTop = moveListEl.scrollHeight;
 }
 
+function canInteract() {
+  if (status === 'checkmate' || status === 'stalemate' || status === 'resigned') return false;
+  if (mode === 'ai') return current.turn !== aiColor && !aiThinking;
+  if (mode === 'online') return !!onlineGame && current.turn === onlineGame.myColor && !onlineMoveInFlight;
+  return true;
+}
+
 function renderAll() {
-  status = gameStatus(current);
+  status = (mode === 'online' && onlineGame && onlineGame.status === 'resigned') ? 'resigned' : gameStatus(current);
   renderBoard();
   renderStatus();
   renderCaptured();
   renderMoveList();
+  renderControlRow();
 }
 
+// ── Local / AI move commit (online moves go through submitOnlineMove
+// instead — see below — so both players' boards update from the same
+// Firestore snapshot rather than one client applying it optimistically) ──
 function doMove(move) {
   const label = moveLabel(current, move);
-  const before = current;
+  const movingFromRect = squareRect(move.from);
+  const rookFromRect = move.isCastle ? squareRect(move.isCastle === 'K' ? sq(7, rankOf(move.from)) : sq(0, rankOf(move.from))) : null;
+  const capturedPiece = move.captured || null;
+  const capturedSquare = move.isEnPassant ? sq(fileOf(move.to), rankOf(move.from)) : move.to;
+
   current = applyMove(current, move);
-  history.push({ state: before, move, label });
+  moveHistory.push({ move, label });
   lastMove = move;
   selected = null;
   legalForSelected = [];
   renderAll();
+
+  animatePieceFromRect(boardEl.querySelector(`.sq[data-index="${move.to}"] .piece`), movingFromRect);
+  if (move.isCastle) {
+    const rookToSq = move.isCastle === 'K' ? sq(5, rankOf(move.to)) : sq(3, rankOf(move.to));
+    animatePieceFromRect(boardEl.querySelector(`.sq[data-index="${rookToSq}"] .piece`), rookFromRect);
+  }
+  if (capturedPiece) spawnCaptureGhost(capturedSquare, capturedPiece);
+  if (move.promotion) popPromotion(move.to);
+
+  maybeTriggerAi();
+}
+
+function maybeTriggerAi() {
+  if (mode !== 'ai' || current.turn !== aiColor) return;
+  if (status !== 'playing' && status !== 'check') return;
+  aiThinking = true;
+  renderStatus();
+  boardEl.classList.add('disabled');
+  setTimeout(() => {
+    const move = getBestMove(current, aiDifficulty);
+    aiThinking = false;
+    if (move) doMove(move);
+    else renderAll();
+  }, 260);
 }
 
 function promoteAndMove(baseMove) {
@@ -556,12 +911,13 @@ function promoteAndMove(baseMove) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'promo-choice';
-    btn.textContent = PIECE_GLYPH[color][type];
+    btn.innerHTML = pieceIconHtml(color, type);
     btn.title = PIECE_NAME[type];
     btn.addEventListener('click', () => {
       promoOverlay.classList.remove('open');
       const full = legalForSelected.find(m => m.to === baseMove.to && m.promotion === type);
-      if (full) doMove(full);
+      if (!full) return;
+      if (mode === 'online') submitOnlineMove(full); else doMove(full);
     });
     promoChoices.appendChild(btn);
   }
@@ -570,7 +926,7 @@ function promoteAndMove(baseMove) {
 
 boardEl.addEventListener('click', e => {
   const sqEl = e.target.closest('.sq');
-  if (!sqEl || status === 'checkmate' || status === 'stalemate') return;
+  if (!sqEl || !canInteract()) return;
   const i = Number(sqEl.dataset.index);
   const piece = current.board[i];
 
@@ -578,7 +934,7 @@ boardEl.addEventListener('click', e => {
     const chosen = legalForSelected.filter(m => m.to === i);
     if (chosen.length) {
       if (chosen.length > 1 && chosen[0].promotion) { promoteAndMove(chosen[0]); return; }
-      doMove(chosen[0]);
+      if (mode === 'online') submitOnlineMove(chosen[0]); else doMove(chosen[0]);
       return;
     }
   }
@@ -593,28 +949,362 @@ boardEl.addEventListener('click', e => {
   renderBoard();
 });
 
-document.getElementById('newGameBtn').addEventListener('click', () => {
+promoOverlay.addEventListener('click', e => { if (e.target === promoOverlay) promoOverlay.classList.remove('open'); });
+
+// ── Mode switching + control row ────────────────────────────────────────
+function resetLocalGame() {
   current = freshState();
-  history = [];
+  moveHistory = [];
   selected = null;
   legalForSelected = [];
   lastMove = null;
-  renderAll();
+  flipped = false;
+}
+
+function setMode(next) {
+  if (mode === 'online' && next !== 'online') leaveOnlineGame(false);
+  mode = next;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+  if (mode === 'local') { resetLocalGame(); renderAll(); }
+  else if (mode === 'ai') { resetLocalGame(); flipped = aiColor === 'w'; renderAll(); maybeTriggerAi(); }
+  renderModeBody();
+  renderControlRow();
+}
+
+document.querySelectorAll('.mode-tab').forEach(tab => {
+  tab.addEventListener('click', () => setMode(tab.dataset.mode));
 });
 
-document.getElementById('undoBtn').addEventListener('click', () => {
-  const last = history.pop();
-  if (!last) return;
-  current = last.state;
-  lastMove = history.length ? history[history.length - 1].move : null;
-  selected = null;
-  legalForSelected = [];
+function renderControlRow() {
+  if (mode === 'online') {
+    controlBtnRow.innerHTML = `
+      <button type="button" class="btn danger" id="resignBtn" ${onlineGame ? '' : 'disabled'}>resign</button>
+      <button type="button" class="btn primary" id="leaveBtn">leave game</button>
+    `;
+    const resignBtn = document.getElementById('resignBtn');
+    if (resignBtn) resignBtn.addEventListener('click', resignOnlineGame);
+    document.getElementById('leaveBtn').addEventListener('click', () => leaveOnlineGame(true));
+  } else {
+    controlBtnRow.innerHTML = `
+      <button type="button" class="btn" id="undoBtn">undo</button>
+      <button type="button" class="btn primary" id="newGameBtn">new game</button>
+    `;
+    document.getElementById('undoBtn').addEventListener('click', () => {
+      if (!moveHistory.length) return;
+      moveHistory.pop();
+      // Rebuild from scratch — simplest correct way to undo one ply given
+      // moveHistory entries no longer carry a full state snapshot (online
+      // games share this same list and can't afford to, since Firestore
+      // only stores the move log, not a state per ply).
+      const moves = moveHistory.map(h => h.move);
+      current = freshState();
+      moveHistory = [];
+      for (const m of moves) { current = applyMove(current, m); moveHistory.push({ move: m, label: moveLabel(current, m) }); }
+      lastMove = moveHistory.length ? moveHistory[moveHistory.length - 1].move : null;
+      selected = null; legalForSelected = [];
+      renderAll();
+    });
+    document.getElementById('newGameBtn').addEventListener('click', () => {
+      resetLocalGame();
+      if (mode === 'ai') flipped = aiColor === 'w';
+      renderAll();
+      if (mode === 'ai') maybeTriggerAi();
+    });
+  }
+}
+
+// ── AI mode config ───────────────────────────────────────────────────
+function renderModeBody() {
+  if (mode === 'local') {
+    modeBody.innerHTML = `<div class="status-note">pass-and-play — same board, take turns.</div>`;
+    return;
+  }
+  if (mode === 'ai') {
+    modeBody.innerHTML = `
+      <div class="field-row">
+        <label>difficulty</label>
+        <select id="aiDifficultySelect">
+          <option value="easy">easy</option>
+          <option value="medium">medium</option>
+          <option value="hard">hard (slower)</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <label>play as</label>
+        <select id="aiPlayAsSelect">
+          <option value="w">white</option>
+          <option value="b">black</option>
+          <option value="random">random</option>
+        </select>
+      </div>
+      <button type="button" class="btn primary" id="aiStartBtn">new AI game</button>
+    `;
+    document.getElementById('aiDifficultySelect').value = aiDifficulty;
+    document.getElementById('aiDifficultySelect').addEventListener('change', e => { aiDifficulty = e.target.value; });
+    document.getElementById('aiStartBtn').addEventListener('click', () => {
+      const choice = document.getElementById('aiPlayAsSelect').value;
+      const humanColor = choice === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : choice;
+      aiColor = humanColor === 'w' ? 'b' : 'w';
+      resetLocalGame();
+      flipped = aiColor === 'w';
+      renderAll();
+      maybeTriggerAi();
+    });
+    return;
+  }
+  renderOnlineModeBody();
+}
+
+// ── Online multiplayer ───────────────────────────────────────────────
+function renderOnlineModeBody() {
+  const user = getCurrentUser();
+  if (!user) {
+    modeBody.innerHTML = `<div class="status-note">sign in (top right) to challenge another oeper.dev user to a live game.</div>`;
+    return;
+  }
+  if (onlineGame) {
+    const g = onlineGame;
+    modeBody.innerHTML = `
+      <div class="opp-card">
+        <img src="${escHtml(g.opponentPhoto || '')}" alt="">
+        <div>
+          <div class="opp-name">${escHtml(g.opponentName || g.opponentEmail)}</div>
+          <div class="opp-sub">you're playing ${g.myColor === 'w' ? 'white' : 'black'}</div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  modeBody.innerHTML = `
+    <button type="button" class="btn primary" id="challengeBtn" style="margin-bottom:12px;">
+      <span class="material-symbols-rounded" style="font-size:16px;">add</span> challenge a friend
+    </button>
+    <div class="captured-label">your games</div>
+    <div id="myGamesList"><div class="empty-note">loading…</div></div>
+  `;
+  document.getElementById('challengeBtn').addEventListener('click', openChallengePicker);
+  loadMyGames();
+}
+
+function escHtml(str) { return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+async function loadMyGames() {
+  const user = getCurrentUser();
+  const listEl = document.getElementById('myGamesList');
+  if (!user || !listEl) return;
+  try {
+    const [wSnap, bSnap] = await Promise.all([
+      getDocs(query(collection(db, 'chessGames'), where('players.w', '==', user.email))),
+      getDocs(query(collection(db, 'chessGames'), where('players.b', '==', user.email))),
+    ]);
+    const seen = new Map();
+    [...wSnap.docs, ...bSnap.docs].forEach(d => { if (!seen.has(d.id)) seen.set(d.id, d.data()); });
+    const games = [...seen.entries()].filter(([, g]) => g.status === 'ongoing');
+    if (!listEl) return; // mode may have changed while awaiting
+    if (!games.length) { listEl.innerHTML = '<div class="empty-note">no games in progress.</div>'; return; }
+    listEl.innerHTML = games.map(([id, g]) => {
+      const myColor = g.players.w === user.email ? 'w' : 'b';
+      const oppColor = myColor === 'w' ? 'b' : 'w';
+      const oppName = (g.playerNames && g.playerNames[oppColor]) || g.players[oppColor];
+      const oppPhoto = (g.playerPhotos && g.playerPhotos[oppColor]) || '';
+      const myTurn = g.turn === myColor;
+      return `<div class="game-row" data-id="${id}">
+        <img src="${escHtml(oppPhoto)}" alt="">
+        <div class="gr-name">${escHtml(oppName)}</div>
+        <div class="gr-turn">${myTurn ? 'your turn' : 'waiting'}</div>
+      </div>`;
+    }).join('');
+    listEl.querySelectorAll('.game-row').forEach(row => {
+      row.addEventListener('click', () => goToGame(row.dataset.id));
+    });
+  } catch (err) {
+    if (listEl) listEl.innerHTML = `<div class="empty-note">couldn't load games: ${escHtml(err.message)}</div>`;
+  }
+}
+
+async function openChallengePicker() {
+  const user = getCurrentUser();
+  if (!user) return;
+  pickerList.innerHTML = '<div class="empty-note">loading contacts…</div>';
+  pickerOverlay.classList.add('open');
+  const { following, followers } = await loadFollowRelationships(user.email);
+  const emails = [...new Set([...following, ...followers])].filter(e => e !== user.email);
+  if (!emails.length) { pickerList.innerHTML = '<div class="empty-note">follow someone first — challenges are picked from people you follow or who follow you.</div>'; return; }
+  await Promise.all(emails.map(e => ensureProfileLoaded(e)));
+  pickerList.innerHTML = emails.map(email => {
+    const p = getProfile(email);
+    return `<div class="picker-row" data-email="${escHtml(email)}">
+      <img src="${escHtml(p.photo || '')}" alt="">
+      <div class="pr-name">${escHtml(p.name || email)}</div>
+      <button type="button">challenge</button>
+    </div>`;
+  }).join('');
+  pickerList.querySelectorAll('.picker-row button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const email = btn.closest('.picker-row').dataset.email;
+      pickerOverlay.classList.remove('open');
+      createGame(email);
+    });
+  });
+}
+document.getElementById('pickerCloseBtn').addEventListener('click', () => pickerOverlay.classList.remove('open'));
+pickerOverlay.addEventListener('click', e => { if (e.target === pickerOverlay) pickerOverlay.classList.remove('open'); });
+
+async function createGame(opponentEmail) {
+  const user = getCurrentUser();
+  if (!user) return;
+  try {
+    const iAmWhite = Math.random() < 0.5;
+    await ensureProfileLoaded(opponentEmail);
+    const myProfile = getProfile(user.email, user.displayName, user.photoURL);
+    const oppProfile = getProfile(opponentEmail);
+    const players = iAmWhite ? { w: user.email, b: opponentEmail } : { w: opponentEmail, b: user.email };
+    const playerNames = iAmWhite ? { w: myProfile.name, b: oppProfile.name } : { w: oppProfile.name, b: myProfile.name };
+    const playerPhotos = iAmWhite ? { w: myProfile.photo, b: oppProfile.photo } : { w: oppProfile.photo, b: myProfile.photo };
+    const initial = freshState();
+    const docRef = await addDoc(collection(db, 'chessGames'), {
+      players, playerNames, playerPhotos,
+      turn: 'w',
+      board: serializeBoard(initial.board),
+      castling: initial.castling,
+      enPassant: initial.enPassant,
+      status: 'ongoing',
+      winner: null,
+      moves: [],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      lastMoveBy: user.email,
+    });
+    sendNotification({ recipientEmail: opponentEmail, type: 'chess_challenge', targetKind: 'chessGame', targetId: docRef.id });
+    goToGame(docRef.id);
+  } catch (err) {
+    showToast('could not start game: ' + err.message);
+  }
+}
+
+function goToGame(gameId) {
+  window.history.pushState({}, '', '/chess?game=' + gameId);
+  mode = 'online';
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === 'online'));
+  subscribeOnlineGame(gameId);
+}
+
+function subscribeOnlineGame(gameId) {
+  if (onlineUnsub) { onlineUnsub(); onlineUnsub = null; }
+  onlineUnsub = onSnapshot(doc(db, 'chessGames', gameId), snap => {
+    if (!snap.exists()) { showToast('game not found'); leaveOnlineGame(false); return; }
+    const data = snap.data();
+    const user = getCurrentUser();
+    if (!user || (data.players.w !== user.email && data.players.b !== user.email)) {
+      showToast('not your game'); leaveOnlineGame(false); return;
+    }
+    const myColor = data.players.w === user.email ? 'w' : 'b';
+    const oppColor = myColor === 'w' ? 'b' : 'w';
+
+    const incomingMoves = data.moves || [];
+    const isNewMove = boardEl.children.length > 0 && incomingMoves.length > moveHistory.length;
+    const incomingMove = isNewMove ? incomingMoves[incomingMoves.length - 1] : null;
+
+    let movingFromRect = null, rookFromRect = null, capturedPiece = null, capturedSquare = null;
+    if (incomingMove) {
+      movingFromRect = squareRect(incomingMove.from);
+      if (incomingMove.isCastle) rookFromRect = squareRect(incomingMove.isCastle === 'K' ? sq(7, rankOf(incomingMove.from)) : sq(0, rankOf(incomingMove.from)));
+      capturedSquare = incomingMove.isEnPassant ? sq(fileOf(incomingMove.to), rankOf(incomingMove.from)) : incomingMove.to;
+      capturedPiece = current.board[capturedSquare] || null;
+    }
+
+    current = { board: deserializeBoard(data.board), turn: data.turn, castling: data.castling, enPassant: data.enPassant };
+    moveHistory = incomingMoves.map(m => ({ move: m, label: m.label }));
+    lastMove = incomingMoves.length ? incomingMoves[incomingMoves.length - 1] : null;
+    selected = null; legalForSelected = [];
+    flipped = myColor === 'b';
+    onlineGame = {
+      id: gameId, myColor,
+      opponentEmail: data.players[oppColor],
+      opponentName: (data.playerNames && data.playerNames[oppColor]) || data.players[oppColor],
+      opponentPhoto: (data.playerPhotos && data.playerPhotos[oppColor]) || '',
+      status: data.status, winner: data.winner || null,
+    };
+
+    renderAll();
+    renderModeBody();
+
+    if (incomingMove) {
+      animatePieceFromRect(boardEl.querySelector(`.sq[data-index="${incomingMove.to}"] .piece`), movingFromRect);
+      if (incomingMove.isCastle) {
+        const rookToSq = incomingMove.isCastle === 'K' ? sq(5, rankOf(incomingMove.to)) : sq(3, rankOf(incomingMove.to));
+        animatePieceFromRect(boardEl.querySelector(`.sq[data-index="${rookToSq}"] .piece`), rookFromRect);
+      }
+      if (capturedPiece) spawnCaptureGhost(capturedSquare, capturedPiece);
+      if (incomingMove.promotion) popPromotion(incomingMove.to);
+    }
+  }, err => showToast('game sync error: ' + err.message));
+}
+
+async function submitOnlineMove(move) {
+  if (!onlineGame || onlineMoveInFlight) return;
+  onlineMoveInFlight = true;
+  try {
+    const label = moveLabel(current, move);
+    const nextState = applyMove(current, move);
+    const nextStatus = gameStatus(nextState);
+    const movesSoFar = [...(moveHistory.map(h => h.move)), move].map((m, idx) => ({
+      from: m.from, to: m.to, promotion: m.promotion || null, isCastle: m.isCastle || null, isEnPassant: !!m.isEnPassant,
+      label: idx === moveHistory.length ? label : moveHistory[idx].label,
+    }));
+    const patch = {
+      board: serializeBoard(nextState.board),
+      turn: nextState.turn,
+      castling: nextState.castling,
+      enPassant: nextState.enPassant,
+      moves: movesSoFar,
+      lastMoveBy: getCurrentUser().email,
+      updatedAt: serverTimestamp(),
+    };
+    if (nextStatus === 'checkmate') { patch.status = 'checkmate'; patch.winner = nextState.turn === 'w' ? 'b' : 'w'; }
+    else if (nextStatus === 'stalemate') { patch.status = 'stalemate'; patch.winner = null; }
+    await updateDoc(doc(db, 'chessGames', onlineGame.id), patch);
+    if (!patch.status) sendNotification({ recipientEmail: onlineGame.opponentEmail, type: 'chess_move', targetKind: 'chessGame', targetId: onlineGame.id });
+  } catch (err) {
+    showToast('could not send move: ' + err.message);
+  } finally {
+    onlineMoveInFlight = false;
+  }
+}
+
+async function resignOnlineGame() {
+  if (!onlineGame) return;
+  if (!(await oeConfirm('Resign this game?', { danger: true }))) return;
+  const winnerColor = onlineGame.myColor === 'w' ? 'b' : 'w';
+  try {
+    await updateDoc(doc(db, 'chessGames', onlineGame.id), { status: 'resigned', winner: winnerColor, updatedAt: serverTimestamp() });
+  } catch (err) {
+    showToast('could not resign: ' + err.message);
+  }
+}
+
+function leaveOnlineGame(resetUrl) {
+  if (onlineUnsub) { onlineUnsub(); onlineUnsub = null; }
+  onlineGame = null;
+  if (resetUrl !== false) window.history.pushState({}, '', '/chess');
+  resetLocalGame();
   renderAll();
-});
+  renderModeBody();
+}
 
-promoOverlay.addEventListener('click', e => { if (e.target === promoOverlay) promoOverlay.classList.remove('open'); });
+// ── Boot ─────────────────────────────────────────────────────────────
+onAccountChange(() => { if (mode === 'online') renderModeBody(); });
 
-renderAll();
+const urlGameId = new URLSearchParams(window.location.search).get('game');
+if (urlGameId) {
+  mode = 'online';
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === 'online'));
+  subscribeOnlineGame(urlGameId);
+} else {
+  renderAll();
+}
+renderModeBody();
+renderControlRow();
 </script>
 </body>
 </html>

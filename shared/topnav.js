@@ -30,6 +30,7 @@ export const LOGO_SVG = `<svg viewBox="0 0 98 118" fill="currentColor" xmlns="ht
 // matching against.
 export const HIDDEN_PAGES = [
   { keywords: ['leaderboard', 'leaderboards', 'rankings', 'ranking', 'most viewed', 'most liked', 'most followed', 'karma'], name: 'leaderboard', url: '/leaderboard', icon: 'leaderboard' },
+  { keywords: ['chess', 'chess game', 'play chess', 'checkmate'], name: 'chess', url: '/chess', icon: 'chess' },
 ];
 export function hiddenPageRank(page, q) {
   let best = -1;
@@ -843,12 +844,15 @@ function notifText(n) {
   if (n.type === 'badge') return `you were given a badge${n.preview ? ': ' + escHtml(n.preview) : ''}`;
   if (n.type === 'credits') return `${name} sent you ${n.preview ? escHtml(n.preview) : 'some'} credits`;
   if (n.type === 'creditsGrant') return `you were granted ${n.preview ? escHtml(n.preview) : 'some'} credits`;
+  if (n.type === 'chess_challenge') return `${name} challenged you to a game of chess`;
+  if (n.type === 'chess_move') return `it's your move against ${name}`;
   return name;
 }
 function notifUrl(n) {
   if (n.type === 'follow') { const h = handleOf(n.actorEmail); return h ? `/profile?u=${encodeURIComponent(h)}` : '/'; }
   if (n.type === 'badge') return '/settings';
   if (n.type === 'credits' || n.type === 'creditsGrant') return '/credits';
+  if (n.type === 'chess_challenge' || n.type === 'chess_move') return `/chess?game=${n.targetId}`;
   if (n.targetKind === 'post') return `/feed?post=${n.targetId}`;
   if (n.targetKind === 'video') return `/videos?video=${n.targetId}`;
   return '/';
