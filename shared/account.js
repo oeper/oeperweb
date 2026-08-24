@@ -17,6 +17,7 @@ import {
   getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, serverTimestamp, deleteField, collection, addDoc,
   query, where, documentId, orderBy, onSnapshot, writeBatch, increment,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { beginUpload, updateUpload, finishUpload } from './upload-queue.js?v=1';
 
 export const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAs7SP8FaWUDuz7GVp9rG5uZw4oEIWmBUk",
@@ -662,7 +663,10 @@ export function signOutUser() {
 
 // onProgress (optional): called with a 0-1 fraction as the upload streams,
 // via XMLHttpRequest since fetch has no cross-browser upload-progress event.
-export async function uploadFile(file, endpointPath, extraFields, onProgress) {
+// label (optional): short human name shown in the site-wide upload widget
+// (shared/upload-queue.js) — this is what lets an upload keep going, with
+// visible progress, after the form/modal that started it has closed.
+export async function uploadFile(file, endpointPath, extraFields, onProgress, label) {
   if (!file) return null;
   if (!SERVER_ENDPOINT) throw new Error('image uploads are not set up yet');
   if (!currentUser) throw new Error('sign in first');
@@ -675,20 +679,28 @@ export async function uploadFile(file, endpointPath, extraFields, onProgress) {
   if (extraFields) for (const key in extraFields) fd.append(key, extraFields[key]);
   fd.append('file', file);
 
+  const queueId = beginUpload(label || file.name || 'file');
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', SERVER_ENDPOINT + (endpointPath || '/upload'));
     xhr.setRequestHeader('Authorization', 'Bearer ' + idToken);
-    if (onProgress) {
-      xhr.upload.addEventListener('progress', e => { if (e.lengthComputable) onProgress(e.loaded / e.total); });
-    }
+    xhr.upload.addEventListener('progress', e => {
+      if (!e.lengthComputable) return;
+      const frac = e.loaded / e.total;
+      updateUpload(queueId, frac);
+      if (onProgress) onProgress(frac);
+    });
     xhr.onload = () => {
       let data = {};
       try { data = JSON.parse(xhr.responseText); } catch {}
-      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
-      else reject(new Error(data.error || `Upload failed (${xhr.status})`));
+      if (xhr.status >= 200 && xhr.status < 300) { finishUpload(queueId); resolve(data); }
+      else { const err = new Error(data.error || `Upload failed (${xhr.status})`); finishUpload(queueId, err); reject(err); }
     };
-    xhr.onerror = () => reject(new Error('upload failed — network error'));
+    xhr.onerror = () => {
+      const err = new Error('upload failed — network error');
+      finishUpload(queueId, err);
+      reject(err);
+    };
     xhr.send(fd);
   }).then(data => data.url);
 }
@@ -700,7 +712,7 @@ export async function updateProfile({ displayName, photoFile, bio, onProgress })
   patch.displayName = trimmedName || currentUser.displayName || currentUser.email;
   if (bio !== undefined) patch.bio = (bio || '').trim().slice(0, 200);
   if (photoFile) {
-    patch.photoURL = await uploadFile(photoFile, undefined, undefined, onProgress);
+    patch.photoURL = await uploadFile(photoFile, undefined, undefined, onProgress, 'profile photo');
   }
   await setDoc(doc(db, 'users', currentUser.email), patch, { merge: true });
   profileCache[currentUser.email] = { ...(profileCache[currentUser.email] || {}), ...patch };
@@ -977,31 +989,31 @@ export function openEditProfileModal() {
     }, 400);
   };
 
-  saveBtn.onclick = async () => {
+  saveBtn.onclick = () => {
     const newHandle = handleInput.value.trim().toLowerCase();
     if (newHandle && newHandle !== currentHandle && !isValidHandle(newHandle)) {
       showToast('fix your username before saving');
       return;
     }
-    saveBtn.disabled = true;
-    const saveBtnLabel = saveBtn.textContent;
-    try {
-      await updateProfile({
-        displayName: nameInput.value, photoFile: pendingFile, bio: bioInput.value,
-        onProgress: pendingFile ? frac => { saveBtn.textContent = `uploading… ${Math.round(frac * 100)}%`; } : undefined,
-      });
-      if (newHandle && newHandle !== currentHandle) {
-        try { await changeHandle(newHandle); }
-        catch (err) { showToast('profile saved, but username change failed: ' + err.message); saveBtn.disabled = false; return; }
+    // Close right away and finish the save (including any avatar upload)
+    // in the background — no reason to keep this dialog open just to
+    // wait out an image upload.
+    const displayName = nameInput.value;
+    const bio = bioInput.value;
+    const photoFile = pendingFile;
+    closeModal();
+    (async () => {
+      try {
+        await updateProfile({ displayName, photoFile, bio });
+        if (newHandle && newHandle !== currentHandle) {
+          try { await changeHandle(newHandle); }
+          catch (err) { showToast('profile saved, but username change failed: ' + err.message); return; }
+        }
+        showToast('profile updated');
+      } catch (err) {
+        showToast('could not update profile: ' + err.message);
       }
-      closeModal();
-      showToast('profile updated');
-    } catch (err) {
-      showToast('could not update profile: ' + err.message);
-    } finally {
-      saveBtn.disabled = false;
-      saveBtn.textContent = saveBtnLabel;
-    }
+    })();
   };
 
   overlay.classList.add('open');

@@ -485,11 +485,12 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification } from './shared/account.js?v=33';
-import { mountTopNav } from './shared/topnav.js?v=30';
+import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification } from './shared/account.js?v=34';
+import { mountTopNav } from './shared/topnav.js?v=31';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=1';
+import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=1';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 
@@ -1520,16 +1521,27 @@ inputEl.addEventListener('paste', async e => {
   }
 });
 
-async function uploadAnonImage(file) {
-  const fd = new FormData();
-  fd.append('file', file);
-  const res = await fetch(SERVER_ENDPOINT + '/upload-file', { method: 'POST', body: fd });
-  if (!res.ok) {
-    let msg = `HTTP ${res.status}`;
-    try { msg = (await res.json()).error || msg; } catch {}
-    throw new Error(msg);
-  }
-  return (await res.json()).url;
+function uploadAnonImage(file) {
+  const queueId = beginUpload('image');
+  return new Promise((resolve, reject) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', SERVER_ENDPOINT + '/upload-file');
+    xhr.upload.addEventListener('progress', e => { if (e.lengthComputable) updateUpload(queueId, e.loaded / e.total); });
+    xhr.onload = () => {
+      let data = {};
+      try { data = JSON.parse(xhr.responseText); } catch {}
+      if (xhr.status >= 200 && xhr.status < 300) { finishUpload(queueId); resolve(data.url); }
+      else { const err = new Error(data.error || `HTTP ${xhr.status}`); finishUpload(queueId, err); reject(err); }
+    };
+    xhr.onerror = () => {
+      const err = new Error('upload failed — network error');
+      finishUpload(queueId, err);
+      reject(err);
+    };
+    xhr.send(fd);
+  });
 }
 
 // LM Studio's vision support needs an actual base64 data URI in

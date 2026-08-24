@@ -624,13 +624,13 @@ import {
   auth, db, SERVER_ENDPOINT, MAX_IMAGE_BYTES, isOwnerEmail, officialBadgeHtml,
   getCurrentUser, onAccountChange, getProfile, ensureProfileLoaded, handleOf,
   uploadFile, sendNotification, resolveUidsToEmails, linkifyMentions, loadFollowRelationships,
-} from './shared/account.js?v=33';
-import { mountTopNav } from './shared/topnav.js?v=30';
+} from './shared/account.js?v=34';
+import { mountTopNav } from './shared/topnav.js?v=31';
 import { mountFooter } from './shared/footer.js?v=5';
 import { createDropdown } from './shared/dropdown.js?v=2';
-import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=5';
+import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=6';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
-import { reportContent } from './shared/report.js?v=4';
+import { reportContent } from './shared/report.js?v=5';
 import { observeList } from './shared/motion.js?v=1';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
@@ -994,7 +994,7 @@ function initStories() {
     if (file.size > MAX_IMAGE_BYTES) { showToast(`File must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); return; }
     const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
     try {
-      const url = await uploadFile(file, '/upload', undefined, frac => showToast(`uploading… ${Math.round(frac * 100)}%`));
+      const url = await uploadFile(file, '/upload', undefined, undefined, 'story');
       const profile = getProfile(user.email, user.displayName, user.photoURL);
       await addDoc(collection(db, 'stories'), {
         authorEmail: user.email,
@@ -1325,8 +1325,8 @@ function runForum() {
     if (!files || !files.length) return [];
     const urls = [];
     for (let i = 0; i < files.length; i++) {
-      const prefix = files.length > 1 ? `uploading image ${i + 1}/${files.length}… ` : 'uploading… ';
-      urls.push(await uploadFile(files[i], undefined, undefined, frac => showToast(`${prefix}${Math.round(frac * 100)}%`)));
+      const label = files.length > 1 ? `post image ${i + 1}/${files.length}` : 'post image';
+      urls.push(await uploadFile(files[i], undefined, undefined, undefined, label));
     }
     return urls;
   }
@@ -1813,44 +1813,52 @@ function runForum() {
       if (cleanOptions.length < 2) { showToast('add at least 2 poll options'); return; }
       pollPayload = { options: cleanOptions, optionVotes: cleanOptions.map(() => []) };
     }
-    const submitBtn = document.getElementById('submitPostBtn');
-    submitBtn.disabled = true;
-    try {
-      const newUrls = await uploadFilesIfAny(postImageAttach.getFiles());
-      const imageUrls = [...postImageAttach.getExistingUrls(), ...newUrls];
-      if (editingPostId) {
-        await updateDoc(postRef(editingPostId), {
-          title,
-          body: fd.get('body').trim(),
-          tags: selectedTags,
-          imageUrls,
-          editedAt: serverTimestamp(),
-          ...(pollPayload ? { poll: pollPayload } : {}),
-        });
-        showToast('post updated');
-      } else {
-        await addDoc(collection(db, 'posts'), {
-          title,
-          body: fd.get('body').trim(),
-          tags: selectedTags,
-          imageUrls,
-          authorEmail: u.email,
-          authorName: u.displayName,
-          authorPhoto: u.photoURL,
-          upvoters: [],
-          downvoters: [],
-          commentCount: 0,
-          createdAt: serverTimestamp(),
-          ...(pollPayload ? { poll: pollPayload } : {}),
-        });
-        showToast('posted!');
+    // Snapshot everything the write needs, then close the modal right
+    // away — any attached images upload in the background (tracked by
+    // the site-wide upload widget) instead of trapping the user on this
+    // dialog until they finish.
+    const body = fd.get('body').trim();
+    const targetPostId = editingPostId;
+    const pendingFiles = postImageAttach.getFiles();
+    const existingUrls = postImageAttach.getExistingUrls();
+    closeModal();
+    if (pendingFiles.length) showToast('posting — uploading attachments in the background…');
+
+    (async () => {
+      try {
+        const newUrls = await uploadFilesIfAny(pendingFiles);
+        const imageUrls = [...existingUrls, ...newUrls];
+        if (targetPostId) {
+          await updateDoc(postRef(targetPostId), {
+            title,
+            body,
+            tags: selectedTags,
+            imageUrls,
+            editedAt: serverTimestamp(),
+            ...(pollPayload ? { poll: pollPayload } : {}),
+          });
+          showToast('post updated');
+        } else {
+          await addDoc(collection(db, 'posts'), {
+            title,
+            body,
+            tags: selectedTags,
+            imageUrls,
+            authorEmail: u.email,
+            authorName: u.displayName,
+            authorPhoto: u.photoURL,
+            upvoters: [],
+            downvoters: [],
+            commentCount: 0,
+            createdAt: serverTimestamp(),
+            ...(pollPayload ? { poll: pollPayload } : {}),
+          });
+          showToast('posted!');
+        }
+      } catch (err) {
+        showToast('could not post: ' + err.message);
       }
-      closeModal();
-    } catch (err) {
-      showToast('could not post: ' + err.message);
-    } finally {
-      submitBtn.disabled = false;
-    }
+    })();
   });
 
   // ── Thread panel (post + comments) ────────────────────────
@@ -2077,15 +2085,18 @@ function runForum() {
       const fd = new FormData(e.target);
       const body = fd.get('body').trim();
       if (!body || !openPostId || !u) return;
-      const submitBtn = e.target.querySelector('button[type="submit"]');
-      submitBtn.disabled = true;
+      // Capture everything the write needs, then reset the form right
+      // away — an attached image uploads in the background instead of
+      // blocking the user from posting another comment meanwhile.
+      const postId = openPostId;
       const reply = replyingToComment;
+      const file = commentImageAttach.getFile();
+      e.target.reset();
+      commentImageAttach.reset();
+      cancelCommentReply();
       try {
-        const file = commentImageAttach.getFile();
-        const imageUrl = file
-          ? await uploadFile(file, undefined, undefined, frac => { submitBtn.textContent = `uploading… ${Math.round(frac * 100)}%`; })
-          : null;
-        await addDoc(collection(db, 'posts', openPostId, 'comments'), {
+        const imageUrl = file ? await uploadFile(file, undefined, undefined, undefined, 'comment image') : null;
+        await addDoc(collection(db, 'posts', postId, 'comments'), {
           body,
           imageUrl: imageUrl || null,
           authorEmail: u.email,
@@ -2096,20 +2107,14 @@ function runForum() {
           createdAt: serverTimestamp(),
           ...(reply ? { replyToId: reply.id, replyToAuthorEmail: reply.authorEmail, replyToAuthorName: reply.authorName } : {}),
         });
-        const p = posts.find(x => x.id === openPostId);
-        await updateDoc(postRef(openPostId), { commentCount: (p?.commentCount || 0) + 1 });
-        if (p) sendNotification({ recipientEmail: p.authorEmail, type: 'comment', targetKind: 'post', targetId: openPostId, preview: body.slice(0, 120) });
+        const p = posts.find(x => x.id === postId);
+        await updateDoc(postRef(postId), { commentCount: (p?.commentCount || 0) + 1 });
+        if (p) sendNotification({ recipientEmail: p.authorEmail, type: 'comment', targetKind: 'post', targetId: postId, preview: body.slice(0, 120) });
         if (reply && reply.authorEmail !== (p && p.authorEmail)) {
-          sendNotification({ recipientEmail: reply.authorEmail, type: 'comment', targetKind: 'post', targetId: openPostId, preview: body.slice(0, 120) });
+          sendNotification({ recipientEmail: reply.authorEmail, type: 'comment', targetKind: 'post', targetId: postId, preview: body.slice(0, 120) });
         }
-        e.target.reset();
-        commentImageAttach.reset();
-        cancelCommentReply();
       } catch (err) {
         showToast('could not comment: ' + err.message);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Comment';
       }
     });
   }

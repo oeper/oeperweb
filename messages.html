@@ -394,14 +394,14 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=30';
+import { mountTopNav } from './shared/topnav.js?v=31';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
   loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions, CREDITS_ICON,
-} from './shared/account.js?v=33';
-import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=5';
+} from './shared/account.js?v=34';
+import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=6';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
-import { reportContent } from './shared/report.js?v=4';
+import { reportContent } from './shared/report.js?v=5';
 import { observeList } from './shared/motion.js?v=1';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
@@ -506,23 +506,6 @@ function showToast(msg) {
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 2800);
 }
-// A single persistent toast (unlike showToast, which stacks a new one per
-// call) — repeatedly updated as an upload's progress events come in.
-function showUploadToast(label) {
-  let el = document.getElementById('uploadToast');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'uploadToast';
-    el.style.cssText = 'position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#303034;color:#e3e2e6;padding:12px 22px;border-radius:14px;font-size:14px;z-index:300;box-shadow:0 4px 12px rgba(0,0,0,0.4);';
-    document.body.appendChild(el);
-  }
-  el.textContent = label;
-}
-function hideUploadToast() {
-  const el = document.getElementById('uploadToast');
-  if (el) el.remove();
-}
-
 // Played only from the sender's own send action (not from the message
 // list's onSnapshot re-render, which fires on every update including
 // history just loading) — a fresh Audio() per call so rapid sends don't
@@ -1032,14 +1015,13 @@ document.getElementById('groupIconInput').addEventListener('change', async () =>
   document.getElementById('groupIconInput').value = '';
   if (!file || !groupInfoGroupId) return;
   if (file.size > MAX_IMAGE_BYTES) { showToast(`File must be under ${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)}MB`); return; }
+  const groupId = groupInfoGroupId;
   try {
-    const url = await uploadFile(file, '/upload', undefined, frac => showUploadToast(`uploading… ${Math.round(frac * 100)}%`));
-    await updateDoc(doc(db, 'groups', groupInfoGroupId), { icon: url });
+    const url = await uploadFile(file, '/upload', undefined, undefined, 'group icon');
+    await updateDoc(doc(db, 'groups', groupId), { icon: url });
     showToast('icon updated');
   } catch (err) {
     showToast('could not update icon: ' + err.message);
-  } finally {
-    hideUploadToast();
   }
 });
 
@@ -1138,9 +1120,10 @@ async function sendMediaFileTo(file, { messagesRef, sendBtn, user, touchPreview 
   const isImage = file.type.startsWith('image/');
   const kind = isVideo ? 'video' : isImage ? 'image' : 'file';
   if (file.size > MAX_MESSAGE_MEDIA_BYTES) { showToast(`file must be under ${Math.round(MAX_MESSAGE_MEDIA_BYTES / 1024 / 1024)}MB`); return; }
-  sendBtn.disabled = true;
+  // No sendBtn.disabled here — the upload runs in the background (see
+  // shared/upload-queue.js) so the user can keep chatting while it goes.
   try {
-    const url = await uploadFile(file, '/upload-message', undefined, frac => showUploadToast(`uploading ${kind}… ${Math.round(frac * 100)}%`));
+    const url = await uploadFile(file, '/upload-message', undefined, undefined, kind);
     await touchPreview(isVideo ? '🎥 video' : isImage ? '📷 photo' : '📎 ' + file.name);
     await addDoc(messagesRef, {
       senderEmail: user.email,
@@ -1150,9 +1133,6 @@ async function sendMediaFileTo(file, { messagesRef, sendBtn, user, touchPreview 
     playSendSound();
   } catch (err) {
     showToast(`could not send ${kind}: ` + err.message);
-  } finally {
-    hideUploadToast();
-    sendBtn.disabled = false;
   }
 }
 
@@ -1798,7 +1778,7 @@ async function openThread(otherEmail, user) {
 
   async function sendVoiceMessage(file, durationSeconds) {
     try {
-      const audioUrl = await uploadFile(file, '/upload-message', undefined, frac => showUploadToast(`uploading voice message… ${Math.round(frac * 100)}%`));
+      const audioUrl = await uploadFile(file, '/upload-message', undefined, undefined, 'voice message');
       await touchConversation('🎤 Voice message');
       await addDoc(collection(db, 'conversations', convoId, 'messages'), {
         senderEmail: user.email,
@@ -1808,8 +1788,6 @@ async function openThread(otherEmail, user) {
       });
     } catch (err) {
       showToast('could not send voice message: ' + err.message);
-    } finally {
-      hideUploadToast();
     }
   }
 

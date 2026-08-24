@@ -450,14 +450,15 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=30';
+import { mountTopNav } from './shared/topnav.js?v=31';
 import {
   SERVER_ENDPOINT, getCurrentUser, onAccountChange, isOwnerEmail, uploadFile,
-} from './shared/account.js?v=33';
+} from './shared/account.js?v=34';
 import { mountFooter } from './shared/footer.js?v=5';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=1';
+import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=1';
 
 mountTopNav();
 mountFooter();
@@ -1324,7 +1325,7 @@ async function uploadFilesTo(picked) {
     }
     showUploadProgress('upload', picked.length > 1 ? `uploading ${file.name} (${i + 1}/${picked.length})…` : `uploading ${file.name}…`);
     try {
-      await uploadFile(file, '/upload-file', currentFolder ? { folder: currentFolder } : undefined, frac => updateUploadProgress('upload', frac));
+      await uploadFile(file, '/upload-file', currentFolder ? { folder: currentFolder } : undefined, frac => updateUploadProgress('upload', frac), file.name);
       uploaded++;
       if (!owner && file.size > SIGNED_IN_PERMANENT_BYTES) temporaryCount++;
     } catch (err) {
@@ -1383,20 +1384,30 @@ window.addEventListener('drop', e => {
 });
 
 function uploadAnon(file, onProgress) {
+  const queueId = beginUpload(file.name || 'file');
   return new Promise((resolve, reject) => {
-    if (!SERVER_ENDPOINT) { reject(new Error('server not configured')); return; }
+    if (!SERVER_ENDPOINT) { finishUpload(queueId, new Error('server not configured')); reject(new Error('server not configured')); return; }
     const fd = new FormData();
     fd.append('file', file);
     const xhr = new XMLHttpRequest();
     xhr.open('POST', SERVER_ENDPOINT + '/upload-file');
-    if (onProgress) xhr.upload.addEventListener('progress', e => { if (e.lengthComputable) onProgress(e.loaded / e.total); });
+    xhr.upload.addEventListener('progress', e => {
+      if (!e.lengthComputable) return;
+      const frac = e.loaded / e.total;
+      updateUpload(queueId, frac);
+      if (onProgress) onProgress(frac);
+    });
     xhr.onload = () => {
       let data = {};
       try { data = JSON.parse(xhr.responseText); } catch {}
-      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
-      else reject(new Error(data.error || `HTTP ${xhr.status}`));
+      if (xhr.status >= 200 && xhr.status < 300) { finishUpload(queueId); resolve(data); }
+      else { const err = new Error(data.error || `HTTP ${xhr.status}`); finishUpload(queueId, err); reject(err); }
     };
-    xhr.onerror = () => reject(new Error('upload failed — network error'));
+    xhr.onerror = () => {
+      const err = new Error('upload failed — network error');
+      finishUpload(queueId, err);
+      reject(err);
+    };
     xhr.send(fd);
   });
 }

@@ -261,10 +261,6 @@
   <div class="field"><label>title</label><input type="text" id="titleInput" maxlength="150"></div>
   <div class="field"><label>description</label><textarea id="descInput" maxlength="2000" rows="3"></textarea></div>
   <div class="field"><label>video file</label><input type="file" id="fileInput" accept="video/*"></div>
-  <div class="upload-progress" id="uploadProgress" style="display:none;">
-    <div class="upload-progress-label" id="uploadProgressLabel">uploading…</div>
-    <div class="oe-loading-bar determinate"><div class="oe-loading-bar-fill" id="uploadProgressFill"></div></div>
-  </div>
   <div class="modal-actions">
     <button class="btn danger" id="uploadCancelBtn">cancel</button>
     <button class="btn primary" id="uploadSubmitBtn"><span class="material-symbols-rounded" style="font-size:16px;">upload</span> Upload</button>
@@ -291,13 +287,13 @@ import {
   auth, db, SERVER_ENDPOINT, isOwnerEmail, officialBadgeHtml, getCurrentUser, onAccountChange,
   getProfile, handleOf, uploadFile, ensureProfileLoaded, sendNotification, linkifyMentions, resolveUidsToEmails,
   loadFollowRelationships,
-} from './shared/account.js?v=33';
-import { mountTopNav } from './shared/topnav.js?v=30';
+} from './shared/account.js?v=34';
+import { mountTopNav } from './shared/topnav.js?v=31';
 import { mountFooter } from './shared/footer.js?v=5';
-import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=5';
+import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=6';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=1';
-import { reportContent } from './shared/report.js?v=4';
+import { reportContent } from './shared/report.js?v=5';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
   arrayUnion, arrayRemove, increment, query, orderBy,
@@ -765,7 +761,7 @@ document.getElementById('uploadBtn').addEventListener('click', () => {
 uploadOverlay.addEventListener('click', closeUploadModal);
 document.getElementById('uploadCancelBtn').addEventListener('click', closeUploadModal);
 
-document.getElementById('uploadSubmitBtn').addEventListener('click', async () => {
+document.getElementById('uploadSubmitBtn').addEventListener('click', () => {
   const user = getCurrentUser();
   if (!user) { showToast('sign in to upload'); return; }
   const title = document.getElementById('titleInput').value.trim();
@@ -774,41 +770,31 @@ document.getElementById('uploadSubmitBtn').addEventListener('click', async () =>
   if (!title) { showToast('title is required'); return; }
   if (!file) { showToast('choose a video file'); return; }
 
-  const btn = document.getElementById('uploadSubmitBtn');
-  const progressEl = document.getElementById('uploadProgress');
-  const progressFill = document.getElementById('uploadProgressFill');
-  const progressLabel = document.getElementById('uploadProgressLabel');
-  btn.disabled = true;
-  btn.textContent = 'uploading…';
-  progressEl.style.display = '';
-  progressFill.style.width = '0%';
-  progressLabel.textContent = 'uploading… 0%';
-  try {
-    const url = await uploadFile(file, '/upload-video', undefined, frac => {
-      const pct = Math.round(frac * 100);
-      progressFill.style.width = pct + '%';
-      progressLabel.textContent = `uploading… ${pct}%`;
-    });
-    const profile = getProfile(user.email, user.displayName, user.photoURL);
-    await addDoc(collection(db, 'videos'), {
-      title, description, url,
-      authorEmail: user.email,
-      authorName: profile.name,
-      authorPhoto: profile.photo,
-      createdAt: serverTimestamp(),
-      views: 0,
-      upvoters: [],
-      downvoters: [],
-    });
-    closeUploadModal();
-    showToast('uploaded!');
-  } catch (err) {
-    showToast('could not upload: ' + err.message);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<span class="material-symbols-rounded" style="font-size:16px;">upload</span> Upload';
-    progressEl.style.display = 'none';
-  }
+  // Close the modal right away and let the upload run in the background
+  // (tracked by the site-wide upload widget) — no reason to keep the
+  // user stuck staring at this dialog until the video finishes uploading.
+  closeUploadModal();
+  showToast('uploading "' + title + '" in the background…');
+
+  (async () => {
+    try {
+      const url = await uploadFile(file, '/upload-video', undefined, undefined, 'video: ' + title);
+      const profile = getProfile(user.email, user.displayName, user.photoURL);
+      await addDoc(collection(db, 'videos'), {
+        title, description, url,
+        authorEmail: user.email,
+        authorName: profile.name,
+        authorPhoto: profile.photo,
+        createdAt: serverTimestamp(),
+        views: 0,
+        upvoters: [],
+        downvoters: [],
+      });
+      showToast('"' + title + '" uploaded!');
+    } catch (err) {
+      showToast('could not upload: ' + err.message);
+    }
+  })();
 });
 </script>
 </body>
