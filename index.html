@@ -525,6 +525,9 @@
     padding: 4px 14px 0; font-size: 13px; line-height: 1.4; color: var(--md-sys-color-on-surface-variant);
     display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
   }
+  /* Short enough to show in full (see postCardHtml's lineCount check) —
+     no clamp, no truncation, just the real markdown render. */
+  .ig-description.full { display: block; -webkit-line-clamp: unset; overflow: visible; white-space: pre-wrap; }
   .ig-description a { color: var(--md-sys-color-primary); }
   .ig-description a.md-btn {
     display: inline-flex; align-items: center; gap: 4px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
@@ -1442,7 +1445,16 @@
           ${saveBtnHtml(p, 'post')}
         </div>
       `;
-      const bodyHtml = p.body ? `<div class="ig-description">${renderExcerptMarkdown(p.body, 220)}</div>` : '';
+      // Short posts show in full rather than getting clamped/truncated
+      // like a longer one would — 50 lines is generous enough to cover a
+      // normal-length post while still keeping a genuinely long one from
+      // taking over the whole feed.
+      const isShort = p.body && p.body.split('\n').length < 50;
+      const bodyHtml = p.body
+        ? (isShort
+            ? `<div class="ig-description full">${parseMarkdown(p.body)}</div>`
+            : `<div class="ig-description">${renderExcerptMarkdown(p.body, 220)}</div>`)
+        : '';
       const viewCommentsHtml = `<button type="button" class="ig-view-comments" data-open-comments data-kind="post" data-id="${p.id}">${p.commentCount ? `view all ${p.commentCount} comments` : 'add a comment…'}</button>`;
 
       if (!hasMedia) {
