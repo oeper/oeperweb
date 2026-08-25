@@ -538,6 +538,37 @@ Two scripted easter eggs, exact triggers only — don't force them into unrelate
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+// navigator.clipboard.writeText() can silently reject — most commonly
+// "Document is not focused" if focus moved away from the page between the
+// click and the async call resolving, but also possible if the page
+// somehow isn't in a secure context or clipboard permission was denied.
+// Previously nothing handled that rejection at all, so a failed copy just
+// did nothing with no feedback — this falls back to the older
+// execCommand('copy') (which works synchronously off the same click and
+// doesn't have the focus requirement), and reports true/false either way
+// so the caller can show real success/failure feedback instead of always
+// assuming it worked.
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:-1000px;left:-1000px;opacity:0;';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
 const EMOJI_SHORTCODES = {
   smile: '😄', laugh: '😂', wink: '😉', heart: '❤️', fire: '🔥', thumbsup: '👍',
   thumbsdown: '👎', clap: '👏', wave: '👋', thinking: '🤔', eyes: '👀', tada: '🎉',
@@ -1018,9 +1049,11 @@ messagesEl.addEventListener('click', e => {
   const copyBtn = e.target.closest('[data-copy-code]');
   if (copyBtn) {
     const code = copyBtn.closest('.code-block-wrap').querySelector('code').textContent;
-    navigator.clipboard.writeText(code).then(() => {
-      const original = copyBtn.innerHTML;
-      copyBtn.innerHTML = '<span class="material-symbols-rounded">check</span>copied';
+    const original = copyBtn.innerHTML;
+    copyToClipboard(code).then(ok => {
+      copyBtn.innerHTML = ok
+        ? '<span class="material-symbols-rounded">check</span>copied'
+        : '<span class="material-symbols-rounded">error</span>couldn\'t copy';
       setTimeout(() => { copyBtn.innerHTML = original; }, 1500);
     });
     return;
