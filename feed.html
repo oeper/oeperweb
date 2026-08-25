@@ -632,6 +632,7 @@ import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=6'
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { reportContent } from './shared/report.js?v=5';
 import { observeList } from './shared/motion.js?v=2';
+import { codeBlockHtml, wireCodeBlockCopy, injectCodeBlockStyles } from './shared/code-block.js?v=1';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
   query, orderBy, serverTimestamp, arrayUnion, arrayRemove, increment, Timestamp
@@ -718,8 +719,19 @@ function renderExcerptMarkdown(text, maxLen) {
   return linkifyMentions(expandIconShorthand(html), 'onclick="event.stopPropagation()"');
 }
 function parseMarkdown(md) {
-  let html = expandShortcodes(escHtml(md || ''))
-    .replace(/\r\n/g, '\n')
+  // Fenced ```lang code blocks are pulled out into stashed placeholders
+  // before anything else runs, same reason as ai.html's markdown parser:
+  // the bold/italic/link/table passes below would otherwise mangle code
+  // content full of *, _, |, [, ] etc. Restored as the very last step, as
+  // plain block-level HTML rather than through the <p>/<br> pipeline,
+  // which doesn't understand block-level content (same treatment already
+  // given to lists/tables just below).
+  const stash = [];
+  const hold = html => { stash.push(html); return ` ${stash.length - 1} `; };
+  let src = String(md || '').replace(/\r\n/g, '\n')
+    .replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => hold(codeBlockHtml(lang, code.replace(/\n$/, ''))));
+
+  let html = expandShortcodes(escHtml(src))
     .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
     .replace(/^##\s+(.+)$/gm,  '<h2>$1</h2>')
     .replace(/^#\s+(.+)$/gm,   '<h1>$1</h1>')
@@ -749,7 +761,15 @@ function parseMarkdown(md) {
     .replace(/<p>(\s*<(?:ul|table)[\s\S]*?<\/(?:ul|table)>\s*)<\/p>/g, '$1')
     .replace(/<br>(\s*<(?:ul|table|\/ul|\/table))/g, '$1')
     .replace(/(<\/(?:ul|table)>)<br>/g, '$1')
-    .replace(/<li><br>/g, '<li>').replace(/<br><\/li>/g, '</li>');
+    .replace(/<li><br>/g, '<li>').replace(/<br><\/li>/g, '</li>')
+    // Same undo for a stashed code block's placeholder marker — it's
+    // still plain text at this point (the real <div>-based HTML isn't
+    // substituted in until after this <p>/<br> cleanup), so this can
+    // target it directly rather than needing to balance nested tags.
+    .replace(/<p>(\s* \d+ \s*)<\/p>/g, '$1')
+    .replace(/<br>(\s* \d+ )/g, '$1')
+    .replace(/( \d+ )<br>/g, '$1');
+  html = html.replace(/ (\d+) /g, (m, i) => stash[Number(i)]);
   return `<p>${linkifyMentions(html)}</p>`;
 }
 function timeAgo(date) {
@@ -919,6 +939,8 @@ function buildKebabMenu(items) {
 document.getElementById('maxImagesLabel').textContent = MAX_POST_IMAGES;
 mountTopNav();
 mountFooter();
+injectCodeBlockStyles();
+wireCodeBlockCopy(document.body);
 runForum();
 initStories();
 
