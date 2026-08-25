@@ -50,6 +50,21 @@ function reveal(el, index = 0) {
   injectStyles();
   el.classList.add('oe-enter');
   el.style.animationDelay = Math.min(index * 30, 300) + 'ms';
+  // A non-none animation-name makes an element its own CSS stacking
+  // context for as long as the class stays applied — fill-mode:both keeps
+  // it non-none even after the animation visually finishes, which was
+  // silently trapping any absolutely-positioned child (a card's dropdown
+  // menu, a popover) so its z-index could never win against a LATER
+  // sibling card, since z-index only competes within one stacking
+  // context — a later sibling that's ALSO its own stacking context
+  // (same reason) just paints over it regardless of z-index value. Once
+  // the animation actually finishes, drop the class so the element
+  // returns to normal stacking; visually identical either way, since the
+  // `to` keyframe already matches the plain unstyled state.
+  el.addEventListener('animationend', () => {
+    el.classList.remove('oe-enter');
+    el.style.animationDelay = '';
+  }, { once: true });
   if (el.tagName === 'IMG') fadeImg(el);
   else el.querySelectorAll('img').forEach(fadeImg);
 }

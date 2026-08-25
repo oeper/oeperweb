@@ -182,13 +182,14 @@
   .msg-bubble .katex { color: inherit; font-size: 1.05em; }
   .msg-bubble .katex-display { margin: 0; }
   .msg-bubble .code-block-wrap {
-    background: rgba(0,0,0,0.25); border-radius: 10px; margin: 8px 0; overflow: hidden;
+    background: rgba(0,0,0,0.32); border-radius: 8px; margin: 8px 0; overflow: hidden;
   }
   .msg-bubble .code-block-header {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    padding: 6px 8px 6px 14px; background: rgba(0,0,0,0.18); font-size: 12px;
+    padding: 6px 8px 6px 14px; background: rgba(0,0,0,0.22); font-size: 12px;
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
   }
-  .msg-bubble .code-block-lang { opacity: 0.7; text-transform: lowercase; }
+  .msg-bubble .code-block-lang { opacity: 0.6; text-transform: lowercase; }
   .msg-bubble .code-block-copy-btn {
     display: inline-flex; align-items: center; gap: 4px; border: none; background: none; color: inherit;
     opacity: 0.7; cursor: pointer; font: inherit; font-size: 12px; padding: 4px 8px; border-radius: 6px;
@@ -197,8 +198,20 @@
   .msg-bubble .code-block-copy-btn .material-symbols-rounded { font-size: 15px; }
   .msg-bubble pre.code-block {
     padding: 12px 14px; margin: 0; overflow-x: auto; font-size: 13px; line-height: 1.5;
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+    tab-size: 2;
   }
   .msg-bubble pre.code-block code { background: none; padding: 0; }
+  /* Lightweight syntax highlighting (no external library) — an
+     approximate, language-agnostic tokenizer rather than a real per-
+     language grammar, but close enough for a chat code block. Colors
+     follow the common "dark theme" convention (VS Code Dark+ / Discord's
+     own highlight.js theme both land in roughly this palette). */
+  .msg-bubble pre.code-block .tok-keyword { color: #c586c0; }
+  .msg-bubble pre.code-block .tok-string { color: #ce9178; }
+  .msg-bubble pre.code-block .tok-comment { color: #6a9955; font-style: italic; }
+  .msg-bubble pre.code-block .tok-number { color: #b5cea8; }
+  .msg-bubble pre.code-block .tok-function { color: #dcdcaa; }
   .msg-bubble a.md-btn {
     display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500;
     padding: 6px 12px; border-radius: 100px; background: rgba(127,127,127,0.2);
@@ -489,7 +502,7 @@ import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoad
 import { mountTopNav } from './shared/topnav.js?v=33';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
-import { observeList } from './shared/motion.js?v=1';
+import { observeList } from './shared/motion.js?v=2';
 import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=1';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
@@ -537,6 +550,45 @@ Sign-in is Google-only, site-wide.
 Two scripted easter eggs, exact triggers only — don't force them into unrelated answers: if the user asks something equivalent to "what's the capital of France", reply with exactly: Oui oui oui, it is Paris. Merci! Only after that exact exchange has already happened earlier in this same conversation, if the user later asks something equivalent to "what does the cow say", reply with exactly: Oh moo moo moo, I speak that too. All day!`;
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Lightweight, language-agnostic syntax highlighting for fenced ``` code
+// blocks — not a real per-language grammar (no external library), just
+// one shared token pass that covers comments, strings, numbers, a broad
+// keyword set spanning the languages people actually paste in chat (JS/
+// TS, Python, Lua, Go, Rust, C-family, etc.), and a "looks like a call"
+// heuristic for function names. Good enough to read as "highlighted
+// code" without pulling in a whole grammar database for a chat window.
+const HL_KEYWORDS = new Set([
+  'function','return','if','else','elif','elseif','for','while','do','until','repeat','switch','case',
+  'default','break','continue','class','extends','implements','interface','import','from','export',
+  'const','let','var','new','delete','typeof','instanceof','in','of','try','catch','finally','throw',
+  'async','await','def','lambda','pass','yield','with','as','global','nonlocal','raise','except',
+  'public','private','protected','static','void','int','float','double','char','bool','string','local',
+  'true','false','null','none','nil','undefined','self','this','super','struct','enum','namespace',
+  'package','module','fn','mut','impl','trait','match','use','pub','func','defer','go','chan','select',
+  'and','or','not','end','then','type','interface','defer','goto',
+]);
+const HL_TOKEN_RE = /(\/\/[^\n]*|--[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\/|"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\b\d+\.?\d*(?:[eE][+-]?\d+)?\b)|([A-Za-z_]\w*)(\s*\()?/g;
+function highlightCode(code) {
+  let out = '', last = 0, m;
+  HL_TOKEN_RE.lastIndex = 0;
+  while ((m = HL_TOKEN_RE.exec(code))) {
+    out += escHtml(code.slice(last, m.index));
+    if (m[1]) {
+      const isComment = /^(\/\/|--|#|\/\*)/.test(m[1]);
+      out += `<span class="${isComment ? 'tok-comment' : 'tok-string'}">${escHtml(m[1])}</span>`;
+    } else if (m[2]) {
+      out += `<span class="tok-number">${escHtml(m[2])}</span>`;
+    } else if (m[3]) {
+      const cls = HL_KEYWORDS.has(m[3]) ? 'tok-keyword' : (m[4] ? 'tok-function' : null);
+      out += cls ? `<span class="${cls}">${escHtml(m[3])}</span>` : escHtml(m[3]);
+      if (m[4]) out += escHtml(m[4]);
+    }
+    last = HL_TOKEN_RE.lastIndex;
+  }
+  out += escHtml(code.slice(last));
+  return out;
+}
 
 // navigator.clipboard.writeText() can silently reject — most commonly
 // "Document is not focused" if focus moved away from the page between the
@@ -763,7 +815,7 @@ function parseAiMarkdown(text) {
         <span class="code-block-lang">${escHtml(lang || 'text')}</span>
         <button type="button" class="code-block-copy-btn" data-copy-code><span class="material-symbols-rounded">content_copy</span>copy</button>
       </div>
-      <pre class="code-block"><code>${escHtml(code.replace(/\n$/, ''))}</code></pre>
+      <pre class="code-block"><code>${highlightCode(code.replace(/\n$/, ''))}</code></pre>
     </div>
   `));
 
