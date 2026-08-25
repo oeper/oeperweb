@@ -20,7 +20,35 @@ const HL_KEYWORDS = new Set([
   'package','module','fn','mut','impl','trait','match','use','pub','func','defer','go','chan','select',
   'and','or','not','end','then','type','goto',
 ]);
-const HL_TOKEN_RE = /(\/\/[^\n]*|--[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\/|"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\b\d+\.?\d*(?:[eE][+-]?\d+)?\b)|([A-Za-z_]\w*)(\s*\()?/g;
+// The Lua block-comment alternative (--[[...]]) has to come before the
+// plain line-comment one (--[^\n]*) — alternation tries left-to-right at
+// each position, and the line-comment branch would otherwise match just
+// the opening "--[[" and stop at the first newline, leaving the rest of
+// a multi-line block to get tokenized as if it were code.
+const HL_TOKEN_RE = /(\/\/[^\n]*|--\[\[[\s\S]*?\]\]|--[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\/|"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\b\d+\.?\d*(?:[eE][+-]?\d+)?\b)|([A-Za-z_]\w*)(\s*\()?/g;
+
+// A block comment (C-style /* */ or Lua's --[[ ]]) whose text opens with
+// a callout keyword reads as a "note" left in the code for whoever runs
+// it — e.g. a disclaimer before a loadstring — rather than an ordinary
+// inline comment, so it renders as its own callout box instead of plain
+// italic comment text. Single-line // — # comments never qualify, since
+// a one-liner isn't really the "note before the code" pattern this is
+// for.
+const NOTE_TYPES = [
+  { type: 'danger', icon: 'report', re: /^\s*(danger|caution)\b/i },
+  { type: 'warning', icon: 'warning', re: /^\s*warning\b/i },
+  { type: 'tip', icon: 'lightbulb', re: /^\s*tip\b/i },
+  { type: 'info', icon: 'info', re: /^\s*(note|info)\b/i },
+];
+function noteTypeFor(commentText) {
+  const isBlock = /^\/\*/.test(commentText) || /^--\[\[/.test(commentText);
+  if (!isBlock) return null;
+  const inner = commentText.replace(/^\/\*|\*\/$/g, '').replace(/^--\[\[|\]\]$/g, '');
+  for (const nt of NOTE_TYPES) {
+    if (nt.re.test(inner)) return nt;
+  }
+  return null;
+}
 
 // Comments/strings first (greedy alternation, tried left-to-right at each
 // position), then numbers, then identifiers — checked against the shared
@@ -33,7 +61,12 @@ export function highlightCode(code) {
     out += escHtml(code.slice(last, m.index));
     if (m[1]) {
       const isComment = /^(\/\/|--|#|\/\*)/.test(m[1]);
-      out += `<span class="${isComment ? 'tok-comment' : 'tok-string'}">${escHtml(m[1])}</span>`;
+      const note = isComment ? noteTypeFor(m[1]) : null;
+      if (note) {
+        out += `<span class="tok-note tok-note-${note.type}"><span class="material-symbols-rounded tok-note-icon">${note.icon}</span>${escHtml(m[1])}</span>`;
+      } else {
+        out += `<span class="${isComment ? 'tok-comment' : 'tok-string'}">${escHtml(m[1])}</span>`;
+      }
     } else if (m[2]) {
       out += `<span class="tok-number">${escHtml(m[2])}</span>`;
     } else if (m[3]) {
@@ -136,6 +169,17 @@ export function injectCodeBlockStyles() {
     pre.code-block .tok-comment { color: #6a9955; font-style: italic; }
     pre.code-block .tok-number { color: #b5cea8; }
     pre.code-block .tok-function { color: #dcdcaa; }
+    pre.code-block .tok-note {
+      display: flex; align-items: flex-start; gap: 8px;
+      margin: 2px 0 8px; padding: 8px 12px; border-radius: 6px;
+      border-left: 3px solid #7f848e; background: rgba(255,255,255,0.05);
+      font-style: normal; white-space: pre-wrap; color: #abb2bf;
+    }
+    pre.code-block .tok-note-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    pre.code-block .tok-note-warning { border-left-color: #e5c07b; background: rgba(229,192,123,0.1); color: #e5c07b; }
+    pre.code-block .tok-note-danger { border-left-color: #e06c75; background: rgba(224,108,117,0.1); color: #e06c75; }
+    pre.code-block .tok-note-info { border-left-color: #61afef; background: rgba(97,175,239,0.1); color: #61afef; }
+    pre.code-block .tok-note-tip { border-left-color: #98c379; background: rgba(152,195,121,0.1); color: #98c379; }
   `;
   document.head.appendChild(style);
 }

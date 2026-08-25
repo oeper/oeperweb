@@ -632,7 +632,7 @@ import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=6'
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { reportContent } from './shared/report.js?v=5';
 import { observeList } from './shared/motion.js?v=2';
-import { codeBlockHtml, wireCodeBlockCopy, injectCodeBlockStyles } from './shared/code-block.js?v=1';
+import { codeBlockHtml, wireCodeBlockCopy, injectCodeBlockStyles } from './shared/code-block.js?v=2';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, getDoc, setDoc, onSnapshot,
   query, orderBy, serverTimestamp, arrayUnion, arrayRemove, increment, Timestamp
@@ -727,7 +727,7 @@ function parseMarkdown(md) {
   // which doesn't understand block-level content (same treatment already
   // given to lists/tables just below).
   const stash = [];
-  const hold = html => { stash.push(html); return ` ${stash.length - 1} `; };
+  const hold = html => { stash.push(html); return `\u0000${stash.length - 1}\u0000`; };
   let src = String(md || '').replace(/\r\n/g, '\n')
     .replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => hold(codeBlockHtml(lang, code.replace(/\n$/, ''))));
 
@@ -766,10 +766,10 @@ function parseMarkdown(md) {
     // still plain text at this point (the real <div>-based HTML isn't
     // substituted in until after this <p>/<br> cleanup), so this can
     // target it directly rather than needing to balance nested tags.
-    .replace(/<p>(\s* \d+ \s*)<\/p>/g, '$1')
-    .replace(/<br>(\s* \d+ )/g, '$1')
-    .replace(/( \d+ )<br>/g, '$1');
-  html = html.replace(/ (\d+) /g, (m, i) => stash[Number(i)]);
+    .replace(/<p>(\s*\u0000\d+\u0000\s*)<\/p>/g, '$1')
+    .replace(/<br>(\s*\u0000\d+\u0000)/g, '$1')
+    .replace(/(\u0000\d+\u0000)<br>/g, '$1');
+  html = html.replace(/\u0000(\d+)\u0000/g, (m, i) => stash[Number(i)]);
   return `<p>${linkifyMentions(html)}</p>`;
 }
 function timeAgo(date) {
