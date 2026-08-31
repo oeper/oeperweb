@@ -121,7 +121,9 @@
     z-index: 201; transform: translateX(100%); transition: transform 0.25s; overflow-y: auto; padding: 24px;
   }
   .watch-panel.open { transform: translateX(0); }
-  .watch-panel video { width: 100%; border-radius: 16px; background: #000; margin-bottom: 16px; max-height: 60vh; }
+  .watch-player-mount { margin-bottom: 16px; max-height: 60vh; }
+  .watch-player-mount .oe-player { max-height: 60vh; }
+  .watch-player-mount .oe-player-video { max-height: 60vh; object-fit: contain; }
   .watch-title { font-size: 22px; font-weight: 500; margin-bottom: 10px; }
   .watch-desc { font-size: 14px; line-height: 1.6; color: var(--md-sys-color-on-surface-variant); white-space: pre-wrap; margin: 16px 0; }
   .watch-comments { margin-top: 24px; border-top: 1px solid var(--md-sys-color-outline-variant); padding-top: 16px; }
@@ -294,6 +296,7 @@ import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=7'
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=2';
 import { reportContent } from './shared/report.js?v=6';
+import { mountVideoPlayer } from './shared/media-player.js?v=1';
 import {
   collection, doc, addDoc, deleteDoc, updateDoc, onSnapshot, serverTimestamp,
   arrayUnion, arrayRemove, increment, query, orderBy,
@@ -451,7 +454,7 @@ function openWatch(v) {
 
   panel.innerHTML = `
     <button class="watch-close" id="watchCloseBtn" title="close"><span class="material-symbols-rounded">close</span></button>
-    <video src="${v.url}" controls autoplay></video>
+    <div id="watchPlayerMount" class="watch-player-mount"></div>
     <div class="watch-title">${escHtml(v.title)}</div>
     <div class="watch-actions">
       <div class="vote-col">
@@ -481,6 +484,8 @@ function openWatch(v) {
       </form>
     </div>
   `;
+
+  mountVideoPlayer(document.getElementById('watchPlayerMount'), v.url, { autoplay: true });
 
   panel.dataset.watchId = v.id;
   renderWatchLikedBy(v);
