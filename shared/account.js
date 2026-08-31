@@ -17,7 +17,7 @@ import {
   getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, serverTimestamp, deleteField, collection, addDoc,
   query, where, documentId, orderBy, onSnapshot, writeBatch, increment,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { beginUpload, updateUpload, finishUpload } from './upload-queue.js?v=1';
+import { beginUpload, updateUpload, finishUpload } from './upload-queue.js?v=2';
 
 export const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAs7SP8FaWUDuz7GVp9rG5uZw4oEIWmBUk",

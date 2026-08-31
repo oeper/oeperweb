@@ -93,21 +93,40 @@ function ensureWidget() {
   document.body.appendChild(el);
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
+// Updates each item's DOM node in place rather than rebuilding the whole
+// widget's innerHTML on every call — this fires on every XHR progress
+// tick (many times a second for a big file), and destroying/recreating
+// the node each time was re-triggering its CSS entrance animation
+// (.oe-uq-item's `animation: oeUqIn`) from scratch every tick, which is
+// what "keeps flashing" was. Now a node is created once per upload id
+// and only its text/fill-width get touched afterward.
 function renderWidget() {
   const el = document.getElementById('oeUploadQueue');
   if (!el) return;
-  el.innerHTML = [...uploads.entries()].map(([, u]) => {
+  const seen = new Set();
+  for (const [id, u] of uploads.entries()) {
+    seen.add(id);
+    let item = el.querySelector(`[data-upload-id="${id}"]`);
+    if (!item) {
+      item = document.createElement('div');
+      item.className = 'oe-uq-item';
+      item.dataset.uploadId = String(id);
+      item.innerHTML = `
+        <div class="oe-uq-label"><span class="material-symbols-rounded"></span><span class="oe-uq-text"></span></div>
+        <div class="oe-uq-bar"><div class="oe-uq-bar-fill"></div></div>
+      `;
+      el.appendChild(item);
+    }
     const pct = Math.round((u.frac || 0) * 100);
     const icon = u.error ? 'error' : (u.done ? 'check_circle' : 'cloud_upload');
     const text = u.error ? `${u.label} — ${u.error}` : (u.done ? `${u.label} — done` : `${u.label} — ${pct}%`);
     const fillPct = u.error || u.done ? 100 : pct;
-    return `<div class="oe-uq-item ${u.error ? 'error' : ''}">
-      <div class="oe-uq-label"><span class="material-symbols-rounded">${icon}</span><span class="oe-uq-text">${escapeHtml(text)}</span></div>
-      <div class="oe-uq-bar"><div class="oe-uq-bar-fill" style="width:${fillPct}%"></div></div>
-    </div>`;
-  }).join('');
+    item.classList.toggle('error', !!u.error);
+    item.querySelector('.material-symbols-rounded').textContent = icon;
+    item.querySelector('.oe-uq-text').textContent = text;
+    item.querySelector('.oe-uq-bar-fill').style.width = fillPct + '%';
+  }
+  el.querySelectorAll('[data-upload-id]').forEach(item => {
+    if (!seen.has(Number(item.dataset.uploadId))) item.remove();
+  });
 }

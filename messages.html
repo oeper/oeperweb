@@ -394,14 +394,14 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=33';
+import { mountTopNav } from './shared/topnav.js?v=34';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
   loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions, CREDITS_ICON,
-} from './shared/account.js?v=34';
-import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=6';
+} from './shared/account.js?v=35';
+import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=7';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
-import { reportContent } from './shared/report.js?v=5';
+import { reportContent } from './shared/report.js?v=6';
 import { observeList } from './shared/motion.js?v=2';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,

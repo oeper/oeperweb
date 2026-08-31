@@ -12,7 +12,7 @@
 // `from './shared/mention-autocomplete.js?v=N'` import across the site
 // (grep for it) — otherwise visitors can sit on a stale cached copy for
 // hours after a deploy.
-import { db } from './account.js?v=34';
+import { db } from './account.js?v=35';
 import { collection, query, orderBy, limit, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 function escHtml(str) {
