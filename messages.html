@@ -394,14 +394,14 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=34';
+import { mountTopNav } from './shared/topnav.js?v=35';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
   loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions, CREDITS_ICON,
-} from './shared/account.js?v=35';
-import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=7';
+} from './shared/account.js?v=36';
+import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=8';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
-import { reportContent } from './shared/report.js?v=6';
+import { reportContent } from './shared/report.js?v=7';
 import { observeList } from './shared/motion.js?v=2';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
@@ -1167,7 +1167,7 @@ async function sendMediaFileTo(file, { messagesRef, sendBtn, user, touchPreview,
     });
     playSendSound(otherHandle);
   } catch (err) {
-    showToast(`could not send ${kind}: ` + err.message);
+    if (!err.cancelled) showToast(`could not send ${kind}: ` + err.message);
   }
 }
 
@@ -1822,7 +1822,7 @@ async function openThread(otherEmail, user) {
         createdAt: serverTimestamp(),
       });
     } catch (err) {
-      showToast('could not send voice message: ' + err.message);
+      if (!err.cancelled) showToast('could not send voice message: ' + err.message);
     }
   }
 

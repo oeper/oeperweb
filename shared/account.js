@@ -17,7 +17,7 @@ import {
   getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, serverTimestamp, deleteField, collection, addDoc,
   query, where, documentId, orderBy, onSnapshot, writeBatch, increment,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-import { beginUpload, updateUpload, finishUpload } from './upload-queue.js?v=2';
+import { beginUpload, updateUpload, finishUpload } from './upload-queue.js?v=3';
 
 export const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAs7SP8FaWUDuz7GVp9rG5uZw4oEIWmBUk",
@@ -679,9 +679,9 @@ export async function uploadFile(file, endpointPath, extraFields, onProgress, la
   if (extraFields) for (const key in extraFields) fd.append(key, extraFields[key]);
   fd.append('file', file);
 
-  const queueId = beginUpload(label || file.name || 'file');
+  const xhr = new XMLHttpRequest();
+  const queueId = beginUpload(label || file.name || 'file', () => xhr.abort());
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
     xhr.open('POST', SERVER_ENDPOINT + (endpointPath || '/upload'));
     xhr.setRequestHeader('Authorization', 'Bearer ' + idToken);
     xhr.upload.addEventListener('progress', e => {
@@ -698,6 +698,17 @@ export async function uploadFile(file, endpointPath, extraFields, onProgress, la
     };
     xhr.onerror = () => {
       const err = new Error('upload failed — network error');
+      finishUpload(queueId, err);
+      reject(err);
+    };
+    // xhr.abort() (from the widget's cancel button, or beforeunload's
+    // "leave anyway") fires 'abort', not 'error' — kept as a distinct
+    // outcome so the widget shows "cancelled" instead of a failure, and
+    // rejects with .cancelled so callers can skip the "could not upload"
+    // toast for a cancellation the user asked for themselves.
+    xhr.onabort = () => {
+      const err = new Error('upload cancelled');
+      err.cancelled = true;
       finishUpload(queueId, err);
       reject(err);
     };
@@ -1011,7 +1022,7 @@ export function openEditProfileModal() {
         }
         showToast('profile updated');
       } catch (err) {
-        showToast('could not update profile: ' + err.message);
+        if (!err.cancelled) showToast('could not update profile: ' + err.message);
       }
     })();
   };

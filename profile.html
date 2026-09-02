@@ -238,16 +238,16 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav, setProfileMenuVisible } from './shared/topnav.js?v=34';
+import { mountTopNav, setProfileMenuVisible } from './shared/topnav.js?v=35';
 import {
   getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
   openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setUserBadge, sendNotification, linkifyMentions,
   getBadgeOverride, setOwnBadgeOverride, grantCredits, CREDITS_ICON,
-} from './shared/account.js?v=35';
+} from './shared/account.js?v=36';
 import { mountFooter } from './shared/footer.js?v=5';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=2';
-import { reportContent } from './shared/report.js?v=6';
+import { reportContent } from './shared/report.js?v=7';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
   arrayUnion, arrayRemove,

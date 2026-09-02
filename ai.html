@@ -470,12 +470,12 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification } from './shared/account.js?v=35';
-import { mountTopNav } from './shared/topnav.js?v=34';
+import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification } from './shared/account.js?v=36';
+import { mountTopNav } from './shared/topnav.js?v=35';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=2';
-import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=2';
+import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=3';
 import { codeBlockHtml, copyToClipboard, injectCodeBlockStyles } from './shared/code-block.js?v=2';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
@@ -1505,11 +1505,11 @@ inputEl.addEventListener('paste', async e => {
 });
 
 function uploadAnonImage(file) {
-  const queueId = beginUpload('image');
+  const xhr = new XMLHttpRequest();
+  const queueId = beginUpload('image', () => xhr.abort());
   return new Promise((resolve, reject) => {
     const fd = new FormData();
     fd.append('file', file);
-    const xhr = new XMLHttpRequest();
     xhr.open('POST', SERVER_ENDPOINT + '/upload-file');
     xhr.upload.addEventListener('progress', e => { if (e.lengthComputable) updateUpload(queueId, e.loaded / e.total); });
     xhr.onload = () => {
@@ -1520,6 +1520,12 @@ function uploadAnonImage(file) {
     };
     xhr.onerror = () => {
       const err = new Error('upload failed — network error');
+      finishUpload(queueId, err);
+      reject(err);
+    };
+    xhr.onabort = () => {
+      const err = new Error('upload cancelled');
+      err.cancelled = true;
       finishUpload(queueId, err);
       reject(err);
     };
@@ -1647,8 +1653,8 @@ async function sendMessage() {
       try {
         imageUrl = await uploadAnonImage(fileToUpload);
       } catch (err) {
-        uploadingBubble.textContent = 'Could not upload image: ' + err.message;
-        uploadingBubble.classList.add('error');
+        if (err.cancelled) { placeholderImg.remove(); uploadingBubble.remove(); }
+        else { uploadingBubble.textContent = 'Could not upload image: ' + err.message; uploadingBubble.classList.add('error'); }
         return;
       }
     } else {

@@ -449,15 +449,15 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=34';
+import { mountTopNav } from './shared/topnav.js?v=35';
 import {
   SERVER_ENDPOINT, getCurrentUser, onAccountChange, isOwnerEmail, uploadFile,
-} from './shared/account.js?v=35';
+} from './shared/account.js?v=36';
 import { mountFooter } from './shared/footer.js?v=5';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=2';
-import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=2';
+import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=3';
 
 mountTopNav();
 mountFooter();
@@ -1329,6 +1329,7 @@ async function uploadFilesTo(picked) {
   let uploaded = 0;
   let temporaryCount = 0;
   let firstError = null;
+  let cancelled = false;
   for (let i = 0; i < picked.length; i++) {
     const file = picked[i];
     if (!owner && file.size > MAX_UPLOAD_BYTES) {
@@ -1341,6 +1342,12 @@ async function uploadFilesTo(picked) {
       uploaded++;
       if (!owner && file.size > SIGNED_IN_PERMANENT_BYTES) temporaryCount++;
     } catch (err) {
+      // Cancelling one file (from the upload widget's own cancel button)
+      // stops the whole batch rather than moving on to the next file —
+      // if you meant to cancel, you didn't mean "skip this one and keep
+      // going" — and skips the "could not upload" toast, since this was
+      // asked for, not a failure.
+      if (err.cancelled) { cancelled = true; break; }
       firstError = firstError || `${file.name}: ${err.message}`;
     }
   }
@@ -1348,7 +1355,9 @@ async function uploadFilesTo(picked) {
 
   if (uploaded) loadList();
   const tempNote = temporaryCount ? ` ${temporaryCount === uploaded ? 'over 50MB' : `${temporaryCount} over 50MB`} — auto-deletes in 2 hours.` : '';
-  if (uploaded === picked.length) {
+  if (cancelled) {
+    if (uploaded) showToast(`uploaded ${uploaded} — cancelled the rest.`);
+  } else if (uploaded === picked.length) {
     showToast((uploaded === 1 ? 'uploaded!' : `uploaded ${uploaded} files!`) + tempNote);
   } else if (uploaded > 0) {
     showToast(`uploaded ${uploaded} of ${picked.length} — ${firstError}` + tempNote);
@@ -1396,12 +1405,12 @@ window.addEventListener('drop', e => {
 });
 
 function uploadAnon(file, onProgress) {
-  const queueId = beginUpload(file.name || 'file');
+  const xhr = new XMLHttpRequest();
+  const queueId = beginUpload(file.name || 'file', () => xhr.abort());
   return new Promise((resolve, reject) => {
     if (!SERVER_ENDPOINT) { finishUpload(queueId, new Error('server not configured')); reject(new Error('server not configured')); return; }
     const fd = new FormData();
     fd.append('file', file);
-    const xhr = new XMLHttpRequest();
     xhr.open('POST', SERVER_ENDPOINT + '/upload-file');
     xhr.upload.addEventListener('progress', e => {
       if (!e.lengthComputable) return;
@@ -1409,6 +1418,12 @@ function uploadAnon(file, onProgress) {
       updateUpload(queueId, frac);
       if (onProgress) onProgress(frac);
     });
+    xhr.onabort = () => {
+      const err = new Error('upload cancelled');
+      err.cancelled = true;
+      finishUpload(queueId, err);
+      reject(err);
+    };
     xhr.onload = () => {
       let data = {};
       try { data = JSON.parse(xhr.responseText); } catch {}
@@ -1453,6 +1468,7 @@ document.getElementById('anonUploadInput').addEventListener('change', async e =>
   let uploaded = 0;
   let temporaryCount = 0;
   let firstError = null;
+  let cancelled = false;
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     if (file.size > MAX_UPLOAD_BYTES) {
@@ -1467,13 +1483,16 @@ document.getElementById('anonUploadInput').addEventListener('change', async e =>
       anonUploadedCount++;
       if (file.size > ANON_PERMANENT_BYTES) temporaryCount++;
     } catch (err) {
+      if (err.cancelled) { cancelled = true; break; }
       firstError = firstError || `${file.name}: ${err.message}`;
     }
   }
   hideUploadProgress('anonUpload');
 
   const tempNote = temporaryCount ? ` ${temporaryCount === uploaded ? 'Over 25MB' : `${temporaryCount} over 25MB`} — auto-deletes in 2 hours.` : '';
-  if (uploaded === files.length) {
+  if (cancelled) {
+    if (uploaded) showToast(`uploaded ${uploaded} — cancelled the rest.`);
+  } else if (uploaded === files.length) {
     showToast((uploaded === 1 ? 'uploaded!' : `uploaded ${uploaded} files!`) + tempNote);
   } else if (uploaded > 0) {
     showToast(`uploaded ${uploaded} of ${files.length} — ${firstError}` + tempNote);
