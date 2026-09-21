@@ -41,7 +41,8 @@ everyone's for moderation) and the forum:
   anonymous upload's link) — if you need a file kept, keep it under the
   permanent threshold or move/re-upload it before it expires.
 - **`DELETE /docs/:name`** — requires sign-in; only the file's own uploader
-  or an owner can delete it.
+  or an owner can delete it. Moves the file to the trash rather than erasing
+  it — see "Storage console" below.
 - **Folders** — a pure metadata concept, not real directories: every
   uploaded file still lands flat in `USER_FILES_DIR` under its generated
   filename, and a folder is just a path string (e.g. `Vacation/Beach`)
@@ -80,6 +81,82 @@ everyone's for moderation) and the forum:
   just voice messages), any signed-in user. Saved into `MESSAGE_DIR`
   (default `/storage/emulated/0/Download/messages`), capped by
   `MAX_MESSAGE_BYTES` (default 20MB).
+
+## Storage console, quotas, trash & AI moderation
+
+Everything below lives in `storage-admin.js` and is managed from the
+owner-only **`/storage`** page on the site (linked from `/admin`). It builds
+on the same `file-owners.json` metadata as everything above — it adds
+`sha256`, `mod` (scan result) and `quarantined` fields to each file's entry.
+
+- **Per-user quotas.** Everyone gets `defaultQuotaBytes` (2 GB unless changed
+  in the console); owners can give any email a custom limit, or 0 to block
+  uploads. `/upload-file` rejects an upload that won't fit — first from the
+  declared `Content-Length` (before the body is read), then again with the
+  real size. `/my-files` now returns `usage: { used, limit }` (limit is
+  `null` for owners), which `files.html` shows as a usage bar. Owners are
+  always unlimited.
+- **Suspensions and strikes.** A suspended account can't upload anywhere
+  (files, forum attachments, videos, projects, chat). Each flagged upload adds
+  a strike; set `autoSuspendStrikes` in the console to suspend automatically
+  at N strikes (0 = off).
+- **Blocked file types.** Non-owners can't upload the extensions in
+  `blockedExtensions` (default: exe, scr, bat, cmd, com, msi, vbs, ps1, jar).
+- **Trash.** `DELETE /docs/:name` (and the console's delete) moves the file to
+  `USER_FILES_DIR/.oeper-trash` (or `TRASH_DIR`) for `trashRetentionDays`
+  (default 14) instead of erasing it, so an accidental delete or a wrong
+  moderation call is recoverable. Its public link stops working immediately.
+  Set retention to 0 for immediate, permanent deletes. Expired *temporary*
+  uploads (see above) are still deleted outright.
+- **Banned files.** "Delete + ban" in the console records the file's SHA-256:
+  every other copy is removed and any future upload of the same bytes is
+  deleted automatically after it's hashed.
+- **Audit log.** Uploads, deletes, moderation decisions, and every admin
+  action are appended to `audit-log.jsonl` (rotated at 5 MB) and shown in the
+  console's activity tab.
+- **AI content moderation.** After each `/upload-file` upload the server
+  hashes the file, then — if configured — sends images (≤ 6 MB) and text files
+  (first 200 KB) to the Cloudflare Worker's `/api/moderate` endpoint
+  (`cf-ai-worker/`): text goes through Llama Guard, images through the same
+  vision model the chat uses. Modes (console → settings): **quarantine**
+  (flagged files are hidden from `/docs` with HTTP 451 until an owner
+  approves them, and appear in the console's *review* tab), **flag** (mark for
+  review only), or **off**. "Severe" hits are quarantined in either scanning
+  mode. Videos, PDFs and archives aren't scanned yet, and there's a few
+  seconds between upload and scan during which a file is publicly reachable.
+  Only `files.html` uploads are covered — forum attachments, videos, projects
+  and chat media aren't scanned.
+
+  **Setup** (until both env vars are set the server just skips scanning):
+
+  1. Pick a long random secret and give it to the Worker, then redeploy:
+
+     ```sh
+     cd cf-ai-worker
+     npx wrangler secret put MODERATION_KEY
+     npx wrangler deploy
+     ```
+
+  2. Put the same secret and the Worker's URL in `forum-server/.env` on the
+     phone (this is the `workers.dev` or custom-domain address from the
+     Worker's own README, plus `/api/moderate`):
+
+     ```sh
+     MODERATION_URL=https://oeper-ai.<your-subdomain>.workers.dev/api/moderate
+     MODERATION_KEY=the-same-secret
+     ```
+
+  3. Restart the server; the startup log should say
+     `AI moderation -> configured (mode: quarantine)`. In the console's
+     overview tab, **scan existing files** checks everything uploaded before
+     moderation was on.
+
+  The `/admin/*` endpoints (all owner-only, same Firebase-token check as the
+  rest): `overview`, `users`, `user`, `files`, `files/action`, `raw/:filename`,
+  `scan-unscanned`, `trash`, `trash/action`, `settings`, `unban-hash`, `audit`.
+  State files (`storage-settings.json`, `user-settings.json`, `trash.json`,
+  `audit-log.jsonl`) sit next to the script and are gitignored; `DATA_DIR`
+  moves them elsewhere.
 
 **Privacy note:** `USER_FILES_DIR` defaults to `/storage/emulated/0/Documents`
 directly. For regular signed-in users, `/my-files` only ever returns entries
@@ -188,6 +265,9 @@ PUBLIC_BASE_URL=https://fs.oeper.dev
 # MESSAGE_DIR=/storage/emulated/0/Download/messages
 # OWNER_EMAILS=you@gmail.com,other@gmail.com
 # DISCORD_REPORT_WEBHOOK=https://discord.com/api/webhooks/...
+# MODERATION_URL=https://oeper-ai.<subdomain>.workers.dev/api/moderate
+# MODERATION_KEY=long-random-secret   (same value as the Worker's MODERATION_KEY secret)
+# TRASH_DIR=/storage/emulated/0/Documents/.oeper-trash
 ```
 
 `upload-server.js` loads this file automatically on startup (no `dotenv`

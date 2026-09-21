@@ -294,6 +294,15 @@ function makeFilename(originalname) {
   return (base ? `${unique}-${base}` : unique) + ext;
 }
 
+// Quotas, suspensions, trash, audit log, AI moderation + the owner-only
+// /admin/* API behind storage.html — see storage-admin.js. Must be set up
+// before the /docs static route at the bottom of this file, since it
+// registers the middleware that hides quarantined files from it.
+const storage = require('./storage-admin')(app, {
+  verifyFirebaseToken, isOwner, USER_FILES_DIR, loadMeta, saveMeta, loadFolders, loadJson, saveJson,
+  publicBaseUrl: PUBLIC_BASE_URL, dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname,
+});
+
 // ── Forum post/comment attachments — any signed-in user, any file type. ──
 // Not part of the file-owners.json metadata system and never listed
 // publicly — only reachable via the specific URL a post/comment embeds.
@@ -306,7 +315,7 @@ const uploadAttachment = multer({
   limits: { fileSize: MAX_ATTACHMENT_BYTES },
 });
 
-app.post('/upload', verifyFirebaseToken, (req, res) => {
+app.post('/upload', verifyFirebaseToken, storage.suspendGuard, (req, res) => {
   uploadAttachment.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
@@ -323,7 +332,7 @@ const uploadVideo = multer({
   limits: { fileSize: MAX_VIDEO_BYTES },
 });
 
-app.post('/upload-video', verifyFirebaseToken, (req, res) => {
+app.post('/upload-video', verifyFirebaseToken, storage.suspendGuard, (req, res) => {
   uploadVideo.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
@@ -340,7 +349,7 @@ const uploadProject = multer({
   limits: { fileSize: MAX_PROJECT_BYTES },
 });
 
-app.post('/upload-project', verifyFirebaseToken, (req, res) => {
+app.post('/upload-project', verifyFirebaseToken, storage.suspendGuard, (req, res) => {
   uploadProject.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
@@ -358,7 +367,7 @@ const uploadMessageFile = multer({
   limits: { fileSize: MAX_MESSAGE_BYTES },
 });
 
-app.post('/upload-message', verifyFirebaseToken, (req, res) => {
+app.post('/upload-message', verifyFirebaseToken, storage.suspendGuard, (req, res) => {
   uploadMessageFile.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
@@ -376,8 +385,8 @@ const userFileStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, USER_FILES_DIR),
   filename: (req, file, cb) => cb(null, makeFilename(file.originalname)),
 });
-const uploadUserFile = multer({ storage: userFileStorage, limits: { fileSize: MAX_UPLOAD_BYTES } });
-const uploadAnonFile = multer({ storage: userFileStorage, limits: { fileSize: MAX_UPLOAD_BYTES } });
+const uploadUserFile = multer({ storage: userFileStorage, limits: { fileSize: MAX_UPLOAD_BYTES }, fileFilter: storage.fileFilter });
+const uploadAnonFile = multer({ storage: userFileStorage, limits: { fileSize: MAX_UPLOAD_BYTES }, fileFilter: storage.fileFilter });
 // No fileSize limit at all — owners (OWNER_EMAILS) get truly unlimited
 // upload size on files.html, not just the 1GB cap everyone else gets.
 const uploadOwnerFile = multer({ storage: userFileStorage });
@@ -386,13 +395,19 @@ function expiryFor(size, permanentBytes) {
   return size > permanentBytes ? Date.now() + TEMP_FILE_LIFETIME_MS : null;
 }
 
-app.post('/upload-file', optionalAuth, (req, res) => {
+app.post('/upload-file', optionalAuth, storage.uploadGate, (req, res) => {
   if (req.user) {
     const owner = isOwner(req.user.email);
     const uploader = owner ? uploadOwnerFile : uploadUserFile;
     uploader.single('file')(req, res, err => {
       if (err) return res.status(400).json({ error: err.message });
       if (!req.file) return res.status(400).json({ error: 'No file received' });
+      // Authoritative quota check now that the real size is known (the
+      // up-front one in uploadGate only sees the declared Content-Length).
+      if (storage.overQuota(req.user.email, req.file.size)) {
+        try { fs.unlinkSync(req.file.path); } catch {}
+        return res.status(413).json({ error: 'Not enough storage for this file.' });
+      }
       // Folder is optional (root upload if omitted) and only meaningful for
       // signed-in uploads — validated the same way /folders validates a new
       // folder, but an upload into a not-yet-created folder implicitly
@@ -420,6 +435,7 @@ app.post('/upload-file', optionalAuth, (req, res) => {
         expiresAt,
       };
       saveMeta(meta);
+      storage.afterUpload(req.file.filename);
       res.json({ url: `${PUBLIC_BASE_URL}/docs/${req.file.filename}`, expiresAt });
     });
     return;
@@ -446,6 +462,7 @@ app.post('/upload-file', optionalAuth, (req, res) => {
       expiresAt,
     };
     saveMeta(meta);
+    storage.afterUpload(req.file.filename);
     res.json({ url: `${PUBLIC_BASE_URL}/docs/${req.file.filename}`, expiresAt });
   });
 });
@@ -468,6 +485,8 @@ app.get('/my-files', verifyFirebaseToken, (req, res) => {
         email: m.email,
         folder: m.folder || '',
         expiresAt: m.expiresAt || null,
+        quarantined: !!m.quarantined,
+        modStatus: m.mod ? m.mod.status : null,
         url: `${PUBLIC_BASE_URL}/docs/${encodeURIComponent(filename)}`,
       };
     });
@@ -509,7 +528,10 @@ app.get('/my-files', verifyFirebaseToken, (req, res) => {
     ? Object.entries(allFolders).flatMap(([email, paths]) => paths.map(path => ({ email, path })))
     : (allFolders[req.user.email] || []).map(path => ({ email: req.user.email, path }));
 
-  res.json({ files: entries, folders });
+  // Usage is always the requester's OWN total, even for owners looking at
+  // everyone's files — it's what the quota bar in files.html shows.
+  const usage = { used: storage.usageFor(req.user.email, meta), limit: mine ? null : storage.quotaFor(req.user.email) };
+  res.json({ files: entries, folders, usage });
 });
 
 // Create a folder (and any missing ancestors) for the requesting account.
@@ -607,9 +629,9 @@ app.delete('/docs/:filename', verifyFirebaseToken, (req, res) => {
   const resolvedDir = path.resolve(USER_FILES_DIR);
   const target = path.join(resolvedDir, base);
   if (!target.startsWith(resolvedDir + path.sep)) return res.status(400).json({ error: 'Invalid filename' });
-  try { fs.unlinkSync(target); } catch {}
-  delete meta[base];
-  saveMeta(meta);
+  // Goes to the trash (retention is an owner setting; 0 days = permanent),
+  // so an accidental delete or a mistaken moderation call is recoverable.
+  storage.moveToTrash(base, req.user.email);
   res.json({ ok: true });
 });
 
@@ -730,6 +752,8 @@ app.listen(PORT, () => console.log(
   `  videos             -> ${path.resolve(VIDEO_DIR)}\n` +
   `  projects           -> ${path.resolve(PROJECT_DIR)}\n` +
   `  chat attachments   -> ${path.resolve(MESSAGE_DIR)}\n` +
+  `  trash              -> ${storage.trashDir}\n` +
+  `  AI moderation      -> ${storage.moderationConfigured ? 'configured (mode: ' + storage.moderationMode() + ')' : 'not configured — set MODERATION_URL and MODERATION_KEY in .env to enable'}\n` +
   (DISCORD_REPORT_WEBHOOK
     ? '  reporting          -> Discord webhook configured'
     : '  reporting          -> DISCORD_REPORT_WEBHOOK not set — /report will return 503 until it is')

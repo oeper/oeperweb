@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Storage Console — oeper.dev</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
+<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.cdnfonts.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./shared/fonts.css?v=1">
+<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :focus { outline: none; }
+  :focus-visible { outline: none; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-success: #a6d9a8;
+    --md-sys-color-warn: #f5c26b;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    background-image: var(--oe-bg-image, none);
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 1000px; margin: 0 auto; padding: 56px 24px 120px; }
+
+  .header { margin-bottom: 20px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
+  .header h1 {
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2.2rem, 6vw, 3.2rem); font-weight: 400;
+    margin-bottom: 8px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 12px;
+  }
+  .header h1 .material-symbols-rounded { font-size: 0.8em; color: var(--md-sys-color-primary); }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 14px; }
+
+  .gate { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); }
+  .gate .material-symbols-rounded { font-size: 48px; color: var(--md-sys-color-primary); display: block; margin-bottom: 12px; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 8px; margin: 8px 0 24px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--md-sys-color-surface-variant); border: none;
+    border-radius: 100px; padding: 9px 18px; font: inherit; font-size: 14px; font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant); cursor: pointer; white-space: nowrap; transition: background-color 0.2s, color 0.2s;
+  }
+  .tab .material-symbols-rounded { font-size: 18px; }
+  .tab:hover { background: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
+  .tab.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+  .tab .badge {
+    background: var(--md-sys-color-error); color: #601410; border-radius: 100px; padding: 0 7px; font-size: 12px; font-weight: 600; line-height: 18px;
+  }
+
+  /* ── Buttons / inputs ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; border: none; border-radius: 100px; padding: 9px 18px; font: inherit; font-size: 14px;
+    font-weight: 500; cursor: pointer; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); transition: opacity 0.2s, background-color 0.2s;
+  }
+  .btn .material-symbols-rounded { font-size: 18px; }
+  .btn:hover { background: var(--md-sys-state-hover); }
+  .btn.primary { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .btn.primary:hover { opacity: 0.9; background: var(--md-sys-color-primary); }
+  .btn.danger { color: var(--md-sys-color-error); }
+  .btn.small { padding: 6px 12px; font-size: 13px; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: none; background: transparent; color: var(--md-sys-color-on-surface-variant);
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
+  }
+  .icon-btn:hover { background: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
+  .icon-btn.danger:hover { color: var(--md-sys-color-error); }
+  .icon-btn .material-symbols-rounded { font-size: 20px; }
+  .text-input {
+    width: 100%; background: var(--md-sys-color-surface); border: none; border-radius: 100px; padding: 12px 18px; color: var(--md-sys-color-on-surface);
+    font: inherit; font-size: 15px; outline: none; transition: box-shadow 0.2s;
+  }
+  .text-input:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
+  .text-input::placeholder { color: var(--md-sys-color-on-surface-variant); }
+
+  /* ── Cards / stats ── */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .card { background: var(--md-sys-color-surface); border-radius: 24px; padding: 20px 22px; }
+  .card h3 { font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .card h3 .material-symbols-rounded { font-size: 18px; color: var(--md-sys-color-primary); }
+  .big { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 30px; font-weight: 400; line-height: 1.1; }
+  .sub { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 4px; }
+  .section-title { font-size: 16px; font-weight: 500; margin: 8px 0 12px; }
+
+  .bar { height: 8px; border-radius: 4px; background: var(--md-sys-color-surface-variant); overflow: hidden; }
+  .bar > span { display: block; height: 100%; border-radius: 4px; background: var(--md-sys-color-primary); }
+  .bar.warn > span { background: var(--md-sys-color-warn); }
+  .bar.full > span { background: var(--md-sys-color-error); }
+  .kind-row { display: grid; grid-template-columns: 90px 1fr 80px; gap: 12px; align-items: center; font-size: 13px; margin-bottom: 10px; color: var(--md-sys-color-on-surface-variant); }
+  .kind-row b { font-weight: 500; color: var(--md-sys-color-on-surface); text-align: right; }
+  .chart { display: flex; align-items: flex-end; gap: 6px; height: 90px; margin-top: 8px; }
+  .chart .col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; font-size: 10px; color: var(--md-sys-color-on-surface-variant); }
+  .chart .col i { display: block; width: 100%; min-height: 2px; background: var(--md-sys-color-primary); border-radius: 4px 4px 0 0; opacity: 0.85; }
+
+  /* ── Lists / rows ── */
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+  .toolbar .grow { flex: 1; min-width: 200px; position: relative; }
+  .toolbar .grow .material-symbols-rounded { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--md-sys-color-on-surface-variant); font-size: 20px; pointer-events: none; }
+  .toolbar .grow .text-input { padding-left: 46px; }
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .row {
+    display: flex; align-items: center; gap: 14px; background: var(--md-sys-color-surface); border-radius: 20px; padding: 12px 16px;
+    transition: background-color 0.2s;
+  }
+  .row.selected { background: var(--md-sys-color-secondary-container); }
+  .row .main { flex: 1; min-width: 0; }
+  .row .name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .meta { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .row .acts { display: flex; gap: 2px; flex-shrink: 0; }
+  .row .reason { font-size: 13px; color: var(--md-sys-color-warn); margin-top: 4px; }
+  .thumb {
+    width: 48px; height: 48px; border-radius: 12px; background: var(--md-sys-color-surface-variant); display: flex; align-items: center; justify-content: center;
+    color: var(--md-sys-color-primary); flex-shrink: 0; overflow: hidden; cursor: default;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb.big-thumb { width: 96px; height: 96px; border-radius: 16px; }
+  .chk {
+    width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--md-sys-color-outline-variant); background: transparent; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; color: transparent; padding: 0;
+  }
+  .chk .material-symbols-rounded { font-size: 16px; }
+  .chk.on { background: var(--md-sys-color-primary); border-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px; border-radius: 8px; padding: 1px 8px; font-size: 12px; font-weight: 500;
+    background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant);
+  }
+  .chip.bad { background: rgba(255, 180, 171, 0.16); color: var(--md-sys-color-error); }
+  .chip.good { background: rgba(166, 217, 168, 0.14); color: var(--md-sys-color-success); }
+  .chip.warn { background: rgba(245, 194, 107, 0.15); color: var(--md-sys-color-warn); }
+
+  .bulk-bar {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(80px); background: #303034; border-radius: 100px; padding: 8px 12px 8px 20px;
+    display: flex; align-items: center; gap: 6px; box-shadow: 0 6px 24px rgba(0,0,0,0.5); opacity: 0; pointer-events: none; z-index: 60;
+    transition: transform 0.25s, opacity 0.25s; max-width: calc(100vw - 24px); overflow-x: auto;
+  }
+  .bulk-bar.show { transform: translateX(-50%) translateY(0); opacity: 1; pointer-events: all; }
+  .bulk-bar .count { font-size: 14px; margin-right: 8px; white-space: nowrap; }
+
+  .more-row { text-align: center; margin-top: 16px; }
+  .empty { text-align: center; color: var(--md-sys-color-on-surface-variant); padding: 48px 0; font-size: 15px; }
+  .notice {
+    background: rgba(245, 194, 107, 0.12); color: var(--md-sys-color-warn); border-radius: 16px; padding: 14px 18px; font-size: 14px; line-height: 1.5; margin-bottom: 16px;
+  }
+  .notice code, .code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 6px; }
+
+  /* ── Settings form ── */
+  .field { margin-bottom: 20px; }
+  .field label.lbl { display: block; font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  .field .hint { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px; line-height: 1.45; }
+  .field .text-input { max-width: 360px; border-radius: 16px; background: var(--md-sys-color-surface-variant); }
+  .check { display: flex; align-items: center; gap: 10px; font-size: 14px; margin: 8px 0; cursor: pointer; }
+  .check input { width: 18px; height: 18px; accent-color: var(--md-sys-color-primary); }
+
+  /* ── Modal ── */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 90; display: none; align-items: center; justify-content: center; padding: 24px; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--md-sys-color-surface); border-radius: 28px; padding: 22px; max-width: 760px; width: 100%; max-height: 86vh; display: flex; flex-direction: column; gap: 14px; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .modal-head h3 { font-size: 16px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .modal-body { overflow: auto; min-height: 0; }
+  .modal-body img { max-width: 100%; max-height: 66vh; display: block; margin: 0 auto; border-radius: 12px; }
+  .modal-body pre { white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant); }
+
+  .toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: #303034;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4); border-radius: 16px; padding: 14px 24px; font-size: 14px; color: #e3e2e6; opacity: 0;
+    transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 120; max-width: calc(100vw - 32px);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 16px 120px; }
+    .row { flex-wrap: wrap; }
+    .row .acts { width: 100%; justify-content: flex-end; }
+    .kind-row { grid-template-columns: 70px 1fr 70px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <div class="header-container">
+      <a href="/admin" class="header-link"><span class="material-symbols-rounded">arrow_back</span>content manager</a>
+      <a href="/files" class="header-link"><span class="material-symbols-rounded">folder</span>my files</a>
+    </div>
+    <h1><span class="material-symbols-rounded">hard_drive</span>storage console</h1>
+    <p>manage the file server: who's using what, review flagged uploads, set limits, and recover deleted files.</p>
+  </header>
+
+  <div id="gate" class="gate"><span class="oe-loading-indicator"></span></div>
+
+  <div id="app" style="display:none;">
+    <nav class="tabs" id="tabs"></nav>
+    <div id="panel"></div>
+  </div>
+</div>
+
+<div class="bulk-bar" id="bulkBar"></div>
+
+<div class="overlay" id="previewOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3 id="previewTitle"></h3><button type="button" class="icon-btn" id="previewClose"><span class="material-symbols-rounded">close</span></button></div>
+    <div class="modal-body" id="previewBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module" data-cfasync="false">
+import { mountTopNav } from './shared/topnav.js?v=35';
+import { SERVER_ENDPOINT, getCurrentUser, onAccountChange, isOwnerEmail } from './shared/account.js?v=36';
+import { mountFooter } from './shared/footer.js?v=5';
+import { createDropdown } from './shared/dropdown.js?v=2';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
+
+mountTopNav();
+mountFooter();
+
+const GB = 1024 ** 3;
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function fmt(n) {
+  n = Number(n) || 0;
+  if (n >= GB) return (n / GB).toFixed(n >= 10 * GB ? 0 : 1) + ' GB';
+  if (n >= 1024 ** 2) return (n / 1024 ** 2).toFixed(n >= 10 * 1024 ** 2 ? 0 : 1) + ' MB';
+  if (n >= 1024) return Math.round(n / 1024) + ' KB';
+  return n + ' B';
+}
+function ago(ts) {
+  if (!ts) return 'never';
+  const s = Math.max(0, (Date.now() - ts) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  if (s < 86400 * 30) return Math.floor(s / 86400) + 'd ago';
+  return new Date(ts).toLocaleDateString();
+}
+function inDays(ts) {
+  const d = Math.ceil((ts - Date.now()) / 86400000);
+  return d <= 0 ? 'soon' : `in ${d}d`;
+}
+let toastTimer;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+async function api(path, method, body) {
+  const user = getCurrentUser();
+  if (!user) throw new Error('sign in first');
+  const token = await user.getIdToken();
+  const res = await fetch(SERVER_ENDPOINT + path, {
+    method: method || 'GET',
+    headers: { Authorization: 'Bearer ' + token, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let data = null;
+  try { data = await res.json(); } catch {}
+  if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
+  return data;
+}
+async function fetchRaw(filename, trash) {
+  const token = await getCurrentUser().getIdToken();
+  const res = await fetch(`${SERVER_ENDPOINT}/admin/raw/${encodeURIComponent(filename)}${trash ? '?trash=1' : ''}`, { headers: { Authorization: 'Bearer ' + token } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res;
+}
+
+// ── Gate: don't decide "signed out" until Firebase Auth has actually resolved ──
+let authKnown = false;
+let started = false;
+function renderGate() {
+  const gate = $('gate');
+  const user = getCurrentUser();
+  if (!authKnown) { gate.innerHTML = '<span class="oe-loading-indicator"></span>'; gate.style.display = ''; $('app').style.display = 'none'; return; }
+  if (!user) { gate.innerHTML = '<span class="material-symbols-rounded">lock</span>sign in to continue.'; gate.style.display = ''; $('app').style.display = 'none'; return; }
+  if (!isOwnerEmail(user.email)) { gate.innerHTML = '<span class="material-symbols-rounded">shield_person</span>this page is for site owners only.'; gate.style.display = ''; $('app').style.display = 'none'; return; }
+  gate.style.display = 'none';
+  $('app').style.display = '';
+  if (!started) { started = true; buildTabs(); showTab(location.hash.slice(1) || 'overview'); refreshBadges(); }
+}
+onAccountChange(() => { authKnown = true; renderGate(); });
+
+// ── Tabs ──
+const TABS = [
+  { id: 'overview', icon: 'dashboard', label: 'overview' },
+  { id: 'users', icon: 'group', label: 'users' },
+  { id: 'files', icon: 'folder', label: 'files' },
+  { id: 'review', icon: 'shield', label: 'review' },
+  { id: 'trash', icon: 'delete', label: 'trash' },
+  { id: 'activity', icon: 'history', label: 'activity' },
+  { id: 'settings', icon: 'tune', label: 'settings' },
+];
+let currentTab = null;
+let reviewCount = 0;
+function buildTabs() {
+  $('tabs').innerHTML = TABS.map(t => `<button type="button" class="tab" data-tab="${t.id}"><span class="material-symbols-rounded">${t.icon}</span>${t.label}<span class="badge" data-badge="${t.id}" style="display:none;"></span></button>`).join('');
+  $('tabs').addEventListener('click', e => {
+    const b = e.target.closest('[data-tab]');
+    if (b) showTab(b.dataset.tab);
+  });
+}
+function setBadge(id, n) {
+  const el = document.querySelector(`[data-badge="${id}"]`);
+  if (!el) return;
+  el.textContent = n;
+  el.style.display = n > 0 ? '' : 'none';
+}
+async function showTab(id, opts) {
+  if (!TABS.some(t => t.id === id)) id = 'overview';
+  currentTab = id;
+  history.replaceState(null, '', '#' + id);
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+  clearSelection();
+  const panel = $('panel');
+  panel.innerHTML = '<div class="empty"><span class="oe-loading-indicator small"></span></div>';
+  try {
+    if (id === 'overview') await renderOverview(panel);
+    else if (id === 'users') await renderUsers(panel);
+    else if (id === 'files') await renderFiles(panel, 'files', opts);
+    else if (id === 'review') await renderFiles(panel, 'review', opts);
+    else if (id === 'trash') await renderTrash(panel);
+    else if (id === 'activity') await renderActivity(panel);
+    else if (id === 'settings') await renderSettings(panel);
+  } catch (err) {
+    if (currentTab !== id) return;
+    panel.innerHTML = `<div class="notice"><b>couldn't reach the file server.</b><br>${esc(err.message)}<br>check that the server and its Cloudflare tunnel are running on the phone.</div><button type="button" class="btn" id="retryBtn"><span class="material-symbols-rounded">refresh</span>retry</button>`;
+    $('retryBtn').onclick = () => showTab(id);
+  }
+}
+// Keeps the red count on the "review" tab fresh regardless of which tab is open.
+async function refreshBadges() {
+  try { const o = await api('/admin/overview'); reviewCount = o.flagged; setBadge('review', o.flagged); } catch {}
+}
+
+// ── Overview ──
+const KIND_LABEL = { image: 'images', video: 'videos', audio: 'audio', document: 'documents', archive: 'archives', code: 'code', other: 'other' };
+async function renderOverview(panel) {
+  const o = await api('/admin/overview');
+  if (currentTab !== 'overview') return;
+  setBadge('review', o.flagged);
+  const diskUsed = o.disk ? o.disk.total - o.disk.free : 0;
+  const diskFrac = o.disk ? diskUsed / o.disk.total : 0;
+  const maxKind = Math.max(1, ...Object.values(o.byKind));
+  const days = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    days.push({ d, n: o.perDay[d] || 0 });
+  }
+  const maxDay = Math.max(1, ...days.map(x => x.n));
+  const mod = o.moderation;
+  panel.innerHTML = `
+    <div class="grid">
+      <div class="card"><h3><span class="material-symbols-rounded">hard_drive</span>phone storage</h3>
+        ${o.disk ? `<div class="big">${fmt(o.disk.free)} <span style="font-size:15px;color:var(--md-sys-color-on-surface-variant)">free</span></div>
+        <div class="bar ${diskFrac > 0.95 ? 'full' : diskFrac > 0.85 ? 'warn' : ''}" style="margin-top:12px;"><span style="width:${(diskFrac * 100).toFixed(1)}%"></span></div>
+        <div class="sub">${fmt(diskUsed)} used of ${fmt(o.disk.total)}</div>` : `<div class="big">—</div><div class="sub">the server couldn't read disk stats</div>`}
+      </div>
+      <div class="card"><h3><span class="material-symbols-rounded">description</span>stored files</h3>
+        <div class="big">${o.files.toLocaleString()}</div><div class="sub">${fmt(o.bytes)} across ${o.users} user${o.users === 1 ? '' : 's'}</div></div>
+      <div class="card"><h3><span class="material-symbols-rounded">shield</span>needs review</h3>
+        <div class="big" style="${o.flagged ? 'color:var(--md-sys-color-error)' : ''}">${o.flagged}</div><div class="sub">${o.quarantined} quarantined</div></div>
+      <div class="card"><h3><span class="material-symbols-rounded">delete</span>in trash</h3>
+        <div class="big">${o.trash.files}</div><div class="sub">${fmt(o.trash.bytes)} recoverable</div></div>
+    </div>
+
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));">
+      <div class="card"><h3><span class="material-symbols-rounded">donut_small</span>by type</h3>
+        ${Object.keys(o.byKind).length ? Object.entries(o.byKind).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
+          `<div class="kind-row"><span>${KIND_LABEL[k] || k}</span><div class="bar"><span style="width:${(v / maxKind * 100).toFixed(1)}%"></span></div><b>${fmt(v)}</b></div>`).join('') : '<div class="sub">nothing uploaded yet</div>'}
+      </div>
+      <div class="card"><h3><span class="material-symbols-rounded">bar_chart</span>uploads, last 14 days</h3>
+        <div class="chart">${days.map(x => `<div class="col" title="${x.d}: ${x.n}"><i style="height:${(x.n / maxDay * 100).toFixed(0)}%"></i></div>`).join('')}</div>
+      </div>
+    </div>
+
+    <div class="card"><h3><span class="material-symbols-rounded">smart_toy</span>AI content moderation</h3>
+      ${mod.configured
+        ? `<div class="big" style="font-size:22px;">${mod.mode === 'off' ? 'off' : 'on — ' + mod.mode}</div>
+           <div class="sub">${mod.queued ? mod.queued + ' file(s) being scanned right now. ' : ''}${o.unscanned} existing image/text file(s) haven't been scanned yet.</div>
+           <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+             <button type="button" class="btn small" id="scanAllBtn" ${o.unscanned && mod.mode !== 'off' ? '' : 'disabled'}><span class="material-symbols-rounded">radar</span>scan existing files</button>
+             <button type="button" class="btn small" id="gotoSettings"><span class="material-symbols-rounded">tune</span>change mode</button>
+           </div>`
+        : `<div class="notice" style="margin:8px 0 0;"><b>not set up yet.</b> the server needs the AI worker's address and secret. see “ai moderation” in <code>forum-server/README.md</code>, then add <code>MODERATION_URL</code> and <code>MODERATION_KEY</code> to the phone's <code>.env</code> and restart the server.</div>`}
+    </div>`;
+  const scan = $('scanAllBtn');
+  if (scan) scan.onclick = async () => {
+    scan.disabled = true;
+    try { const r = await api('/admin/scan-unscanned', 'POST'); toast(`queued ${r.queued} file(s) for scanning`); }
+    catch (err) { toast(err.message); }
+    setTimeout(() => showTab('overview'), 800);
+  };
+  const gs = $('gotoSettings');
+  if (gs) gs.onclick = () => showTab('settings');
+}
+
+// ── Users ──
+async function renderUsers(panel) {
+  const { users, defaultQuotaBytes } = await api('/admin/users');
+  if (currentTab !== 'users') return;
+  panel.innerHTML = `
+    <div class="toolbar">
+      <div class="sub" style="margin:0;flex:1;">default quota: <b>${fmt(defaultQuotaBytes)}</b> per person · owners are unlimited</div>
+      <button type="button" class="btn small" id="addRuleBtn"><span class="material-symbols-rounded">person_add</span>set limits for an email</button>
+    </div>
+    <div class="list" id="userList">${users.length ? users.map(userRow).join('') : '<div class="empty">no users have uploaded anything yet</div>'}</div>`;
+  $('addRuleBtn').onclick = async () => {
+    const email = await oePrompt('email address to set limits for:', { placeholder: 'name@example.com', maxLength: 200 });
+    if (email && email.includes('@')) editQuota(email.trim(), null, defaultQuotaBytes);
+  };
+  $('userList').onclick = e => {
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+    const row = b.closest('[data-email]');
+    const u = users.find(x => x.email === row.dataset.email);
+    const act = b.dataset.act;
+    if (act === 'quota') editQuota(u.email, u.customQuota, defaultQuotaBytes);
+    else if (act === 'suspend') suspendUser(u);
+    else if (act === 'unsuspend') updateUser({ email: u.email, suspended: false }, 'unsuspended ' + u.email);
+    else if (act === 'strikes') updateUser({ email: u.email, resetStrikes: true }, 'cleared strikes');
+    else if (act === 'files') showTab('files', { email: u.email });
+  };
+}
+function userRow(u) {
+  const frac = u.quotaBytes > 0 ? Math.min(u.bytes / u.quotaBytes, 1) : 1;
+  return `<div class="row" data-email="${esc(u.email)}">
+    <div class="thumb"><span class="material-symbols-rounded">person</span></div>
+    <div class="main">
+      <div class="name">${esc(u.email)} ${u.unlimited ? '<span class="chip">owner</span>' : ''}${u.suspended ? ' <span class="chip bad" title="' + esc(u.reason) + '">suspended</span>' : ''}${u.strikes ? ` <span class="chip warn">${u.strikes} strike${u.strikes === 1 ? '' : 's'}</span>` : ''}${u.flagged ? ` <span class="chip bad">${u.flagged} flagged</span>` : ''}</div>
+      <div class="meta">${u.files} file${u.files === 1 ? '' : 's'} · ${fmt(u.bytes)}${u.unlimited ? '' : ` of ${fmt(u.quotaBytes)}${u.customQuota != null ? ' (custom)' : ''}`} · last upload ${ago(u.lastUpload)}</div>
+      ${u.unlimited ? '' : `<div class="bar ${frac >= 1 ? 'full' : frac > 0.85 ? 'warn' : ''}" style="margin-top:8px;max-width:340px;"><span style="width:${(frac * 100).toFixed(1)}%"></span></div>`}
+    </div>
+    <div class="acts">
+      <button type="button" class="icon-btn" data-act="files" title="view their files"><span class="material-symbols-rounded">folder_open</span></button>
+      ${u.unlimited ? '' : `<button type="button" class="icon-btn" data-act="quota" title="set quota"><span class="material-symbols-rounded">data_usage</span></button>`}
+      ${u.strikes ? `<button type="button" class="icon-btn" data-act="strikes" title="clear strikes"><span class="material-symbols-rounded">restart_alt</span></button>` : ''}
+      ${u.unlimited ? '' : u.suspended
+        ? `<button type="button" class="icon-btn" data-act="unsuspend" title="lift suspension"><span class="material-symbols-rounded">lock_open</span></button>`
+        : `<button type="button" class="icon-btn danger" data-act="suspend" title="suspend uploads"><span class="material-symbols-rounded">block</span></button>`}
+    </div>
+  </div>`;
+}
+async function updateUser(body, okMsg) {
+  try { await api('/admin/user', 'POST', body); toast(okMsg); } catch (err) { toast(err.message); }
+  showTab('users');
+}
+async function editQuota(email, current, def) {
+  const val = await oePrompt(`storage limit for ${email}, in GB.\nleave blank to use the default (${fmt(def)}). 0 blocks all uploads.`, {
+    defaultValue: current != null ? String(+(current / GB).toFixed(3)) : '', placeholder: 'e.g. 5',
+  });
+  if (val === null) return;
+  const trimmed = val.trim();
+  let quotaBytes = null;
+  if (trimmed !== '') {
+    const gb = Number(trimmed);
+    if (!Number.isFinite(gb) || gb < 0) { await oeAlert('that isn\'t a valid number of GB.'); return; }
+    quotaBytes = Math.round(gb * GB);
+  }
+  updateUser({ email, quotaBytes }, quotaBytes === null ? `${email} now uses the default quota` : `quota for ${email}: ${fmt(quotaBytes)}`);
+}
+async function suspendUser(u) {
+  const reason = await oePrompt(`suspend uploads for ${u.email}? they'll keep their existing files but can't upload more.\nreason (shown to them):`, { maxLength: 200 });
+  if (reason === null) return;
+  updateUser({ email: u.email, suspended: true, reason }, 'suspended ' + u.email);
+}
+
+// ── Files / review ──
+const fs_ = { files: null, review: null };
+const selected = new Set();
+const thumbCache = new Map();
+const KIND_ICON = { image: 'image', video: 'movie', audio: 'music_note', document: 'description', archive: 'folder_zip', code: 'code', other: 'draft' };
+const PREVIEW_TEXT_KINDS = new Set(['document', 'code']);
+const TEXT_EXT = /\.(txt|md|csv|json|log|xml|ya?ml|ini|cfg|js|ts|py|lua|css|html?|c|cpp|cs|java|go|rs|sh)$/i;
+
+function clearSelection() { selected.clear(); renderBulk(); }
+
+async function renderFiles(panel, mode, opts) {
+  const review = mode === 'review';
+  const st = fs_[mode] = fs_[mode] && !(opts && opts.email) ? fs_[mode] : { q: '', kind: '', status: review ? 'review' : '', sort: 'newest', email: (opts && opts.email) || '', offset: 0, total: 0, files: [] };
+  if (opts && opts.email) st.email = opts.email;
+  st.offset = 0;
+  panel.innerHTML = `
+    ${review ? `<div class="sub" style="margin-bottom:14px;">files the AI flagged, plus anything you quarantined by hand. quarantined files are hidden from the public link until you approve them.</div>` : ''}
+    <div class="toolbar">
+      <div class="grow"><span class="material-symbols-rounded">search</span><input class="text-input" id="fq" placeholder="search name, filename, or owner…" value="${esc(st.q)}"></div>
+      <div id="kindSlot"></div>${review ? '' : '<div id="statusSlot"></div>'}<div id="sortSlot"></div>
+    </div>
+    ${st.email ? `<div style="margin-bottom:12px;"><span class="chip">${st.email === '__anon__' ? 'anonymous uploads' : esc(st.email)}<button type="button" class="icon-btn" id="clearEmail" style="width:20px;height:20px;"><span class="material-symbols-rounded" style="font-size:14px;">close</span></button></span></div>` : ''}
+    <div class="list" id="fileList"></div>
+    <div class="more-row" id="moreRow"></div>`;
+  const reload = () => { st.offset = 0; st.files = []; loadFiles(mode); };
+  const dd = (slot, options, key) => {
+    const d = createDropdown(options, { value: st[key], onChange: v => { st[key] = v; reload(); } });
+    $(slot).appendChild(d.el);
+  };
+  dd('kindSlot', [{ value: '', label: 'all types' }, ...Object.entries(KIND_LABEL).map(([value, label]) => ({ value, label }))], 'kind');
+  if (!review) dd('statusSlot', [
+    { value: '', label: 'any status' }, { value: 'review', label: 'needs review' }, { value: 'quarantined', label: 'quarantined' },
+    { value: 'unscanned', label: 'not scanned' }, { value: 'error', label: 'scan failed' },
+  ], 'status');
+  dd('sortSlot', [{ value: 'newest', label: 'newest' }, { value: 'oldest', label: 'oldest' }, { value: 'size', label: 'largest' }], 'sort');
+  let timer;
+  $('fq').oninput = e => { clearTimeout(timer); timer = setTimeout(() => { st.q = e.target.value.trim(); reload(); }, 300); };
+  const ce = $('clearEmail');
+  if (ce) ce.onclick = () => { st.email = ''; showTab(mode); };
+  await loadFiles(mode);
+}
+
+async function loadFiles(mode) {
+  const st = fs_[mode];
+  const qs = new URLSearchParams({ limit: 40, offset: st.offset, sort: st.sort });
+  if (st.q) qs.set('q', st.q);
+  if (st.kind) qs.set('kind', st.kind);
+  if (st.status) qs.set('status', st.status);
+  if (st.email) qs.set('email', st.email);
+  let data;
+  try { data = await api('/admin/files?' + qs); } catch (err) { toast(err.message); return; }
+  if (currentTab !== mode) return;
+  st.total = data.total;
+  st.files = st.offset ? st.files.concat(data.files) : data.files;
+  if (mode === 'review') { reviewCount = data.total; setBadge('review', data.total); }
+  paintFiles(mode);
+}
+
+function modChip(f) {
+  if (f.quarantined) return '<span class="chip bad"><span class="material-symbols-rounded" style="font-size:14px;">shield_lock</span>quarantined</span>';
+  const s = f.mod && f.mod.status;
+  if (s === 'flagged') return '<span class="chip warn">flagged</span>';
+  if (s === 'approved') return '<span class="chip good">approved</span>';
+  if (s === 'clean') return '<span class="chip good">clean</span>';
+  if (s === 'pending') return '<span class="chip">scanning…</span>';
+  if (s === 'error') return `<span class="chip bad" title="${esc(f.mod.reason)}">scan failed</span>`;
+  if (s === 'skipped') return '<span class="chip">not scannable</span>';
+  return '<span class="chip">unscanned</span>';
+}
+function fileRow(f, mode) {
+  const on = selected.has(f.filename);
+  const cats = f.mod && f.mod.categories && f.mod.categories.length ? f.mod.categories.map(c => c.replace(/_/g, ' ')).join(', ') : '';
+  const canPreview = f.kind === 'image' || (PREVIEW_TEXT_KINDS.has(f.kind) && TEXT_EXT.test(f.name) && f.size < 2 * 1024 * 1024);
+  return `<div class="row${on ? ' selected' : ''}" data-fn="${esc(f.filename)}">
+    <button type="button" class="chk${on ? ' on' : ''}" data-act="sel" title="select"><span class="material-symbols-rounded">check</span></button>
+    <div class="thumb${mode === 'review' && f.kind === 'image' ? ' big-thumb' : ''}" data-thumb="${f.kind === 'image' && f.size < 8 * 1024 * 1024 ? '1' : ''}"><span class="material-symbols-rounded">${KIND_ICON[f.kind] || 'draft'}</span></div>
+    <div class="main">
+      <div class="name" title="${esc(f.name)}">${esc(f.name)}</div>
+      <div class="meta"><span>${f.email ? esc(f.email) : 'anonymous'}</span>·<span>${fmt(f.size)}</span>·<span>${ago(f.mtime)}</span>${f.folder ? `·<span>${esc(f.folder)}</span>` : ''}${modChip(f)}</div>
+      ${(f.mod && (f.mod.status === 'flagged' || (f.quarantined && f.mod.reason))) ? `<div class="reason">${esc(f.mod.reason || '')}${cats ? ` <span class="chip warn">${esc(cats)}</span>` : ''}${f.mod.severity === 'severe' ? ' <span class="chip bad">severe</span>' : ''}</div>` : ''}
+    </div>
+    <div class="acts">
+      ${canPreview ? '<button type="button" class="icon-btn" data-act="preview" title="preview"><span class="material-symbols-rounded">visibility</span></button>' : ''}
+      ${f.quarantined || (f.mod && f.mod.status === 'flagged')
+        ? '<button type="button" class="icon-btn" data-act="release" title="approve — make public again"><span class="material-symbols-rounded">check_circle</span></button>'
+        : '<button type="button" class="icon-btn" data-act="quarantine" title="quarantine — hide from public"><span class="material-symbols-rounded">shield_lock</span></button>'}
+      <button type="button" class="icon-btn danger" data-act="delete" title="move to trash"><span class="material-symbols-rounded">delete</span></button>
+      <button type="button" class="icon-btn danger" data-act="ban" title="delete + ban this exact file"><span class="material-symbols-rounded">gpp_bad</span></button>
+    </div>
+  </div>`;
+}
+function paintFiles(mode) {
+  const st = fs_[mode];
+  const list = $('fileList');
+  if (!list) return;
+  list.innerHTML = st.files.length ? st.files.map(f => fileRow(f, mode)).join('') : `<div class="empty">${mode === 'review' ? 'nothing to review — all clear.' : 'no files match'}</div>`;
+  $('moreRow').innerHTML = st.files.length < st.total ? `<button type="button" class="btn" id="moreBtn">show more (${st.total - st.files.length} left)</button>` : (st.total ? `<div class="sub">${st.total} file${st.total === 1 ? '' : 's'}</div>` : '');
+  const more = $('moreBtn');
+  if (more) more.onclick = () => { st.offset = st.files.length; loadFiles(mode); };
+  list.onclick = e => {
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+    const fn = b.closest('[data-fn]').dataset.fn;
+    const act = b.dataset.act;
+    if (act === 'sel') { toggleSelect(fn); paintSelection(); }
+    else if (act === 'preview') previewFile(st.files.find(x => x.filename === fn));
+    else runFileAction(act, [fn], mode);
+  };
+  loadThumbs(list);
+  renderBulk();
+}
+let thumbObserver;
+function loadThumbs(root) {
+  if (thumbObserver) thumbObserver.disconnect();
+  thumbObserver = new IntersectionObserver(entries => {
+    for (const en of entries) {
+      if (!en.isIntersecting) continue;
+      thumbObserver.unobserve(en.target);
+      const fn = en.target.closest('[data-fn]').dataset.fn;
+      (async () => {
+        try {
+          let url = thumbCache.get(fn);
+          if (!url) { url = URL.createObjectURL(await (await fetchRaw(fn)).blob()); thumbCache.set(fn, url); }
+          en.target.innerHTML = `<img src="${url}" alt="" loading="lazy">`;
+        } catch {}
+      })();
+    }
+  }, { rootMargin: '200px' });
+  root.querySelectorAll('[data-thumb="1"]').forEach(el => thumbObserver.observe(el));
+}
+function toggleSelect(fn) { selected.has(fn) ? selected.delete(fn) : selected.add(fn); renderBulk(); }
+function paintSelection() {
+  document.querySelectorAll('#fileList [data-fn]').forEach(r => {
+    const on = selected.has(r.dataset.fn);
+    r.classList.toggle('selected', on);
+    r.querySelector('.chk').classList.toggle('on', on);
+  });
+}
+function renderBulk() {
+  const bar = $('bulkBar');
+  const inFiles = currentTab === 'files' || currentTab === 'review';
+  if (!selected.size || !inFiles) { bar.classList.remove('show'); return; }
+  bar.innerHTML = `<span class="count">${selected.size} selected</span>
+    <button type="button" class="btn small" data-bulk="quarantine"><span class="material-symbols-rounded">shield_lock</span>quarantine</button>
+    <button type="button" class="btn small" data-bulk="release"><span class="material-symbols-rounded">check_circle</span>approve</button>
+    <button type="button" class="btn small" data-bulk="rescan"><span class="material-symbols-rounded">radar</span>rescan</button>
+    <button type="button" class="btn small danger" data-bulk="delete"><span class="material-symbols-rounded">delete</span>trash</button>
+    <button type="button" class="btn small danger" data-bulk="ban"><span class="material-symbols-rounded">gpp_bad</span>ban</button>
+    <button type="button" class="icon-btn" data-bulk="clear" title="clear selection"><span class="material-symbols-rounded">close</span></button>`;
+  bar.classList.add('show');
+}
+$('bulkBar').addEventListener('click', e => {
+  const b = e.target.closest('[data-bulk]');
+  if (!b) return;
+  if (b.dataset.bulk === 'clear') { clearSelection(); paintSelection(); return; }
+  runFileAction(b.dataset.bulk, [...selected], currentTab);
+});
+
+async function runFileAction(action, filenames, mode) {
+  const n = filenames.length;
+  const plural = n === 1 ? 'this file' : `these ${n} files`;
+  if (action === 'delete' && !(await oeConfirm(`move ${plural} to the trash?`, { danger: true, okLabel: 'move to trash' }))) return;
+  if (action === 'ban' && !(await oeConfirm(`delete ${plural} and ban ${n === 1 ? 'its exact contents' : 'their exact contents'}? any other copy — and any future re-upload — of the same file is removed automatically. this can't be undone from the trash.`, { danger: true, okLabel: 'delete + ban' }))) return;
+  let done = 0; let failed = [];
+  try {
+    for (let i = 0; i < filenames.length; i += 80) {
+      const r = await api('/admin/files/action', 'POST', { action, filenames: filenames.slice(i, i + 80) });
+      done += r.done; failed = failed.concat(r.failed);
+    }
+  } catch (err) { toast(err.message); return; }
+  const verb = { quarantine: 'quarantined', release: 'approved', delete: 'moved to trash', ban: 'banned', rescan: 'queued for rescan' }[action];
+  toast(failed.length ? `${done} ${verb}, ${failed.length} failed: ${failed[0].error}` : `${done} ${verb}`);
+  clearSelection();
+  showTab(mode);
+}
+
+async function previewFile(f) {
+  if (!f) return;
+  $('previewTitle').textContent = f.name;
+  $('previewBody').innerHTML = '<div class="empty"><span class="oe-loading-indicator small"></span></div>';
+  $('previewOverlay').classList.add('open');
+  try {
+    const res = await fetchRaw(f.filename);
+    if (f.kind === 'image') {
+      let url = thumbCache.get(f.filename);
+      if (!url) { url = URL.createObjectURL(await res.blob()); thumbCache.set(f.filename, url); }
+      $('previewBody').innerHTML = `<img src="${url}" alt="">`;
+    } else {
+      // Text only ever goes through textContent — never rendered as HTML, so an
+      // uploaded .html file can't run script in this (signed-in) page.
+      const text = (await res.text()).slice(0, 40000);
+      const pre = document.createElement('pre');
+      pre.textContent = text;
+      $('previewBody').replaceChildren(pre);
+    }
+  } catch (err) { $('previewBody').innerHTML = `<div class="empty">couldn't load preview: ${esc(err.message)}</div>`; }
+}
+$('previewClose').onclick = () => $('previewOverlay').classList.remove('open');
+$('previewOverlay').addEventListener('click', e => { if (e.target === $('previewOverlay')) $('previewOverlay').classList.remove('open'); });
+
+// ── Trash ──
+async function renderTrash(panel) {
+  const { files, retentionDays } = await api('/admin/trash');
+  if (currentTab !== 'trash') return;
+  panel.innerHTML = `
+    <div class="toolbar">
+      <div class="sub" style="margin:0;flex:1;">${retentionDays > 0 ? `deleted files are kept for ${retentionDays} day${retentionDays === 1 ? '' : 's'}, then removed for good.` : 'trash is off — deletes are permanent.'}</div>
+      <button type="button" class="btn small danger" id="emptyTrashBtn" ${files.length ? '' : 'disabled'}><span class="material-symbols-rounded">delete_forever</span>empty trash</button>
+    </div>
+    <div class="list" id="trashList">${files.length ? files.map(f => `
+      <div class="row" data-fn="${esc(f.filename)}">
+        <div class="thumb"><span class="material-symbols-rounded">${KIND_ICON[f.kind] || 'draft'}</span></div>
+        <div class="main">
+          <div class="name" title="${esc(f.name)}">${esc(f.name)}</div>
+          <div class="meta"><span>${f.email ? esc(f.email) : 'anonymous'}</span>·<span>${fmt(f.size)}</span>·<span>deleted ${ago(f.deletedAt)} by ${esc(f.deletedBy || 'system')}</span>·<span>purges ${inDays(f.purgeAt)}</span></div>
+        </div>
+        <div class="acts">
+          <button type="button" class="icon-btn" data-act="restore" title="restore"><span class="material-symbols-rounded">restore_from_trash</span></button>
+          <button type="button" class="icon-btn danger" data-act="purge" title="delete forever"><span class="material-symbols-rounded">delete_forever</span></button>
+        </div>
+      </div>`).join('') : '<div class="empty">trash is empty</div>'}</div>`;
+  const run = async (body, msg) => {
+    try { const r = await api('/admin/trash/action', 'POST', body); toast(r.failed.length ? `${r.done} done, ${r.failed.length} failed: ${r.failed[0].error}` : `${r.done} ${msg}`); }
+    catch (err) { toast(err.message); }
+    showTab('trash');
+  };
+  $('trashList').onclick = async e => {
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+    const fn = b.closest('[data-fn]').dataset.fn;
+    if (b.dataset.act === 'restore') run({ action: 'restore', filenames: [fn] }, 'restored');
+    else if (await oeConfirm('delete this file forever?', { danger: true, okLabel: 'delete forever' })) run({ action: 'purge', filenames: [fn] }, 'deleted');
+  };
+  $('emptyTrashBtn').onclick = async () => {
+    if (await oeConfirm(`permanently delete all ${files.length} file(s) in the trash?`, { danger: true, okLabel: 'empty trash' })) run({ action: 'empty' }, 'deleted');
+  };
+}
+
+// ── Activity ──
+const ACTION_LABEL = {
+  upload: ['upload_file', 'uploaded'], delete: ['delete', 'deleted'], 'delete-permanent': ['delete_forever', 'permanently deleted'], restore: ['restore_from_trash', 'restored'],
+  purge: ['delete_forever', 'purged from trash'], flagged: ['flag', 'AI flagged'], quarantine: ['shield_lock', 'quarantined'], release: ['check_circle', 'approved'],
+  'ban-hash': ['gpp_bad', 'banned file'], 'unban-hash': ['gpp_good', 'unbanned file'], 'blocked-hash-upload': ['block', 'blocked a banned re-upload'],
+  'user-update': ['manage_accounts', 'updated user'], 'auto-suspend': ['lock', 'auto-suspended'], 'settings-update': ['tune', 'changed settings'], 'scan-unscanned': ['radar', 'queued scans'],
+};
+let activityFilter = '';
+async function renderActivity(panel) {
+  const { entries } = await api('/admin/audit?limit=200' + (activityFilter ? '&action=' + encodeURIComponent(activityFilter) : ''));
+  if (currentTab !== 'activity') return;
+  panel.innerHTML = `<div class="toolbar"><div id="actSlot"></div></div><div class="list">${entries.length ? entries.map(en => {
+    const [icon, label] = ACTION_LABEL[en.action] || ['bolt', en.action];
+    const d = en.detail || {};
+    const bits = [d.name, d.email && d.email !== en.actor ? d.email : '', d.size ? fmt(d.size) : '', d.categories && d.categories.length ? d.categories.join(', ').replace(/_/g, ' ') : '', d.removed ? d.removed + ' copies removed' : '',
+      d.quotaBytes !== undefined ? 'quota ' + (typeof d.quotaBytes === 'number' ? fmt(d.quotaBytes) : d.quotaBytes) : '', d.suspended !== undefined ? (d.suspended ? 'suspended' : 'unsuspended') : ''].filter(Boolean);
+    return `<div class="row"><div class="thumb"><span class="material-symbols-rounded">${icon}</span></div><div class="main">
+      <div class="name">${esc(en.actor)} <span style="color:var(--md-sys-color-on-surface-variant)">${esc(label)}</span> ${en.target ? `<span style="color:var(--md-sys-color-on-surface-variant)">${esc(String(en.target).length > 40 ? String(en.target).slice(0, 40) + '…' : en.target)}</span>` : ''}</div>
+      <div class="meta"><span>${ago(en.t)}</span>${bits.length ? '·<span>' + esc(bits.join(' · ')) + '</span>' : ''}</div></div></div>`;
+  }).join('') : '<div class="empty">no activity recorded yet</div>'}</div>`;
+  const opts = [{ value: '', label: 'all activity' }, ...['upload', 'delete', 'flagged', 'quarantine', 'release', 'ban-hash', 'user-update', 'auto-suspend', 'settings-update'].map(v => ({ value: v, label: ACTION_LABEL[v][1] }))];
+  $('actSlot').appendChild(createDropdown(opts, { value: activityFilter, onChange: v => { activityFilter = v; showTab('activity'); } }).el);
+}
+
+// ── Settings ──
+async function renderSettings(panel) {
+  const { settings: s, blockedHashes, moderationConfigured } = await api('/admin/settings');
+  if (currentTab !== 'settings') return;
+  panel.innerHTML = `
+    ${moderationConfigured ? '' : '<div class="notice"><b>AI moderation isn\'t connected.</b> the mode below only takes effect once <code>MODERATION_URL</code> and <code>MODERATION_KEY</code> are set in the server\'s <code>.env</code> (see <code>forum-server/README.md</code>).</div>'}
+    <div class="card" style="margin-bottom:16px;">
+      <div class="field"><label class="lbl">default storage per person (GB)</label><div class="hint">applies to everyone without a custom limit. owners are always unlimited.</div>
+        <input class="text-input" id="setQuota" type="number" min="0" step="0.5" value="${+(s.defaultQuotaBytes / GB).toFixed(3)}"></div>
+      <div class="field"><label class="lbl">AI moderation</label><div class="hint"><b>quarantine</b> hides flagged files from the public link until you approve them · <b>flag</b> only marks them for review · <b>off</b> skips scanning. images and text files are scanned; videos, PDFs and archives currently aren't.</div>
+        <div id="modSlot"></div>
+        <label class="check"><input type="checkbox" id="setImages" ${s.moderation.scanImages ? 'checked' : ''}>scan images</label>
+        <label class="check"><input type="checkbox" id="setText" ${s.moderation.scanText ? 'checked' : ''}>scan text files</label></div>
+      <div class="field"><label class="lbl">auto-suspend after N flagged uploads</label><div class="hint">0 = never suspend automatically. you can always suspend by hand from the users tab.</div>
+        <input class="text-input" id="setStrikes" type="number" min="0" max="100" step="1" value="${s.autoSuspendStrikes}"></div>
+      <div class="field"><label class="lbl">blocked file types</label><div class="hint">comma-separated extensions non-owners can't upload.</div>
+        <input class="text-input" id="setExts" style="max-width:none;" value="${esc(s.blockedExtensions.join(', '))}"></div>
+      <div class="field"><label class="lbl">keep deleted files for (days)</label><div class="hint">deleted files sit in the trash this long so mistakes can be undone. 0 = delete immediately and permanently.</div>
+        <input class="text-input" id="setTrash" type="number" min="0" max="365" step="1" value="${s.trashRetentionDays}"></div>
+      <button type="button" class="btn primary" id="saveSettings"><span class="material-symbols-rounded">save</span>save settings</button>
+    </div>
+    <div class="section-title">banned files (${blockedHashes.length})</div>
+    <div class="list">${blockedHashes.length ? blockedHashes.map(h => `
+      <div class="row" data-sha="${esc(h.sha256)}"><div class="thumb"><span class="material-symbols-rounded">gpp_bad</span></div>
+        <div class="main"><div class="name">${esc(h.name || 'unnamed file')}</div><div class="meta"><span class="code">${esc(h.sha256.slice(0, 16))}…</span>·<span>banned ${ago(h.at)} by ${esc(h.by || '?')}</span>${h.reason ? '·<span>' + esc(h.reason) + '</span>' : ''}</div></div>
+        <div class="acts"><button type="button" class="icon-btn" data-act="unban" title="allow this file again"><span class="material-symbols-rounded">undo</span></button></div></div>`).join('') : '<div class="empty" style="padding:24px 0;">nothing banned</div>'}</div>`;
+  const modDd = createDropdown([{ value: 'quarantine', label: 'quarantine flagged files' }, { value: 'flag', label: 'flag for review only' }, { value: 'off', label: 'off' }], { value: s.moderation.mode });
+  $('modSlot').appendChild(modDd.el);
+  $('saveSettings').onclick = async () => {
+    try {
+      await api('/admin/settings', 'PUT', {
+        defaultQuotaBytes: Math.round(Number($('setQuota').value) * GB),
+        moderation: { mode: modDd.getValue(), scanImages: $('setImages').checked, scanText: $('setText').checked },
+        autoSuspendStrikes: Number($('setStrikes').value),
+        blockedExtensions: $('setExts').value.split(',').map(x => x.trim()).filter(Boolean),
+        trashRetentionDays: Number($('setTrash').value),
+      });
+      toast('settings saved');
+    } catch (err) { toast(err.message); }
+  };
+  panel.onclick = async e => {
+    const b = e.target.closest('[data-act="unban"]');
+    if (!b) return;
+    try { await api('/admin/unban-hash', 'POST', { sha256: b.closest('[data-sha]').dataset.sha }); toast('file unbanned'); } catch (err) { toast(err.message); }
+    showTab('settings');
+  };
+}
+
+// Keep the review badge fresh when the tab regains focus (e.g. after uploads elsewhere).
+document.addEventListener('visibilitychange', () => { if (!document.hidden && started) refreshBadges(); });
+window.addEventListener('hashchange', () => { const id = location.hash.slice(1); if (started && id !== currentTab) showTab(id); });
+</script>
+</body>
+</html>

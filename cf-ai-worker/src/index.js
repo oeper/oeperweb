@@ -511,6 +511,112 @@ async function handleChat(request, env) {
   });
 }
 
+// ── Content moderation for the file server ─────────────────────────────
+// Called server-to-server by forum-server/storage-admin.js after each
+// upload — never from a browser (no CORS headers on purpose), and gated by a
+// shared secret (MODERATION_KEY, set with `wrangler secret put MODERATION_KEY`)
+// so it can't be used as a free general-purpose classifier by anyone who
+// finds the URL. Text goes to Llama Guard (a purpose-built safety
+// classifier); images go to the same vision-capable model the chat uses,
+// with a strict JSON-only prompt. Returns { flagged, categories, severity, reason }.
+const TEXT_GUARD_MODEL = '@cf/meta/llama-guard-3-8b';
+const MOD_CATEGORIES = ['nudity_or_sexual', 'sexual_minors', 'graphic_violence', 'hate_or_harassment', 'self_harm', 'illegal_activity', 'weapons', 'spam_or_scam', 'personal_data'];
+const GUARD_CATEGORY_MAP = {
+  S1: 'violent_crime', S2: 'nonviolent_crime', S3: 'sex_crime', S4: 'sexual_minors', S5: 'defamation',
+  S6: 'specialized_advice', S7: 'privacy', S8: 'intellectual_property', S9: 'weapons', S10: 'hate_or_harassment',
+  S11: 'self_harm', S12: 'sexual_content', S13: 'elections', S14: 'code_interpreter_abuse',
+};
+// Only these Llama Guard categories count as a reason to flag — the advice,
+// IP, and elections categories are far too noisy for a file host.
+const GUARD_FLAG = new Set(['S1', 'S3', 'S4', 'S9', 'S10', 'S11', 'S12']);
+const SEVERE = new Set(['sexual_minors', 'sex_crime']);
+
+function aiText(out) {
+  if (!out) return '';
+  if (typeof out === 'string') return out;
+  if (typeof out.response === 'string') return out.response;
+  const c = out.choices && out.choices[0];
+  if (c && c.message && typeof c.message.content === 'string') return c.message.content;
+  return '';
+}
+
+async function moderateText(env, text) {
+  const out = await env.AI.run(TEXT_GUARD_MODEL, {
+    messages: [{ role: 'user', content: String(text).slice(0, 12000) }],
+  });
+  // Newer bindings return { response: { safe, categories } }, older ones the
+  // raw "safe" / "unsafe\nS1,S9" string — handle both.
+  let safe = true;
+  let cats = [];
+  const r = out && out.response;
+  if (r && typeof r === 'object') {
+    safe = r.safe !== false;
+    cats = Array.isArray(r.categories) ? r.categories : [];
+  } else {
+    const raw = aiText(out).trim();
+    safe = !/^unsafe/i.test(raw);
+    cats = raw.match(/S\d{1,2}/g) || [];
+  }
+  const flaggedCats = cats.filter(c => GUARD_FLAG.has(c));
+  const flagged = !safe && flaggedCats.length > 0;
+  const names = flaggedCats.map(c => GUARD_CATEGORY_MAP[c] || c);
+  return {
+    flagged,
+    categories: names,
+    severity: names.some(n => SEVERE.has(n)) ? 'severe' : (flagged ? 'moderate' : 'none'),
+    reason: flagged ? 'Text matched: ' + names.join(', ') : '',
+  };
+}
+
+const IMAGE_MOD_PROMPT =
+  'You are a content-safety classifier for a file-hosting service. Look at the image and decide whether it clearly ' +
+  'contains any of these: ' + MOD_CATEGORIES.join(', ') + '. ' +
+  'Ordinary photos, art, memes, screenshots, and game footage are fine — only flag content that clearly violates. ' +
+  'Reply with ONLY a JSON object, no prose, no code fences: ' +
+  '{"flagged": boolean, "categories": [strings from the list], "severity": "none"|"moderate"|"severe", "reason": "one short sentence"}';
+
+async function moderateImage(env, dataUrl) {
+  const out = await env.AI.run(MODEL, {
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: IMAGE_MOD_PROMPT },
+        { type: 'image_url', image_url: { url: dataUrl } },
+      ],
+    }],
+    max_tokens: MAX_TOKENS,
+  });
+  const raw = aiText(out);
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('Moderation model returned no JSON');
+  let parsed;
+  try { parsed = JSON.parse(m[0]); } catch { throw new Error('Moderation model returned invalid JSON'); }
+  const cats = Array.isArray(parsed.categories) ? parsed.categories.filter(c => MOD_CATEGORIES.includes(c)) : [];
+  const flagged = parsed.flagged === true && cats.length > 0;
+  return {
+    flagged,
+    categories: cats,
+    severity: !flagged ? 'none' : (cats.includes('sexual_minors') || parsed.severity === 'severe' ? 'severe' : 'moderate'),
+    reason: flagged ? String(parsed.reason || '').slice(0, 300) : '',
+  };
+}
+
+async function handleModerate(request, env) {
+  if (!env.MODERATION_KEY) return json({ error: 'Moderation is not configured (MODERATION_KEY secret missing)' }, 503, request);
+  if (request.headers.get('X-Moderation-Key') !== env.MODERATION_KEY) return json({ error: 'Forbidden' }, 403, request);
+  let body;
+  try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400, request); }
+  try {
+    if (body.type === 'text' && typeof body.text === 'string') return json(await moderateText(env, body.text), 200, request);
+    if (body.type === 'image' && typeof body.image === 'string' && body.image.startsWith('data:image/')) {
+      return json(await moderateImage(env, body.image), 200, request);
+    }
+  } catch (err) {
+    return json({ error: err.message }, 502, request);
+  }
+  return json({ error: 'Expected { type: "text", text } or { type: "image", image: <data URL> }' }, 400, request);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -535,6 +641,10 @@ export default {
     // config/aiModels if you ever want to offer a choice.
     if (url.pathname === '/api/models' && request.method === 'GET') {
       return json({ models: [] }, 200, request);
+    }
+
+    if (url.pathname === '/api/moderate' && request.method === 'POST') {
+      return handleModerate(request, env);
     }
 
     if (url.pathname === '/api/chat' && request.method === 'POST') {

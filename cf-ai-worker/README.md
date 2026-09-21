@@ -114,3 +114,18 @@ actual AI service, not a local model) — useful for testing changes to
   time variance, not a stuck request; the client (`ai.html`) only aborts on
   45 seconds of total silence, not total duration, and tokens keep
   trickling in throughout in every case tested.
+
+## Content moderation endpoint (`POST /api/moderate`)
+
+Used by the file server (`forum-server/storage-admin.js`) to scan uploads —
+text through Llama Guard, images through the chat model. It's server-to-server
+only (no CORS headers) and requires an `X-Moderation-Key` header matching the
+`MODERATION_KEY` Worker secret:
+
+```bash
+npx wrangler secret put MODERATION_KEY
+npx wrangler deploy
+```
+
+Without that secret the endpoint returns 503. See "Storage console" in
+`forum-server/README.md` for the matching server-side `.env` setup.

@@ -169,6 +169,10 @@
 
   .stats { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 24px; padding-left: 4px; display: flex; gap: 16px; flex-wrap: wrap; }
   .stats strong { color: var(--md-sys-color-primary); font-weight: 500; }
+  .quota-stats { display: inline-flex; align-items: center; gap: 10px; }
+  .quota-track { width: 120px; height: 6px; border-radius: 3px; background: var(--md-sys-color-surface-variant); overflow: hidden; }
+  .quota-fill { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--md-sys-color-primary); transition: width 0.4s; }
+  .quota-fill.near-full { background: var(--md-sys-color-error); }
 
   /* Drag-and-drop upload — a full-page overlay shown only while a file drag
      is over the window, per document-level dragenter/dragleave counting
@@ -402,6 +406,7 @@
   <div class="stats" id="stats" style="display:none;">
     <span>total: <strong id="visibleCount">0</strong> items</span>
     <span id="storageStats" style="display:none;"><strong id="storageUsed">0 B</strong> used across <strong id="storageFileCount">0</strong> files</span>
+    <span id="quotaStats" class="quota-stats" style="display:none;"><span class="quota-track"><span class="quota-fill" id="quotaFill"></span></span><span id="quotaText"></span></span>
   </div>
 
   <div class="file-list" id="fileList"></div>
@@ -490,6 +495,7 @@ const ANON_MAX_FILES = Infinity;
 
 let files = [];
 let folders = []; // { email, path }[]
+let usage = null; // { used, limit } for the signed-in account; limit null = unlimited (owners)
 let scope = 'mine'; // 'mine' | 'all' (owners only)
 let currentFolder = ''; // path within the space currently being browsed
 let currentOwnerEmail = null; // scope 'all' only: null = "pick a user" screen, else whose space we're in
@@ -818,6 +824,19 @@ onAccountChange(user => {
   }
 });
 
+// Quota bar — only for your own space, and only when the server reports a
+// limit (owners are unlimited, so they just see the plain used/file-count line).
+function renderQuota() {
+  const el = document.getElementById('quotaStats');
+  if (!usage || usage.limit == null || !isOwnSpace()) { el.style.display = 'none'; return; }
+  const frac = usage.limit > 0 ? Math.min(usage.used / usage.limit, 1) : 1;
+  const fill = document.getElementById('quotaFill');
+  fill.style.width = (frac * 100) + '%';
+  fill.classList.toggle('near-full', frac >= 0.9);
+  document.getElementById('quotaText').textContent = `${formatSize(usage.used)} of ${formatSize(usage.limit)}`;
+  el.style.display = '';
+}
+
 async function loadList() {
   const user = getCurrentUser();
   if (!user) return;
@@ -835,10 +854,12 @@ async function loadList() {
     const data = await res.json();
     files = data.files || [];
     folders = data.folders || [];
+    usage = data.usage || null;
   } catch (err) {
     showToast('could not load files: ' + err.message);
     files = [];
     folders = [];
+    usage = null;
   }
   render();
 }
@@ -946,6 +967,7 @@ function render() {
   } else {
     storageStatsEl.style.display = 'none';
   }
+  renderQuota();
 
   const totalEmpty = folderChildren.length === 0 && filesHere.length === 0;
   empty.style.display = totalEmpty ? 'block' : 'none';
@@ -1097,7 +1119,7 @@ function buildFileTile(f) {
     </div>
     <div class="file-tile-info">
       <div class="file-tile-name" title="${escHtml(f.name)}">${escHtml(f.name)}</div>
-      <div class="file-tile-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.expiresAt ? ` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
+      <div class="file-tile-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.quarantined ? ' · <span class="temp-tag">under review</span>' : ''}${f.expiresAt ?` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
     </div>
   `;
 
@@ -1165,7 +1187,7 @@ function buildCard(f) {
     ${thumbHtml}
     <div class="file-main">
       <div class="file-name">${escHtml(f.name)}</div>
-      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.untracked ? ' · unknown owner' : ''}${f.expiresAt ? ` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
+      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.untracked ? ' · unknown owner' : ''}${f.quarantined ? ' · <span class="temp-tag" title="an automatic check flagged this file, so it isn\'t publicly viewable until an owner reviews it">under review</span>' : ''}${f.expiresAt ?` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
       ${isAudio(f.name) ? `<audio class="file-audio-player" controls preload="metadata" src="${f.url}"></audio>` : ''}
     </div>
     <div class="file-actions" draggable="false">
@@ -1336,10 +1358,17 @@ async function uploadFilesTo(picked) {
       firstError = firstError || `${file.name}: must be under ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024 / 1024)}GB`;
       continue;
     }
+    // Quota pre-check so an obviously-too-big file fails instantly instead of
+    // after streaming the whole thing (the server enforces it regardless).
+    if (!owner && usage && usage.limit != null && usage.used + file.size > usage.limit) {
+      firstError = firstError || `${file.name}: not enough storage (${formatSize(Math.max(0, usage.limit - usage.used))} left)`;
+      continue;
+    }
     showUploadProgress('upload', picked.length > 1 ? `uploading ${file.name} (${i + 1}/${picked.length})…` : `uploading ${file.name}…`);
     try {
       await uploadFile(file, '/upload-file', currentFolder ? { folder: currentFolder } : undefined, frac => updateUploadProgress('upload', frac), file.name);
       uploaded++;
+      if (usage) usage.used += file.size;
       if (!owner && file.size > SIGNED_IN_PERMANENT_BYTES) temporaryCount++;
     } catch (err) {
       // Cancelling one file (from the upload widget's own cancel button)

@@ -5,3 +5,7 @@ file-owners.json
 anon-uploads.json
 user-folders.json
 .env
+storage-settings.json
+user-settings.json
+trash.json
+audit-log.jsonl*
