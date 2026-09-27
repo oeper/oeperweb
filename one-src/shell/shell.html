@@ -213,9 +213,13 @@ async function openFromHash() {
   if (window.ONE_CLOUD && window.ONE_CLOUD.enabled()) await window.ONE_CLOUD.syncAll();
   await loadFiles();
   if (!byId[app]) return;
-  if (files.some(f => f.app === app && String(f.id) === id)) openApp(app, { type:'open', id });
-  else if (window.ONE_CLOUD && !window.ONE_CLOUD.enabled()) { ONE.toast('Turn on “Save my files to my oeper.dev account” to open files from your account here.'); window.ONE_CLOUD.openSettings(); }
-  else ONE.toast('That file isn’t on this device yet. Sign in and check Settings, then try again.');
+  if (files.some(f => f.app === app && String(f.id) === id)) return openApp(app, { type:'open', id });
+  // Not on this device yet (cloud saving is off, or it hasn't synced): pull just this file from the account and open it.
+  if (window.ONE_CLOUD && await window.ONE_CLOUD.fetchOne(app, id)) {
+    await loadFiles();
+    if (files.some(f => f.app === app && String(f.id) === id)) return openApp(app, { type:'open', id });
+  }
+  ONE.toast('That file couldn’t be found in your oeper.dev account.');
 }
 addEventListener('hashchange', openFromHash);
 openFromHash();

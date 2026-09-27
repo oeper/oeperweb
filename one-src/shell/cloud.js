@@ -148,6 +148,32 @@ async function syncAll() {
   return running;
 }
 
+/* ---------- open ONE document from the account (links from oeper.dev/files) ----------
+   Works whether or not cloud saving is turned on: opening a file from your account is an explicit ask,
+   so fetch just that document into this browser instead of requiring "Save my files to my account". */
+const localHas = (app, id) => app === 'pdf' ? null : localStorage.getItem(LOCAL[app].doc + id) !== null;
+async function fetchOne(app, id) {
+  if (!ID_RE.test(id) || !(app === 'pdf' || LOCAL[app])) return false;
+  if (!getCurrentUser()) { try { await signIn(); } catch {} }
+  if (!getCurrentUser()) { ONE.toast('Sign in to open files from your oeper.dev account.'); return false; }
+  const state = store.get(STATE, {});
+  try {
+    if (app === 'pdf') {
+      const db = await pdfDB(); if (!db) return false;
+      try {
+        const r = await api('/one-sync/pdf'); if (!r.ok) throw new Error((await jsonOr(r)).error || 'Server said ' + r.status);
+        const R = ((await r.json()).docs || []).find(d => String(d.id) === id); if (!R) return false;
+        await pdfDown(db, id, R, state);
+      } finally { db.close(); }
+    } else {
+      await download(app, id, state);
+      if (!localHas(app, id)) return false;
+    }
+    store.set(STATE, state);
+    return true;
+  } catch (err) { ONE.toast('Couldn’t open that file: ' + (err.message || err)); return false; }
+}
+
 /* ---------- when to sync ---------- */
 let t; const soon = (ms = 2500) => { clearTimeout(t); t = setTimeout(syncAll, ms); };
 addEventListener('storage', e => { if (e.key && /^(ow|os|op|oi)-(doc|lib)/.test(e.key)) soon(); });
@@ -211,7 +237,7 @@ function openSettings() {
     } }].filter(Boolean) });
 }
 
-window.ONE_CLOUD = { ready, syncAll, openSettings, enabled:() => settings().enabled, isSynced:(app, id) => app + ':' + id in store.get(STATE, {}),
+window.ONE_CLOUD = { ready, syncAll, fetchOne, openSettings, enabled:() => settings().enabled, isSynced:(app, id) => app + ':' + id in store.get(STATE, {}),
   account:() => acct,
   onAccount:cb => { acctListeners.add(cb); cb(acct); return () => acctListeners.delete(cb); },
   signIn:async () => { try { await signIn(); } catch { ONE.toast('Sign-in didn’t finish.'); } },
