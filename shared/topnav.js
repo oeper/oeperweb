@@ -328,10 +328,6 @@ function injectStyles() {
       transition: background-color 0.15s;
     }
     .oe-create-item:last-child { margin-bottom: 0; }
-    .oe-create-label {
-      font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px;
-      color: var(--md-sys-color-on-surface-variant); padding: 10px 8px 6px;
-    }
     .oe-create-item:visited { color: var(--md-sys-color-on-surface); }
     .oe-create-item:hover, .oe-create-item:active { background-color: var(--md-sys-color-hover-surface); }
     .oe-create-item .material-symbols-rounded { font-size: 22px; color: var(--md-sys-color-primary); }
@@ -496,12 +492,7 @@ export function mountTopNav(container) {
       <a href="/videos" class="oe-create-item"><span class="material-symbols-rounded">smart_display</span>new video</a>
       <a href="/files" class="oe-create-item"><span class="material-symbols-rounded">folder</span>new file</a>
       <a href="/credits" class="oe-create-item"><span class="material-symbols-rounded">${CREDITS_ICON}</span>credits</a>
-      <div class="oe-create-label">tools</div>
-      <a href="/composer" class="oe-create-item"><span class="material-symbols-rounded">piano</span>music composer</a>
-      <a href="/one" class="oe-create-item"><span class="material-symbols-rounded">apps</span>one</a>
-      <a href="/qrmaker" class="oe-create-item"><span class="material-symbols-rounded">qr_code_2</span>QR maker</a>
-      <a href="/chess" class="oe-create-item"><span class="material-symbols-rounded">chess</span>chess</a>
-      <a href="/tools" class="oe-create-item"><span class="material-symbols-rounded">build</span>all tools</a>
+      <a href="/tools" class="oe-create-item"><span class="material-symbols-rounded">build</span>tools</a>
     </div>
     <div class="oe-profile-menu-sheet" id="oeProfileMenuSheet">
       <a href="/settings" class="oe-create-item"><span class="material-symbols-rounded">settings</span>settings</a>
