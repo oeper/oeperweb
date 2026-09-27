@@ -31,6 +31,14 @@ export const LOGO_SVG = `<svg viewBox="0 0 98 118" fill="currentColor" xmlns="ht
 export const HIDDEN_PAGES = [
   { keywords: ['leaderboard', 'leaderboards', 'rankings', 'ranking', 'most viewed', 'most liked', 'most followed', 'karma'], name: 'leaderboard', url: '/leaderboard', icon: 'leaderboard' },
   { keywords: ['chess', 'chess game', 'play chess', 'checkmate'], name: 'chess', url: '/chess', icon: 'chess' },
+  // The tools (/tools) — every one of them is reachable by search, not just
+  // through the tools page or the mobile Create menu.
+  { keywords: ['tools', 'utilities', 'utility'], name: 'tools', url: '/tools', icon: 'build' },
+  { keywords: ['music composer', 'composer', 'melody', 'melody maker', 'music maker', 'piano'], name: 'music composer', url: '/composer', icon: 'piano' },
+  { keywords: ['one', 'office', 'office suite', 'oneword', 'onesheet', 'oneslide', 'oneidea', 'onepdf', 'word', 'docs', 'documents', 'spreadsheet', 'spreadsheets', 'sheets', 'excel', 'slides', 'presentation', 'powerpoint', 'pdf editor', 'edit pdf', 'annotate pdf'], name: 'one', url: '/one', icon: 'apps' },
+  { keywords: ['qr', 'qr code', 'qr codes', 'qr maker', 'qr generator', 'qrcode'], name: 'QR maker', url: '/qrmaker', icon: 'qr_code_2' },
+  { keywords: ['pdf combiner', 'combine pdf', 'combine pdfs', 'merge pdf', 'merge pdfs', 'pdf merge', 'join pdf'], name: 'PDF combiner', url: '/pdfcombiner', icon: 'merge' },
+  { keywords: ['pdf splitter', 'split pdf', 'split pdfs', 'split pdf by size', 'pdf split'], name: 'PDF splitter', url: '/pdfsplitbysize', icon: 'call_split' },
 ];
 export function hiddenPageRank(page, q) {
   let best = -1;
@@ -320,6 +328,10 @@ function injectStyles() {
       transition: background-color 0.15s;
     }
     .oe-create-item:last-child { margin-bottom: 0; }
+    .oe-create-label {
+      font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px;
+      color: var(--md-sys-color-on-surface-variant); padding: 10px 8px 6px;
+    }
     .oe-create-item:visited { color: var(--md-sys-color-on-surface); }
     .oe-create-item:hover, .oe-create-item:active { background-color: var(--md-sys-color-hover-surface); }
     .oe-create-item .material-symbols-rounded { font-size: 22px; color: var(--md-sys-color-primary); }
@@ -484,6 +496,12 @@ export function mountTopNav(container) {
       <a href="/videos" class="oe-create-item"><span class="material-symbols-rounded">smart_display</span>new video</a>
       <a href="/files" class="oe-create-item"><span class="material-symbols-rounded">folder</span>new file</a>
       <a href="/credits" class="oe-create-item"><span class="material-symbols-rounded">${CREDITS_ICON}</span>credits</a>
+      <div class="oe-create-label">tools</div>
+      <a href="/composer" class="oe-create-item"><span class="material-symbols-rounded">piano</span>music composer</a>
+      <a href="/one" class="oe-create-item"><span class="material-symbols-rounded">apps</span>one</a>
+      <a href="/qrmaker" class="oe-create-item"><span class="material-symbols-rounded">qr_code_2</span>QR maker</a>
+      <a href="/chess" class="oe-create-item"><span class="material-symbols-rounded">chess</span>chess</a>
+      <a href="/tools" class="oe-create-item"><span class="material-symbols-rounded">build</span>all tools</a>
     </div>
     <div class="oe-profile-menu-sheet" id="oeProfileMenuSheet">
       <a href="/settings" class="oe-create-item"><span class="material-symbols-rounded">settings</span>settings</a>
