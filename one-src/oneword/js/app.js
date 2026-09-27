@@ -387,6 +387,7 @@ $('#openInput').addEventListener('change', async e => {
   const name = f.name.replace(/\.[^.]+$/, '');
   try {
     let html;
+    if (/\.(oneword|json)$/i.test(f.name)) { const d = JSON.parse(await f.text()); if (typeof d.html !== 'string') throw new Error('not a oneWord file'); d.id = ONE.uid(); openDoc(d); ONE.toast(`Opened ${f.name}.`); return; }
     if (/\.docx$/i.test(f.name)) { ONE.toast('Opening Word document…'); const m = await loadMammoth(); const r = await m.convertToHtml({ arrayBuffer:await f.arrayBuffer() }); html = W.sanitize(r.value); }
     else { const text = await f.text(); html = /\.html?$/i.test(f.name) ? W.sanitize(text) : /\.(md|markdown)$/i.test(f.name) ? mdToHtml(text) : text.split(/\r?\n/).map(l => `<p>${esc(l) || '<br>'}</p>`).join(''); }
     openDoc(W.newDoc(html || '<p><br></p>', name)); ONE.toast(`Opened ${f.name}.`);

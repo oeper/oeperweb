@@ -283,6 +283,7 @@ $('#openInput').addEventListener('change', async e => {
         (ws['!cols'] || []).forEach((c, i) => { if (c && (c.wpx || c.wch)) s.colW[i] = Math.round(c.wpx || c.wch * 7.5); });
         return s; });
       if (!wb.sheets.length) wb.sheets = [X.newSheet('Sheet1')];
+    } else if (/\.onesheet$/i.test(f.name) || (/\.json$/i.test(f.name) && /"sheets"\s*:\s*\[/.test(await f.slice(0, 4000).text()))) { wb = JSON.parse(await f.text()); if (!Array.isArray(wb.sheets)) throw new Error('not a oneSheet file'); wb.id = ONE.uid();
     } else if (/\.json$/i.test(f.name)) { const data = JSON.parse(await f.text()); const arr = Array.isArray(data) ? data : [data]; const keys = [...new Set(arr.flatMap(o => Object.keys(o || {})))]; wb = fromRows(base, [keys, ...arr.map(o => keys.map(k => typeof o[k] === 'object' ? JSON.stringify(o[k]) : o[k]))]); }
     else { const t = await f.text(); const d = /\.tsv$/i.test(f.name) || (t.split('\n')[0].split('\t').length > t.split('\n')[0].split(',').length) ? '\t' : ','; wb = fromRows(base, parseCSV(t, d), base.slice(0, 31)); }
     X.openBook(wb); ONE.backstage.close(); ONE.toast(`Opened ${f.name}.`);

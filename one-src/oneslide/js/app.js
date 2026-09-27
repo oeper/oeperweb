@@ -234,7 +234,7 @@ $('#openInput').addEventListener('change', async e => {
       }
       if (!d.slides.length) throw new Error('empty');
       openDeck(d); ONE.toast(`Imported the text and notes of ${d.slides.length} slides from ${f.name}. Pictures and layouts aren’t imported.`);
-    } else if (/\.json$/i.test(f.name)) { const d = JSON.parse(await f.text()); if (!d.slides) throw new Error('bad'); d.id = ONE.uid(); openDeck(d); }
+    } else if (/\.(json|oneslide)$/i.test(f.name)) { const d = JSON.parse(await f.text()); if (!d.slides) throw new Error('bad'); d.id = ONE.uid(); openDeck(d); }
     else { const d = S.newDeck(base); d.slides = []; S.deck = d; S.cur = -1; const n = S.outlineToSlides(await f.text()); if (!n) throw new Error('empty'); openDeck(S.deck); }
   } catch (err) { console.error(err); ONE.toast('Couldn’t open that file.'); }
 });

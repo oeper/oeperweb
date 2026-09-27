@@ -257,7 +257,7 @@ $('#openInput').addEventListener('change', async e => {
   for (const f of files) {
     try {
       const txt = await f.text(), base = f.name.replace(/\.[^.]+$/, '');
-      if (/\.json$/i.test(f.name)) { const nb = JSON.parse(txt); if (!nb.sections) throw new Error('not a notebook'); nb.id = ONE.uid(); openNotebook(nb); ONE.toast(`Opened notebook “${nb.title}”.`); continue; }
+      if (/\.(json|oneidea)$/i.test(f.name)) { const nb = JSON.parse(txt); if (!nb.sections) throw new Error('not a notebook'); nb.id = ONE.uid(); openNotebook(nb); ONE.toast(`Opened notebook “${nb.title}”.`); continue; }
       let html, title = base;
       if (/\.(md|markdown)$/i.test(f.name)) { const m = /^#\s+(.+)$/m.exec(txt); if (m) title = m[1]; html = mdToHTML(m ? txt.replace(m[0], '') : txt); }
       else if (/\.html?$/i.test(f.name)) { const d = new DOMParser().parseFromString(txt, 'text/html'); title = d.title || base; html = sanitize(d.body.innerHTML); }

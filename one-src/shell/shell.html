@@ -45,6 +45,9 @@ main{max-width:1120px;margin:0 auto;padding:12px 20px 60px}
 .appcard .btn{height:34px;padding:0 14px;font-size:13px}
 .files-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:36px 0 12px}
 .files-head h2{margin:0;font:500 22px "Google Sans",sans-serif;flex:1}
+.files-head .btn{height:38px;gap:6px}.files-head .btn .ms{font-size:18px}
+.dropzone{position:fixed;inset:12px;z-index:30;border-radius:28px;border:3px dashed var(--primary);background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(6px);display:grid;place-items:center;animation:fadeIn .15s;pointer-events:none}
+.dropzone div{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:20px}.dropzone .ms{font-size:48px;color:var(--primary)}.dropzone b{font:500 22px "Google Sans",sans-serif}.dropzone small{color:var(--on-surface-variant)}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .fchip{height:34px;padding:0 14px;border-radius:10px;box-shadow:inset 0 0 0 1px var(--outline-variant);color:var(--on-surface-variant);font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:background-color .2s,border-radius .35s var(--spring),box-shadow .2s}
 .fchip i{width:10px;height:10px;border-radius:3px;background:var(--c)}
@@ -104,13 +107,15 @@ main{max-width:1120px;margin:0 auto;padding:12px 20px 60px}
       <label class="home-search"><span class="ms" aria-hidden="true">search</span><input id="q" placeholder="Search all your files" aria-label="Search all your files"></label>
     </div>
     <section class="apps" id="apps" aria-label="Apps"></section>
-    <div class="files-head"><h2>Your files</h2></div>
+    <div class="files-head"><h2>Your files</h2><button class="btn tonal" id="importBtn" type="button" title="Open files from this device (or drop them anywhere on this page)"><span class="ms" aria-hidden="true">upload_file</span>Import</button></div>
+    <input type="file" id="importInput" multiple hidden accept=".docx,.html,.htm,.md,.markdown,.txt,.oneword,.xlsx,.xls,.xlsm,.ods,.csv,.tsv,.onesheet,.pptx,.oneslide,.oneidea,.pdf,.onesite,.json">
     <div class="chips" id="chips"></div>
     <div class="files" id="files"></div>
     <p class="note"><span class="ms" aria-hidden="true">lock</span><span>Files are kept in this browser’s storage for this page’s address, so they stay private to this device. Use each app’s File › Export to keep a copy elsewhere.</span></p>
   </main>
 </div>
 <div class="frames" id="frames" hidden></div>
+<div class="dropzone" id="dropzone" hidden><div><span class="ms" aria-hidden="true">upload_file</span><b>Drop to open</b><small>Word, Excel, PowerPoint, PDF, text, Markdown, CSV and one files</small></div></div>
 
 <script>window.ONE_SHELL = true;</script>
 <script>/*CORE_JS*/</script>
@@ -211,7 +216,45 @@ addEventListener('message', e => {
 addEventListener('popstate', e => { const id = e.state && e.state.app; if (id && byId[id]) openApp(id, null, true); else showHome(true); });
 let lt; addEventListener('storage', () => { if (!$('#home').hidden) { clearTimeout(lt); lt = setTimeout(loadFiles, 300); } });
 ONE.mountAvatar(document.getElementById('avatarSlot'));
-window.ONE_SHELL_API = { refresh:() => { if (!$('#home').hidden) loadFiles(); }, frameLoaded:id => !!frames[id] && !!ready[id], openApp };
+/* ---------- Import: pick or drop files, each goes to the app that opens it ---------- */
+const APP_FOR_EXT = { docx:'word', html:'word', htm:'word', md:'word', markdown:'word', txt:'word', oneword:'word', xlsx:'sheet', xls:'sheet', xlsm:'sheet', ods:'sheet', csv:'sheet', tsv:'sheet', onesheet:'sheet', pptx:'slide', oneslide:'slide', oneidea:'idea', pdf:'pdf', onesite:'site' };
+async function appForFile(f) {
+  const ext = (f.name.split('.').pop() || '').toLowerCase();
+  if (ext !== 'json') return APP_FOR_EXT[ext] || null;
+  // a .json: look at what's inside (one's own saved formats, or plain data for oneSheet)
+  try { const d = JSON.parse(await f.text()); if (d && d.header && d.pages) return 'site'; if (d && d.slides) return 'slide'; if (d && Array.isArray(d.sheets)) return 'sheet'; if (d && typeof d.html === 'string') return 'word'; if (d && Array.isArray(d.sections)) return 'idea'; return 'sheet'; } catch { return null; }
+}
+const waitReady = id => new Promise(ok => { const t0 = Date.now(); (function poll() { if (ready[id] || Date.now() - t0 > 15000) return setTimeout(ok, 250); setTimeout(poll, 120); })(); });
+async function importFiles(list) {
+  const files = [...list]; if (!files.length) return;
+  const groups = {}, skipped = [];
+  for (const f of files) { const app = await appForFile(f); if (app) (groups[app] = groups[app] || []).push(f); else skipped.push(f.name); }
+  const skipMsg = skipped.length ? `Can’t open ${skipped.length === 1 ? skipped[0] : skipped.length + ' files'} here. Try Word, Excel, PowerPoint, PDF, text, Markdown or CSV.` : '';
+  const apps = Object.keys(groups); if (!apps.length) { if (skipMsg) ONE.toast(skipMsg); return; }
+  for (const app of apps) {
+    openApp(app); await waitReady(app);
+    const doc = frames[app].contentDocument, input = doc && (doc.getElementById('openInput') || doc.getElementById('file-upload'));
+    if (!input) { ONE.toast('That app isn’t ready to open files yet. Try again in a moment.'); continue; }
+    // hand the files over one at a time, the same way picking them in the app's own File > Open would
+    for (const f of groups[app]) {
+      const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files;
+      input.dispatchEvent(new Event('change', { bubbles:true }));
+      await new Promise(r => setTimeout(r, 900));
+    }
+  }
+  // said last, so the apps' own "Opened …" messages don't cover it
+  if (skipMsg) ONE.toast(skipMsg);
+  else if (apps.length > 1) ONE.toast(`Opened files in ${apps.map(a => byId[a].name).join(', ')}. The last one is showing.`);
+}
+$('#importBtn').onclick = () => $('#importInput').click();
+$('#importInput').onchange = e => { const f = e.target.files; importFiles(f).finally(() => { e.target.value = ''; }); };
+let dragDepth = 0; const dz = $('#dropzone'), hasFiles = e => [...(e.dataTransfer && e.dataTransfer.types || [])].includes('Files');
+addEventListener('dragenter', e => { if (!hasFiles(e) || $('#home').hidden) return; dragDepth++; dz.hidden = false; });
+addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; dz.hidden = true; } });
+addEventListener('dragover', e => { if (hasFiles(e) && !$('#home').hidden) e.preventDefault(); });
+addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth = 0; dz.hidden = true; if (!$('#home').hidden) importFiles(e.dataTransfer.files); });
+
+window.ONE_SHELL_API = { importFiles, refresh:() => { if (!$('#home').hidden) loadFiles(); }, frameLoaded:id => !!frames[id] && !!ready[id], openApp };
 loadFiles();
 // #word opens an app; #open=word:<id> (the links oeper.dev/files uses) opens one document, once cloud sync had a chance to bring it in.
 const clearHash = () => { try { history.replaceState({ app:null }, '', location.pathname + location.search); } catch {} };
