@@ -501,6 +501,19 @@
     color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);
   }
   .story-icon-btn:hover { background: rgba(255,255,255,0.25); }
+
+  /* ── Wide desktop layout ── */
+  @media (min-width: 1100px) {
+    .page { max-width: 1320px; display: grid; grid-template-columns: minmax(0, 1fr) 320px; column-gap: 32px; align-items: start; }
+    .page > .header { grid-column: 1 / -1; }
+    .page > .stories-bar { grid-column: 1; }
+    .page > .toolbar { grid-column: 2; grid-row: 2 / span 4; position: sticky; top: 88px; margin-bottom: 0; }
+    .page > .stats, .page > .post-list, .page > .empty { grid-column: 1; }
+    .toolbar .controls-row { flex-direction: column; align-items: stretch; }
+    .toolbar .new-post-btn { order: -1; justify-content: center; }
+    .toolbar .sort-select-slot .oe-dropdown-btn { background: var(--md-sys-color-surface); width: 100%; }
+    .toolbar .sort-select-slot .oe-dropdown { display: block; }
+  }
 </style>
 </head>
 <body>

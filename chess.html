@@ -220,6 +220,15 @@
   .game-row .gr-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .game-row .gr-turn { font-size: 11px; color: var(--md-sys-color-primary); flex-shrink: 0; }
   .empty-note { font-size: 13px; color: var(--md-sys-color-on-surface-variant); padding: 8px 0; }
+
+  /* ── Wide desktop layout ── */
+  @media (min-width: 1100px) {
+    .page { max-width: 1240px; }
+    .layout { gap: 48px; --bd: max(420px, min(calc(100vh - 300px), 680px)); }
+    .board { width: var(--bd); height: var(--bd); }
+    .sq .piece, .piece-ghost { font-size: calc(var(--bd) * 0.085); }
+    .side-panel { max-width: 420px; }
+  }
 </style>
 </head>
 <body>

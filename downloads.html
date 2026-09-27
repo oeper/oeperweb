@@ -304,6 +304,12 @@
     .file-card:not(.has-image) .card-controls,
     .card-body .card-controls { flex-basis: 100%; justify-content: flex-end; margin-top: 4px; }
   }
+
+  /* ── Wide desktop layout ── */
+  @media (min-width: 1100px) {
+    .page { max-width: 1240px; }
+    .file-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  }
 </style>
 </head>
 <body>

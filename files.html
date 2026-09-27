@@ -336,6 +336,13 @@
     font-size: 14px; color: #e3e2e6; opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 100; white-space: nowrap;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Wide desktop layout ── */
+  @media (min-width: 1100px) {
+    .page { max-width: 1280px; }
+    .file-list.view-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(500px, 1fr)); gap: 12px; align-items: start; }
+    .file-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+  }
 </style>
 </head>
 <body>

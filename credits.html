@@ -157,6 +157,13 @@
   @media (max-width: 600px) {
     .toast { bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 32px); }
   }
+
+  /* ── Wide desktop layout ── */
+  @media (min-width: 1000px) {
+    .page { max-width: 1040px; }
+    #content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; align-items: start; }
+    #content > .balance-card, #content > .card:only-child { grid-column: 1 / -1; }
+  }
 </style>
 </head>
 <body>

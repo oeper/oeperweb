@@ -116,6 +116,14 @@
   .session-empty { padding: 8px 0; font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
 
   .footnote { text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13px; margin-top: 8px; }
+
+  /* ── Wide desktop layout ── */
+  @media (min-width: 1000px) {
+    .page { max-width: 1100px; column-count: 2; column-gap: 32px; }
+    .page > .header { column-span: all; }
+    .page > .settings-section { break-inside: avoid; }
+    .page > .footnote { column-span: all; }
+  }
 </style>
 </head>
 <body>

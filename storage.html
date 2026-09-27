@@ -213,6 +213,13 @@
     .row .acts { width: 100%; justify-content: flex-end; }
     .kind-row { grid-template-columns: 70px 1fr 70px; }
   }
+
+  /* ── Wide desktop layout ── */
+  @media (min-width: 1100px) {
+    .page { max-width: 1480px; }
+    .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 8px 12px; align-items: start; }
+    .list > .empty { grid-column: 1 / -1; }
+  }
 </style>
 </head>
 <body>

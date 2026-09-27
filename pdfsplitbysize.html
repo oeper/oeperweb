@@ -393,6 +393,11 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }
+
+  /* ── Wide desktop layout ── */
+  @media (min-width: 1100px) {
+    .app { max-width: 860px; }
+  }
 </style>
 </head>
 <body>

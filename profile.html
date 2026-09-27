@@ -218,6 +218,18 @@
 
   .empty-note { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 0; text-align: center; }
   .loading-note { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 60px 0; text-align: center; }
+
+  /* ── Wide desktop layout ── */
+  @media (min-width: 1100px) {
+    .page { max-width: 1240px; }
+    #content { display: grid; grid-template-columns: 340px minmax(0, 1fr); column-gap: 32px; align-items: start; }
+    #content > .profile-card { grid-column: 1; grid-row: 1 / span 3; position: sticky; top: 88px; margin-bottom: 0; }
+    #content > .profile-tabs, #content > .section-heading { grid-column: 2; grid-row: 1; margin-top: 0; }
+    #content > .post-list { grid-column: 2; grid-row: 2; }
+    #content > .loading-note, #content > .empty-note { grid-column: 1 / -1; }
+    .post-list { max-width: none; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); grid-auto-rows: 4px; grid-auto-flow: row dense; gap: 0 24px; align-items: start; }
+    .post-list > .empty-note { grid-column: 1 / -1; }
+  }
 </style>
 </head>
 <body>
@@ -247,6 +259,7 @@ import {
 import { mountFooter } from './shared/footer.js?v=5';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=2';
+import { masonry } from './shared/masonry.js?v=1';
 import { reportContent } from './shared/report.js?v=7';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
@@ -778,6 +791,7 @@ async function init() {
     setProfileMenuVisible(isOwn);
 
     observeList(document.getElementById('profilePostList'));
+    masonry(document.getElementById('profilePostList'));
 
     document.getElementById('profilePostList').addEventListener('click', e => {
       const pollBtn = e.target.closest('[data-poll-vote]');
