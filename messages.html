@@ -333,6 +333,97 @@
     transform: rotate(45deg) translate(-1px, -1px);
   }
   .note-modal-actions { display: flex; justify-content: space-between; gap: 12px; }
+  /* ── Instagram-style messages ─────────────────────────────────────────
+     Chat list on the left, open conversation on the right (>= 900px); below
+     that it's one screen at a time, exactly as before. Everything here
+     overrides the earlier per-element rules above (same specificity, later
+     wins). */
+  .dm-shell { display: block; }
+  .dm-inbox { display: block; }
+  .dm-inbox-head { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 6px 8px; }
+  .dm-inbox-title { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 20px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dm-icon-btn { width: 40px; height: 40px; border-radius: 50%; border: none; background: transparent; color: var(--md-sys-color-on-surface); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .dm-icon-btn:hover { background: var(--md-sys-state-hover); }
+  .dm-icon-btn .material-symbols-rounded { font-size: 26px; }
+  .dm-inbox-subhead { font-size: 16px; font-weight: 700; padding: 4px 8px 8px; }
+  .dm-inbox .notes-bar { padding: 36px 12px 8px 44px; }
+
+  /* Flat chat rows: no cards, no glow — the open one is tinted, unread ones are bold with a dot. */
+  .convo-list { gap: 0; }
+  .convo-row { background: transparent; border-radius: 12px; padding: 0 4px 0 8px; }
+  .convo-row:hover { background: var(--md-sys-state-hover); }
+  .convo-row.active, .convo-row.active:hover { background: var(--md-sys-color-surface-variant); }
+  .convo-row.unread, .convo-row.unread:hover { background: transparent; box-shadow: none; filter: none; }
+  .convo-row.unread:hover { background: var(--md-sys-state-hover); }
+  .convo-row.unread.active, .convo-row.unread.active:hover { background: var(--md-sys-color-surface-variant); }
+  .convo-row-click { gap: 12px; padding: 9px 0; }
+  .convo-avatar, .convo-row .group-icon-fallback { width: 56px; height: 56px; }
+  .convo-name { font-size: 14px; font-weight: 400; color: var(--md-sys-color-on-surface); }
+  .convo-sub { display: flex; gap: 4px; min-width: 0; font-size: 12.5px; color: var(--md-sys-color-on-surface-variant); margin-top: 1px; }
+  .convo-sub .convo-preview { font-size: inherit; min-width: 0; flex: 0 1 auto; }
+  .convo-sub .convo-time { font-size: inherit; flex-shrink: 0; }
+  .convo-row.unread .convo-name { color: var(--md-sys-color-on-surface); font-weight: 700; }
+  .convo-row.unread .convo-preview, .convo-row.unread .convo-time { color: var(--md-sys-color-on-surface); font-weight: 600; }
+  .convo-unread-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--md-sys-color-primary); flex-shrink: 0; margin-right: 6px; }
+  @media (hover: hover) {
+    .convo-pin-btn { opacity: 0; transition: opacity 0.15s; }
+    .convo-row:hover .convo-pin-btn, .convo-pin-btn.pinned { opacity: 1; }
+  }
+  .convo-section-label { padding: 10px 8px 4px; }
+
+  /* Conversation */
+  .thread-header { padding: 10px 4px 12px; margin-bottom: 10px; border-bottom: 1px solid rgba(127,127,127,0.25); }
+  .thread-header img { width: 40px; height: 40px; }
+  .thread-header .name { font-weight: 600; }
+  .msg { margin-bottom: 2px; }
+  .msg-bubble { border-radius: 22px; padding: 9px 14px; background: var(--md-sys-color-surface-variant); }
+  .msg.mine .msg-bubble { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .msg-meta-row { margin-top: 1px; min-height: 14px; }
+  .msg-time { opacity: 0; transition: opacity 0.15s; }
+  .msg:hover .msg-time { opacity: 1; }
+  .msg-avatar, .msg-avatar-spacer { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; align-self: flex-end; margin-bottom: 16px; }
+  .msg-avatar { object-fit: cover; background: var(--md-sys-color-surface-variant); }
+  .msg-divider { align-self: center; font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin: 14px 0 10px; text-align: center; }
+  .thread-inputbar { background: transparent; border: 1px solid var(--md-sys-color-outline); padding: 5px 6px 5px 14px; }
+
+  /* "Your messages" screen (no conversation open) */
+  .dm-empty { margin: auto; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 40px 24px; }
+  .dm-empty-icon { width: 96px; height: 96px; border-radius: 50%; border: 2px solid var(--md-sys-color-on-surface); display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+  .dm-empty-icon .material-symbols-rounded { font-size: 48px; }
+  .dm-empty h2 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 20px; font-weight: 400; }
+  .dm-empty p { color: var(--md-sys-color-on-surface-variant); font-size: 14px; }
+  .dm-empty-btn { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border: none; border-radius: 10px; padding: 9px 18px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+  .dm-empty-btn:hover { opacity: 0.9; }
+
+  /* Narrow: one screen at a time */
+  @media (max-width: 899.98px) {
+    .dm-shell.thread-open .dm-inbox { display: none; }
+    .dm-shell:not(.thread-open):not(.signed-out) .dm-thread { display: none; }
+  }
+
+  /* Wide: two panes, each scrolling on its own */
+  @media (min-width: 900px) {
+    .page { max-width: 1240px; height: calc(100vh - 72px); min-height: 0; padding: 16px 24px 24px; }
+    .header-container { display: none; }
+    .dm-shell {
+      display: flex; flex: 1; min-height: 0; overflow: hidden;
+      border: 1px solid rgba(127,127,127,0.28); border-radius: 20px;
+    }
+    .dm-inbox { display: flex; flex-direction: column; width: 390px; flex-shrink: 0; min-height: 0; padding: 14px 8px 0; border-right: 1px solid rgba(127,127,127,0.28); }
+    .dm-inbox-list { flex: 1; min-height: 0; overflow-y: auto; padding-bottom: 12px; }
+    .dm-thread { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 0 20px 16px; }
+    .dm-shell.signed-out .dm-inbox { display: none; }
+    .dm-shell.signed-out { border-color: transparent; }
+    .dm-shell.signed-out .dm-thread { justify-content: center; }
+    .thread-shell { flex: 1; min-height: 0; }
+    .thread-header { padding-top: 14px; }
+    .msg-list { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 4px 4px 12px; }
+    /* short conversations sit at the bottom, next to the input (auto margin, not justify-content, so long ones still scroll from the top) */
+    .msg-list > :first-child { margin-top: auto; }
+    .thread-inputbar { position: static; margin-top: 8px; flex-shrink: 0; }
+    .edit-indicator { flex-shrink: 0; }
+    .dm-thread > .empty-note { margin: auto; }
+  }
 </style>
 </head>
 <body>
@@ -345,9 +436,18 @@
     </a>
   </div>
 
-  <div class="notes-bar" id="notesBar"></div>
-
-  <div id="content"><div class="empty-note">loading…</div></div>
+  <div class="dm-shell" id="dmShell">
+    <aside class="dm-inbox" id="dmInbox">
+      <div class="dm-inbox-head">
+        <div class="dm-inbox-title" id="dmInboxTitle">messages</div>
+        <button type="button" class="dm-icon-btn" id="newGroupBtn" title="new group"><span class="material-symbols-rounded">edit_square</span></button>
+      </div>
+      <div class="notes-bar" id="notesBar"></div>
+      <div class="dm-inbox-subhead">messages</div>
+      <div class="dm-inbox-list" id="inboxList"><div class="empty-note">loading…</div></div>
+    </aside>
+    <section class="dm-thread" id="content"></section>
+  </div>
 </div>
 
 <div class="note-overlay" id="noteOverlay"></div>
@@ -658,21 +758,42 @@ function initNotes() {
 }
 
 const content = document.getElementById('content');
+const dmShell = document.getElementById('dmShell');
+const inboxList = document.getElementById('inboxList');
 observeList(content);
+// Which conversation is open in the right-hand pane ("dm:<convoId>" /
+// "group:<id>", same keys the pin toggle uses) — drives the highlighted row.
+let activeThreadKey = null;
 let unsubConvos = null;
 let unsubGroups = null;
 let unsubMessages = null;
 let unsubReads = null;
 
+// shared/account.js re-fires this callback for the same signed-in user whenever
+// their profile/handle/etc. changes — treating that as a fresh page load would
+// tear down the conversation you have open (and lose a ?to= deep link), so a
+// repeat for the same account is ignored.
+let lastUserEmail = null;
 onAccountChange(user => {
+  if (user && user.email === lastUserEmail) return;
+  lastUserEmail = user ? user.email : null;
   if (unsubConvos) { unsubConvos(); unsubConvos = null; }
   if (unsubGroups) { unsubGroups(); unsubGroups = null; }
   if (unsubMessages) { unsubMessages(); unsubMessages = null; }
   if (unsubReads) { unsubReads(); unsubReads = null; }
+  activeThreadKey = null;
   if (!user) {
+    dmShell.classList.add('signed-out');
+    dmShell.classList.remove('thread-open');
+    inboxList.innerHTML = '';
     content.innerHTML = '<div class="signin-note">sign in to chat.</div>';
     return;
   }
+  dmShell.classList.remove('signed-out');
+  // The chat list stays subscribed for as long as you're on this page — opening
+  // a conversation just fills the right-hand pane (or, on narrow screens,
+  // swaps to it), it doesn't tear the list down.
+  startInbox(user);
   const params = new URLSearchParams(window.location.search);
   const toHandle = params.get('to');
   const groupId = params.get('group');
@@ -683,11 +804,114 @@ onAccountChange(user => {
     window.history.replaceState({}, '', '/messages');
     openGroupThread(groupId, user);
   } else {
-    showInbox(user);
+    closeThread();
   }
 });
 
+// The back link above the panes: on the chat list it leaves the page (via real
+// history when possible); inside a conversation on a narrow screen it returns
+// to the list. Hidden entirely on wide screens, where the list is always visible.
+function setBackLink(mode) {
+  const backLink = document.getElementById('backLink');
+  const text = document.getElementById('backLinkText');
+  if (mode === 'thread') {
+    backLink.href = '#';
+    text.textContent = 'back to chats';
+    backLink.onclick = e => { e.preventDefault(); closeThread(); };
+    return;
+  }
+  // href is just the no-JS/new-tab fallback (home) — the click handler below
+  // prefers actual browser history so this doesn't dump people who arrived
+  // from their profile, a notification, etc. onto /feed instead of back
+  // where they came from.
+  backLink.href = 'https://oeper.dev/';
+  backLink.onclick = e => {
+    e.preventDefault();
+    if (window.history.length > 1 && document.referrer.startsWith(location.origin)) window.history.back();
+    else window.location.href = 'https://oeper.dev/';
+  };
+  text.textContent = 'back';
+}
+
+// Shown in the right-hand pane when no conversation is open (Instagram's
+// "your messages" screen). Invisible on narrow screens, where the pane only
+// exists while a conversation is open.
+function showThreadPlaceholder() {
+  content.innerHTML = `
+    <div class="dm-empty">
+      <div class="dm-empty-icon"><span class="material-symbols-rounded">chat</span></div>
+      <h2>your messages</h2>
+      <p>send private messages to a friend or a group.</p>
+      <button type="button" class="dm-empty-btn" id="dmEmptyBtn">new group</button>
+    </div>`;
+  document.getElementById('dmEmptyBtn').addEventListener('click', () => {
+    const u = getCurrentUser();
+    if (u) openNewGroupModal(u);
+  });
+}
+
+// Closes whatever conversation is open: stops its listeners, un-highlights its
+// row, and puts the placeholder (wide) / the chat list (narrow) back.
+function closeThread() {
+  if (unsubMessages) { unsubMessages(); unsubMessages = null; }
+  if (unsubReads) { unsubReads(); unsubReads = null; }
+  activeThreadKey = null;
+  dmShell.classList.remove('thread-open');
+  setBackLink('inbox');
+  showThreadPlaceholder();
+  updateActiveRow();
+}
+
+// Called by openThread/openGroupThread before they render into the pane.
+function beginThread(key) {
+  if (unsubMessages) { unsubMessages(); unsubMessages = null; }
+  if (unsubReads) { unsubReads(); unsubReads = null; }
+  activeThreadKey = key;
+  dmShell.classList.add('thread-open');
+  setBackLink('thread');
+  updateActiveRow();
+}
+
+function updateActiveRow() {
+  inboxList.querySelectorAll('.convo-row').forEach(row => {
+    row.classList.toggle('active', !!activeThreadKey && row.dataset.pinKey === activeThreadKey);
+  });
+}
+
+// Instagram-style centered time label above a message when it starts a new
+// burst — the first message, a different day, or a gap of an hour or more.
+function timeDividerHtml(prevMsg, m) {
+  const cur = m.createdAt && m.createdAt.toDate ? m.createdAt.toDate() : null;
+  if (!cur) return '';
+  const prev = prevMsg && prevMsg.createdAt && prevMsg.createdAt.toDate ? prevMsg.createdAt.toDate() : null;
+  if (prev && cur - prev < 60 * 60 * 1000 && prev.toDateString() === cur.toDateString()) return '';
+  const clock = cur.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const label = cur.toDateString() === new Date().toDateString()
+    ? clock
+    : cur.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' + clock;
+  return `<div class="msg-divider">${escHtml(label)}</div>`;
+}
+// The other person's avatar sits beside the LAST message of each run of theirs
+// (a same-width spacer keeps the earlier bubbles in the run aligned with it).
+function msgAvatarHtml(msgs, i) {
+  const next = msgs[i + 1];
+  if (next && next.senderEmail === msgs[i].senderEmail) return '<span class="msg-avatar-spacer"></span>';
+  const p = getProfile(msgs[i].senderEmail, null, null);
+  return `<img class="msg-avatar" src="${escHtml(p.photo || '')}" alt="">`;
+}
+
+// Keeps a conversation scrolled to its newest message. In the two-pane layout
+// the message list is its own scroll container; on narrow screens the whole
+// page scrolls instead.
+function scrollThreadToEnd(msgList) {
+  const oy = getComputedStyle(msgList).overflowY;
+  if (oy === 'auto' || oy === 'scroll') msgList.scrollTop = msgList.scrollHeight;
+  else msgList.scrollIntoView({ block: 'end' });
+}
+
 async function openByHandle(handle, user) {
+  dmShell.classList.add('thread-open');
+  setBackLink('thread');
   content.innerHTML = '<div class="empty-note">loading…</div>';
   try {
     const snap = await getDoc(doc(db, 'handles', handle));
@@ -716,21 +940,16 @@ function togglePinnedChat(pinKey) {
   try { localStorage.setItem(PINNED_CHATS_KEY, JSON.stringify([...set])); } catch {}
 }
 
-function showInbox(user) {
-  const backLink = document.getElementById('backLink');
-  // href is just the no-JS/new-tab fallback (home) — the click handler below
-  // prefers actual browser history so this doesn't dump people who arrived
-  // from their profile, a notification, etc. onto /feed instead of back
-  // where they came from.
-  backLink.href = 'https://oeper.dev/';
-  backLink.onclick = e => {
-    e.preventDefault();
-    if (window.history.length > 1 && document.referrer.startsWith(location.origin)) window.history.back();
-    else window.location.href = 'https://oeper.dev/';
-  };
-  document.getElementById('backLinkText').textContent = 'back';
-  document.getElementById('notesBar').style.display = '';
-  content.innerHTML = '<div class="empty-note">loading…</div>';
+// "Return to the chat list" — with the list always mounted, that just means
+// closing the open conversation.
+function showInbox() { closeThread(); }
+
+function startInbox(user) {
+  document.getElementById('newGroupBtn').onclick = () => openNewGroupModal(user);
+  const titleEl = document.getElementById('dmInboxTitle');
+  const setTitle = () => { titleEl.textContent = handleOf(user.email) || 'messages'; };
+  setTitle();
+  inboxList.innerHTML = '<div class="empty-note">loading…</div>';
 
   let lastConvos = null;
   let lastGroups = null;
@@ -751,9 +970,6 @@ function showInbox(user) {
     const readMs = Number(localStorage.getItem('oe-group-read-' + g.id) || 0);
     return lastMs > readMs;
   }
-  function newGroupBtnHtml() {
-    return `<div class="inbox-toolbar"><button class="new-group-btn" id="newGroupBtn"><span class="material-symbols-rounded" style="font-size:18px;">group_add</span> new group</button></div>`;
-  }
 
   // Render right away with whatever's already cached (falls back to "User"
   // for names we haven't seen this session) rather than blocking the whole
@@ -763,6 +979,7 @@ function showInbox(user) {
   // or group-only inbox is a normal state, not a loading state.
   function renderRows() {
     if (lastConvos === null || lastGroups === null) return;
+    setTitle();
     const pinnedChats = getPinnedChats();
     const rows = [
       ...lastConvos.map(c => ({ kind: 'dm', data: c, ms: c.updatedAt?.toMillis?.() || 0, pinKey: `dm:${c.id}` })),
@@ -774,7 +991,7 @@ function showInbox(user) {
     });
 
     if (rows.length === 0) {
-      content.innerHTML = `${newGroupBtnHtml()}<div class="empty-note">no chats yet. start one from someone's profile page, or create a group.</div>`;
+      inboxList.innerHTML = `<div class="empty-note">no chats yet. start one from someone's profile page, or create a group.</div>`;
     } else {
       const pinnedCount = rows.filter(r => pinnedChats.has(r.pinKey)).length;
       const rowsHtml = rows.map((r, i) => {
@@ -797,14 +1014,14 @@ function showInbox(user) {
           const unread = isUnreadConvo(c);
           return `
             ${label}
-            <div class="convo-row${unread ? ' unread' : ''}">
+            <div class="convo-row${unread ? ' unread' : ''}${r.pinKey === activeThreadKey ? ' active' : ''}" data-pin-key="${escHtml(r.pinKey)}">
               <button class="convo-row-click" data-kind="dm" data-email="${escHtml(otherEmail)}">
                 <img class="convo-avatar" src="${profile.photo || ''}" alt="">
                 <div class="convo-main">
-                  <div class="convo-name">${unread ? '<span class="convo-unread-dot"></span>' : ''}${escHtml(profile.name)}${officialBadgeHtml(otherEmail)}</div>
-                  <div class="convo-preview">${escHtml(c.lastMessage || '')}</div>
+                  <div class="convo-name">${escHtml(profile.name)}${officialBadgeHtml(otherEmail)}</div>
+                  <div class="convo-sub"><span class="convo-preview">${escHtml(c.lastMessage || '')}</span><span class="convo-time">${c.updatedAt?.toDate ? '· ' + timeAgo(c.updatedAt.toDate()) : ''}</span></div>
                 </div>
-                <div class="convo-time">${c.updatedAt?.toDate ? timeAgo(c.updatedAt.toDate()) : ''}</div>
+                ${unread ? '<span class="convo-unread-dot"></span>' : ''}
               </button>
               ${pinBtnHtml}
             </div>
@@ -815,27 +1032,27 @@ function showInbox(user) {
         const preview = g.lastMessage ? `${g.lastMessageSenderEmail === user.email ? 'you: ' : ''}${escHtml(g.lastMessage)}` : 'no messages yet';
         return `
           ${label}
-          <div class="convo-row${unread ? ' unread' : ''}">
+          <div class="convo-row${unread ? ' unread' : ''}${r.pinKey === activeThreadKey ? ' active' : ''}" data-pin-key="${escHtml(r.pinKey)}">
             <button class="convo-row-click" data-kind="group" data-id="${escHtml(g.id)}">
               ${g.icon ? `<img class="convo-avatar" src="${escHtml(g.icon)}" alt="">` : `<div class="group-icon-fallback"><span class="material-symbols-rounded">groups</span></div>`}
               <div class="convo-main">
-                <div class="convo-name">${unread ? '<span class="convo-unread-dot"></span>' : ''}${escHtml(g.name)}</div>
-                <div class="convo-preview">${preview}</div>
+                <div class="convo-name">${escHtml(g.name)}</div>
+                <div class="convo-sub"><span class="convo-preview">${preview}</span><span class="convo-time">${g.updatedAt?.toDate ? '· ' + timeAgo(g.updatedAt.toDate()) : ''}</span></div>
               </div>
-              <div class="convo-time">${g.updatedAt?.toDate ? timeAgo(g.updatedAt.toDate()) : ''}</div>
+              ${unread ? '<span class="convo-unread-dot"></span>' : ''}
             </button>
             ${pinBtnHtml}
           </div>
         `;
       }).join('');
-      content.innerHTML = `${newGroupBtnHtml()}<div class="convo-list">${rowsHtml}</div>`;
-      content.querySelectorAll('.convo-row-click').forEach(btn => {
+      inboxList.innerHTML = `<div class="convo-list">${rowsHtml}</div>`;
+      inboxList.querySelectorAll('.convo-row-click').forEach(btn => {
         btn.addEventListener('click', () => {
           if (btn.dataset.kind === 'group') openGroupThread(btn.dataset.id, user);
           else openThread(btn.dataset.email, user);
         });
       });
-      content.querySelectorAll('.convo-pin-btn').forEach(btn => {
+      inboxList.querySelectorAll('.convo-pin-btn').forEach(btn => {
         btn.addEventListener('click', e => {
           e.stopPropagation();
           togglePinnedChat(btn.dataset.pinKey);
@@ -843,7 +1060,6 @@ function showInbox(user) {
         });
       });
     }
-    document.getElementById('newGroupBtn').addEventListener('click', () => openNewGroupModal(user));
   }
 
   unsubConvos = onSnapshot(
@@ -1040,7 +1256,7 @@ document.getElementById('groupInfoLeaveBtn').addEventListener('click', async () 
   try {
     await updateDoc(doc(db, 'groups', groupInfoGroupId), { members: arrayRemove(user.email), admins: arrayRemove(user.email) });
     closeGroupInfoModal();
-    showInbox(user);
+    showInbox();
   } catch (err) {
     showToast('could not leave group: ' + err.message);
   }
@@ -1172,15 +1388,7 @@ async function sendMediaFileTo(file, { messagesRef, sendBtn, user, touchPreview,
 }
 
 async function openGroupThread(groupId, user) {
-  if (unsubConvos) { unsubConvos(); unsubConvos = null; }
-  if (unsubGroups) { unsubGroups(); unsubGroups = null; }
-  if (unsubMessages) { unsubMessages(); unsubMessages = null; }
-  if (unsubReads) { unsubReads(); unsubReads = null; }
-
-  document.getElementById('backLink').href = '#';
-  document.getElementById('backLinkText').textContent = 'back to chats';
-  document.getElementById('backLink').onclick = e => { e.preventDefault(); showInbox(user); };
-  document.getElementById('notesBar').style.display = 'none';
+  beginThread('group:' + groupId);
 
   const groupSnap = await getDoc(doc(db, 'groups', groupId));
   if (!groupSnap.exists() || !(groupSnap.data().members || []).includes(user.email)) {
@@ -1283,11 +1491,13 @@ async function openGroupThread(groupId, user) {
     snap => {
       const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       const mine = m => m.senderEmail === user.email;
-      msgList.innerHTML = msgs.map(m => {
+      msgList.innerHTML = msgs.map((m, i) => {
         const time = m.createdAt && m.createdAt.toDate ? formatClockTimeGroup(m.createdAt.toDate()) : '';
         const senderProfile = getProfile(m.senderEmail, null, null);
         return `
+          ${timeDividerHtml(msgs[i - 1], m)}
           <div class="msg ${mine(m) ? 'mine' : ''}">
+            ${mine(m) ? '' : msgAvatarHtml(msgs, i)}
             <div class="msg-col">
               ${!mine(m) ? `<div class="msg-sender-name">${escHtml(senderProfile.name)}</div>` : ''}
               <div class="msg-bubble">${mediaBubbleHtml(m) ?? parseMsgMarkdown(m.text || '')}</div>
@@ -1321,7 +1531,7 @@ async function openGroupThread(groupId, user) {
           });
         });
       });
-      msgList.scrollIntoView({ block: 'end' });
+      scrollThreadToEnd(msgList);
       markGroupRead();
     },
     () => { /* group doc/messages not readable — access likely just changed (removed, etc.) */ }
@@ -1354,17 +1564,8 @@ async function openGroupThread(groupId, user) {
 }
 
 async function openThread(otherEmail, user) {
-  if (unsubConvos) { unsubConvos(); unsubConvos = null; }
-  if (unsubGroups) { unsubGroups(); unsubGroups = null; }
-  if (unsubMessages) { unsubMessages(); unsubMessages = null; }
-  if (unsubReads) { unsubReads(); unsubReads = null; }
-
-  document.getElementById('backLink').href = '#';
-  document.getElementById('backLinkText').textContent = 'back to chats';
-  document.getElementById('backLink').onclick = e => { e.preventDefault(); showInbox(user); };
-  document.getElementById('notesBar').style.display = 'none'; // notes belong on the inbox screen, not inside a conversation
-
   const convoId = conversationId(user.email, otherEmail);
+  beginThread('dm:' + convoId);
   const otherProfile = getProfile(otherEmail, null, null);
   const otherHandle = handleOf(otherEmail);
   localStorage.setItem('oe-chat-read-' + convoId, String(Date.now()));
@@ -1513,7 +1714,7 @@ async function openThread(otherEmail, user) {
     const mine = m => m.senderEmail === user.email;
     const mineMsgs = msgs.filter(mine);
     const lastMineId = mineMsgs.length ? mineMsgs[mineMsgs.length - 1].id : null;
-    msgList.innerHTML = msgs.map(m => {
+    msgList.innerHTML = msgs.map((m, i) => {
       const time = m.createdAt && m.createdAt.toDate ? formatClockTime(m.createdAt.toDate()) : '';
       const seen = m.id === lastMineId && m.createdAt && m.createdAt.toMillis && otherReadAtMs >= m.createdAt.toMillis();
       const replyQuoteHtml = m.replyToId ? `
@@ -1522,7 +1723,9 @@ async function openThread(otherEmail, user) {
         </div>
       ` : '';
       return `
+        ${timeDividerHtml(msgs[i - 1], m)}
         <div class="msg ${mine(m) ? 'mine' : ''}" id="msg-${escHtml(m.id)}">
+          ${mine(m) ? '' : msgAvatarHtml(msgs, i)}
           <div class="msg-col">
             <div class="msg-bubble">${replyQuoteHtml}${bubbleInnerHtml(m)}</div>
             <div class="msg-meta-row">
@@ -1588,7 +1791,7 @@ async function openThread(otherEmail, user) {
     query(collection(db, 'conversations', convoId, 'messages'), orderBy('createdAt', 'asc')),
     snap => {
       renderMsgs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      msgList.scrollIntoView({ block: 'end' });
+      scrollThreadToEnd(msgList);
       markRead();
     },
     () => { /* conversation doc doesn't exist yet — no messages, that's fine */ }

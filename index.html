@@ -790,6 +790,7 @@
   import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
   import { observeList } from './shared/motion.js?v=2';
   import { masonry } from './shared/masonry.js?v=1';
+  import { codeBlockHtml, wireCodeBlockCopy, injectCodeBlockStyles } from './shared/code-block.js?v=2';
   import { reportContent } from './shared/report.js?v=7';
   import {
     collection, query, orderBy, limit, onSnapshot, doc, updateDoc, arrayUnion, arrayRemove, addDoc, serverTimestamp,
@@ -798,6 +799,8 @@
 
   mountTopNav();
   mountFooter();
+  injectCodeBlockStyles();
+  wireCodeBlockCopy(document.body);
 
   // ── Follow relationships (drives story/note visibility) ─────────────
   // Loaded once per sign-in state, not per story/note — everything that
@@ -1287,8 +1290,13 @@
     return linkifyMentions(expandIconShorthand(html), 'onclick="event.stopPropagation()"');
   }
   function parseMarkdown(md) {
-    let html = expandShortcodes(escHtml(md || ''))
-      .replace(/\r\n/g, '\n')
+    // Fenced code blocks are stashed before the other passes run (they'd mangle
+    // code full of *, _, |, [ ]) and restored last — same approach as feed.html.
+    const stash = [];
+    const hold = h => { stash.push(h); return `\u0000${stash.length - 1}\u0000`; };
+    const src = String(md || '').replace(/\r\n/g, '\n')
+      .replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => hold(codeBlockHtml(lang, code.replace(/\n$/, ''))));
+    let html = expandShortcodes(escHtml(src))
       .replace(/^###\s+(.+)$/gm, '<h3>$1</h3>')
       .replace(/^##\s+(.+)$/gm,  '<h2>$1</h2>')
       .replace(/^#\s+(.+)$/gm,   '<h1>$1</h1>')
@@ -1314,7 +1322,11 @@
       .replace(/<p>(\s*<(?:ul|table)[\s\S]*?<\/(?:ul|table)>\s*)<\/p>/g, '$1')
       .replace(/<br>(\s*<(?:ul|table|\/ul|\/table))/g, '$1')
       .replace(/(<\/(?:ul|table)>)<br>/g, '$1')
-      .replace(/<li><br>/g, '<li>').replace(/<br><\/li>/g, '</li>');
+      .replace(/<li><br>/g, '<li>').replace(/<br><\/li>/g, '</li>')
+      .replace(/<p>(\s*\u0000\d+\u0000\s*)<\/p>/g, '$1')
+      .replace(/<br>(\s*\u0000\d+\u0000)/g, '$1')
+      .replace(/(\u0000\d+\u0000)<br>/g, '$1');
+    html = html.replace(/\u0000(\d+)\u0000/g, (m, i) => stash[Number(i)]);
     return `<p>${linkifyMentions(html)}</p>`;
   }
   function timeAgo(date) {
@@ -1861,6 +1873,7 @@
 
     feedEl.addEventListener('click', e => {
       if (e.target.closest('a')) return; // real links (linkified URLs) behave normally
+      if (e.target.closest('.code-block-wrap')) return; // selecting/copying code must not open the post
       const voteUpBtn = e.target.closest('[data-vote-up]');
       const voteDownBtn = e.target.closest('[data-vote-down]');
       const saveBtn = e.target.closest('[data-save-toggle]');
