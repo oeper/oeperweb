@@ -35,7 +35,13 @@ main{max-width:1120px;margin:0 auto;padding:12px 20px 60px}
 .appcard .al .ms{font-size:28px;font-variation-settings:"FILL" 1}
 .appcard b{font:600 18px "Google Sans",sans-serif;display:block}
 .appcard small{color:var(--on-surface-variant)}
-.appcard .row{display:flex;gap:6px;margin-top:auto;position:relative;z-index:1}
+.appcard .row{display:flex;gap:6px;margin-top:auto;position:relative;z-index:1;align-items:center}
+.sharebtn{display:none;width:34px;height:34px;border-radius:50%;place-items:center;color:var(--on-surface-variant);cursor:pointer;flex-shrink:0}
+.cloud .sharebtn{display:inline-grid}
+.sharebtn:hover,.sharebtn:focus-visible{background:var(--surface-highest);color:var(--on-surface);outline:none}
+.appcard .row .sharebtn{margin-left:auto}
+.sharebody .sharerow{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.sharebody textarea.tf{resize:vertical;min-height:84px}
 .appcard .btn{height:34px;padding:0 14px;font-size:13px}
 .files-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:36px 0 12px}
 .files-head h2{margin:0;font:500 22px "Google Sans",sans-serif;flex:1}
@@ -139,13 +145,19 @@ async function loadFiles(){
 }
 const when = t => { if (!t) return ''; const d = Date.now() - t; if (d < 60000) return 'Just now'; if (d < 3600000) return Math.floor(d / 60000) + ' min ago'; if (d < 86400000) return Math.floor(d / 3600000) + ' h ago'; return new Date(t).toLocaleDateString(undefined, { month:'short', day:'numeric', year:new Date(t).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }); };
 
+// Share button for an app card / file row (only shown in the oeper.dev build — see .cloud in the CSS).
+function shareBtn(target, label){
+  const go = e => { e.stopPropagation(); e.preventDefault(); if (window.ONE_CLOUD) window.ONE_CLOUD.share(target()); };
+  return el('span', { class:'sharebtn', role:'button', tabindex:0, title:label, 'aria-label':label, html:icon('share'), onclick:go, onkeydown:e => { if (e.key === 'Enter' || e.key === ' ') go(e); } });
+}
 function renderApps(){
   const box = $('#apps'); box.innerHTML = '';
   APPS.forEach((a, i) => {
     const n = files.filter(f => f.app === a.id).length;
     const card = el('div', { class:'appcard', role:'button', tabindex:0, style:{ '--c':a.color, animationDelay:i * 60 + 'ms' }, 'aria-label':`Open ${a.name}` },
       el('span', { class:'al', html:logo(a) }), el('span', {}, el('b', { text:a.name }), el('small', { text:`${a.what} · ${n} file${n === 1 ? '' : 's'}` })),
-      el('div', { class:'row' }, el('button', { class:'btn tonal', html:`${icon(a.id === 'pdf' ? 'upload_file' : 'add')}${a.id === 'pdf' ? 'Open' : 'New'}`, title:NEW_LABEL[a.id], onclick:e => { e.stopPropagation(); a.id === 'pdf' ? openApp('pdf') : openApp(a.id, { type:'new', template:'blank' }); } })));
+      el('div', { class:'row' }, el('button', { class:'btn tonal', html:`${icon(a.id === 'pdf' ? 'upload_file' : 'add')}${a.id === 'pdf' ? 'Open' : 'New'}`, title:NEW_LABEL[a.id], onclick:e => { e.stopPropagation(); a.id === 'pdf' ? openApp('pdf') : openApp(a.id, { type:'new', template:'blank' }); } }),
+        shareBtn(() => ({ kind:'tool', app:a.id, title:a.name }), `Share ${a.name}`)));
     card.onclick = () => openApp(a.id); card.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openApp(a.id); } };
     box.append(card);
   });
@@ -158,7 +170,7 @@ function renderFiles(){
   const box = $('#files'); box.innerHTML = '';
   if (!list.length) box.append(el('div', { class:'empty', text:q ? 'No files match that search.' : files.length ? 'Nothing here yet.' : 'No files yet. Start one from an app above.' }));
   list.slice(0, 300).forEach((f, i) => { const a = byId[f.app];
-    box.append(el('button', { class:'file', style:{ '--c':a.color, animationDelay:Math.min(i, 20) * 20 + 'ms' }, onclick:() => openApp(f.app, { type:'open', id:f.id }) }, el('span', { class:'fi', html:logo(a) }), el('span', { class:'grow', html:`<b>${esc(f.title)}</b><small>${esc(a.name)}${f.meta ? ' · ' + esc(f.meta) : ''}${window.ONE_CLOUD && window.ONE_CLOUD.enabled() && window.ONE_CLOUD.isSynced(f.app, f.id) ? '<span class="ms synced" title="Saved to your oeper.dev account">cloud_done</span>' : ''}</small>` }), el('time', { text:when(f.updated) }))); });
+    box.append(el('button', { class:'file', style:{ '--c':a.color, animationDelay:Math.min(i, 20) * 20 + 'ms' }, onclick:() => openApp(f.app, { type:'open', id:f.id }) }, el('span', { class:'fi', html:logo(a) }), el('span', { class:'grow', html:`<b>${esc(f.title)}</b><small>${esc(a.name)}${f.meta ? ' · ' + esc(f.meta) : ''}${window.ONE_CLOUD && window.ONE_CLOUD.enabled() && window.ONE_CLOUD.isSynced(f.app, f.id) ? '<span class="ms synced" title="Saved to your oeper.dev account">cloud_done</span>' : ''}</small>` }), shareBtn(() => ({ kind:'file', app:f.app, id:f.id, title:f.title }), `Share ${f.title}`), el('time', { text:when(f.updated) }))); });
 }
 $('#q').addEventListener('input', renderFiles);
 $('#seedBtn').onclick = e => ONE.seedMenu(e.currentTarget);
@@ -206,6 +218,16 @@ const clearHash = () => { try { history.replaceState({ app:null }, '', location.
 async function openFromHash() {
   const h = decodeURIComponent(location.hash.slice(1));
   if (byId[h]) { clearHash(); return openApp(h); }
+  if (h.startsWith('shared=')) {
+    const rest = h.slice(7), i = rest.indexOf(':'); clearHash();
+    if (i < 0) return;
+    if (document.readyState === 'loading') await new Promise(r => addEventListener('DOMContentLoaded', r, { once:true }));
+    await Promise.resolve(window.ONE_CLOUD && window.ONE_CLOUD.ready);
+    if (!window.ONE_CLOUD) return ONE.toast('Open this link on oeper.dev/one to get your own copy.');
+    const got = await window.ONE_CLOUD.openShared(rest.slice(0, i), rest.slice(i + 1));
+    if (got) { await loadFiles(); openApp(got.app, { type:'open', id:got.id }); }
+    return;
+  }
   if (!h.startsWith('open=')) return;
   const [app, id] = h.slice(5).split(':'); clearHash();
   if (document.readyState === 'loading') await new Promise(r => addEventListener('DOMContentLoaded', r, { once:true }));
