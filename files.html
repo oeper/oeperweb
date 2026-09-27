@@ -1153,7 +1153,7 @@ function buildFileTile(f) {
   }
   tile.addEventListener('dblclick', e => {
     if (e.target.closest('button, a')) return;
-    window.open(f.url, '_blank', 'noopener');
+    window.open(f.openUrl || f.url, '_blank', 'noopener'); // suite docs (oneWord/...) open in their app
   });
 
   // Unlike the row view's separate always-visible copy/download icon
@@ -1228,7 +1228,7 @@ function buildCard(f) {
   }
   card.addEventListener('dblclick', e => {
     if (e.target.closest('button, a, audio')) return;
-    window.open(f.url, '_blank', 'noopener');
+    window.open(f.openUrl || f.url, '_blank', 'noopener'); // suite docs (oneWord/...) open in their app
   });
 
   if (mineOrOwner) {

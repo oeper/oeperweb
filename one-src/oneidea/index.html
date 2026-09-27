@@ -1,0 +1,77 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>oneIdea</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&family=Roboto+Flex:opsz,wght@8..144,300..800&family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Caveat:wght@500;700&display=swap">
+<link rel="stylesheet" href="shared/m3.css?v=5">
+<link rel="stylesheet" href="idea.css?v=1">
+
+<div class="app" id="app">
+  <header class="titlebar">
+    <div class="logo" aria-hidden="true">I</div>
+    <span class="appname">oneIdea</span>
+    <div class="qat">
+      <button class="tb-btn" data-act="save" title="Save (Ctrl+S)"><span class="ms" aria-hidden="true">save</span></button>
+      <button class="tb-btn" data-act="undo" title="Undo (Ctrl+Z)"><span class="ms" aria-hidden="true">undo</span></button>
+      <button class="tb-btn" data-act="redo" title="Redo (Ctrl+Y)"><span class="ms" aria-hidden="true">redo</span></button>
+    </div>
+    <div class="docname"><span class="savestate" id="saveState">Saved</span></div>
+    <label class="tsearch"><span class="ms" aria-hidden="true">search</span><input id="topSearch" placeholder="Search (Alt+Q)" aria-label="Search commands and notes" autocomplete="off"></label>
+    <button class="tb-btn" data-act="apps" title="Apps and Home"><span class="ms" aria-hidden="true">apps</span></button>
+    <button class="tb-btn" data-act="seed" title="App color"><span class="ms" aria-hidden="true">palette</span></button>
+    <button class="tb-btn" data-act="shortcuts" title="Keyboard shortcuts (F1)"><span class="ms" aria-hidden="true">keyboard</span></button>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <div class="ribbon-wrap"><div class="ribbon" id="ribbon"></div></div>
+
+  <div class="work">
+    <aside class="nav" id="nav" aria-label="Notebook">
+      <button class="nb-switch" id="nbSwitch" title="Switch notebook"><i id="nbDot"></i><span id="nbName">Notebook</span><span class="ms" aria-hidden="true">expand_more</span></button>
+      <div class="navcols">
+        <div class="sections" id="sections" aria-label="Sections"></div>
+        <div class="pages" id="pages" aria-label="Pages"></div>
+      </div>
+    </aside>
+    <div class="navscrim" onclick="document.getElementById('app').classList.remove('nav-open')"></div>
+    <section class="canvaswrap" id="canvaswrap">
+      <div class="pagesizer" id="pagesizer">
+        <div class="page" id="page" data-tool="type">
+          <div class="ptitle" id="ptitle" contenteditable="plaintext-only" spellcheck="true" data-ph="Page title" aria-label="Page title"></div>
+          <div class="pdate" id="pdate"></div>
+          <div class="items" id="items"></div>
+          <svg class="ink" id="ink" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
+        </div>
+      </div>
+    </section>
+    <aside class="sidepane" id="side" hidden>
+      <div class="sp-head"><b id="sideTitle">Tags</b><button class="icon-btn" id="sideClose" title="Close"><span class="ms" aria-hidden="true">close</span></button></div>
+      <div class="sp-body" id="sideBody"></div>
+    </aside>
+  </div>
+
+  <footer class="status">
+    <button class="icon-btn navbtn" data-act="toggleNav" title="Show or hide the notebook"><span class="ms" aria-hidden="true">menu_open</span></button>
+    <span class="sb" id="pageInfo"></span>
+    <span class="sb hide-sm" id="wordInfo"></span>
+    <span class="sb on" id="toolInfo" hidden></span>
+    <span class="grow"></span>
+    <button class="sb hide-sm" data-act="immersive"><span class="ms" aria-hidden="true">chrome_reader_mode</span>Reader</button>
+    <button class="icon-btn hide-sm" data-act="fullPage" title="Full page view (F11)"><span class="ms" aria-hidden="true">fullscreen</span></button>
+    <div class="zoomctl">
+      <button class="icon-btn" data-act="zoomOut" title="Zoom out"><span class="ms" aria-hidden="true">remove</span></button>
+      <input type="range" id="zoomRange" min="30" max="300" value="100" aria-label="Zoom">
+      <button class="icon-btn" data-act="zoomIn" title="Zoom in"><span class="ms" aria-hidden="true">add</span></button>
+      <button class="sb zoompct" id="zoomPct" data-act="zoom100" title="Zoom to 100%">100%</button>
+    </div>
+  </footer>
+</div>
+<input type="file" id="openInput" accept=".json,.md,.markdown,.txt,.html,.htm" multiple hidden>
+<input type="file" id="picInput" accept="image/*" multiple hidden>
+<input type="file" id="fileInput" multiple hidden>
+
+<script src="shared/core.js?v=5"></script>
+<script src="js/model.js?v=1"></script>
+<script src="js/page.js?v=1"></script>
+<script src="js/app.js?v=1"></script>

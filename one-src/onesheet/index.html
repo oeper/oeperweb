@@ -1,0 +1,77 @@
+<meta charset="utf-8">
+<title>oneSheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&family=Roboto+Flex:opsz,wght@8..144,300..800&family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Caladea:wght@400;700&display=swap">
+<link rel="stylesheet" href="shared/m3.css?v=4">
+<link rel="stylesheet" href="sheet.css?v=4">
+
+<div class="app" id="app">
+  <header class="titlebar">
+    <div class="logo" aria-hidden="true">S</div>
+    <span class="appname">oneSheet</span>
+    <div class="qat">
+      <button class="tb-btn" data-act="save" title="Save (Ctrl+S)"><span class="ms" aria-hidden="true">save</span></button>
+      <button class="tb-btn" data-act="undo" title="Undo (Ctrl+Z)"><span class="ms" aria-hidden="true">undo</span></button>
+      <button class="tb-btn" data-act="redo" title="Redo (Ctrl+Y)"><span class="ms" aria-hidden="true">redo</span></button>
+    </div>
+    <div class="docname">
+      <input id="docTitle" aria-label="Workbook name" value="Book1">
+      <span class="savestate" id="saveState">Saved</span>
+    </div>
+    <label class="tsearch"><span class="ms" aria-hidden="true">search</span><input id="topSearch" placeholder="Search (Alt+Q)" aria-label="Search commands" autocomplete="off"></label>
+    <button class="tb-btn" data-act="apps" title="Apps and Home"><span class="ms" aria-hidden="true">apps</span></button>
+    <button class="tb-btn" data-act="seed" title="App color"><span class="ms" aria-hidden="true">palette</span></button>
+    <button class="tb-btn" data-act="shortcuts" title="Keyboard shortcuts (F1)"><span class="ms" aria-hidden="true">keyboard</span></button>
+    <div class="avatar" title="You">Y</div>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <div class="ribbon-wrap"><div class="ribbon" id="ribbon"></div></div>
+
+  <div class="work">
+    <div class="fxbar" id="fxbar">
+      <input id="nameBox" class="namebox" aria-label="Name Box" title="Name Box: type a cell like B7, a range, or a new name" autocomplete="off">
+      <div class="fxbtns">
+        <button class="icon-btn" data-act="fxCancel" title="Cancel (Esc)"><span class="ms" aria-hidden="true">close</span></button>
+        <button class="icon-btn" data-act="fxEnter" title="Enter"><span class="ms" aria-hidden="true">check</span></button>
+        <button class="icon-btn" data-act="insertFunction" title="Insert Function (Shift+F3)"><span class="fxi">fx</span></button>
+      </div>
+      <input id="fx" class="fx" aria-label="Formula bar" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="gridhost" id="gridhost">
+      <canvas id="grid" aria-hidden="true"></canvas>
+      <div class="gscroll" id="gscroll" data-cur="cell" aria-label="Worksheet grid" role="grid"><div id="gsizer"></div></div>
+      <div class="goverlay" id="goverlay"><div id="charts"></div></div>
+      <textarea id="cellEditor" class="celled" hidden spellcheck="false" aria-label="Cell editor"></textarea>
+      <textarea id="kb" class="kb" aria-label="Worksheet keyboard focus" autocomplete="off"></textarea>
+    </div>
+    <div class="sheetbar">
+      <div class="sheettabs" id="sheettabs"></div>
+    </div>
+  </div>
+
+  <footer class="status">
+    <span class="sb" id="modeInfo">Ready</span>
+    <span class="sb hide-sm" id="protInfo" hidden><span class="ms" aria-hidden="true">lock</span>Protected</span>
+    <span class="grow"></span>
+    <span class="sb stats" id="statInfo"></span>
+    <div class="zoomctl">
+      <button class="icon-btn" data-act="zoomOut" title="Zoom out"><span class="ms" aria-hidden="true">remove</span></button>
+      <input type="range" id="zoomRange" min="25" max="400" value="100" aria-label="Zoom">
+      <button class="icon-btn" data-act="zoomIn" title="Zoom in"><span class="ms" aria-hidden="true">add</span></button>
+      <button class="sb zoompct" id="zoomPct" data-act="pop:zoom" title="Zoom">100%</button>
+    </div>
+  </footer>
+</div>
+<div class="menu acpop pop" id="acpop" hidden></div>
+<div class="fntip" id="fntip" hidden></div>
+<div class="notetip" id="notetip" hidden></div>
+<input type="file" id="openInput" accept=".xlsx,.xls,.xlsm,.ods,.csv,.tsv,.txt,.json" hidden>
+
+<script src="shared/core.js?v=4"></script>
+<script src="js/engine.js?v=4"></script>
+<script src="js/grid.js?v=4"></script>
+<script src="js/features.js?v=4"></script>
+<script src="js/extras.js?v=4"></script>
+<script src="js/app.js?v=4"></script>

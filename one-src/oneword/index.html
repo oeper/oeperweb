@@ -1,0 +1,86 @@
+<meta charset="utf-8">
+<title>oneWord</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&family=Roboto+Flex:opsz,wght@8..144,300..800&family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=Caladea:ital,wght@0,400;0,700;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Caveat:wght@500&display=swap">
+<link rel="stylesheet" href="shared/m3.css?v=4">
+<link rel="stylesheet" href="word.css?v=4">
+
+<div class="app" id="app">
+  <header class="titlebar">
+    <div class="logo" aria-hidden="true">W</div>
+    <span class="appname">oneWord</span>
+    <div class="qat">
+      <button class="tb-btn" data-act="save" title="Save (Ctrl+S)"><span class="ms" aria-hidden="true">save</span></button>
+      <button class="tb-btn" data-act="undo" title="Undo (Ctrl+Z)"><span class="ms" aria-hidden="true">undo</span></button>
+      <button class="tb-btn" data-act="redo" title="Redo (Ctrl+Y)"><span class="ms" aria-hidden="true">redo</span></button>
+    </div>
+    <div class="docname">
+      <input id="docTitle" aria-label="Document name" value="Document">
+      <span class="savestate" id="saveState">Saved</span>
+    </div>
+    <label class="tsearch"><span class="ms" aria-hidden="true">search</span><input id="topSearch" placeholder="Search (Alt+Q)" aria-label="Search commands and document" autocomplete="off"></label>
+    <button class="tb-btn" data-act="apps" title="Apps and Home"><span class="ms" aria-hidden="true">apps</span></button>
+    <button class="tb-btn" data-act="seed" title="App color"><span class="ms" aria-hidden="true">palette</span></button>
+    <button class="tb-btn" data-act="shortcuts" title="Keyboard shortcuts (F1)"><span class="ms" aria-hidden="true">keyboard</span></button>
+    <div class="avatar" id="avatar" title="Author">Y</div>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <div class="ribbon-wrap"><div class="ribbon" id="ribbon"></div></div>
+
+  <div class="main" id="main">
+    <aside class="nav" id="nav" hidden>
+      <div class="nav-head">Navigation <button class="icon-btn" data-act="toggleNav" title="Close"><span class="ms" aria-hidden="true">close</span></button></div>
+      <label class="nav-search"><span class="ms" aria-hidden="true">search</span><input id="navSearch" placeholder="Search document" aria-label="Search document" autocomplete="off"></label>
+      <div class="nav-count" id="navCount"></div>
+      <div class="nav-tabs"><button class="active" data-navtab="headings">Headings</button><button data-navtab="pages">Pages</button><button data-navtab="results">Results</button></div>
+      <div class="nav-list" id="navList"></div>
+    </aside>
+    <div class="canvas" id="canvas">
+      <div class="zoomer" id="zoomer">
+        <div class="ruler"><div class="ruler-in" id="ruler"></div></div>
+        <div class="sheet" id="sheet">
+          <div class="pages" id="pages"></div>
+          <div class="doc" id="editor" contenteditable="true" spellcheck="true" lang="en" aria-label="Document body"></div>
+          <div class="imgsel" id="imgsel" hidden><i class="h nw"></i><i class="h ne"></i><i class="h sw"></i><i class="h se"></i></div>
+        </div>
+        <div class="cpane" id="cpane"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="status">
+    <span class="sb" id="pageInfo">Page 1 of 1</span>
+    <button class="sb" data-act="wordCount" id="wordInfo">0 words</button>
+    <button class="sb hide-sm" data-act="a11y" id="a11yInfo"><span class="ms" aria-hidden="true">accessibility_new</span><span>Accessibility: Good to go</span></button>
+    <span class="sb hide-sm" id="trackInfo" hidden><span class="ms" aria-hidden="true">track_changes</span>Track Changes: On</span>
+    <span class="sb chip-warn" id="roInfo" hidden><span class="ms" aria-hidden="true">lock</span>Read-only</span>
+    <span class="sb hide-sm">English (United States)</span>
+    <span class="grow"></span>
+    <button class="sb hide-sm" data-act="focus"><span class="ms" aria-hidden="true">center_focus_strong</span>Focus</button>
+    <button class="icon-btn hide-sm" data-act="readMode" title="Read Mode"><span class="ms" aria-hidden="true">menu_book</span></button>
+    <button class="icon-btn hide-sm" data-act="printLayout" data-state="printLayout" title="Print Layout"><span class="ms" aria-hidden="true">description</span></button>
+    <button class="icon-btn hide-sm" data-act="webLayout" data-state="webLayout" title="Web Layout"><span class="ms" aria-hidden="true">public</span></button>
+    <div class="zoomctl">
+      <button class="icon-btn" data-act="zoomOut" title="Zoom out"><span class="ms" aria-hidden="true">remove</span></button>
+      <input type="range" id="zoomRange" min="10" max="500" value="100" aria-label="Zoom">
+      <button class="icon-btn" data-act="zoomIn" title="Zoom in"><span class="ms" aria-hidden="true">add</span></button>
+      <button class="sb zoompct" id="zoomPct" data-act="zoomPop" title="Zoom">100%</button>
+    </div>
+  </footer>
+</div>
+
+<div class="readbar" id="readbar" hidden>
+  <span class="rb-title" id="readTitle"></span>
+  <button class="btn tonal" data-act="readMode"><span class="ms" aria-hidden="true">edit_document</span>Edit Document</button>
+</div>
+<div class="minibar" id="minibar" hidden></div>
+<input type="file" id="picInput" accept="image/*" hidden>
+<input type="file" id="openInput" accept=".docx,.html,.htm,.txt,.md,.markdown" hidden>
+
+<script src="shared/core.js?v=4"></script>
+<script src="js/doc.js?v=4"></script>
+<script src="js/tools.js?v=4"></script>
+<script src="js/extras.js?v=4"></script>
+<script src="js/app.js?v=4"></script>

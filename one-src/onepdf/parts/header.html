@@ -1,0 +1,30 @@
+<header class="titlebar">
+  <div class="logo" aria-hidden="true"><span class="ms">picture_as_pdf</span></div>
+  <span class="appname">onePDF</span>
+  <span class="tb-grow"></span>
+  <span class="privacy-chip" title="Everything runs in your browser"><span class="ms" aria-hidden="true">lock</span>Files never leave this device</span>
+  <button class="tb-btn" type="button" id="appsBtn" title="Apps and Home" aria-label="Apps and Home"><span class="ms" aria-hidden="true">apps</span></button>
+  <button class="tb-btn" type="button" id="seedBtn" title="App color" aria-label="App color"><span class="ms" aria-hidden="true">palette</span></button>
+</header>
+
+<nav class="tabs" id="mainNav" aria-label="Tools">
+  <span class="tab-ind" aria-hidden="true"></span>
+  <button type="button" data-view="viewer" class="active"><span class="ms" aria-hidden="true">visibility</span>Viewer</button>
+  <button type="button" data-view="split"><span class="ms" aria-hidden="true">call_split</span>Split</button>
+  <button type="button" data-view="combine"><span class="ms" aria-hidden="true">library_add</span>Combine</button>
+  <button type="button" data-view="convert"><span class="ms" aria-hidden="true">sync_alt</span>Convert</button>
+  <button type="button" data-view="edit"><span class="ms" aria-hidden="true">edit_document</span>Edit</button>
+  <button type="button" data-view="compress"><span class="ms" aria-hidden="true">compress</span>Compress</button>
+</nav>
+
+<div class="app-main">
+  <aside class="doclib" id="sidebarDocLibrary" aria-label="My Documents">
+    <p class="sidebar-library-label">My Documents</p>
+    <button class="btn-tonal full" type="button" id="newPdfBtn">
+      <span class="ms" aria-hidden="true">upload_file</span>
+      Open PDF
+    </button>
+    <input type="file" id="file-upload" accept="application/pdf" hidden>
+    <input type="file" id="image-upload" accept="image/*" hidden>
+    <div class="library-list" id="library-list"></div>
+  </aside>

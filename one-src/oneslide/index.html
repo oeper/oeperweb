@@ -1,0 +1,77 @@
+<meta charset="utf-8">
+<title>oneSlide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&family=Roboto+Flex:opsz,wght@8..144,300..800&family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Caveat:wght@500;700&display=swap">
+<link rel="stylesheet" href="shared/m3.css?v=4">
+<link rel="stylesheet" href="slide.css?v=4">
+
+<div class="app" id="app">
+  <header class="titlebar">
+    <div class="logo" aria-hidden="true">P</div>
+    <span class="appname">oneSlide</span>
+    <div class="qat">
+      <button class="tb-btn" data-act="save" title="Save (Ctrl+S)"><span class="ms" aria-hidden="true">save</span></button>
+      <button class="tb-btn" data-act="undo" title="Undo (Ctrl+Z)"><span class="ms" aria-hidden="true">undo</span></button>
+      <button class="tb-btn" data-act="redo" title="Redo (Ctrl+Y)"><span class="ms" aria-hidden="true">redo</span></button>
+      <button class="tb-btn" data-act="showStart" title="Start from Beginning (F5)"><span class="ms" aria-hidden="true">slideshow</span></button>
+    </div>
+    <div class="docname">
+      <input id="docTitle" aria-label="Presentation name" value="Presentation">
+      <span class="savestate" id="saveState">Saved</span>
+    </div>
+    <label class="tsearch"><span class="ms" aria-hidden="true">search</span><input id="topSearch" placeholder="Search (Alt+Q)" aria-label="Search commands" autocomplete="off"></label>
+    <button class="btn filled present" data-act="showCurrent" title="Present from current slide (Shift+F5)"><span class="ms" aria-hidden="true">play_arrow</span>Present</button>
+    <button class="tb-btn" data-act="apps" title="Apps and Home"><span class="ms" aria-hidden="true">apps</span></button>
+    <button class="tb-btn" data-act="seed" title="App color"><span class="ms" aria-hidden="true">palette</span></button>
+    <button class="tb-btn" data-act="shortcuts" title="Keyboard shortcuts (F1)"><span class="ms" aria-hidden="true">keyboard</span></button>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <div class="ribbon-wrap"><div class="ribbon" id="ribbon"></div></div>
+
+  <div class="work">
+    <aside class="slidesPane" id="slidesPane" aria-label="Slides"></aside>
+    <section class="editArea">
+      <div class="stagewrap" id="stagewrap">
+        <div class="stagesizer" id="stagesizer">
+          <div class="stage" id="stage"><div class="guides" id="guides"></div><div class="selLayer" id="selLayer"></div></div>
+        </div>
+      </div>
+      <div class="notesWrap" id="notesWrap"><textarea id="notes" placeholder="Click to add notes" aria-label="Speaker notes"></textarea></div>
+    </section>
+    <aside class="sidepane" id="animPane" hidden>
+      <div class="sp-head"><b>Animation Pane</b><button class="icon-btn" data-act="animPane" title="Close"><span class="ms" aria-hidden="true">close</span></button></div>
+      <div class="sp-actions"><button class="btn tonal" data-act="previewAnims"><span class="ms" aria-hidden="true">play_arrow</span>Play All</button></div>
+      <div id="animList" class="animlist"></div>
+    </aside>
+    <aside class="sidepane" id="fmtpane" hidden>
+      <div class="sp-head"><b id="fmtTitle">Format</b><button class="icon-btn" id="fmtClose" title="Close"><span class="ms" aria-hidden="true">close</span></button></div>
+      <div id="fmtBody" class="fmtbody"></div>
+    </aside>
+  </div>
+
+  <footer class="status">
+    <span class="sb" id="slideInfo">Slide 1 of 1</span>
+    <span class="sb hide-sm" id="posInfo"></span>
+    <span class="grow"></span>
+    <button class="sb hide-sm" data-act="notes"><span class="ms" aria-hidden="true">sticky_note_2</span>Notes</button>
+    <button class="icon-btn hide-sm" data-act="normal" title="Normal"><span class="ms" aria-hidden="true">view_sidebar</span></button>
+    <button class="icon-btn hide-sm" data-act="sorter" title="Slide Sorter"><span class="ms" aria-hidden="true">grid_view</span></button>
+    <button class="icon-btn hide-sm" data-act="showCurrent" title="Slide Show"><span class="ms" aria-hidden="true">slideshow</span></button>
+    <div class="zoomctl">
+      <button class="icon-btn" data-act="zoomOut" title="Zoom out"><span class="ms" aria-hidden="true">remove</span></button>
+      <input type="range" id="zoomRange" min="10" max="300" value="100" aria-label="Zoom">
+      <button class="icon-btn" data-act="zoomIn" title="Zoom in"><span class="ms" aria-hidden="true">add</span></button>
+      <button class="sb zoompct" id="zoomPct" data-act="zoomFit" title="Fit slide to window">100%</button>
+    </div>
+  </footer>
+</div>
+<input type="file" id="openInput" accept=".pptx,.json,.md,.txt" hidden>
+
+<script src="shared/core.js?v=4"></script>
+<script src="js/model.js?v=4"></script>
+<script src="js/editor.js?v=4"></script>
+<script src="js/features.js?v=4"></script>
+<script src="js/extras.js?v=5"></script>
+<script src="js/app.js?v=5"></script>

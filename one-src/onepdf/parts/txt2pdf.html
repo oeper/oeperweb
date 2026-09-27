@@ -1,0 +1,44 @@
+    <!-- ---- Text to PDF ---- -->
+    <div id="conv-txt2pdf" hidden>
+      <section class="card">
+        <h2>1. Your text</h2>
+        <p class="card-hint">Type or paste below, or load a .txt or .md file. Lines starting with # become headings and - becomes a bullet.</p>
+        <textarea class="text-input" id="conv-t2p-text" rows="10" placeholder="# Meeting notes&#10;&#10;- First point&#10;- Second point&#10;&#10;Plain paragraphs wrap to the page width."></textarea>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn-tonal" id="conv-t2p-loadBtn" type="button">Load a text file…</button>
+          <input type="file" id="conv-t2p-fileInput" accept=".txt,.md,.markdown,.csv,text/plain" hidden>
+        </div>
+      </section>
+      <section class="card">
+        <h2>2. Page setup</h2>
+        <div class="field-row">
+          <div class="field">
+            <label for="conv-t2p-size">Page size</label>
+            <select class="select-input" id="conv-t2p-size"><option value="letter">US Letter</option><option value="a4">A4</option></select>
+          </div>
+          <div class="field">
+            <label for="conv-t2p-font">Font</label>
+            <select class="select-input" id="conv-t2p-font"><option value="Helvetica">Sans (Helvetica)</option><option value="TimesRoman">Serif (Times)</option><option value="Courier">Monospace (Courier)</option></select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="conv-t2p-fontSize">Text size</label>
+            <div class="input-group"><input type="number" id="conv-t2p-fontSize" min="6" max="36" value="11"><span class="suffix">pt</span></div>
+          </div>
+          <div class="field">
+            <label for="conv-t2p-margin">Margins</label>
+            <div class="input-group"><input type="number" id="conv-t2p-margin" min="18" max="144" value="54"><span class="suffix">pt</span></div>
+          </div>
+        </div>
+        <label class="checkbox-row"><input type="checkbox" id="conv-t2p-pageNums" checked> Add page numbers</label>
+        <div class="field" style="margin-top:12px">
+          <label for="conv-t2p-name">File name</label>
+          <div class="input-group"><input type="text" id="conv-t2p-name" value="document"><span class="suffix">.pdf</span></div>
+        </div>
+      </section>
+      <section class="card">
+        <button class="btn-filled" id="conv-t2p-buildBtn" type="button"><span id="conv-t2p-buildBtnLabel">Create PDF</span></button>
+        <div id="conv-t2p-error"></div>
+      </section>
+    </div>

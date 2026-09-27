@@ -1,0 +1,93 @@
+    <!-- ---- Rotate / delete / insert pages ---- -->
+    <section class="card" id="edit-rotateCard" hidden>
+      <h2>Rotate pages</h2>
+      <p class="card-hint">Turns pages permanently in the saved file.</p>
+      <div class="field-row">
+        <div class="field"><label for="edit-rot-range">Pages</label><input type="text" class="text-input" id="edit-rot-range" value="all" placeholder="all, odd, even, or 1-3, 7"></div>
+        <div class="field"><label for="edit-rot-angle">Rotation</label><select class="select-input" id="edit-rot-angle"><option value="90">90° clockwise</option><option value="180">180°</option><option value="270">90° counter-clockwise</option></select></div>
+      </div>
+      <div id="edit-rot-banner"></div>
+    </section>
+
+    <section class="card" id="edit-deleteCard" hidden>
+      <h2>Delete pages</h2>
+      <p class="card-hint">Removes pages from the saved file. At least one page has to stay.</p>
+      <div class="field"><label for="edit-del-range">Pages to delete</label><input type="text" class="text-input" id="edit-del-range" placeholder="e.g. 2, 5-7"></div>
+      <div id="edit-del-banner"></div>
+    </section>
+
+    <section class="card" id="edit-insertCard" hidden>
+      <h2>Insert blank pages</h2>
+      <p class="card-hint">New pages copy the size of the page before them.</p>
+      <div class="field-row">
+        <div class="field"><label for="edit-ins-after">After page</label><input type="number" class="text-input" id="edit-ins-after" min="0" value="1"><small style="color:var(--on-surface-variant);font-size:12px">0 puts them at the start</small></div>
+        <div class="field"><label for="edit-ins-count">How many</label><input type="number" class="text-input" id="edit-ins-count" min="1" max="100" value="1"></div>
+      </div>
+    </section>
+
+    <!-- ---- Header & footer ---- -->
+    <section class="card" id="edit-hfCard" hidden>
+      <h2>Header &amp; footer</h2>
+      <p class="card-hint">Use {page}, {total}, {date} and {title} to fill in values on each page.</p>
+      <div class="field"><label for="edit-hf-header">Header text</label><input type="text" class="text-input" id="edit-hf-header" placeholder="e.g. {title}"></div>
+      <div class="field"><label for="edit-hf-footer">Footer text</label><input type="text" class="text-input" id="edit-hf-footer" value="Page {page} of {total}"></div>
+      <div class="field-row">
+        <div class="field"><label for="edit-hf-align">Alignment</label><select class="select-input" id="edit-hf-align"><option value="left">Left</option><option value="center" selected>Center</option><option value="right">Right</option></select></div>
+        <div class="field"><label for="edit-hf-size">Text size</label><div class="input-group"><input type="number" id="edit-hf-size" min="5" max="36" value="9"><span class="suffix">pt</span></div></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="edit-hf-color">Colour</label><input type="color" id="edit-hf-color" value="#555555"></div>
+        <div class="field"><label for="edit-hf-range">Pages</label><input type="text" class="text-input" id="edit-hf-range" value="all"></div>
+      </div>
+    </section>
+
+    <!-- ---- Image stamp / signature ---- -->
+    <section class="card" id="edit-stampCard" hidden>
+      <h2>Image stamp</h2>
+      <p class="card-hint">Place a logo, signature or “Approved” stamp on the pages you choose. PNG with transparency works best.</p>
+      <div class="btn-row"><button class="btn-tonal" id="edit-st-pick" type="button">Choose image…</button><button class="btn-tonal" id="edit-st-draw" type="button">Draw a signature…</button></div>
+      <input type="file" id="edit-st-file" accept="image/png,image/jpeg" hidden>
+      <img id="edit-st-preview" class="img-preview" alt="Selected stamp image" hidden>
+      <div class="field" style="margin-top:14px">
+        <label>Position</label>
+        <div class="pos-grid" id="edit-st-posGrid">
+          <button class="pos-cell" type="button" data-pos="top-left" aria-label="Top left"></button>
+          <button class="pos-cell" type="button" data-pos="top-center" aria-label="Top center"></button>
+          <button class="pos-cell" type="button" data-pos="top-right" aria-label="Top right"></button>
+          <button class="pos-cell" type="button" data-pos="bottom-left" aria-label="Bottom left"></button>
+          <button class="pos-cell" type="button" data-pos="bottom-center" aria-label="Bottom center"></button>
+          <button class="pos-cell active" type="button" data-pos="bottom-right" aria-label="Bottom right"></button>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="edit-st-width">Width</label><div class="input-group"><input type="number" id="edit-st-width" min="20" max="600" value="140"><span class="suffix">pt</span></div></div>
+        <div class="field"><label for="edit-st-margin">Margin from edge</label><div class="input-group"><input type="number" id="edit-st-margin" min="0" max="200" value="36"><span class="suffix">pt</span></div></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="edit-st-opacity">Opacity</label><div class="slider-row"><input type="range" id="edit-st-opacity" min="10" max="100" step="5" value="100"><span class="slider-value" id="edit-st-opacityValue">100%</span></div></div>
+        <div class="field"><label for="edit-st-range">Pages</label><input type="text" class="text-input" id="edit-st-range" value="all"></div>
+      </div>
+    </section>
+
+    <!-- ---- Crop ---- -->
+    <section class="card" id="edit-cropCard" hidden>
+      <h2>Crop margins</h2>
+      <p class="card-hint">Trims the visible area of each page. Content outside the crop is hidden, not deleted.</p>
+      <div class="field-row">
+        <div class="field"><label for="edit-crop-t">Top</label><div class="input-group"><input type="number" id="edit-crop-t" min="0" value="36"><span class="suffix">pt</span></div></div>
+        <div class="field"><label for="edit-crop-b">Bottom</label><div class="input-group"><input type="number" id="edit-crop-b" min="0" value="36"><span class="suffix">pt</span></div></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label for="edit-crop-l">Left</label><div class="input-group"><input type="number" id="edit-crop-l" min="0" value="36"><span class="suffix">pt</span></div></div>
+        <div class="field"><label for="edit-crop-r">Right</label><div class="input-group"><input type="number" id="edit-crop-r" min="0" value="36"><span class="suffix">pt</span></div></div>
+      </div>
+      <div class="field"><label for="edit-crop-range">Pages</label><input type="text" class="text-input" id="edit-crop-range" value="all"></div>
+      <p class="card-hint" style="margin:6px 0 0">72 pt = 1 inch ≈ 25.4 mm.</p>
+    </section>
+
+    <!-- ---- Flatten ---- -->
+    <section class="card" id="edit-flattenCard" hidden>
+      <h2>Flatten form</h2>
+      <p class="card-hint">Turns filled-in form fields into plain page content so they can’t be changed, and so they show up in every PDF reader.</p>
+      <div id="edit-fl-banner"></div>
+    </section>

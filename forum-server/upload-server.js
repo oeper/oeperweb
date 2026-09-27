@@ -303,6 +303,12 @@ const storage = require('./storage-admin')(app, {
   publicBaseUrl: PUBLIC_BASE_URL, dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname,
 });
 
+// Cloud saves for the one office suite (oeper.dev/one) — see one-sync.js.
+const oneSync = require('./one-sync')(app, {
+  verifyFirebaseToken, isOwner, USER_FILES_DIR, loadMeta, saveMeta, loadFolders, saveFolders, storage, makeFilename,
+  publicBaseUrl: PUBLIC_BASE_URL,
+});
+
 // ── Forum post/comment attachments — any signed-in user, any file type. ──
 // Not part of the file-owners.json metadata system and never listed
 // publicly — only reachable via the specific URL a post/comment embeds.
@@ -488,6 +494,7 @@ app.get('/my-files', verifyFirebaseToken, (req, res) => {
         quarantined: !!m.quarantined,
         modStatus: m.mod ? m.mod.status : null,
         url: `${PUBLIC_BASE_URL}/docs/${encodeURIComponent(filename)}`,
+        openUrl: m.email === req.user.email ? oneSync.openUrlFor(m) : null,
       };
     });
 
