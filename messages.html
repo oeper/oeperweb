@@ -383,6 +383,10 @@
   .msg:hover .msg-time { opacity: 1; }
   .msg-avatar, .msg-avatar-spacer { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; align-self: flex-end; margin-bottom: 16px; }
   .msg-avatar { object-fit: cover; background: var(--md-sys-color-surface-variant); }
+  /* Very long unbroken text (a URL, a keyboard mash) must wrap inside the bubble, not push it off-screen:
+     flex items default to min-width:auto (their content width), so every level down to the bubble needs min-width:0. */
+  .dm-thread, .thread-shell, .msg-list, .msg, .msg-col { min-width: 0; }
+  .msg-bubble, .msg-reply-quote, .msg-file-name { overflow-wrap: anywhere; word-break: break-word; }
   .msg-divider { align-self: center; font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin: 14px 0 10px; text-align: center; }
   .thread-inputbar { background: transparent; border: 1px solid var(--md-sys-color-outline); padding: 5px 6px 5px 14px; }
 
