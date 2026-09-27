@@ -55,6 +55,9 @@ const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765'];
 
 const MAX_MESSAGES = 40;
 const MAX_MESSAGE_CHARS = 4000;
+// A user message carrying a one document attached from ai.html (marked <<one:Title>>...<</one>>)
+// may be much longer than something a person typed.
+const MAX_ATTACHED_DOC_MESSAGE_CHARS = 16000;
 // The system message is app-constructed (site description + self-context
 // + remembered facts — see ai.html's toWireMessages), not something a
 // person is typing, so it doesn't need the same tight cap that exists to
@@ -213,7 +216,7 @@ async function streamOneRound(upstream, send) {
 // to the client, and between rounds — invisibly to the client — executes
 // any tool calls the model made and feeds the results back in, up to
 // MAX_TOOL_ROUNDS.
-function streamToolLoop(env, initialMessages) {
+function streamToolLoop(env, initialMessages, tools) {
   const encoder = new TextEncoder();
   return new ReadableStream({
     async start(controller) {
@@ -221,7 +224,7 @@ function streamToolLoop(env, initialMessages) {
       let workingMessages = initialMessages;
       try {
         for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-          const upstream = await env.AI.run(MODEL, { messages: workingMessages, tools: TOOLS, stream: true, max_tokens: MAX_TOKENS });
+          const upstream = await env.AI.run(MODEL, { messages: workingMessages, tools: tools || TOOLS, stream: true, max_tokens: MAX_TOKENS });
           const { finishedWithToolCalls, toolCalls, assistantContent } = await streamOneRound(upstream, send);
           if (!finishedWithToolCalls || round === MAX_TOOL_ROUNDS) break;
 
@@ -249,6 +252,8 @@ function streamToolLoop(env, initialMessages) {
               send({ updateMemory: { old: String(args.old_fact).slice(0, 300), new: String(args.new_fact).slice(0, 300) } });
             } else if (call.function.name === 'forget_fact' && args.fact) {
               send({ forget: String(args.fact).slice(0, 300) });
+            } else if (call.function.name === 'create_document' && args.title && args.content) {
+              send({ createDoc: { title: String(args.title).slice(0, 120), content: String(args.content).slice(0, 60000) } });
             } else if (call.function.name === 'set_follow' && args.handle && typeof args.follow === 'boolean') {
               send({ setFollow: { handle: String(args.handle).replace(/^@/, '').trim().slice(0, 50), follow: args.follow } });
             }
@@ -443,6 +448,24 @@ const TOOLS = [
     },
   },
 ];
+// Only offered when the page says the user switched on epic AI's one integration
+// (settings.html › "epic AI"; ai.html sends oneTools: true). Like the memory tools,
+// the document is actually written client-side — see streamToolLoop.
+const ONE_TOOLS = [
+  {
+    name: 'create_document',
+    description: "Create a new document in the user's oneWord (the word processor at oeper.dev/one) and save it there. Only call this when they've clearly asked you to write/save/draft something as a document. content is the whole document in markdown (headings with #, lists, **bold**, tables). After calling it, tell them briefly what you made — they get an Open button automatically, so don't paste the document into the chat as well.",
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'A short document title' },
+        content: { type: 'string', description: 'The full document body, in markdown' },
+      },
+      required: ['title', 'content'],
+    },
+  },
+];
+async function createDocument() { return JSON.stringify({ ok: true, note: 'Saved to oneWord. The user sees an Open button under your message.' }); }
 // These four tools' actual persistence happens client-side (see the
 // streamToolLoop comment above) — these handlers exist only so the
 // tool-calling protocol gets a normal result to feed back to the model.
@@ -457,6 +480,7 @@ const TOOL_FUNCTIONS = {
   update_memory: updateMemory,
   forget_fact: forgetFact,
   set_follow: setFollow,
+  create_document: createDocument,
 };
 const MAX_TOOL_ROUNDS = 3;
 
@@ -480,7 +504,8 @@ async function handleChat(request, env) {
       return json({ error: 'Invalid message shape' }, 400, request);
     }
     if (typeof m.content === 'string') {
-      const limit = m.role === 'system' ? MAX_SYSTEM_MESSAGE_CHARS : MAX_MESSAGE_CHARS;
+      const limit = m.role === 'system' ? MAX_SYSTEM_MESSAGE_CHARS
+        : (m.role === 'user' && m.content.includes('<<one:')) ? MAX_ATTACHED_DOC_MESSAGE_CHARS : MAX_MESSAGE_CHARS;
       if (m.content.length > limit) {
         return json({ error: `A message is too long (max ${limit} characters)` }, 400, request);
       }
@@ -498,7 +523,7 @@ async function handleChat(request, env) {
     return json({ error: 'Too many requests — please slow down and try again in a few minutes.' }, 429, request);
   }
 
-  const stream = streamToolLoop(env, messages);
+  const stream = streamToolLoop(env, messages, body.oneTools === true ? [...TOOLS, ...ONE_TOOLS] : TOOLS);
 
   return new Response(stream, {
     status: 200,

@@ -91,6 +91,16 @@
   .row-title { font-size: 15px; font-weight: 500; }
   .row-sub { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; }
   .row-block { padding: 4px 22px 22px; }
+  .switch { position: relative; flex-shrink: 0; width: 52px; height: 32px; }
+  .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+  .switch-track { position: absolute; inset: 0; border-radius: 16px; background: var(--md-sys-color-surface-variant); border: 2px solid var(--md-sys-color-outline); transition: background-color 0.2s, border-color 0.2s; }
+  .switch-track::after { content: ''; position: absolute; top: 6px; left: 6px; width: 16px; height: 16px; border-radius: 50%; background: var(--md-sys-color-outline-variant); transition: transform 0.2s, width 0.2s, height 0.2s, top 0.2s, background-color 0.2s; }
+  .switch input:checked + .switch-track { background: var(--md-sys-color-primary); border-color: var(--md-sys-color-primary); }
+  .switch input:checked + .switch-track::after { transform: translateX(20px); top: 2px; left: 6px; width: 24px; height: 24px; background: var(--md-sys-color-on-primary); }
+  .ai-feature-list { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; font-size: 13px; line-height: 1.45; color: var(--md-sys-color-on-surface-variant); }
+  .ai-feature-list > div { display: flex; gap: 10px; align-items: flex-start; }
+  .ai-feature-list .material-symbols-rounded { font-size: 18px; color: var(--md-sys-color-primary); flex-shrink: 0; margin-top: 1px; }
+  .ai-feature-list a { color: var(--md-sys-color-primary); }
 
   .oe-theme-grid { display: flex; flex-wrap: wrap; gap: 12px; }
 
@@ -144,6 +154,26 @@
         </div>
       </div>
       <div class="row-block" id="themePicker"></div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h2>epic AI</h2>
+    <p class="section-desc">lets epic AI work with the rest of the site. it's off by default — nothing below happens until you turn it on, and it only affects this browser.</p>
+    <div class="group">
+      <label class="row" for="aiFeaturesToggle" style="cursor:pointer;">
+        <div class="row-icon"><span class="material-symbols-rounded">auto_awesome</span></div>
+        <div class="row-text">
+          <div class="row-title">epic AI features</div>
+          <div class="row-sub" id="aiFeaturesSub">off</div>
+        </div>
+        <span class="switch"><input type="checkbox" id="aiFeaturesToggle"><span class="switch-track"></span></span>
+      </label>
+      <div class="row-block ai-feature-list">
+        <div><span class="material-symbols-rounded">apps</span>an AI assistant inside <a href="/one">one</a> — rewrite, summarize, draft and explain in your documents</div>
+        <div><span class="material-symbols-rounded">attach_file</span>attach your one documents to a chat on <a href="/ai">epic AI</a>, and save its answers as new documents</div>
+        <div><span class="material-symbols-rounded">note_add</span>ask epic AI to write a document straight into oneWord</div>
+      </div>
     </div>
   </div>
 
@@ -226,9 +256,20 @@ import { mountThemePicker } from './shared/theme-picker.js?v=4';
 import { mountFooter } from './shared/footer.js?v=5';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=2';
+import { aiFeaturesEnabled, setAiFeaturesEnabled, onAiFeaturesChange } from './shared/ai-features.js?v=1';
 
 mountTopNav();
 mountFooter();
+
+// epic AI features — off until switched on (see shared/ai-features.js).
+{
+  const toggle = document.getElementById('aiFeaturesToggle');
+  const sub = document.getElementById('aiFeaturesSub');
+  const paint = on => { toggle.checked = on; sub.textContent = on ? 'on' : 'off'; };
+  paint(aiFeaturesEnabled());
+  toggle.addEventListener('change', () => setAiFeaturesEnabled(toggle.checked));
+  onAiFeaturesChange(paint);
+}
 
 onAccountChange(user => {
   const row = document.getElementById('profileRow');
