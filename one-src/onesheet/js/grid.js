@@ -225,6 +225,7 @@ function overlays(sh, V){
       g2.fillStyle = col + '1f'; g2.fillRect(R.x, R.y, R.w, R.h); g2.strokeStyle = col; g2.lineWidth = 2; g2.setLineDash([]); g2.strokeRect(R.x + 1, R.y + 1, R.w - 2, R.h - 2); });
   }
   if (X.traces && X.traces.length && X.drawTraces) X.drawTraces(g2, V);
+  if (X.drawSmart) X.drawSmart(g2, V);
   // selection
   const R = rangeRect(V, g), A = X.cellRect(S.ar, S.ac, V);
   g2.fillStyle = T.sel; g2.globalAlpha = .12; g2.beginPath(); g2.rect(R.x, R.y, R.w, R.h); g2.rect(A.x, A.y, A.w, A.h); g2.fill('evenodd'); g2.globalAlpha = 1;

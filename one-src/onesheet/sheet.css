@@ -74,3 +74,14 @@
 .qa-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:14px;font-size:12px;color:var(--on-surface);transition:background-color .2s,transform .3s var(--spring);animation:fadeUp .3s var(--ease-dec) both}
 .qa-item:hover{background:var(--hover);transform:translateY(-2px)}
 .qa-item .ms{font-size:26px;color:var(--primary)}
+.sf-chip{position:absolute;pointer-events:auto;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 12px;border-radius:16px;background:var(--surface-cont);color:var(--on-surface);box-shadow:var(--elev2);max-width:min(420px,calc(100% - 16px));animation:popIn .3s var(--spring);z-index:4}
+.sf-chip .sf-ic{font-size:20px;color:var(--primary);font-variation-settings:"FILL" 1}
+.sf-txt{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.sf-txt b{font-size:13px;font-weight:600}
+.sf-txt small{font-size:12px;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sf-chip button{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;flex:none;transition:background-color .2s,transform .2s var(--spring)}
+.sf-chip button .ms{font-size:20px}
+.sf-chip .sf-yes{background:var(--primary);color:var(--on-primary)}
+.sf-chip .sf-yes:hover{transform:scale(1.08)}
+.sf-chip .sf-no{color:var(--on-surface-variant)}
+.sf-chip .sf-no:hover{background:var(--hover)}
