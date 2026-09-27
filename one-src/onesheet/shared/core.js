@@ -236,7 +236,7 @@ R.build = (spec, { tabsEl, ribbonEl, run, states }) => {
   });
   tabsEl.append(ONE.el('span', { class:'grow' }));
   tabsEl.append(ONE.el('button', { class:'tb-btn collapse', 'data-act':'collapseRibbon', title:'Collapse the ribbon', html:ONE.icon('keyboard_arrow_up') }));
-  tabsEl.addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (t) R.switchTab(t.dataset.tab); });
+  tabsEl.addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (!t) return; const app = document.querySelector('.app'); if (app && app.classList.contains('ribbon-peek') && t.classList.contains('active')) { app.classList.remove('ribbon-peek'); return; } tabsEl.dataset.userClick = '1'; R.switchTab(t.dataset.tab); delete tabsEl.dataset.userClick; });
   const handler = e => {
     const b = e.target.closest('[data-act]'); if (!b || b.tagName === 'INPUT') return;
     if (b.closest('.tabs') && !b.classList.contains('file') && !b.classList.contains('collapse')) return;
@@ -249,42 +249,70 @@ R.build = (spec, { tabsEl, ribbonEl, run, states }) => {
   addEventListener('resize', R.moveInd);
   R.initGrip();
 };
-/* Drag the handle under the ribbon to resize the top of the app: the ribbon scales down (and the title bar
-   slims with it) and snaps shut past its smallest size. Double-click the handle to toggle. Remembered per app. */
-R.MIN = .62;
-R.setScale = (k, collapsed, save = true) => {
-  const app = document.querySelector('.app'); if (!app) return;
-  k = ONE.clamp(k, R.MIN, 1); R.scale = k;
-  const t = collapsed ? 0 : (k - R.MIN) / (1 - R.MIN);
-  app.style.setProperty('--rz', k); app.style.setProperty('--tz', t.toFixed(3));
-  app.classList.toggle('ribbon-min', !!collapsed); app.classList.toggle('chrome-slim', t < .5);
-  if (save) ONE.store.set((ONE.appKey || 'one') + '-ribbon', { k, collapsed:!!collapsed });
+/* The top of the app has four sizes. Text never shrinks - each smaller size re-lays the ribbon out to use the
+   empty width instead of its height:
+     full       the normal ribbon
+     compact    big buttons turn sideways (icon beside label) and wrap into two rows; group captions hide
+     line       the whole ribbon on one row, and the tabs move up into the title bar
+     hidden     just that one combined bar; clicking a tab shows the ribbon over the page until you click away
+   Drag the handle under the ribbon (or use arrow keys on it) to change size; double-click it to hide/show.
+   Remembered per app. */
+R.MODES = ['full', 'compact', 'line', 'hidden'];
+R.mode = 'full'; R.lastOpen = 'full';
+R.setMode = (mode, save = true) => {
+  const app = document.querySelector('.app'); if (!app || !R.MODES.includes(mode)) return;
+  const layout = mode === 'hidden' ? R.lastOpen : mode;
+  R.mode = mode; if (mode !== 'hidden') R.lastOpen = mode;
+  app.classList.toggle('rb-compact', layout === 'compact');
+  app.classList.toggle('rb-line', layout === 'line');
+  app.classList.toggle('ribbon-min', mode === 'hidden');
+  app.classList.remove('ribbon-peek');
+  R.mergeChrome(mode === 'line' || mode === 'hidden');
+  if (save) ONE.store.set((ONE.appKey || 'one') + '-ribbon', { mode });
   requestAnimationFrame(R.moveInd); dispatchEvent(new Event('resize'));
 };
+// Moves the tab strip into the title bar (and back), so the two rows become one.
+R.mergeChrome = on => {
+  const app = document.querySelector('.app'), tabs = R.tabsEl, tb = app && app.querySelector('.titlebar'); if (!tabs || !tb) return;
+  if (!R.tabsHome) R.tabsHome = { parent:tabs.parentElement, next:tabs.nextElementSibling };
+  app.classList.toggle('chrome-merge', on);
+  if (on && tabs.parentElement !== tb) { const anchor = tb.querySelector('.qat') || tb.querySelector('.appname'); anchor ? anchor.after(tabs) : tb.prepend(tabs); }
+  if (!on && tabs.parentElement === tb) R.tabsHome.parent.insertBefore(tabs, R.tabsHome.next);
+};
+// Old name, still used by the apps' "collapse ribbon" button.
+R.setScale = (k, collapsed) => R.setMode(collapsed ? 'hidden' : R.lastOpen);
 R.initGrip = () => {
   const wrap = R.ribbonEl && R.ribbonEl.parentElement; if (!wrap || wrap.querySelector('.rgrip')) return;
-  const grip = ONE.el('div', { class:'rgrip', role:'separator', 'aria-orientation':'horizontal', 'aria-label':'Resize the ribbon', tabindex:0, title:'Drag to resize the ribbon · double-click to hide or show it' });
+  const grip = ONE.el('div', { class:'rgrip', role:'slider', 'aria-label':'Ribbon size', 'aria-valuemin':0, 'aria-valuemax':3, tabindex:0, title:'Drag to resize the ribbon · double-click to hide or show it' });
   wrap.append(grip);
-  const saved = ONE.store.get((ONE.appKey || 'one') + '-ribbon'); if (saved) R.setScale(saved.k || 1, saved.collapsed, false);
+  const saved = ONE.store.get((ONE.appKey || 'one') + '-ribbon');
+  if (saved && saved.mode) R.setMode(saved.mode, false);
+  const idx = () => R.MODES.indexOf(R.mode), aria = () => { grip.setAttribute('aria-valuenow', idx()); grip.setAttribute('aria-valuetext', R.mode); };
   let d = null;
-  grip.addEventListener('pointerdown', e => {
-    e.preventDefault(); grip.setPointerCapture(e.pointerId);
-    const collapsed = document.querySelector('.app').classList.contains('ribbon-min'), k = R.scale || 1;
-    const natural = R.ribbonEl.offsetHeight / (collapsed ? 1 : k) || 110;
-    d = { y:e.clientY, natural:collapsed ? Math.max(natural, 110) : natural, h:collapsed ? 0 : natural * k };
-    document.body.classList.add('rgrip-drag');
-  });
+  grip.addEventListener('pointerdown', e => { e.preventDefault(); grip.setPointerCapture(e.pointerId); d = { y:e.clientY, start:idx() }; document.body.classList.add('rgrip-drag'); });
   grip.addEventListener('pointermove', e => {
-    if (!d) return; const h = d.h + (e.clientY - d.y), k = h / d.natural;
-    if (k < R.MIN - .18) R.setScale(R.scale || R.MIN, true, false); else R.setScale(k, false, false);
+    if (!d) return;
+    // every 28px of drag is one size step; up = smaller
+    const i = ONE.clamp(d.start + Math.round((d.y - e.clientY) / 28), 0, R.MODES.length - 1);
+    if (R.MODES[i] !== R.mode) R.setMode(R.MODES[i], false);
   });
-  const end = () => { if (!d) return; d = null; document.body.classList.remove('rgrip-drag'); R.setScale(R.scale || 1, document.querySelector('.app').classList.contains('ribbon-min')); };
+  const end = () => { if (!d) return; d = null; document.body.classList.remove('rgrip-drag'); R.setMode(R.mode); aria(); };
   grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
-  grip.addEventListener('dblclick', () => { const c = document.querySelector('.app').classList.contains('ribbon-min'); R.setScale(c ? (R.scale || 1) : R.scale || 1, !c); });
-  grip.addEventListener('keydown', e => { const k = R.scale || 1, c = document.querySelector('.app').classList.contains('ribbon-min');
-    if (e.key === 'ArrowUp') { e.preventDefault(); if (!c && k <= R.MIN + .001) R.setScale(k, true); else R.setScale(k - .08, false); }
-    if (e.key === 'ArrowDown') { e.preventDefault(); if (c) R.setScale(R.MIN, false); else R.setScale(k + .08, false); }
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); R.setScale(k, !c); } });
+  grip.addEventListener('dblclick', () => { R.setMode(R.mode === 'hidden' ? R.lastOpen : 'hidden'); aria(); });
+  grip.addEventListener('keydown', e => {
+    if (e.key === 'ArrowUp') { e.preventDefault(); R.setMode(R.MODES[Math.min(3, idx() + 1)]); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); R.setMode(R.MODES[Math.max(0, idx() - 1)]); }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); R.setMode(R.mode === 'hidden' ? R.lastOpen : 'hidden'); }
+    aria();
+  });
+  aria();
+  // "hidden": a tab click peeks the ribbon over the page; clicking anywhere else (or Esc) puts it away.
+  document.addEventListener('mousedown', e => {
+    const app = document.querySelector('.app'); if (!app || !app.classList.contains('ribbon-peek')) return;
+    if (e.target.closest('.ribbon, .tabs, .pop, .dialog, .scrim')) return;
+    app.classList.remove('ribbon-peek');
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { const app = document.querySelector('.app'); if (app) app.classList.remove('ribbon-peek'); } });
 };
 R.switchTab = id => {
   R.current = id;
@@ -293,7 +321,7 @@ R.switchTab = id => {
     const on = p.dataset.panel === id; p.hidden = !on;
     if (on) { p.classList.remove('enter'); void p.offsetWidth; p.classList.add('enter'); }
   });
-  if (document.querySelector('.app')?.classList.contains('ribbon-min') && R.setScale) R.setScale(R.scale || 1, false);
+  const appEl = document.querySelector('.app'); if (appEl && appEl.classList.contains('ribbon-min') && R.tabsEl && R.tabsEl.dataset.userClick) appEl.classList.add('ribbon-peek');
   R.moveInd(); R.refresh();
 };
 R.moveInd = () => {

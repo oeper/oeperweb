@@ -348,15 +348,54 @@ textarea.tf{height:auto;padding:10px 12px;resize:vertical;line-height:1.4}
 .rail-logo .ms{font-size:24px;font-variation-settings:"FILL" 1}
 @media (max-width:760px){.rail-logo{width:38px;height:38px;margin:0 4px 0 0}}
 
-/* resizable top: --rz scales the ribbon, --tz (0..1) slims the title bar with it */
-.ribbon{zoom:var(--rz,1)}
-.titlebar{height:calc(46px + 14px * var(--tz,1));transition:height .2s var(--ease)}
-.titlebar .logo{width:calc(30px + 8px * var(--tz,1));height:calc(30px + 8px * var(--tz,1));font-size:calc(14px + 3px * var(--tz,1))}
-.titlebar .tsearch{height:calc(36px + 8px * var(--tz,1))}
-.app.chrome-slim .titlebar .tb-btn{width:34px;height:34px}
-.app.chrome-slim .tabs{padding-bottom:4px}
-.app.chrome-slim .tab{height:32px}
-.app.chrome-slim .tab-ind{height:32px}
+/* resizable top (see R.setMode in core.js): the layout changes, the text size never does */
+.app.rb-compact .rb-lg{flex-direction:row;max-width:none;min-width:0;height:36px;padding:0 12px 0 6px;gap:6px;border-radius:999px;font-size:13px}
+.app.rb-compact .rb-lg>.ms,.app.rb-compact .rb-lg .ic-bar>.ms{font-size:20px;padding:0}
+.app.rb-compact .rb-lg:hover{background:var(--hover)}
+.app.rb-compact .rb-lg:hover>.ms{background:none;transform:none}
+.app.rb-compact .rb-lg.on{background:var(--secondary-container);color:var(--on-secondary-container)}
+.app.rb-compact .rb-lg.on>.ms{background:none}
+.app.rb-compact .glabel{display:none}
+.app.rb-line .rb-lg{flex-direction:row;max-width:none;min-width:0;height:36px;padding:0 12px 0 6px;gap:6px;border-radius:999px;font-size:13px}
+.app.rb-line .rb-lg>.ms,.app.rb-line .rb-lg .ic-bar>.ms{font-size:20px;padding:0}
+.app.rb-line .rb-lg:hover{background:var(--hover)}
+.app.rb-line .rb-lg:hover>.ms{background:none;transform:none}
+.app.rb-line .rb-lg.on{background:var(--secondary-container);color:var(--on-secondary-container)}
+.app.rb-line .rb-lg.on>.ms{background:none}
+.app.rb-line .glabel{display:none}
+.app.rb-compact .panel{min-height:0;padding:6px 10px 4px}
+.app.rb-compact .group{padding:0 8px}
+.app.rb-compact .group+.group::before{top:6px;bottom:6px}
+.app.rb-compact .gbody{flex-direction:column;flex-wrap:wrap;max-height:76px;align-content:flex-start;align-items:flex-start;column-gap:4px;row-gap:2px}
+.app.rb-compact .gallery{height:68px}
+.app.rb-line .panel{min-height:0;padding:4px 8px;align-items:center}
+.app.rb-line .group{padding:0 6px;justify-content:center}
+.app.rb-line .group+.group::before{top:8px;bottom:8px}
+.app.rb-line .gbody{flex-direction:row;align-items:center;flex-wrap:nowrap;padding:0;gap:2px}
+.app.rb-line .col,.app.rb-line .row{flex-direction:row;align-items:center;gap:2px}
+.app.rb-line .rb.lbl .lb{display:none}
+.app.rb-line .rb.lbl{padding:0 8px}
+.app.rb-line .gallery{height:40px;padding:2px}
+.app.rb-line .gallery>*{max-height:36px}
+.app.rb-line .gal-more{flex-direction:row}
+.app.rb-line .gbody>*:not(.rb-lg):not(.col):not(.row):not(.split):not(.rb){max-height:40px;overflow:hidden}
+.app.rb-compact .gbody>*:not(.rb-lg):not(.col):not(.row):not(.split):not(.rb){max-height:76px;overflow:hidden}
+/* title bar + tabs as one row */
+.app.chrome-merge{grid-template-rows:auto auto 1fr auto}
+.app.chrome-merge.readmode{grid-template-rows:0 0 1fr 0}
+.app.chrome-merge .titlebar{height:56px;gap:4px}
+.app.chrome-merge .titlebar .tabs{flex:1 1 auto;min-width:120px;padding:0 4px;background:none;height:40px;align-items:center;position:relative}
+.app.chrome-merge .titlebar .tabs .grow{flex:0 0 8px}
+.app.chrome-merge .titlebar .tab-ind{top:2px}
+.app.chrome-merge .appname{display:none}
+.app.chrome-merge .docname{flex:0 1 auto;min-width:0}
+.app.chrome-merge .docname input{width:min(180px,16vw);font-size:14px;padding:6px 10px}
+.app.chrome-merge .tsearch{width:40px;padding:0 10px;cursor:text}
+.app.chrome-merge .tsearch:focus-within{width:min(300px,28vw)}
+.app.chrome-merge .tsearch input::placeholder{color:transparent}
+/* hidden: a tab click peeks the ribbon over the page */
+.app.ribbon-peek .ribbon-wrap{overflow:visible}
+.app.ribbon-peek .ribbon{position:absolute;left:12px;right:12px;top:0;z-index:60;box-shadow:var(--elev3);animation:fadeUp .25s var(--ease-dec)}
 .ribbon-wrap{position:relative}
 .app.ribbon-min .ribbon-wrap{padding-bottom:8px}
 .rgrip{position:absolute;left:0;right:0;bottom:0;height:10px;cursor:ns-resize;touch-action:none;z-index:3;display:grid;place-items:center}
