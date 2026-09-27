@@ -181,6 +181,7 @@ ONE.seedMenu = anchor => {
 
 /* ---------- ribbon ---------- */
 ONE.commands = [];
+ONE.MARK = '<svg class="onemark" viewBox="0 0 60 200" aria-hidden="true"><path d="M20 0H40A20 20 0 0 1 60 20V180A20 20 0 0 1 20 180V41A20 20 0 0 1 0 21V20A20 20 0 0 1 20 0Z" fill="currentColor"/></svg>';
 const R = ONE.ribbon = { spec:null, run:null, states:{}, contexts:new Set(), current:null };
 const chev = '<span class="ms chev" aria-hidden="true">arrow_drop_down</span>';
 function mkBtn(cls, icon, label, act, opt = {}, tab){
@@ -435,7 +436,7 @@ ONE.appSwitcher = anchor => {
   const g = ONE.el('div', { class:'appgrid' });
   const tile = (a, label, onClick) => {
     const t = ONE.el('button', { class:'apptile' + (a && a.id === ONE.appId ? ' on' : ''), style:{ '--c':a ? a.color : '#3f5aa8' }, onclick:onClick });
-    t.append(ONE.el('span', { class:'apptile-logo', html:a ? (a.icon ? ONE.icon(a.icon) : ONE.esc(a.letter)) : ONE.icon('home') }), ONE.el('span', { text:label }));
+    t.append(ONE.el('span', { class:'apptile-logo', html:a ? (a.icon ? ONE.icon(a.icon) : ONE.esc(a.letter)) : ONE.MARK }), ONE.el('span', { text:label }));
     return t;
   };
   g.append(tile(null, 'Home', () => { ONE.pop.close(); ONE.post({ type:'home' }); }));
@@ -470,12 +471,64 @@ ONE.logoClick = () => {
   if (ONE.backstage.sections && ONE.backstage.sections.some(x => x.id === 'home')) ONE.backstage.show('home');
 };
 ONE.syncLogo = () => { const t = ONE.atHome() ? (ONE.embedded ? 'Back to one' : 'Close Home') : 'Home'; $$('.titlebar .logo, .rail-logo').forEach(l => { l.title = t; l.setAttribute('aria-label', t); }); };
+/* Account button (top right). At oeper.dev/one it reflects the oeper.dev account kept by the main page
+   (window.ONE_CLOUD, reached through the parent frame); in a standalone copy it's just a local name. */
+ONE.accountHost = () => { try { if (ONE.embedded && window.parent.ONE_CLOUD) return window.parent.ONE_CLOUD; } catch {} return window.ONE_CLOUD || null; };
+ONE.localName = () => ONE.store.get('one-name') || '';
+ONE.displayName = () => { const h = ONE.accountHost(), a = h && h.account(); return (a && a.name) || ONE.localName() || 'You'; };
+ONE.setLocalName = n => { ONE.store.set('one-name', n); dispatchEvent(new CustomEvent('one-name', { detail:n })); ONE.renderAvatars(); };
+const initialsOf = n => (n || 'You').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+ONE.renderAvatars = () => {
+  const h = ONE.accountHost(), a = h && h.account(), name = ONE.displayName();
+  $$('.avatar[data-account]').forEach(av => {
+    av.title = a ? `${a.name} (${a.email})` : h ? 'Sign in to oeper.dev' : name;
+    av.setAttribute('aria-label', 'Account: ' + av.title);
+    av.classList.toggle('signed-out', !!h && !a);
+    av.innerHTML = a && a.photo ? `<img src="${ONE.esc(a.photo)}" alt="" referrerpolicy="no-referrer">` : h && !a ? ONE.icon('account_circle') : ONE.esc(initialsOf(name));
+    const img = av.querySelector('img'); if (img) img.onerror = () => { av.textContent = initialsOf(name); };
+  });
+};
+ONE.mountAvatar = slot => {
+  let av = slot ? slot.querySelector('.avatar') : $('.titlebar .avatar');
+  if (!av) { const tb = slot || $('.titlebar'); if (!tb) return; av = ONE.el('button', { class:'avatar', type:'button' }); tb.append(av); }
+  if (av.dataset.account) return ONE.renderAvatars();
+  av.dataset.account = '1'; av.removeAttribute('id'); if (av.tagName !== 'BUTTON') { av.setAttribute('role', 'button'); av.tabIndex = 0; }
+  av.addEventListener('click', () => ONE.accountMenu(av));
+  av.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ONE.accountMenu(av); } });
+  const h = ONE.accountHost(); if (h && h.onAccount) h.onAccount(() => { ONE.renderAvatars(); dispatchEvent(new CustomEvent('one-name', { detail:ONE.displayName() })); });
+  ONE.renderAvatars();
+};
+ONE.accountMenu = anchor => {
+  const h = ONE.accountHost(), a = h && h.account(), E = ONE.el, I = ONE.icon;
+  const card = E('div', { class:'acctcard' });
+  const big = E('span', { class:'avatar big' }); big.innerHTML = a && a.photo ? `<img src="${ONE.esc(a.photo)}" alt="" referrerpolicy="no-referrer">` : ONE.esc(initialsOf(ONE.displayName()));
+  card.append(E('div', { class:'acct-head' }, big, E('div', { class:'acct-id' }, E('b', { text:a ? a.name : ONE.displayName() }), E('small', { text:a ? a.email : h ? 'Not signed in' : 'Only on this device' }))));
+  const items = [];
+  const openTop = url => { try { window.open(url, '_blank', 'noopener'); } catch { location.href = url; } };
+  if (h && a) {
+    items.push({ label:'Cloud saving: ' + (h.enabled() ? 'on' : 'off'), sub:h.enabled() ? 'Your files are saved to oeper.dev' : 'Only in this browser', icon:h.enabled() ? 'cloud_done' : 'cloud_off', on:() => h.openSettings() });
+    items.push({ label:'My files on oeper.dev', icon:'folder_open', on:() => openTop('/files') });
+    items.push({ label:'My profile', icon:'person', on:() => openTop(a.profileUrl || '/profile') });
+  } else if (h) {
+    items.push({ label:'Sign in with your oeper.dev account', sub:'Save files to your account and use them anywhere', icon:'login', on:() => h.signIn() });
+  } else {
+    items.push({ label:'Open at oeper.dev/one', sub:'Sign in there to save files to your account', icon:'open_in_new', on:() => openTop('https://oeper.dev/one/') });
+  }
+  if (!a) items.push({ label:'Your name: ' + (ONE.localName() || 'not set'), sub:'Shown on comments and tracked changes', icon:'badge', on:() => {
+    const i = ONE.input({ value:ONE.localName(), placeholder:'Your name' });
+    ONE.modal({ title:'Your name', icon:'badge', body:ONE.field('Name', i, 'Used for comments and tracked changes'), actions:[{ label:'Cancel' }, { label:'Save', kind:'filled', on:() => ONE.setLocalName(i.value.trim()) }] });
+  } });
+  if (h && a) items.push('-', { label:'Sign out', icon:'logout', on:() => h.signOut() });
+  card.append(ONE.menu(items));
+  ONE.pop.open(anchor, card, { alignRight:true });
+};
 ONE.boot = (appKey, appId) => {
   ONE.appKey = appKey; ONE.appId = appId || appKey;
   const seed = ONE.store.get(appKey + '-seed'); if (seed) ONE.setSeed(seed, false);
   ONE.loadIcons();
   setTimeout(() => ONE.post({ type:'ready' }), 0);
   if (!ONE.embedded) document.querySelectorAll('[data-act="apps"]').forEach(b => b.hidden = true);
+  ONE.mountAvatar();
   const logo = $('.titlebar .logo');
   if (logo) { logo.setAttribute('role', 'button'); logo.tabIndex = 0; logo.removeAttribute('aria-hidden'); logo.classList.add('logo-btn'); logo.addEventListener('click', ONE.logoClick); logo.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ONE.logoClick(); } }); ONE.syncLogo(); }
 };

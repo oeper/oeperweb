@@ -310,7 +310,11 @@ textarea.tf{height:auto;padding:10px 12px;resize:vertical;line-height:1.4}
 .info>span:nth-child(odd){color:var(--on-surface-variant)}
 
 @media (max-width:760px){
-  .tsearch,.savestate,.appname,.avatar{display:none}
+  .tsearch,.savestate,.appname,.avatar:not([data-account]){display:none}
+  .titlebar{padding-inline:10px;gap:2px}
+  .titlebar [data-act="shortcuts"],.titlebar [data-act="seed"]{display:none}
+  .titlebar .present{font-size:0;gap:0;padding:0 12px}
+  .titlebar .present .ms{font-size:20px}
   .zoomctl input{width:70px}
   .hide-sm{display:none!important}
   .backstage{grid-template-columns:1fr;grid-template-rows:auto 1fr}
@@ -332,6 +336,8 @@ textarea.tf{height:auto;padding:10px 12px;resize:vertical;line-height:1.4}
 .apptile.on{background:var(--secondary-container)}
 .apptile-logo{width:44px;height:44px;border-radius:14px;background:var(--c);color:#fff;display:grid;place-items:center;font:800 18px "Google Sans","Roboto Flex",sans-serif;transition:border-radius .4s var(--spring)}
 .apptile:hover .apptile-logo{border-radius:50%}
+.onemark{display:block;height:1em;width:auto}
+.apptile-logo .onemark{height:26px;color:#fff}
 .apptile-logo .ms{font-size:24px;font-variation-settings:"FILL" 1,"wght" 500,"GRAD" 0,"opsz" 24}
 /* app home (start) screen */
 .home-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
@@ -404,3 +410,25 @@ textarea.tf{height:auto;padding:10px 12px;resize:vertical;line-height:1.4}
 .rgrip:focus-visible{outline:none}
 body.rgrip-drag,body.rgrip-drag *{cursor:ns-resize!important;user-select:none}
 body.rgrip-drag .ribbon-wrap{transition:none}
+
+/* account button + card */
+.avatar[data-account]{cursor:pointer;border:0;padding:0;overflow:hidden;margin-left:4px;transition:box-shadow .2s,transform .3s var(--spring)}
+.avatar[data-account]:hover{box-shadow:0 0 0 3px var(--hover);transform:scale(1.05)}
+.avatar[data-account]:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.avatar.signed-out{background:var(--surface-high);color:var(--on-surface-variant)}
+.avatar.signed-out .ms{font-size:24px}
+.acctcard{min-width:280px;max-width:340px}
+.acct-head{display:flex;align-items:center;gap:12px;padding:12px 14px 10px}
+.avatar.big{width:48px;height:48px;font-size:18px}
+.acct-id{min-width:0;display:flex;flex-direction:column}
+.acct-id b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct-id small{color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acctcard .menu{border-top:1px solid var(--outline-variant);padding-top:4px}
+
+/* never let the page be wider than the screen: the title bar gives way (document name shrinks) instead */
+.app{grid-template-columns:minmax(0,1fr)}
+.titlebar{min-width:0}
+.titlebar>*{flex-shrink:0}
+.titlebar .docname{flex:1 1 auto;min-width:0}
+.titlebar .docname input{min-width:48px;width:100%;max-width:280px}

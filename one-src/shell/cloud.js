@@ -2,7 +2,7 @@
    Off by default. When on and signed in, every document is mirrored to fs.oeper.dev (forum-server/one-sync.js)
    under oneWord/, oneSheet/, oneSlide/, oneIdea/ and onePDF/, which is also where oeper.dev/files shows them.
    The browser copy stays the working copy; sync is last-writer-wins on each document's own "updated" time. */
-import { onAccountChange, getCurrentUser, signIn, signOutUser, SERVER_ENDPOINT } from '/shared/account.js?v=36';
+import { onAccountChange, getCurrentUser, signIn, signOutUser, SERVER_ENDPOINT, ensureProfileLoaded, getProfile, handleOf } from '/shared/account.js?v=36';
 
 const store = ONE.store, el = ONE.el, icon = ONE.icon, esc = ONE.esc;
 const SETTINGS = 'one-cloud', STATE = 'one-cloud-state';
@@ -156,6 +156,18 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) soon
 setInterval(() => soon(0), 60000); // also picks up onePDF saves, which IndexedDB doesn't announce
 
 let resolveReady; const ready = new Promise(r => resolveReady = r);
+// The account as the apps show it: oeper.dev profile name/photo (falls back to the Google ones).
+let acct = null; const acctListeners = new Set();
+async function loadAccount(u) {
+  if (!u) return null;
+  try { await ensureProfileLoaded(u.email); } catch {}
+  const p = getProfile(u.email, u.displayName, u.photoURL), h = handleOf(u.email);
+  return { email:u.email, name:p.name, photo:p.photo, profileUrl:h ? '/profile?u=' + encodeURIComponent(h) : '/profile' };
+}
+onAccountChange(async u => {
+  acct = await loadAccount(u);
+  acctListeners.forEach(f => { try { f(acct); } catch { acctListeners.delete(f); } });
+})
 onAccountChange(async u => {
   user = u;
   if (!u) setStatus({ state:settings().enabled ? 'signedout' : 'off' });
@@ -199,7 +211,13 @@ function openSettings() {
     } }].filter(Boolean) });
 }
 
-window.ONE_CLOUD = { ready, syncAll, openSettings, enabled:() => settings().enabled, isSynced:(app, id) => app + ':' + id in store.get(STATE, {}) };
+window.ONE_CLOUD = { ready, syncAll, openSettings, enabled:() => settings().enabled, isSynced:(app, id) => app + ':' + id in store.get(STATE, {}),
+  account:() => acct,
+  onAccount:cb => { acctListeners.add(cb); cb(acct); return () => acctListeners.delete(cb); },
+  signIn:async () => { try { await signIn(); } catch { ONE.toast('Sign-in didn’t finish.'); } },
+  signOut:async () => { await signOutUser(); },
+};
+ONE.mountAvatar(document.getElementById('avatarSlot')); window.ONE_CLOUD.onAccount(() => ONE.renderAvatars());
 const slot = document.getElementById('cloudSlot'); if (slot) slot.append(chip);
 const gear = document.getElementById('settingsBtn'); if (gear) { gear.hidden = false; gear.onclick = openSettings; }
 renderChip();

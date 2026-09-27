@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>one</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='-70%200%20200%20200'%3E%3Cstyle%3Epath{fill:%235f6368}@media(prefers-color-scheme:dark){path{fill:%23d9d9d9}}%3C/style%3E%3Cpath%20d='M20%200H40A20%2020%200%200%201%2060%2020V180A20%2020%200%200%201%2020%20180V41A20%2020%200%200%201%200%2021V20A20%2020%200%200%201%2020%200Z'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&display=swap">
@@ -15,7 +16,9 @@ body{overflow:auto;background:var(--surface)}
 .home[hidden]{display:none}
 .top{display:flex;align-items:center;gap:12px;height:64px;padding:0 20px;position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(12px)}
 .brand{display:flex;align-items:center;gap:10px;font:700 22px "Google Sans",sans-serif;letter-spacing:-.5px}
-.brand .logo{width:38px;height:38px}
+.brandmark{display:grid;place-items:center;width:30px;height:40px;color:var(--on-surface)}
+.brandmark .onemark{height:34px;transition:transform .45s var(--spring)}
+.brand:hover .onemark{transform:rotate(-8deg) scale(1.06)}
 .top .grow{flex:1}
 main{max-width:1120px;margin:0 auto;padding:12px 20px 60px}
 .hero{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:18px 0 22px}
@@ -82,11 +85,12 @@ main{max-width:1120px;margin:0 auto;padding:12px 20px 60px}
 <body>
 <div class="home" id="home">
   <header class="top">
-    <div class="brand"><div class="logo" aria-hidden="true">1</div>one</div>
+    <div class="brand"><span class="brandmark"><svg class="onemark" viewBox="0 0 60 200" aria-hidden="true"><path d="M20 0H40A20 20 0 0 1 60 20V180A20 20 0 0 1 20 180V41A20 20 0 0 1 0 21V20A20 20 0 0 1 20 0Z" fill="currentColor"/></svg></span>one</div>
     <span class="grow"></span>
     <span id="cloudSlot"></span>
     <button class="tb-btn" id="seedBtn" title="Color"><span class="ms" aria-hidden="true">palette</span></button>
     <button class="tb-btn" id="settingsBtn" title="Settings" hidden><span class="ms" aria-hidden="true">settings</span></button>
+    <span id="avatarSlot"></span>
   </header>
   <main>
     <div class="hero">
@@ -194,6 +198,7 @@ addEventListener('message', e => {
 });
 addEventListener('popstate', e => { const id = e.state && e.state.app; if (id && byId[id]) openApp(id, null, true); else showHome(true); });
 let lt; addEventListener('storage', () => { if (!$('#home').hidden) { clearTimeout(lt); lt = setTimeout(loadFiles, 300); } });
+ONE.mountAvatar(document.getElementById('avatarSlot'));
 window.ONE_SHELL_API = { refresh:() => { if (!$('#home').hidden) loadFiles(); }, frameLoaded:id => !!frames[id] && !!ready[id], openApp };
 loadFiles();
 // #word opens an app; #open=word:<id> (the links oeper.dev/files uses) opens one document, once cloud sync had a chance to bring it in.

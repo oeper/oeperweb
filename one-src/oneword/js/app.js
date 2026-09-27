@@ -468,7 +468,7 @@ el('div', { class:'list' },
   '-',
   { id:'options', label:'Options', icon:'settings', render:b => {
     const s = W.settings; b.append(el('h1', { text:'Options' }));
-    const nm = ONE.input({ value:s.author }); nm.oninput = () => { s.author = nm.value.trim() || 'You'; $('#avatar').textContent = W.initials(); W.saveSettings(); };
+    const nm = ONE.input({ value:s.author }); nm.oninput = () => { s.author = nm.value.trim() || 'You'; W.saveSettings(); if (!(ONE.accountHost() && ONE.accountHost().account())) ONE.setLocalName(s.author === 'You' ? '' : s.author); };
     b.append(el('h3', { text:'Personalize' }), el('div', { style:{ maxWidth:'380px' } }, ONE.field('Your name (used for comments and tracked changes)', nm)), el('div', { class:'bs-row', style:{ marginTop:'12px' } }, el('button', { class:'btn outlined', html:`${icon('palette')}App color`, onclick:e => ONE.seedMenu(e.currentTarget) })));
     b.append(el('h3', { text:'AutoCorrect & AutoFormat' }));
     [['smartQuotes', 'Replace straight quotes with smart quotes, and (c) → ©, ... → …'], ['autoDashes', 'Replace -- with an em dash (—)'], ['autoLists', 'Automatic bulleted and numbered lists (type “* ” or “1. ”)'], ['miniToolbar', 'Show the Mini Toolbar on selection']].forEach(([k, l]) => { const c = ONE.check(l, s[k]); c.input.onchange = () => { s[k] = c.input.checked; W.saveSettings(); }; b.append(c.wrap); });
@@ -486,7 +486,9 @@ function recentList(max, withDelete, q, where = 'open'){
 }
 
 /* ---------- boot ---------- */
-$('#avatar').textContent = W.initials(); $('#avatar').title = W.settings.author;
+// Comment/track-changes author follows the oeper.dev account (or the name set in the account menu).
+const syncAuthor = () => { const n = ONE.displayName(); if (n && n !== 'You' && W.settings.author !== n) { W.settings.author = n; W.saveSettings(); } };
+addEventListener('one-name', syncAuthor); syncAuthor();
 let first = W.lib.current && store.get('ow-doc-' + W.lib.current);
 if (!first) { const old = store.get('folio-doc'); if (old && old.html) { first = W.newDoc(old.html, old.title || 'Document'); if (old.layout) { first.layout.size = old.layout.size || 'letter'; first.layout.orient = old.layout.orient || 'portrait'; } } }
 const pendingId = ONE.pendingOpen(), pendingDoc = pendingId && store.get('ow-doc-' + pendingId);
