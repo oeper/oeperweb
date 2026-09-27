@@ -14,6 +14,7 @@ const paletteGallery = () => {
 const syncDesign = () => { $$('.pal').forEach(b => b.classList.toggle('on', b.dataset.k === M.site.theme.palette)); ONE.ribbon.refresh(); };
 P.fonts = a => ONE.menuAt(a, Object.entries(SITE.FONTS).map(([k, f]) => ({ html:`<span style="font-family:'${f.head}',serif;font-weight:${f.w}">${esc(f.name)}</span><small>${esc(f.head)}${f.head !== f.body ? ' + ' + esc(f.body) : ''}</small>`, checked:M.site.theme.font === k, on:() => { M.site.theme.font = k; M.changed(true, 'all'); } })));
 P.corners = a => ONE.menuAt(a, Object.entries(SITE.RADII).map(([k, r]) => ({ label:r[0], icon:{ sharp:'crop_square', soft:'rounded_corner', round:'circle' }[k], checked:M.site.theme.radius === k, on:() => { M.site.theme.radius = k; M.changed(true, 'all'); } })));
+P.element = a => E.elementMenu(a, k => E.addElement(k));
 P.accent = a => ONE.pop.open(a, ONE.colorGrid(c => { M.site.theme.accent = c; M.changed(true, 'all'); }, { autoLabel:'Palette colour', autoColor:SITE.PALETTES[M.site.theme.palette].accent }));
 // fonts preview in the Fonts menu needs the fonts themselves
 (() => { const fams = [...new Set(Object.values(SITE.FONTS).map(f => f.head))].map(n => 'family=' + n.replace(/ /g, '+') + ':wght@400;600;700').join('&'); document.head.append(el('link', { rel:'stylesheet', href:`https://fonts.googleapis.com/css2?${fams}&display=swap` })); })();
@@ -73,7 +74,7 @@ const STATES = { desktop:() => E.device === 'desktop', tablet:() => E.device ===
   leftPanel:() => !$('#app').classList.contains('hide-left'), rightPanel:() => !$('#app').classList.contains('hide-right') };
 const SPEC = [
   { id:'home', label:'Home', groups:[
-    { label:'Add', items:[['L', 'add_box', 'Add section', 'addSection'], ['L', 'note_add', 'Add page', 'addPage']] },
+    { label:'Add', items:[['L', 'add_box', 'Add section', 'addSection'], ['LD', 'widgets', 'Add element', 'pop:element'], ['L', 'note_add', 'Add page', 'addPage']] },
     { label:'Section', items:[['C', [['S', 'arrow_upward', 'Move up', 'up', { kbd:'Alt+↑' }], ['S', 'arrow_downward', 'Move down', 'down', { kbd:'Alt+↓' }]]], ['C', [['S', 'content_copy', 'Duplicate', 'dup', { kbd:'Ctrl+D' }], ['S', 'delete', 'Delete', 'del', { kbd:'Del' }]]]] },
     { label:'Page', items:[['LD', 'description', 'This page', 'pageMenu'], ['L', 'settings', 'Site settings', 'siteSettings']] },
     { label:'Share', items:[['L', 'visibility', 'Preview', 'preview'], ['L', 'public', 'Publish', 'publish']] }

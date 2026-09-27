@@ -18,6 +18,7 @@ body.outlines [data-block]:hover{outline-color:rgba(66,133,244,.45)}
 [data-k]{cursor:text;border-radius:4px;transition:box-shadow .15s}
 [data-k]:hover{box-shadow:0 0 0 2px rgba(66,133,244,.35)}
 [data-k][contenteditable]{outline:none;box-shadow:0 0 0 2px #4285f4;cursor:text}
+[data-el]{border-radius:6px;transition:box-shadow .15s}[data-block].sel [data-el]:hover{box-shadow:0 0 0 1px rgba(66,133,244,.35)}
 [data-img]{cursor:pointer}[data-img]:hover{outline:3px solid rgba(66,133,244,.6);outline-offset:-3px}
 .ed-bar{position:absolute;z-index:1000;display:flex;align-items:center;gap:2px;padding:4px;border-radius:12px;background:#1f2937;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25);font:500 12px system-ui,sans-serif}
 .ed-bar b{padding:0 8px 0 6px;font-weight:600;white-space:nowrap}
@@ -69,6 +70,7 @@ function hookCanvas(d) {
     const a = e.target.closest('a'); if (a && !a.matches('[contenteditable]')) e.preventDefault();
     if (e.target.closest('.ed-bar,.ed-add')) return;
     const k = e.target.closest('[data-k]'), im = e.target.closest('[data-img]'), blk = e.target.closest('[data-block]');
+    const elNode = e.target.closest('[data-el]'); if (blk && elNode) E.openItem = `${blk.dataset.block}:${elNode.dataset.el}`;
     if (blk) E.select(blk.dataset.block, false);
     if (im && blk) { e.preventDefault(); E.pickImage(blk.dataset.block, im.dataset.img); return; }
     if (k && blk) startEdit(k, blk.dataset.block);
@@ -218,6 +220,17 @@ E.insert = (type, after) => {
   setTimeout(() => { const n = fd() && fd().querySelector(`[data-block="${b.id}"]`); if (n) n.scrollIntoView({ behavior:'smooth', block:'start' }); }, 250);
 };
 
+/* ---------- elements ---------- */
+E.elementMenu = (anchor, pick) => ONE.menuAt(anchor, Object.entries(BLOCKS.ELEMENTS).map(([k, x]) => ({ label:x.name, icon:x.icon, on:() => pick(k) })));
+// Adds to the selected "Build your own" section, or makes one right after whatever is selected.
+E.addElement = kind => {
+  const f = E.sel && M.find(E.sel);
+  if (f && f.b.type === 'custom') { f.b.data.items.push(BLOCKS.newElement(kind)); E.openItem = `${f.b.id}:${f.b.data.items.length - 1}`; M.changed(true, f.b.id); E.fillInspector(); return; }
+  const list = M.page().sections, b = BLOCKS.new('custom'); b.data.items = [BLOCKS.newElement(kind)];
+  const at = f && f.list ? f.i + 1 : list.length; list.splice(at, 0, b); E.sel = b.id; E.openItem = `${b.id}:0`; M.changed(true, 'all');
+  setTimeout(() => { const n = fd() && fd().querySelector(`[data-block="${b.id}"]`); if (n) n.scrollIntoView({ behavior:'smooth', block:'center' }); }, 250);
+};
+
 /* ---------- pictures ---------- */
 const readURL = f => new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = bad; r.readAsDataURL(f); });
 E.shrink = async (f, max = 1800) => {
@@ -266,6 +279,26 @@ function field(b, id, [key, type, label, opt], base = '') {
     lab.oninput = push; url.oninput = push; sel.onchange = () => { url.hidden = sel.value !== 'custom'; if (!url.hidden) url.focus(); push(); };
     return wrapF(lab, sel, url);
   }
+  if (type === 'choice') return wrapF(chipRow(opt, val, k => upd(k)));
+  if (type === 'elements') {
+    const items = get(b.data, path) || [], box = el('div', { class:'ilist' });
+    items.forEach((it, i) => {
+      const K = BLOCKS.ELEMENTS[it.kind]; if (!K) return;
+      const preview = String(it.title || it.text || (it.btn && it.btn.label) || it.caption || it.address || '').split('\n')[0].slice(0, 40);
+      const d = el('details', { class:'iitem', open:E.openItem === `${id}:${i}` }, el('summary', {}, el('span', { class:'ms iel-ic', text:K.icon }), el('span', { class:'grow', html:`${esc(K.name)}${preview ? `<small>${esc(preview)}</small>` : ''}` }),
+        el('button', { class:'icon-btn', title:'Move up', html:icon('arrow_upward'), disabled:i === 0, onclick:e => { e.preventDefault(); items.splice(i - 1, 0, items.splice(i, 1)[0]); E.openItem = `${id}:${i - 1}`; M.changed(true, id); E.fillInspector(); } }),
+        el('button', { class:'icon-btn', title:'Move down', html:icon('arrow_downward'), disabled:i === items.length - 1, onclick:e => { e.preventDefault(); items.splice(i + 1, 0, items.splice(i, 1)[0]); E.openItem = `${id}:${i + 1}`; M.changed(true, id); E.fillInspector(); } }),
+        el('button', { class:'icon-btn', title:'Duplicate', html:icon('content_copy'), onclick:e => { e.preventDefault(); items.splice(i + 1, 0, JSON.parse(JSON.stringify(it))); E.openItem = `${id}:${i + 1}`; M.changed(true, id); E.fillInspector(); } }),
+        el('button', { class:'icon-btn', title:'Remove', html:icon('delete'), onclick:e => { e.preventDefault(); items.splice(i, 1); M.changed(true, id); E.fillInspector(); } })));
+      d.ontoggle = () => { if (d.open) E.openItem = `${id}:${i}`; };
+      K.fields.forEach(sub => d.append(field(b, id, sub, `${path}.${i}.`)));
+      box.append(d);
+    });
+    const addB = el('button', { class:'btn tonal addi', html:`${icon('add')}Add element` });
+    addB.onclick = () => E.elementMenu(addB, kind => { items.push(BLOCKS.newElement(kind)); set(b.data, path, items); E.openItem = `${id}:${items.length - 1}`; M.changed(true, id); E.fillInspector(); });
+    box.append(addB);
+    return el('div', { class:'ifield' }, el('div', { class:'ilabel', text:label }), box);
+  }
   if (type === 'list') {
     const items = get(b.data, path) || [], box = el('div', { class:'ilist' });
     items.forEach((it, i) => {
@@ -282,7 +315,7 @@ function field(b, id, [key, type, label, opt], base = '') {
   }
   return el('div');
 }
-const chipRow = (opts, cur, on) => { const r = el('div', { class:'chips' }); opts.forEach(([k, t]) => { const b = el('button', { class:'chip' + (k === cur ? ' on' : ''), text:t }); b.onclick = () => { $$('.chip', r).forEach(c => c.classList.toggle('on', c === b)); on(k); }; r.append(b); }); return r; };
+function chipRow(opts, cur, on) { const r = el('div', { class:'chips' }); opts.forEach(([k, t]) => { const b = el('button', { class:'chip' + (k === cur ? ' on' : ''), text:t }); b.onclick = () => { $$('.chip', r).forEach(c => c.classList.toggle('on', c === b)); on(k); }; r.append(b); }); return r; }
 E.fillInspector = (soft = false) => {
   if (soft && right.contains(document.activeElement)) return; // don't yank a field out from under the cursor
   const body = $('#insp'), f = E.sel && M.find(E.sel); body.innerHTML = '';

@@ -38,7 +38,8 @@
 .iitem summary{display:flex;align-items:center;gap:4px;padding:6px 6px 6px 12px;cursor:pointer;list-style:none;font-weight:500;font-size:13.5px}.iitem summary::-webkit-details-marker{display:none}
 .iitem summary .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.iitem summary .icon-btn{width:30px;height:30px}.iitem summary .icon-btn .ms{font-size:18px}
 .iitem[open]{padding-bottom:10px}.iitem>.ifield{padding:4px 12px}
-.addi{align-self:flex-start;height:36px}.irow{display:flex;gap:4px;flex-wrap:wrap}.btn.danger{color:var(--error)}
+.addi{align-self:flex-start;height:36px}
+.iel-ic{font-size:18px;color:var(--primary);margin-right:2px}.iitem summary .grow small{display:block;font-weight:400;font-size:12px;color:var(--on-surface-variant);overflow:hidden;text-overflow:ellipsis}.irow{display:flex;gap:4px;flex-wrap:wrap}.btn.danger{color:var(--error)}
 /* library */
 .lib{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;max-height:62vh;overflow:auto;padding:2px}
 .libc{display:flex;flex-direction:column;border-radius:18px;background:var(--surface-low);overflow:hidden;text-align:left;box-shadow:0 0 0 1px var(--outline-variant);transition:transform .3s var(--spring),box-shadow .2s;animation:fadeUp .35s var(--ease-dec) both}

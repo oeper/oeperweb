@@ -161,6 +161,41 @@ B.footer = {
   }
 };
 
-B.ORDER = ['hero', 'features', 'about', 'text', 'gallery', 'stats', 'testimonials', 'logos', 'team', 'pricing', 'faq', 'cta', 'contact', 'video'];
+/* ---------- elements: the building blocks of a "Build your own" section ---------- */
+const EL = B.ELEMENTS = {
+  heading:{ name:'Heading', icon:'title', make:() => ({ title:'A new heading', size:'h2' }), fields:[['title', 'text', 'Text'], ['size', 'choice', 'Size', [['h1', 'Huge'], ['h2', 'Large'], ['h3', 'Small']]]],
+    render:(it, k) => `<${it.size || 'h2'} data-k="${k}.title">${esc(it.title || '')}</${it.size || 'h2'}>` },
+  text:{ name:'Text', icon:'notes', make:() => ({ text:'Write something here. Press Enter for a new line.', size:'normal' }), fields:[['text', 'area', 'Text'], ['size', 'choice', 'Size', [['small', 'Small'], ['normal', 'Normal'], ['lead', 'Large']]]],
+    render:(it, k) => `<p class="${it.size === 'lead' ? 'lead' : it.size === 'small' ? 'small' : 'body'}" data-k="${k}.text">${esc(it.text || '').replace(/\n/g, '<br>')}</p>` },
+  button:{ name:'Button', icon:'smart_button', make:() => ({ btn:{ label:'Click me', url:'#contact' }, style:'filled' }), fields:[['btn', 'link', 'Button'], ['style', 'choice', 'Style', [['filled', 'Filled'], ['ghost', 'Outline']]]],
+    render:(it, k, ctx) => `<div class="btns el-btn">${btn(it, 'btn', ctx, it.style === 'ghost' ? 'btn ghost' : 'btn').replace(/data-k="btn\./, `data-k="${k}.btn.`).replace('data-link="btn"', `data-link="${k}.btn"`)}</div>` },
+  image:{ name:'Picture', icon:'image', make:() => ({ image:'ph:g2', size:'full', shape:'rounded', caption:'' }), fields:[['image', 'image', 'Picture'], ['size', 'choice', 'Width', [['small', 'Small'], ['medium', 'Medium'], ['full', 'Full']]], ['shape', 'choice', 'Shape', [['rounded', 'Rounded'], ['square', 'Square'], ['circle', 'Circle']]], ['caption', 'text', 'Caption']],
+    render:(it, k, ctx) => `<figure class="el-img w-${it.size || 'full'} sh-${it.shape || 'rounded'}">${img(it, 'image', ctx).replace('data-img="image"', `data-img="${k}.image"`)}${it.caption ? `<figcaption data-k="${k}.caption">${esc(it.caption)}</figcaption>` : ''}</figure>` },
+  iconText:{ name:'Icon with text', icon:'interests', make:() => ({ icon:'bolt', title:'Something great', text:'A sentence about it.' }), fields:[['icon', 'icon', 'Icon'], ['title', 'text', 'Title'], ['text', 'area', 'Text']],
+    render:(it, k) => `<div class="el-icon">${icon(it.icon)}<div><h3 data-k="${k}.title">${esc(it.title || '')}</h3><p data-k="${k}.text">${esc(it.text || '').replace(/\n/g, '<br>')}</p></div></div>` },
+  list:{ name:'List', icon:'format_list_bulleted', make:() => ({ text:'First thing\nSecond thing\nThird thing', style:'check' }), fields:[['text', 'area', 'Items (one per line)'], ['style', 'choice', 'Style', [['check', 'Ticks'], ['dot', 'Bullets'], ['num', 'Numbers']]]],
+    render:it => { const li = String(it.text || '').split('\n').filter(Boolean).map(s => `<li>${esc(s)}</li>`).join(''); return it.style === 'num' ? `<ol class="el-list">${li}</ol>` : `<ul class="el-list ${it.style === 'dot' ? 'dot' : 'check'}">${li}</ul>`; } },
+  quote:{ name:'Quote', icon:'format_quote', make:() => ({ text:'Something wise or kind that someone said.', name:'Someone' }), fields:[['text', 'area', 'Quote'], ['name', 'text', 'Who said it']],
+    render:(it, k) => `<blockquote class="el-quote"><p data-k="${k}.text">${esc(it.text || '')}</p>${it.name ? `<cite data-k="${k}.name">${esc(it.name)}</cite>` : ''}</blockquote>` },
+  divider:{ name:'Divider', icon:'horizontal_rule', make:() => ({ style:'line' }), fields:[['style', 'choice', 'Style', [['line', 'Line'], ['dots', 'Dots'], ['short', 'Short line']]]],
+    render:it => `<hr class="el-hr ${it.style || 'line'}">` },
+  spacer:{ name:'Space', icon:'height', make:() => ({ size:'m' }), fields:[['size', 'choice', 'Height', [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']]]],
+    render:(it, k, ctx) => `<div class="el-space ${it.size || 'm'}${ctx.mode === 'edit' ? ' edit' : ''}" aria-hidden="true"></div>` },
+  video:{ name:'Video', icon:'smart_display', make:() => ({ url:'' }), fields:[['url', 'text', 'YouTube or Vimeo link']],
+    render:it => { const u = String(it.url || ''), yt = /(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/.exec(u), vm = /vimeo\.com\/(\d+)/.exec(u); const src = yt ? `https://www.youtube-nocookie.com/embed/${yt[1]}` : vm ? `https://player.vimeo.com/video/${vm[1]}` : ''; return `<div class="video">${src ? `<iframe src="${esc(src)}" title="Video" allow="accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen loading="lazy"></iframe>` : '<div class="video-empty">Paste a YouTube or Vimeo link in the panel</div>'}</div>`; } },
+  map:{ name:'Map', icon:'map', make:() => ({ address:'Eiffel Tower, Paris' }), fields:[['address', 'text', 'Address or place']],
+    render:it => `<div class="video el-map"><iframe src="https://maps.google.com/maps?q=${encodeURIComponent(it.address || '')}&z=15&output=embed" title="Map of ${esc(it.address || '')}" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>` }
+};
+B.custom = {
+  name:'Build your own', icon:'dashboard_customize', cat:'Build your own', desc:'Stack any elements you like: text, buttons, pictures, maps…',
+  variants:{ left:'Left aligned', center:'Centered', two:'Two columns', three:'Three columns' },
+  make:() => ({ items:[EL.heading.make(), EL.text.make(), EL.button.make()] }),
+  fields:[['items', 'elements', 'Elements']],
+  render:(d, v, ctx) => `<div class="wrap ${v === 'center' ? 'narrow tc' : v === 'left' ? 'narrow' : ''}"><div class="els ${v === 'two' || v === 'three' ? 'cols c-' + v : ''}">${(d.items || []).map((it, i) => { const E1 = EL[it.kind]; return E1 ? `<div class="el el-${it.kind}" data-el="${i}" data-reveal>${E1.render(it, 'items.' + i, ctx)}</div>` : ''; }).join('')}</div></div>`
+};
+B.newElement = kind => Object.assign({ kind }, EL[kind].make());
+B.custom.make = () => ({ items:['heading', 'text', 'button'].map(B.newElement) });
+
+B.ORDER = ['custom', 'hero', 'features', 'about', 'text', 'gallery', 'stats', 'testimonials', 'logos', 'team', 'pricing', 'faq', 'cta', 'contact', 'video'];
 B.new = type => { const b = B[type]; return { id:ONE.uid(), type, v:Object.keys(b.variants)[0], bg:'default', pad:'m', data:b.make() }; };
 })();
