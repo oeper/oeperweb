@@ -168,12 +168,19 @@
 .show .ghost{z-index:1}
 
 @media (max-width:760px){
-  .slidesPane{width:112px;padding:8px 6px}
+  .work{flex-direction:column}
+  .editArea{flex:1;min-height:0}
+  .slidesPane{order:2;width:auto;height:84px;flex:none;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:6px 10px;gap:8px;align-items:center}
+  .sthumb{flex:none;padding:2px}
+  .sthumb .thumbwrap{zoom:.4}
+  .slidesPane>*:not(.sthumb){flex:none}
   .sthumb .snum{display:none}
   .sidepane{position:absolute;right:0;top:0;bottom:0;z-index:25;box-shadow:var(--elev3);width:min(300px,90vw)}
   .work{padding:0}
   .editArea{border-radius:18px 18px 0 0}
-  .present span:last-child{display:none}
+  .notesWrap{padding:4px 12px}
+  .notesWrap textarea{height:28px;resize:none;transition:height .25s var(--ease)}
+  .notesWrap textarea:focus{height:120px}
 }
 .print-hand{display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:18px;max-width:1000px}
 .ph-item{display:flex;gap:14px;align-items:center;background:#fff;border-radius:10px;padding:12px;box-shadow:var(--elev1);animation:fadeUp .4s var(--ease-dec) both}

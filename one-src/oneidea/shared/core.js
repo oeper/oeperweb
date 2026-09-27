@@ -268,7 +268,7 @@ R.setMode = (mode, save = true) => {
   app.classList.toggle('rb-line', layout === 'line');
   app.classList.toggle('ribbon-min', mode === 'hidden');
   app.classList.remove('ribbon-peek');
-  R.mergeChrome(mode === 'line' || mode === 'hidden');
+  R.mergeChrome((mode === 'line' || mode === 'hidden') && !R.narrow());
   if (save) ONE.store.set((ONE.appKey || 'one') + '-ribbon', { mode });
   requestAnimationFrame(R.moveInd); dispatchEvent(new Event('resize'));
 };
@@ -280,6 +280,9 @@ R.mergeChrome = on => {
   if (on && tabs.parentElement !== tb) { const anchor = tb.querySelector('.qat') || tb.querySelector('.appname'); anchor ? anchor.after(tabs) : tb.prepend(tabs); }
   if (!on && tabs.parentElement === tb) R.tabsHome.parent.insertBefore(tabs, R.tabsHome.next);
 };
+// On a phone the title bar has no room for the tabs, so they keep their own row there.
+R.narrow = () => matchMedia('(max-width:760px)').matches;
+matchMedia('(max-width:760px)').addEventListener('change', () => R.mergeChrome((R.mode === 'line' || R.mode === 'hidden') && !R.narrow()));
 // Old name, still used by the apps' "collapse ribbon" button.
 R.setScale = (k, collapsed) => R.setMode(collapsed ? 'hidden' : R.lastOpen);
 R.initGrip = () => {
@@ -288,6 +291,7 @@ R.initGrip = () => {
   wrap.append(grip);
   const saved = ONE.store.get((ONE.appKey || 'one') + '-ribbon');
   if (saved && saved.mode) R.setMode(saved.mode, false);
+  else if (R.narrow()) R.setMode('line', false); // phones start with the one-line ribbon
   const idx = () => R.MODES.indexOf(R.mode), aria = () => { grip.setAttribute('aria-valuenow', idx()); grip.setAttribute('aria-valuetext', R.mode); };
   let d = null;
   grip.addEventListener('pointerdown', e => { e.preventDefault(); grip.setPointerCapture(e.pointerId); d = { y:e.clientY, start:idx() }; document.body.classList.add('rgrip-drag'); });

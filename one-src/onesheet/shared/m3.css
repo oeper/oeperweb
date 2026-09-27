@@ -314,6 +314,12 @@ textarea.tf{height:auto;padding:10px 12px;resize:vertical;line-height:1.4}
   .titlebar{padding-inline:10px;gap:2px}
   .titlebar [data-act="shortcuts"],.titlebar [data-act="seed"]{display:none}
   .titlebar .present{font-size:0;gap:0;padding:0 12px}
+  .qat [data-act="save"],.qat [data-act="showStart"]{display:none}
+  .titlebar .docname input{font-size:14px;padding:6px 8px}
+  .status{padding-inline:8px;gap:0}
+  .status .sb{min-width:0;overflow:hidden;text-overflow:ellipsis;flex-shrink:1}
+  .status>*:not(.sb){flex-shrink:0}
+  .zoomctl input{display:none}
   .titlebar .present .ms{font-size:20px}
   .zoomctl input{width:70px}
   .hide-sm{display:none!important}
