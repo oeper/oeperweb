@@ -1,0 +1,70 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>oneSite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&family=Roboto+Flex:opsz,wght@8..144,300..800&display=swap">
+<link rel="stylesheet" href="shared/m3.css?v=1">
+<link rel="stylesheet" href="site.css?v=1">
+
+<div class="app" id="app">
+  <header class="titlebar">
+    <div class="logo" aria-hidden="true"><span class="ms">web</span></div>
+    <span class="appname">oneSite</span>
+    <div class="qat">
+      <button class="tb-btn" data-act="save" title="Save (Ctrl+S)"><span class="ms" aria-hidden="true">save</span></button>
+      <button class="tb-btn" data-act="undo" title="Undo (Ctrl+Z)"><span class="ms" aria-hidden="true">undo</span></button>
+      <button class="tb-btn" data-act="redo" title="Redo (Ctrl+Y)"><span class="ms" aria-hidden="true">redo</span></button>
+    </div>
+    <div class="docname">
+      <input id="docTitle" aria-label="Site name" value="My Site">
+      <span class="savestate" id="saveState">Saved</span>
+    </div>
+    <div class="dev" role="group" aria-label="Preview size">
+      <button data-dev="desktop" class="on" title="Desktop"><span class="ms" aria-hidden="true">desktop_windows</span></button>
+      <button data-dev="tablet" title="Tablet"><span class="ms" aria-hidden="true">tablet_mac</span></button>
+      <button data-dev="phone" title="Phone"><span class="ms" aria-hidden="true">smartphone</span></button>
+    </div>
+    <label class="tsearch"><span class="ms" aria-hidden="true">search</span><input id="topSearch" placeholder="Search (Alt+Q)" aria-label="Search commands" autocomplete="off"></label>
+    <button class="btn tonal tb-action" data-act="preview" title="Preview in a new tab"><span class="ms" aria-hidden="true">visibility</span><span class="lbl">Preview</span></button>
+    <button class="btn filled tb-action" data-act="publish" title="Publish your site"><span class="ms" aria-hidden="true">public</span><span class="lbl">Publish</span></button>
+    <button class="tb-btn" data-act="apps" title="Apps and Home"><span class="ms" aria-hidden="true">apps</span></button>
+    <button class="tb-btn" data-act="seed" title="App color"><span class="ms" aria-hidden="true">palette</span></button>
+    <button class="tb-btn" data-act="shortcuts" title="Keyboard shortcuts"><span class="ms" aria-hidden="true">keyboard</span></button>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <div class="ribbon-wrap"><div class="ribbon" id="ribbon"></div></div>
+
+  <div class="work">
+    <aside class="panel-l" id="left" aria-label="Pages and sections">
+      <div class="ph"><b>Pages</b><button class="icon-btn" data-act="addPage" title="Add page"><span class="ms" aria-hidden="true">note_add</span></button></div>
+      <div class="plist" id="pages"></div>
+      <div class="ph"><b>Sections</b><button class="icon-btn" data-act="addSection" title="Add section"><span class="ms" aria-hidden="true">add_box</span></button></div>
+      <div class="slist" id="sections"></div>
+    </aside>
+    <section class="canvas" id="canvas" aria-label="Your site">
+      <div class="frame-box" id="frameBox"><iframe id="frame" title="Your site"></iframe></div>
+    </section>
+    <aside class="panel-r" id="right" aria-label="Edit">
+      <div class="insp" id="insp"></div>
+    </aside>
+    <div class="scrim-l" onclick="document.getElementById('app').classList.remove('show-left','show-right')"></div>
+  </div>
+
+  <footer class="status">
+    <button class="sb" data-act="leftPanel"><span class="ms" aria-hidden="true">side_navigation</span><span class="hide-sm">Pages</span></button>
+    <span class="sb" id="pageInfo"></span>
+    <span class="grow"></span>
+    <span class="sb hide-sm" id="zoomInfo"></span>
+    <button class="sb" data-act="rightPanel"><span class="ms" aria-hidden="true">tune</span><span class="hide-sm">Edit</span></button>
+  </footer>
+</div>
+<input type="file" id="openInput" accept=".onesite,.json" hidden>
+
+<script src="shared/core.js?v=1"></script>
+<script src="js/blocks.js?v=1"></script>
+<script src="js/render.js?v=1"></script>
+<script src="js/model.js?v=1"></script>
+<script src="js/editor.js?v=1"></script>
+<script src="js/app.js?v=1"></script>

@@ -52,7 +52,7 @@
   })();
   if (!embedded) { if (btn) btn.hidden = true; return; }
   const ONEMARK = '<svg class="onemark" viewBox="0 0 60 200" aria-hidden="true"><path d="M20 0H40A20 20 0 0 1 60 20V180A20 20 0 0 1 20 180V41A20 20 0 0 1 0 21V20A20 20 0 0 1 20 0Z" fill="currentColor"/></svg>';
-  const APPS = [['home', 'Home', '#3f5aa8', null, null], ['word', 'oneWord', '#185abd', 'W'], ['sheet', 'oneSheet', '#107c41', 'S'], ['slide', 'oneSlide', '#c43e1c', 'P'], ['idea', 'oneIdea', '#7719aa', 'I'], ['pdf', 'onePDF', '#c5221f', null, 'picture_as_pdf']];
+  const APPS = [['home', 'Home', '#3f5aa8', null, null], ['word', 'oneWord', '#185abd', 'W'], ['sheet', 'oneSheet', '#107c41', 'S'], ['slide', 'oneSlide', '#c43e1c', 'P'], ['idea', 'oneIdea', '#7719aa', 'I'], ['site', 'oneSite', '#00838f', null, 'web'], ['pdf', 'onePDF', '#c5221f', null, 'picture_as_pdf']];
   let pop = null;
   const close = () => { if (pop) { pop.remove(); pop = null; } };
   btn.addEventListener('click', () => {

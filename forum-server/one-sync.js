@@ -30,6 +30,9 @@ const APPS = {
   slide: { folder: 'oneSlide', ext: 'oneslide', type: 'application/json' },
   idea: { folder: 'oneIdea', ext: 'oneidea', type: 'application/json' },
   pdf: { folder: 'onePDF', ext: 'pdf', type: 'application/pdf' },
+  site: { folder: 'oneSite', ext: 'onesite', type: 'application/json' },
+  // a published oneSite website: public at /site/<file>, see below
+  sitepub: { folder: 'oneSite', ext: 'html', type: 'text/html' },
 };
 const MAX_DOC_BYTES = 50 * 1024 * 1024;   // same as files.html's "kept forever" threshold
 const MAX_EXTRA_BYTES = 5 * 1024 * 1024;  // PDF annotations (can hold signature/stamp images)
@@ -132,7 +135,7 @@ module.exports = function oneSync(app, { verifyFirebaseToken, isOwner, USER_FILE
     delete fresh[filename].sha256; // content changed
     saveMeta(fresh);
     if (!hit) storage.afterUpload(filename); // audit + moderation once, not on every autosave
-    res.json({ ok: true, filename, updated, url: `${publicBaseUrl}/docs/${encodeURIComponent(filename)}` });
+    res.json({ ok: true, filename, updated, url: `${publicBaseUrl}/docs/${encodeURIComponent(filename)}`, publicUrl: req.params.app === 'sitepub' ? `${publicBaseUrl}/site/${encodeURIComponent(filename)}` : undefined });
   });
 
   // Delete (goes to the server's trash, same as deleting it in oeper.dev/files).
@@ -144,10 +147,24 @@ module.exports = function oneSync(app, { verifyFirebaseToken, isOwner, USER_FILE
     res.json({ ok: true });
   });
 
+  // Published oneSite websites, public by design. Only files published through oneSite are served here (never
+  // any other upload), with a short cache so republishing shows up within a minute (unlike /docs, cached 30 days).
+  app.get('/site/:filename', (req, res) => {
+    const name = path.basename(req.params.filename);
+    const m = loadMeta()[name];
+    if (!m || m.oneApp !== 'sitepub') return res.status(404).type('text/plain').send('This site isn’t published (any more).');
+    if (m.quarantined) return res.status(451).type('text/plain').send('This site is under review.');
+    res.set('Cache-Control', 'public, max-age=60');
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.type('text/html');
+    res.sendFile(path.join(dir, name), err => { if (err && !res.headersSent) res.status(404).end(); });
+  });
+
   // Lets /my-files point a suite document at the app that opens it.
   return {
-    openUrlFor(m) {
+    openUrlFor(m, filename) {
       if (!m || !m.oneApp || !APPS[m.oneApp]) return null;
+      if (m.oneApp === 'sitepub') return `${publicBaseUrl}/site/${encodeURIComponent(filename)}`; // a published website opens as the live site
       return `https://oeper.dev/one/#open=${m.oneApp}:${encodeURIComponent(m.oneId)}`;
     },
   };

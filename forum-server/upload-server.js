@@ -494,7 +494,7 @@ app.get('/my-files', verifyFirebaseToken, (req, res) => {
         quarantined: !!m.quarantined,
         modStatus: m.mod ? m.mod.status : null,
         url: `${PUBLIC_BASE_URL}/docs/${encodeURIComponent(filename)}`,
-        openUrl: m.email === req.user.email ? oneSync.openUrlFor(m) : null,
+        openUrl: m.email === req.user.email ? oneSync.openUrlFor(m, filename) : null,
       };
     });
 

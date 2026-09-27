@@ -2,7 +2,7 @@
 import re, json, pathlib
 D = pathlib.Path(__file__).resolve().parent
 OUT = D / 'dist'; OUT.mkdir(exist_ok=True)
-APPS = {'word': 'oneword', 'sheet': 'onesheet', 'slide': 'oneslide', 'idea': 'oneidea'}
+APPS = {'word': 'oneword', 'sheet': 'onesheet', 'slide': 'oneslide', 'idea': 'oneidea', 'site': 'onesite'}
 
 def inline(app_dir):
     base = D / app_dir

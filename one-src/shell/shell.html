@@ -121,13 +121,13 @@ const APP_SRC = /*APP_SRC*/;
 const { $, el, esc, icon, store } = { $:s => document.querySelector(s), el:ONE.el, esc:ONE.esc, icon:ONE.icon, store:ONE.store };
 ONE.boot('one', 'home');
 const APPS = ONE.APPS, byId = Object.fromEntries(APPS.map(a => [a.id, a]));
-const LIBS = { word:['ow-lib', 'description'], sheet:['os-lib', 'table_chart'], slide:['op-lib', 'slideshow'], idea:['oi-lib', 'book_2'] };
-const NEW_LABEL = { word:'Blank document', sheet:'Blank workbook', slide:'New presentation', idea:'New notebook', pdf:'Open a PDF' };
+const LIBS = { word:['ow-lib', 'description'], sheet:['os-lib', 'table_chart'], slide:['op-lib', 'slideshow'], idea:['oi-lib', 'book_2'], site:['ob-lib', 'web'] };
+const NEW_LABEL = { word:'Blank document', sheet:'Blank workbook', slide:'New presentation', idea:'New notebook', site:'New website', pdf:'Open a PDF' };
 const logo = a => a.icon ? icon(a.icon) : esc(a.letter);
 let filter = 'all', files = [];
 
 /* ---------- files from every app ---------- */
-const meta = (id, m) => id === 'word' ? `${(m.words || 0).toLocaleString()} words` : id === 'sheet' ? `${m.sheets || 1} sheet${m.sheets > 1 ? 's' : ''}` : id === 'slide' ? `${m.slides || 0} slide${m.slides === 1 ? '' : 's'}` : id === 'idea' ? `${m.sections || 0} sections · ${m.pages || 0} pages` : '';
+const meta = (id, m) => id === 'word' ? `${(m.words || 0).toLocaleString()} words` : id === 'sheet' ? `${m.sheets || 1} sheet${m.sheets > 1 ? 's' : ''}` : id === 'slide' ? `${m.slides || 0} slide${m.slides === 1 ? '' : 's'}` : id === 'idea' ? `${m.sections || 0} sections · ${m.pages || 0} pages` : id === 'site' ? `${m.pages || 1} page${m.pages > 1 ? 's' : ''}` : '';
 function pdfFiles(){
   return new Promise(ok => { try {
     const r = indexedDB.open('PdfToolsViewerDB'); r.onerror = () => ok([]);

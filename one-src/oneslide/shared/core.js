@@ -14,7 +14,7 @@ ONE.store = {
     // A file list (ow-lib, os-lib, ...) written by an app holds the copy it loaded at startup. Documents that
     // arrived since (downloaded by cloud sync, or saved from another tab) must survive that write, so keep any
     // entry whose document still exists. A document the app deleted has already had its doc key removed.
-    const m = /^(ow|os|op|oi)-lib$/.exec(k);
+    const m = /^(ow|os|op|oi|ob)-lib$/.exec(k);
     if (m && v && v.docs) { try { const cur = JSON.parse(localStorage.getItem(k) || 'null'); if (cur && cur.docs) for (const [id, e] of Object.entries(cur.docs)) if (!(id in v.docs) && localStorage.getItem(m[1] + '-doc-' + id) !== null) v.docs[id] = e; } catch {} }
     try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; }
   },
@@ -430,6 +430,7 @@ ONE.APPS = [
   { id:'sheet', name:'oneSheet', letter:'S', color:'#107c41', what:'Spreadsheets' },
   { id:'slide', name:'oneSlide', letter:'P', color:'#c43e1c', what:'Presentations' },
   { id:'idea', name:'oneIdea', letter:'I', color:'#7719aa', what:'Notebooks' },
+  { id:'site', name:'oneSite', icon:'web', color:'#00838f', what:'Websites' },
   { id:'pdf', name:'onePDF', icon:'picture_as_pdf', color:'#c5221f', what:'PDFs' }
 ];
 ONE.post = msg => { if (ONE.embedded) window.parent.postMessage(Object.assign({ one:true, from:ONE.appId }, msg), '*'); };

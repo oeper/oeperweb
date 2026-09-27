@@ -12,6 +12,7 @@ const LOCAL = {
   word: { lib:'ow-lib', doc:'ow-doc-', meta:d => ({ title:d.title, updated:d.updated, words:(String(d.html || '').replace(/<[^>]+>/g, ' ').match(/\S+/g) || []).length }) },
   sheet: { lib:'os-lib', doc:'os-doc-', meta:d => ({ title:d.title, updated:d.updated, sheets:(d.sheets || []).length || 1 }) },
   slide: { lib:'op-lib', doc:'op-doc-', meta:d => ({ title:d.title, updated:d.updated, slides:(d.slides || []).length, theme:d.theme }) },
+  site: { lib:'ob-lib', doc:'ob-doc-', meta:d => ({ title:d.title, updated:d.updated, pages:(d.pages || []).length, palette:d.theme && d.theme.palette }) },
   idea: { lib:'oi-lib', doc:'oi-doc-', meta:d => ({ title:d.title, updated:d.updated, sections:(d.sections || []).length, pages:(d.sections || []).reduce((a, s) => a + (s.pages || []).length, 0), color:d.color }) },
 };
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -60,7 +61,9 @@ const idb = (db, mode, fn) => new Promise((ok, bad) => { const tx = db.transacti
 
 /* ---------- sync ---------- */
 async function syncApp(app, state) {
-  const r = await api('/one-sync/' + app); if (!r.ok) throw new Error((await jsonOr(r)).error || 'Server said ' + r.status);
+  const r = await api('/one-sync/' + app);
+  if (r.status === 404) return; // a server that hasn't been updated for this app yet: skip it, keep syncing the rest
+  if (!r.ok) throw new Error((await jsonOr(r)).error || 'Server said ' + r.status);
   const remote = Object.fromEntries(((await r.json()).docs || []).map(d => [d.id, d]));
   const local = localDocs(app);
   for (const id of new Set([...Object.keys(local), ...Object.keys(remote)])) {
@@ -386,7 +389,16 @@ function openSettings() {
     } }].filter(Boolean) });
 }
 
-window.ONE_CLOUD = { ready, syncAll, fetchOne, share, openShared, openSettings, enabled:() => settings().enabled, isSynced:(app, id) => app + ':' + id in store.get(STATE, {}),
+// oneSite: put a site online. One published file per site, overwritten in place, served at a stable public link.
+async function publishSite(id, title, html) {
+  if (!getCurrentUser()) throw new Error('Sign in to your oeper.dev account first.');
+  const r = await api('/one-sync/sitepub/' + encodeURIComponent(id), { method:'PUT', headers:{ 'Content-Type':'application/octet-stream', 'X-One-Name':encodeURIComponent(title), 'X-One-Updated':String(Date.now()) }, body:html });
+  const j = await jsonOr(r);
+  if (r.status === 404 && !j.error) throw new Error('The oeper.dev file server doesn’t know about publishing yet — it needs to be updated and restarted.');
+  if (!r.ok) throw new Error(j.error || 'Publishing failed (' + r.status + ')');
+  return { url:j.publicUrl || j.url };
+}
+window.ONE_CLOUD = { ready, syncAll, publishSite, fetchOne, share, openShared, openSettings, enabled:() => settings().enabled, isSynced:(app, id) => app + ':' + id in store.get(STATE, {}),
   account:() => acct,
   onAccount:cb => { acctListeners.add(cb); cb(acct); return () => acctListeners.delete(cb); },
   signIn:async () => { try { await signIn(); } catch { ONE.toast('Sign-in didn’t finish.'); } },
