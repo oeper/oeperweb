@@ -247,6 +247,58 @@ wrong (e.g. 0 tracked files when you know you've uploaded plenty), the
 server is very likely reading config or metadata from the wrong place
 (e.g. a stray second clone of this repo) rather than actually missing data.
 
+## An interface for all this — aio.sh
+
+Typing `git pull`, editing `.env`, `pkill`ing and restarting by hand every
+time is exactly what `aio.sh` automates, but as a menu instead of a
+one-shot script:
+
+```sh
+cd oeperweb/forum-server
+chmod +x aio.sh      # first time only
+./aio.sh
+```
+
+It shows whether the server and the Cloudflare tunnel are running, your
+`.env`'s `PUBLIC_BASE_URL`, and disk space, then lets you start/stop/restart
+either, pull the latest code, tail the server's log live, edit `.env`, and
+look up recent uploads (who uploaded what, to where, with a link — see
+"Upload logs" below; this runs `view-uploads.js` for you). The server is
+started in the background with its output going to `forum-server/server.log`
+so it survives you closing the menu, and `pkill -f upload-server.js` (same
+as before) stops it.
+
+Starting the tunnel from the menu needs a `TUNNEL_TOKEN=` line in `.env`
+(the token from your Cloudflare Zero Trust dashboard for this tunnel) —
+without one it tells you the manual command instead of guessing.
+
+**A one-tap home-screen icon**, via the separate Termux:Widget app (F-Droid,
+same source as Termux): see the setup steps at the top of
+`shortcuts/start-oeper-server.sh`. Tapping the icon pulls, restarts the
+server, and starts the tunnel if it isn't already running — the same
+sequence as `aio.sh`'s Restart, without opening a terminal at all.
+
+**A web view of all this** already exists at `/storage` on the site
+(owner-only — see "Storage console" above) — status, users, files, trash,
+settings, and the same upload log with clickable links, from any browser,
+not just on the phone.
+
+## Upload logs — who uploaded what, and where
+
+Every upload endpoint (`/upload`, `/upload-video`, `/upload-project`,
+`/upload-message`, `/upload-file`) now records who uploaded, the original
+filename, its size, which of those five destinations it went to (plus the
+folder, for a personal file), and its public URL — in the same
+`audit-log.jsonl` the storage console's Activity tab already read for
+moderation/admin actions (see "Storage console" above).
+
+- **On the phone**: `node view-uploads.js` (or `aio.sh`'s "Recent uploads"),
+  optionally `node view-uploads.js 50 --user someone@example.com` or
+  `--dest video`.
+- **From a browser**: `/storage` → Activity → the "uploads only" checkbox,
+  or filter the action dropdown to "uploaded". Each entry's filename links
+  straight to the file.
+
 ## Persistent config with .env
 
 Typing `PUBLIC_BASE_URL=...` (and any other overrides) by hand on every
@@ -268,6 +320,7 @@ PUBLIC_BASE_URL=https://fs.oeper.dev
 # MODERATION_URL=https://oeper-ai.<subdomain>.workers.dev/api/moderate
 # MODERATION_KEY=long-random-secret   (same value as the Worker's MODERATION_KEY secret)
 # TRASH_DIR=/storage/emulated/0/Documents/.oeper-trash
+# TUNNEL_TOKEN=your-cloudflare-tunnel-token   (only used by aio.sh / the home-screen shortcut, to start cloudflared for you)
 ```
 
 `upload-server.js` loads this file automatically on startup (no `dotenv`

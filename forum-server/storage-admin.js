@@ -304,7 +304,9 @@ module.exports = function setupStorageAdmin(app, ctx) {
     const meta = loadMeta();
     const e = meta[filename];
     if (!e) return;
-    audit(e.email || 'anonymous', 'upload', filename, { name: e.name, size: e.size });
+    audit(e.email || 'anonymous', 'upload', filename, {
+      dest: 'file', name: e.name, size: e.size, folder: e.folder || '', url: `${publicBaseUrl}/docs/${encodeURIComponent(filename)}`,
+    });
     if (getSettings().moderation.mode !== 'off' && moderationConfigured) {
       e.mod = { status: 'pending' };
       saveMeta(meta);

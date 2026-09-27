@@ -325,7 +325,9 @@ app.post('/upload', verifyFirebaseToken, storage.suspendGuard, (req, res) => {
   uploadAttachment.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
-    res.json({ url: `${PUBLIC_BASE_URL}/files/${req.file.filename}` });
+    const url = `${PUBLIC_BASE_URL}/files/${req.file.filename}`;
+    storage.audit(req.user.email, 'upload', req.file.filename, { dest: 'forum', name: req.file.originalname, size: req.file.size, url });
+    res.json({ url });
   });
 });
 
@@ -342,7 +344,9 @@ app.post('/upload-video', verifyFirebaseToken, storage.suspendGuard, (req, res) 
   uploadVideo.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
-    res.json({ url: `${PUBLIC_BASE_URL}/videos/${req.file.filename}` });
+    const url = `${PUBLIC_BASE_URL}/videos/${req.file.filename}`;
+    storage.audit(req.user.email, 'upload', req.file.filename, { dest: 'video', name: req.file.originalname, size: req.file.size, url });
+    res.json({ url });
   });
 });
 
@@ -359,7 +363,9 @@ app.post('/upload-project', verifyFirebaseToken, storage.suspendGuard, (req, res
   uploadProject.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
-    res.json({ url: `${PUBLIC_BASE_URL}/projects/${req.file.filename}` });
+    const url = `${PUBLIC_BASE_URL}/projects/${req.file.filename}`;
+    storage.audit(req.user.email, 'upload', req.file.filename, { dest: 'project', name: req.file.originalname, size: req.file.size, url });
+    res.json({ url });
   });
 });
 
@@ -377,7 +383,9 @@ app.post('/upload-message', verifyFirebaseToken, storage.suspendGuard, (req, res
   uploadMessageFile.single('file')(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
-    res.json({ url: `${PUBLIC_BASE_URL}/messages-media/${req.file.filename}` });
+    const url = `${PUBLIC_BASE_URL}/messages-media/${req.file.filename}`;
+    storage.audit(req.user.email, 'upload', req.file.filename, { dest: 'message', name: req.file.originalname, size: req.file.size, url });
+    res.json({ url });
   });
 });
 

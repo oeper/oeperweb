@@ -9,3 +9,5 @@ storage-settings.json
 user-settings.json
 trash.json
 audit-log.jsonl*
+server.log
+cloudflared.log

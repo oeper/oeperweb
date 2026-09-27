@@ -760,21 +760,33 @@ const ACTION_LABEL = {
   'ban-hash': ['gpp_bad', 'banned file'], 'unban-hash': ['gpp_good', 'unbanned file'], 'blocked-hash-upload': ['block', 'blocked a banned re-upload'],
   'user-update': ['manage_accounts', 'updated user'], 'auto-suspend': ['lock', 'auto-suspended'], 'settings-update': ['tune', 'changed settings'], 'scan-unscanned': ['radar', 'queued scans'],
 };
+// Where an upload landed — matches the `dest` tag each upload endpoint now
+// records (upload-server.js), so "who uploaded what and where" reads as an
+// actual place, not a raw filename prefix.
+const DEST_LABEL = { forum: 'forum attachment', video: 'video', project: 'project', message: 'chat attachment', file: 'personal file' };
 let activityFilter = '';
+let activityOnlyUploads = false;
 async function renderActivity(panel) {
   const { entries } = await api('/admin/audit?limit=200' + (activityFilter ? '&action=' + encodeURIComponent(activityFilter) : ''));
   if (currentTab !== 'activity') return;
-  panel.innerHTML = `<div class="toolbar"><div id="actSlot"></div></div><div class="list">${entries.length ? entries.map(en => {
+  const shown = activityOnlyUploads ? entries.filter(en => en.action === 'upload') : entries;
+  panel.innerHTML = `<div class="toolbar"><div id="actSlot"></div>
+      <label class="check" style="margin:0;"><input type="checkbox" id="actUploadsOnly" ${activityOnlyUploads ? 'checked' : ''}>uploads only</label>
+    </div><div class="list">${shown.length ? shown.map(en => {
     const [icon, label] = ACTION_LABEL[en.action] || ['bolt', en.action];
     const d = en.detail || {};
-    const bits = [d.name, d.email && d.email !== en.actor ? d.email : '', d.size ? fmt(d.size) : '', d.categories && d.categories.length ? d.categories.join(', ').replace(/_/g, ' ') : '', d.removed ? d.removed + ' copies removed' : '',
+    const where = d.dest ? (DEST_LABEL[d.dest] || d.dest) + (d.folder ? ' · ' + d.folder : '') : '';
+    const bits = [where, d.name, d.email && d.email !== en.actor ? d.email : '', d.size ? fmt(d.size) : '', d.categories && d.categories.length ? d.categories.join(', ').replace(/_/g, ' ') : '', d.removed ? d.removed + ' copies removed' : '',
       d.quotaBytes !== undefined ? 'quota ' + (typeof d.quotaBytes === 'number' ? fmt(d.quotaBytes) : d.quotaBytes) : '', d.suspended !== undefined ? (d.suspended ? 'suspended' : 'unsuspended') : ''].filter(Boolean);
+    const targetLabel = en.target ? esc(String(en.target).length > 40 ? String(en.target).slice(0, 40) + '…' : en.target) : '';
+    const targetHtml = d.url ? `<a href="${esc(d.url)}" target="_blank" rel="noopener" style="color:var(--md-sys-color-primary);">${targetLabel}</a>` : `<span style="color:var(--md-sys-color-on-surface-variant)">${targetLabel}</span>`;
     return `<div class="row"><div class="thumb"><span class="material-symbols-rounded">${icon}</span></div><div class="main">
-      <div class="name">${esc(en.actor)} <span style="color:var(--md-sys-color-on-surface-variant)">${esc(label)}</span> ${en.target ? `<span style="color:var(--md-sys-color-on-surface-variant)">${esc(String(en.target).length > 40 ? String(en.target).slice(0, 40) + '…' : en.target)}</span>` : ''}</div>
+      <div class="name">${esc(en.actor)} <span style="color:var(--md-sys-color-on-surface-variant)">${esc(label)}</span> ${en.target ? targetHtml : ''}</div>
       <div class="meta"><span>${ago(en.t)}</span>${bits.length ? '·<span>' + esc(bits.join(' · ')) + '</span>' : ''}</div></div></div>`;
   }).join('') : '<div class="empty">no activity recorded yet</div>'}</div>`;
   const opts = [{ value: '', label: 'all activity' }, ...['upload', 'delete', 'flagged', 'quarantine', 'release', 'ban-hash', 'user-update', 'auto-suspend', 'settings-update'].map(v => ({ value: v, label: ACTION_LABEL[v][1] }))];
   $('actSlot').appendChild(createDropdown(opts, { value: activityFilter, onChange: v => { activityFilter = v; showTab('activity'); } }).el);
+  $('actUploadsOnly').addEventListener('change', e => { activityOnlyUploads = e.target.checked; renderActivity(panel); });
 }
 
 // ── Settings ──

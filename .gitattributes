@@ -1,0 +1,4 @@
+# Shell scripts run on Termux (Linux) — CRLF line endings break the shebang
+# and every line there, so keep them LF regardless of a Windows clone's
+# core.autocrlf setting.
+*.sh text eol=lf
