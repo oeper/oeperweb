@@ -376,7 +376,10 @@ W.dirty = () => {
 };
 W.save = explicit => {
   clearTimeout(saveT);
-  const d = W.doc; d.html = W.cleanHTML(); d.title = $('#docTitle').value.trim() || 'Document'; d.updated = Date.now();
+  const d = W.doc; d.html = W.cleanHTML(); d.title = $('#docTitle').value.trim() || 'Document';
+  // W.pristine: set for the blank document shown on a first visit, so opening the app doesn't create a file
+  if (!explicit && W.pristine) { if (W.pristine === d.title + '\u0000' + d.html) { const st = $('#saveState'); st.classList.remove('busy'); st.textContent = 'Saved'; return true; } W.pristine = null; }
+  W.pristine = null; d.updated = Date.now();
   const lastV = d.versions[0];
   if (explicit || !lastV || Date.now() - lastV.t > 5 * 60e3) { if (!lastV || lastV.html !== d.html) { d.versions.unshift({ t:Date.now(), html:d.html, title:d.title }); d.versions = d.versions.slice(0, 12); } }
   const ok = store.set('ow-doc-' + d.id, d);

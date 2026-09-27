@@ -181,7 +181,10 @@ let saveT;
 X.dirty = () => { const s = $('#saveState'); s.textContent = 'Saving…'; s.classList.add('busy'); clearTimeout(saveT); saveT = setTimeout(() => X.save(false), 900); };
 X.serialize = () => JSON.parse(JSON.stringify(X.wb, (k, v) => k === '_vals' || k === '_sel' ? undefined : v));
 X.save = explicit => {
-  clearTimeout(saveT); X.wb.title = $('#docTitle').value.trim() || 'Book1'; X.wb.updated = Date.now();
+  clearTimeout(saveT); X.wb.title = $('#docTitle').value.trim() || 'Book1';
+  // X.pristine: set for the blank workbook shown on a first visit, so opening the app doesn't create a file
+  if (!explicit && X.pristine) { const sig = JSON.stringify(Object.assign(X.serialize(), { updated:0 })); if (sig === X.pristine) { const s = $('#saveState'); s.classList.remove('busy'); s.textContent = 'Saved'; return true; } }
+  X.pristine = null; X.wb.updated = Date.now();
   const ok = store.set('os-doc-' + X.wb.id, X.serialize());
   X.lib.docs[X.wb.id] = { title:X.wb.title, updated:X.wb.updated, sheets:X.wb.sheets.length }; X.lib.current = X.wb.id; store.set('os-lib', X.lib);
   const s = $('#saveState'); s.classList.remove('busy'); s.textContent = ok ? 'Saved' : 'Not saved'; s.title = ok ? 'Saved in this browser' : 'This browser blocked local storage.'; void explicit; return ok;
@@ -327,7 +330,8 @@ ONE.backstage([
 X.setMode('Ready');
 const firstId = X.lib.current, first = firstId && store.get('os-doc-' + firstId);
 const pendId = ONE.pendingOpen(), pend = pendId && store.get('os-doc-' + pendId);
-X.openBook(pend || first || newFrom('sales')); if (!first && !pend) X.save(false);
+X.openBook(pend || first || newFrom('blank'));
+if (!pend && !first) X.pristine = JSON.stringify(Object.assign(X.serialize(), { updated:0 }));
 if (!pend) setTimeout(() => ONE.backstage.show('home'), 60);
 ONE.onOpenRequest = id => { const d = store.get('os-doc-' + id); if (d) { X.openBook(d); ONE.backstage.close(); } };
 ONE.onNewRequest = k => { X.openBook(newFrom(TEMPLATES[k] ? k : 'blank')); ONE.backstage.close(); X.save(false); };

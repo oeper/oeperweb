@@ -45,6 +45,7 @@ N.TEMPLATES = {
 };
 
 N.NOTEBOOK_TEMPLATES = {
+  tour:{ name:'Getting started', desc:'A quick tour of oneIdea', icon:'tour', make:() => N.sample() },
   blank:{ name:'Blank notebook', desc:'One empty section', icon:'book', make:() => { const n = N.newNotebook('My Notebook'); n.sections = [N.newSection('Quick Notes', '#4472C4')]; return n; } },
   personal:{ name:'Personal', desc:'Quick Notes, Journal, Recipes', icon:'favorite', make:() => { const n = N.newNotebook('Personal'); n.sections = [N.newSection('Quick Notes', '#4472C4'), Object.assign(N.newSection('Journal', '#E0457B'), { pages:[N.TEMPLATES.journal.make()] }), Object.assign(N.newSection('Recipes', '#ED7D31'), { pages:[N.TEMPLATES.recipe.make()] })]; return n; } },
   work:{ name:'Work', desc:'Meetings, Projects, To do', icon:'work', make:() => { const n = N.newNotebook('Work'); n.color = '#185abd'; n.sections = [Object.assign(N.newSection('Meetings', '#4472C4'), { pages:[N.TEMPLATES.meeting.make()] }), Object.assign(N.newSection('Projects', '#70AD47'), { pages:[N.TEMPLATES.project.make()] }), Object.assign(N.newSection('To do', '#FFC000'), { pages:[N.TEMPLATES.todo.make()] })]; return n; } },

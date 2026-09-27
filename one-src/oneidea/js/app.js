@@ -407,7 +407,7 @@ N.hooks.push(renderNav, () => P.render());
 if (store.get('oi-darkpage')) $('#page').classList.add('darkpage');
 const first = N.lib.current && store.get('oi-doc-' + N.lib.current);
 const pendId = ONE.pendingOpen(), pend = pendId && store.get('oi-doc-' + pendId);
-N.open(pend || first || N.sample()); if (!first && !pend) N.save();
+N.open(pend || first || N.NOTEBOOK_TEMPLATES.blank.make());
 P.setZoom(1);
 if (!pend) setTimeout(() => ONE.backstage.show('home'), 60);
 ONE.onOpenRequest = id => openNotebook(store.get('oi-doc-' + id));

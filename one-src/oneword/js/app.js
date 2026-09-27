@@ -490,8 +490,8 @@ $('#avatar').textContent = W.initials(); $('#avatar').title = W.settings.author;
 let first = W.lib.current && store.get('ow-doc-' + W.lib.current);
 if (!first) { const old = store.get('folio-doc'); if (old && old.html) { first = W.newDoc(old.html, old.title || 'Document'); if (old.layout) { first.layout.size = old.layout.size || 'letter'; first.layout.orient = old.layout.orient || 'portrait'; } } }
 const pendingId = ONE.pendingOpen(), pendingDoc = pendingId && store.get('ow-doc-' + pendingId);
-W.open(pendingDoc || first || W.fromTemplate('sample')); postOpen();
-if (!first && !pendingDoc) W.save(false);
+W.open(pendingDoc || first || W.fromTemplate('blank')); postOpen();
+if (!pendingDoc && !first) W.pristine = W.doc.title + '\u0000' + W.cleanHTML();
 if (!pendingDoc) setTimeout(() => ONE.backstage.show('home'), 60);
 ONE.onOpenRequest = id => { const d = store.get('ow-doc-' + id); if (d) openDoc(d); };
 ONE.onNewRequest = k => { openDoc(W.fromTemplate(TEMPLATES[k] ? k : 'blank')); };

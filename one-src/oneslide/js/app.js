@@ -275,7 +275,7 @@ ONE.backstage([
 /* ---------- boot ---------- */
 const first = S.lib.current && store.get('op-doc-' + S.lib.current);
 const pendId = ONE.pendingOpen(), pend = pendId && store.get('op-doc-' + pendId);
-S.open(pend || first || sampleDeck()); if (!first && !pend) S.save();
+S.open(pend || first || TEMPLATES.material.make());
 if (!pend) setTimeout(() => ONE.backstage.show('home'), 60);
 ONE.onOpenRequest = id => { const d = store.get('op-doc-' + id); if (d) { S.open(d); ONE.backstage.close(); } };
 ONE.onNewRequest = k => openDeck((TEMPLATES[k] || TEMPLATES.material).make());
