@@ -160,13 +160,24 @@
   .btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
   .btn.danger { color: var(--md-sys-color-error); background: color-mix(in srgb, var(--md-sys-color-error) 18%, transparent); }
-  .btn-row { display: flex; gap: 10px; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn.icon { width: auto; flex: 0 0 auto; padding: 10px 14px; }
+  .btn.icon .material-symbols-rounded { font-size: 18px; }
 
   .move-list { max-height: 220px; overflow-y: auto; font-size: 13px; }
   .move-row { display: flex; gap: 10px; padding: 4px 0; color: var(--md-sys-color-on-surface-variant); }
   .move-row .num { width: 24px; flex-shrink: 0; opacity: 0.6; }
   .move-row .mv { flex: 1; color: var(--md-sys-color-on-surface); }
+  .move-row .mv[data-ply] { cursor: pointer; }
+  .move-row .mv[data-ply]:hover { text-decoration: underline; }
+  .move-row .mv.active { color: var(--md-sys-color-primary); font-weight: 600; }
   .move-empty { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .review-label { text-align: center; font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 8px; }
+  .history-icon { width: 32px; height: 32px; border-radius: 50%; background: var(--md-sys-color-surface-variant); display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-primary); font-size: 18px; flex-shrink: 0; }
+  .hist-info { flex: 1; min-width: 0; }
+  .hist-title { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-result { font-size: 11px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; }
+  .hist-time { font-size: 11px; color: var(--md-sys-color-on-surface-variant); flex-shrink: 0; white-space: nowrap; margin-left: 8px; }
 
   .promo-overlay, .picker-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; display: none;
@@ -236,11 +247,13 @@
 <div class="page">
   <header class="header">
     <a href="/tools" class="header-link"><span class="material-symbols-rounded" style="font-size:18px;">arrow_back</span>back to tools</a>
+    <button type="button" class="header-link" id="pastGamesBtn" style="background:none;border:none;font:inherit;cursor:pointer;float:right;"><span class="material-symbols-rounded" style="font-size:18px;">history</span>past games</button>
     <h1><span class="material-symbols-rounded">chess</span>chess</h1>
   </header>
 
   <div class="layout">
     <div class="board-wrap">
+      <div class="review-label" id="reviewLabel" style="display:none;"></div>
       <div class="thinking-badge" id="thinkingBadge"><span class="material-symbols-rounded">progress_activity</span>thinking…</div>
       <div class="board" id="board"></div>
     </div>
@@ -261,6 +274,7 @@
           <div class="turn-label" id="turnLabel">white to move</div>
         </div>
         <div class="status-note" id="statusNote"></div>
+        <button type="button" class="btn" id="reviewThisGameBtn" style="display:none;margin-top:10px;"><span class="material-symbols-rounded" style="font-size:16px;">history</span>review this game</button>
       </div>
 
       <div class="card">
@@ -297,6 +311,14 @@
     <h3>challenge a friend</h3>
     <div class="picker-list" id="pickerList"></div>
     <button type="button" class="btn picker-close" id="pickerCloseBtn">cancel</button>
+  </div>
+</div>
+
+<div class="picker-overlay" id="historyOverlay">
+  <div class="picker-box">
+    <h3>past games</h3>
+    <div class="picker-list" id="historyList"></div>
+    <button type="button" class="btn picker-close" id="historyCloseBtn">close</button>
   </div>
 </div>
 
@@ -695,6 +717,21 @@ let aiThinking = false;
 let onlineGame = null; // { id, myColor, opponentEmail, opponentName, opponentPhoto, status, winner }
 let onlineUnsub = null;
 let onlineMoveInFlight = false;
+
+// ── Game review / replay — steps through a finished (or in-progress) game's
+// moves read-only, reusing the SAME board/status/move-list rendering as live
+// play by temporarily swapping current/moveHistory/etc. for the reviewed
+// position and restoring the live snapshot on close (see openReview/
+// closeReview below). Source games come from either this session's live
+// moveHistory ("review this game" / clicking a move in the list) or the
+// past-games list (local/AI games logged to localStorage, online games read
+// once from Firestore — see loadLocalHistory/openHistoryModal). ──────────
+let isReviewing = false;
+let reviewSnapshot = null; // { current, moveHistory, lastMove, selected, legalForSelected, flipped } saved from before review started
+let reviewMoves = []; // [{ move, label }] being stepped through
+let reviewIndex = 0; // 0 = start position, N = position after move N
+let reviewInfo = null; // { title } shown above the board
+let reviewAutoplayTimer = null;
 // getCurrentUser() reads null both before auth has resolved AND once
 // confirmed signed-out — indistinguishable on their own. This tracks the
 // first onAccountChange firing so the online tab shows a loading
@@ -834,6 +871,11 @@ function renderStatus() {
     statusNote.className = 'status-note';
   }
   thinkingBadge.classList.toggle('show', aiThinking);
+  const reviewBtn = document.getElementById('reviewThisGameBtn');
+  if (reviewBtn) {
+    reviewBtn.style.display = (!isReviewing && moveHistory.length > 0
+      && (status === 'checkmate' || status === 'stalemate' || status === 'resigned')) ? '' : 'none';
+  }
 }
 
 function renderCaptured() {
@@ -854,13 +896,32 @@ function renderMoveList() {
     const num = i / 2 + 1;
     const white = moveHistory[i];
     const black = moveHistory[i + 1];
-    html += `<div class="move-row"><span class="num">${num}.</span><span class="mv">${white.label}</span><span class="mv">${black ? black.label : ''}</span></div>`;
+    const wActive = isReviewing && reviewIndex === i + 1 ? ' active' : '';
+    const bActive = isReviewing && reviewIndex === i + 2 ? ' active' : '';
+    html += `<div class="move-row"><span class="num">${num}.</span><span class="mv${wActive}" data-ply="${i + 1}">${white.label}</span><span class="mv${bActive}"${black ? ` data-ply="${i + 2}"` : ''}>${black ? black.label : ''}</span></div>`;
   }
   moveListEl.innerHTML = html;
-  moveListEl.scrollTop = moveListEl.scrollHeight;
+  if (isReviewing) {
+    const activeEl = moveListEl.querySelector('.mv.active');
+    if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+  } else {
+    moveListEl.scrollTop = moveListEl.scrollHeight;
+  }
 }
+// Click any move (live or while reviewing) to jump the board to that ply —
+// reviewing the game you're currently playing/just finished starts a review
+// from here without losing the live game (closeReview restores it).
+moveListEl.addEventListener('click', e => {
+  const el = e.target.closest('[data-ply]');
+  if (!el) return;
+  const ply = Number(el.dataset.ply);
+  if (isReviewing) { stopReviewAutoplay(); reviewGoto(ply); return; }
+  if (!moveHistory.length) return;
+  openReview(moveHistory.slice(), { title: reviewTitleForLive() }, ply);
+});
 
 function canInteract() {
+  if (isReviewing) return false;
   if (status === 'checkmate' || status === 'stalemate' || status === 'resigned') return false;
   if (mode === 'ai') return current.turn !== aiColor && !aiThinking;
   if (mode === 'online') return !!onlineGame && current.turn === onlineGame.myColor && !onlineMoveInFlight;
@@ -868,7 +929,7 @@ function canInteract() {
 }
 
 function renderAll() {
-  status = (mode === 'online' && onlineGame && onlineGame.status === 'resigned') ? 'resigned' : gameStatus(current);
+  status = (!isReviewing && mode === 'online' && onlineGame && onlineGame.status === 'resigned') ? 'resigned' : gameStatus(current);
   renderBoard();
   renderStatus();
   renderCaptured();
@@ -911,8 +972,9 @@ function maybeTriggerAi() {
   renderStatus();
   boardEl.classList.add('disabled');
   setTimeout(() => {
-    const move = getBestMove(current, aiDifficulty);
     aiThinking = false;
+    if (isReviewing) { renderStatus(); return; } // the board moved on to a review while the AI was "thinking" — don't move into that position
+    const move = getBestMove(current, aiDifficulty);
     if (move) doMove(move);
     else renderAll();
   }, 260);
@@ -967,6 +1029,7 @@ promoOverlay.addEventListener('click', e => { if (e.target === promoOverlay) pro
 
 // ── Mode switching + control row ────────────────────────────────────────
 function resetLocalGame() {
+  saveLocalGameToHistory();
   current = freshState();
   moveHistory = [];
   selected = null;
@@ -990,6 +1053,23 @@ document.querySelectorAll('.mode-tab').forEach(tab => {
 });
 
 function renderControlRow() {
+  if (isReviewing) {
+    controlBtnRow.innerHTML = `
+      <button type="button" class="btn icon" id="reviewFirstBtn" title="start"><span class="material-symbols-rounded">skip_previous</span></button>
+      <button type="button" class="btn icon" id="reviewPrevBtn" title="previous move"><span class="material-symbols-rounded">chevron_left</span></button>
+      <button type="button" class="btn icon" id="reviewPlayBtn" title="play through"><span class="material-symbols-rounded">play_arrow</span></button>
+      <button type="button" class="btn icon" id="reviewNextBtn" title="next move"><span class="material-symbols-rounded">chevron_right</span></button>
+      <button type="button" class="btn icon" id="reviewLastBtn" title="latest"><span class="material-symbols-rounded">skip_next</span></button>
+      <button type="button" class="btn primary" id="reviewCloseBtn">close review</button>
+    `;
+    document.getElementById('reviewFirstBtn').addEventListener('click', () => { stopReviewAutoplay(); reviewGoto(0); });
+    document.getElementById('reviewPrevBtn').addEventListener('click', () => { stopReviewAutoplay(); reviewGoto(reviewIndex - 1); });
+    document.getElementById('reviewNextBtn').addEventListener('click', () => { stopReviewAutoplay(); reviewGoto(reviewIndex + 1); });
+    document.getElementById('reviewLastBtn').addEventListener('click', () => { stopReviewAutoplay(); reviewGoto(reviewMoves.length); });
+    document.getElementById('reviewPlayBtn').addEventListener('click', toggleReviewAutoplay);
+    document.getElementById('reviewCloseBtn').addEventListener('click', closeReview);
+    return;
+  }
   if (mode === 'online') {
     controlBtnRow.innerHTML = `
       <button type="button" class="btn danger" id="resignBtn" ${onlineGame ? '' : 'disabled'}>resign</button>
@@ -1310,7 +1390,196 @@ function leaveOnlineGame(resetUrl) {
   renderModeBody();
 }
 
-// ── Boot ─────────────────────────────────────────────────────────────
+// ── Game review / replay ─────────────────────────────────────────────
+const CHESS_HISTORY_KEY = 'oe-chess-history';
+const MAX_LOCAL_HISTORY = 30;
+
+function loadLocalHistory() {
+  try { return JSON.parse(localStorage.getItem(CHESS_HISTORY_KEY) || '[]'); } catch { return []; }
+}
+// Called from resetLocalGame right before it wipes the board — only actually
+// logs anything if the game that's ending reached checkmate or stalemate
+// (abandoning a game by switching modes/starting a new one isn't "a round",
+// so it isn't saved).
+function saveLocalGameToHistory() {
+  if (mode === 'online' || !moveHistory.length || (status !== 'checkmate' && status !== 'stalemate')) return;
+  const isWhite = current.turn === 'w'; // the side with no legal moves at game end
+  const result = status === 'checkmate' ? `${isWhite ? 'black' : 'white'} won by checkmate` : 'draw by stalemate';
+  const list = loadLocalHistory();
+  list.unshift({
+    id: 'local-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    mode, aiColor: mode === 'ai' ? aiColor : null, aiDifficulty: mode === 'ai' ? aiDifficulty : null,
+    result, moves: moveHistory.map(h => ({ move: h.move, label: h.label })), date: Date.now(),
+  });
+  if (list.length > MAX_LOCAL_HISTORY) list.length = MAX_LOCAL_HISTORY;
+  try { localStorage.setItem(CHESS_HISTORY_KEY, JSON.stringify(list)); } catch {}
+}
+
+function reviewTitleForLive() {
+  if (mode === 'ai') return `you vs AI (${aiDifficulty})`;
+  if (mode === 'online' && onlineGame) return `you vs ${onlineGame.opponentName}`;
+  return 'local game';
+}
+
+// Recomputes each move's captured piece from the position it was actually
+// played on. Online games never had it in the first place (Firestore's move
+// log only ever stored from/to/promotion/isCastle/isEnPassant/label, so the
+// captured-pieces panel has always been blank for them) — this fixes that
+// for review regardless of where the moves came from, and costs nothing for
+// local/AI moves that already carried it correctly.
+function deriveCaptures(moves) {
+  let state = freshState();
+  for (const h of moves) {
+    const m = h.move;
+    const capturedSquare = m.isEnPassant ? sq(fileOf(m.to), rankOf(m.from)) : m.to;
+    m.captured = state.board[capturedSquare] || null;
+    state = applyMove(state, m);
+  }
+  return moves;
+}
+
+function openReview(moves, info, startPly) {
+  if (!moves || !moves.length) { showToast('no moves to review.'); return; }
+  document.getElementById('historyOverlay').classList.remove('open');
+  if (!isReviewing) reviewSnapshot = { current, moveHistory, lastMove, selected, legalForSelected, flipped };
+  reviewMoves = deriveCaptures(moves.map(h => ({ move: { ...h.move }, label: h.label })));
+  reviewInfo = info || null;
+  isReviewing = true;
+  stopReviewAutoplay();
+  reviewGoto(startPly != null ? startPly : reviewMoves.length);
+}
+
+function reviewGoto(index) {
+  reviewIndex = Math.max(0, Math.min(index, reviewMoves.length));
+  current = freshState();
+  moveHistory = [];
+  for (let i = 0; i < reviewIndex; i++) { current = applyMove(current, reviewMoves[i].move); moveHistory.push(reviewMoves[i]); }
+  lastMove = reviewIndex > 0 ? reviewMoves[reviewIndex - 1].move : null;
+  selected = null; legalForSelected = [];
+  renderAll();
+  updateReviewLabel();
+  if (reviewIndex >= reviewMoves.length) stopReviewAutoplay();
+}
+
+function updateReviewLabel() {
+  const el = document.getElementById('reviewLabel');
+  if (!el) return;
+  if (!isReviewing) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.textContent = `reviewing${reviewInfo && reviewInfo.title ? ': ' + reviewInfo.title : ''} — move ${reviewIndex} of ${reviewMoves.length}`;
+}
+
+function stopReviewAutoplay() {
+  if (reviewAutoplayTimer) { clearInterval(reviewAutoplayTimer); reviewAutoplayTimer = null; }
+  const btn = document.getElementById('reviewPlayBtn');
+  if (btn) btn.innerHTML = '<span class="material-symbols-rounded">play_arrow</span>';
+}
+function toggleReviewAutoplay() {
+  if (reviewAutoplayTimer) { stopReviewAutoplay(); return; }
+  const btn = document.getElementById('reviewPlayBtn');
+  if (btn) btn.innerHTML = '<span class="material-symbols-rounded">pause</span>';
+  reviewAutoplayTimer = setInterval(() => {
+    if (reviewIndex >= reviewMoves.length) { stopReviewAutoplay(); return; }
+    reviewGoto(reviewIndex + 1);
+  }, 700);
+}
+
+function closeReview() {
+  if (!isReviewing) return;
+  stopReviewAutoplay();
+  isReviewing = false;
+  const snap = reviewSnapshot;
+  reviewSnapshot = null; reviewMoves = []; reviewInfo = null; reviewIndex = 0;
+  if (mode === 'online' && onlineGame) {
+    // Re-subscribing immediately re-fires with the latest cached/live data,
+    // correctly catching up on anything that happened while reviewing —
+    // simpler and safer than trying to merge it with the pre-review snapshot.
+    subscribeOnlineGame(onlineGame.id);
+  } else if (snap) {
+    ({ current, moveHistory, lastMove, selected, legalForSelected, flipped } = snap);
+    renderAll();
+  }
+  renderModeBody();
+  updateReviewLabel();
+}
+document.getElementById('reviewThisGameBtn').addEventListener('click', () => {
+  openReview(moveHistory.slice(), { title: reviewTitleForLive() });
+});
+
+// ── Past games list (local/AI from localStorage + finished online games
+// from Firestore) — each row opens the same review viewer. ────────────────
+function historyTimeLabel(ms) {
+  if (!ms) return '';
+  const s = Math.floor((Date.now() - ms) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  if (s < 2592000) return Math.floor(s / 86400) + 'd ago';
+  return new Date(ms).toLocaleDateString();
+}
+async function openHistoryModal() {
+  const overlay = document.getElementById('historyOverlay');
+  const listEl = document.getElementById('historyList');
+  overlay.classList.add('open');
+  listEl.innerHTML = '<div class="empty-note">loading…</div>';
+
+  const rows = loadLocalHistory().map(g => ({
+    date: g.date, icon: g.mode === 'ai' ? 'smart_toy' : 'groups',
+    label: g.mode === 'ai' ? `vs AI (${g.aiDifficulty || 'medium'})` : 'local pass-and-play',
+    result: g.result,
+    onClick: () => openReview(g.moves, { title: g.mode === 'ai' ? `you vs AI (${g.aiDifficulty})` : 'local game' }),
+  }));
+
+  const user = getCurrentUser();
+  if (user) {
+    try {
+      const [wSnap, bSnap] = await Promise.all([
+        getDocs(query(collection(db, 'chessGames'), where('players.w', '==', user.email))),
+        getDocs(query(collection(db, 'chessGames'), where('players.b', '==', user.email))),
+      ]);
+      const seen = new Map();
+      [...wSnap.docs, ...bSnap.docs].forEach(d => { if (!seen.has(d.id)) seen.set(d.id, d.data()); });
+      for (const g of seen.values()) {
+        if (g.status === 'ongoing' || !g.moves || !g.moves.length) continue;
+        const myColor = g.players.w === user.email ? 'w' : 'b';
+        const oppColor = myColor === 'w' ? 'b' : 'w';
+        const oppName = (g.playerNames && g.playerNames[oppColor]) || g.players[oppColor];
+        const iWon = g.winner === myColor;
+        const result = g.status === 'resigned'
+          ? (g.winner ? (iWon ? 'you won — they resigned' : 'you resigned') : 'game ended')
+          : g.status === 'stalemate' ? 'draw by stalemate'
+          : g.winner ? (iWon ? 'you won by checkmate' : 'you lost by checkmate') : 'game ended';
+        const date = (g.updatedAt && g.updatedAt.toMillis && g.updatedAt.toMillis())
+          || (g.createdAt && g.createdAt.toMillis && g.createdAt.toMillis()) || 0;
+        rows.push({
+          date, icon: 'public', label: `vs ${oppName}`, result,
+          onClick: () => openReview(g.moves.map(m => ({ move: m, label: m.label })), { title: `you vs ${oppName}` }),
+        });
+      }
+    } catch {
+      // local history still shows even if the online fetch fails (offline, rules not published yet, ...)
+    }
+  }
+
+  if (!overlay.classList.contains('open')) return; // closed while the online fetch was in flight
+  rows.sort((a, b) => (b.date || 0) - (a.date || 0));
+  listEl.innerHTML = rows.length
+    ? rows.map((r, i) => `
+      <div class="game-row" data-i="${i}">
+        <span class="material-symbols-rounded history-icon">${r.icon}</span>
+        <div class="hist-info"><div class="hist-title">${escHtml(r.label)}</div><div class="hist-result">${escHtml(r.result)}</div></div>
+        <div class="hist-time">${escHtml(historyTimeLabel(r.date))}</div>
+      </div>`).join('')
+    : '<div class="empty-note">no finished games yet — checkmate, stalemate or a completed online game will show up here.</div>';
+  listEl.querySelectorAll('.game-row').forEach(row => {
+    row.addEventListener('click', () => rows[Number(row.dataset.i)].onClick());
+  });
+}
+document.getElementById('pastGamesBtn').addEventListener('click', openHistoryModal);
+document.getElementById('historyCloseBtn').addEventListener('click', () => document.getElementById('historyOverlay').classList.remove('open'));
+document.getElementById('historyOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
+
+// ── Boot ──────────────────────────────────────────────────
 onAccountChange(() => {
   authKnown = true;
   if (mode === 'online') renderModeBody();

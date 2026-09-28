@@ -568,5 +568,24 @@ service cloud.firestore {
       );
       allow delete: if false;
     }
+
+    // one — shared/collaborative documents. A document becomes collaborative
+    // when its owner invites at least one other person; from then on its
+    // content lives here (not just in each collaborator's own browser) and
+    // every collaborator can read and write it, including editing the
+    // collaborators list itself — a deliberately flat, no-roles model:
+    // anyone with access can invite or remove anyone else. Only the owner
+    // field is locked once created.
+    match /oneCollab/{docId} {
+      allow read: if isSignedIn() && request.auth.token.email in resource.data.collaborators;
+      allow create: if isSignedIn()
+        && request.resource.data.collaborators is list
+        && request.auth.token.email in request.resource.data.collaborators
+        && request.resource.data.owner == request.auth.token.email;
+      allow update: if isSignedIn() && request.auth.token.email in resource.data.collaborators
+        && request.resource.data.owner == resource.data.owner
+        && request.resource.data.collaborators is list;
+      allow delete: if isSignedIn() && request.auth.token.email == resource.data.owner;
+    }
   }
 }

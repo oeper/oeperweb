@@ -42,6 +42,13 @@ main{max-width:1120px;margin:0 auto;padding:12px 20px 60px}
 .appcard .row .sharebtn{margin-left:auto}
 .sharebody .sharerow{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
 .sharebody textarea.tf{resize:vertical;min-height:84px}
+.collabbody .sharerow{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.collabbody .sharerow .tf{flex:1;min-width:160px}
+.colist{display:flex;flex-direction:column;gap:2px;margin:10px 0;max-height:220px;overflow:auto}
+.corow{display:flex;align-items:center;gap:10px;padding:8px 4px}
+.corow .ms{font-size:22px;color:var(--on-surface-variant)}
+.corow .btn{height:30px;padding:0 10px;font-size:12px}
+.file .synced.collab{color:var(--secondary,var(--primary))}
 .appcard .btn{height:34px;padding:0 14px;font-size:13px}
 .files-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:36px 0 12px}
 .files-head h2{margin:0;font:500 22px "Google Sans",sans-serif;flex:1}
@@ -155,6 +162,11 @@ function shareBtn(target, label){
   const go = e => { e.stopPropagation(); e.preventDefault(); if (window.ONE_CLOUD) window.ONE_CLOUD.share(target()); };
   return el('span', { class:'sharebtn', role:'button', tabindex:0, title:label, 'aria-label':label, html:icon('share'), onclick:go, onkeydown:e => { if (e.key === 'Enter' || e.key === ' ') go(e); } });
 }
+// Collaborate button for a file row — invite others to edit this exact document (not a copy).
+function collabBtn(target, label){
+  const go = e => { e.stopPropagation(); e.preventDefault(); if (window.ONE_CLOUD) window.ONE_CLOUD.collaborate(target()); };
+  return el('span', { class:'sharebtn', role:'button', tabindex:0, title:label, 'aria-label':label, html:icon('group_add'), onclick:go, onkeydown:e => { if (e.key === 'Enter' || e.key === ' ') go(e); } });
+}
 function renderApps(){
   const box = $('#apps'); box.innerHTML = '';
   APPS.forEach((a, i) => {
@@ -175,7 +187,8 @@ function renderFiles(){
   const box = $('#files'); box.innerHTML = '';
   if (!list.length) box.append(el('div', { class:'empty', text:q ? 'No files match that search.' : files.length ? 'Nothing here yet.' : 'No files yet. Start one from an app above.' }));
   list.slice(0, 300).forEach((f, i) => { const a = byId[f.app];
-    box.append(el('button', { class:'file', style:{ '--c':a.color, animationDelay:Math.min(i, 20) * 20 + 'ms' }, onclick:() => openApp(f.app, { type:'open', id:f.id }) }, el('span', { class:'fi', html:logo(a) }), el('span', { class:'grow', html:`<b>${esc(f.title)}</b><small>${esc(a.name)}${f.meta ? ' · ' + esc(f.meta) : ''}${window.ONE_CLOUD && window.ONE_CLOUD.enabled() && window.ONE_CLOUD.isSynced(f.app, f.id) ? '<span class="ms synced" title="Saved to your oeper.dev account">cloud_done</span>' : ''}</small>` }), shareBtn(() => ({ kind:'file', app:f.app, id:f.id, title:f.title }), `Share ${f.title}`), el('time', { text:when(f.updated) }))); });
+    const collab = window.ONE_CLOUD && window.ONE_CLOUD.isCollab(f.app, f.id);
+    box.append(el('button', { class:'file', style:{ '--c':a.color, animationDelay:Math.min(i, 20) * 20 + 'ms' }, onclick:() => openApp(f.app, { type:'open', id:f.id }) }, el('span', { class:'fi', html:logo(a) }), el('span', { class:'grow', html:`<b>${esc(f.title)}</b><small>${esc(a.name)}${f.meta ? ' · ' + esc(f.meta) : ''}${collab ? '<span class="ms synced collab" title="Shared — edits sync between collaborators">group</span>' : ''}${window.ONE_CLOUD && window.ONE_CLOUD.enabled() && window.ONE_CLOUD.isSynced(f.app, f.id) ? '<span class="ms synced" title="Saved to your oeper.dev account">cloud_done</span>' : ''}</small>` }), f.app !== 'pdf' ? collabBtn(() => ({ app:f.app, id:f.id, title:f.title }), `Collaborate on ${f.title}`) : null, shareBtn(() => ({ kind:'file', app:f.app, id:f.id, title:f.title }), `Share ${f.title}`), el('time', { text:when(f.updated) }))); });
 }
 $('#q').addEventListener('input', renderFiles);
 $('#seedBtn').onclick = e => ONE.seedMenu(e.currentTarget);
@@ -268,6 +281,16 @@ async function openFromHash() {
     await Promise.resolve(window.ONE_CLOUD && window.ONE_CLOUD.ready);
     if (!window.ONE_CLOUD) return ONE.toast('Open this link on oeper.dev/one to get your own copy.');
     const got = await window.ONE_CLOUD.openShared(rest.slice(0, i), rest.slice(i + 1));
+    if (got) { await loadFiles(); openApp(got.app, { type:'open', id:got.id }); }
+    return;
+  }
+  if (h.startsWith('collab=')) {
+    const rest = h.slice(7), i = rest.indexOf(':'); clearHash();
+    if (i < 0) return;
+    if (document.readyState === 'loading') await new Promise(r => addEventListener('DOMContentLoaded', r, { once:true }));
+    await Promise.resolve(window.ONE_CLOUD && window.ONE_CLOUD.ready);
+    if (!window.ONE_CLOUD) return ONE.toast('Open this link on oeper.dev/one to collaborate.');
+    const got = await window.ONE_CLOUD.openCollabLink(rest.slice(0, i), rest.slice(i + 1));
     if (got) { await loadFiles(); openApp(got.app, { type:'open', id:got.id }); }
     return;
   }

@@ -3,7 +3,7 @@
    under oneWord/, oneSheet/, oneSlide/, oneIdea/ and onePDF/, which is also where oeper.dev/files shows them.
    The browser copy stays the working copy; sync is last-writer-wins on each document's own "updated" time. */
 import { onAccountChange, getCurrentUser, signIn, signOutUser, SERVER_ENDPOINT, ensureProfileLoaded, getProfile, handleOf, uploadFile, db } from '/shared/account.js?v=36';
-import { collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc, onSnapshot, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 document.documentElement.classList.add('cloud'); // shows the Share buttons (they don't exist in the standalone build)
 
 const store = ONE.store, el = ONE.el, icon = ONE.icon, esc = ONE.esc;
@@ -326,9 +326,163 @@ async function openShared(app, url) {
   });
 }
 
+/* ---------- collaboration: multiple people editing the SAME document ----------
+   Distinct from sharing above (which hands out an independent COPY). Once a document has
+   at least one other collaborator, its content lives in Firestore's oneCollab collection
+   (owner, collaborators[], content, updatedBy/updatedAt) as well as this browser's own
+   copy, and every collaborator can read and write it. Sync is push-based (onSnapshot) and
+   last-writer-wins on each write, same trust model as everything else here — there's no
+   merge of concurrent edits. A document open in an app frame is never silently overwritten
+   by an incoming remote change (same isOpen guard the local<->account sync above already
+   uses) — the collaborator just gets a toast telling them to reopen it. */
+const COLLAB_MAP = 'one-collab-map', COLLAB_CACHE = 'one-collab-cache';
+const mapKey = (app, id) => app + ':' + id;
+const collabDocKey = (app, id) => app + '_' + id;
+const collabMap = () => store.get(COLLAB_MAP, {});
+const collabCache = () => store.get(COLLAB_CACHE, {});
+const isCollab = (app, id) => !!collabMap()[mapKey(app, id)];
+const collabInfo = (app, id) => collabCache()[mapKey(app, id)] || null;
+function markCollab(app, id) { const m = collabMap(); m[mapKey(app, id)] = true; store.set(COLLAB_MAP, m); }
+function unmarkCollab(app, id) {
+  const m = collabMap(); delete m[mapKey(app, id)]; store.set(COLLAB_MAP, m);
+  const c = collabCache(); delete c[mapKey(app, id)]; store.set(COLLAB_CACHE, c);
+}
+function appAndIdFromDocKey(key) {
+  for (const app of Object.keys(LOCAL)) { const p = LOCAL[app].doc; if (key.startsWith(p)) return { app, id:key.slice(p.length) }; }
+  return null;
+}
+
+const collabUnsubs = new Map(), applyingRemote = new Set();
+function stopWatchingCollab(app, id) {
+  const mk = mapKey(app, id), u = collabUnsubs.get(mk);
+  if (u) { u(); collabUnsubs.delete(mk); }
+}
+function watchCollabDoc(app, id) {
+  const mk = mapKey(app, id); if (collabUnsubs.has(mk)) return;
+  const unsub = onSnapshot(doc(db, 'oneCollab', collabDocKey(app, id)), snap => {
+    if (!snap.exists()) { unmarkCollab(app, id); stopWatchingCollab(app, id); return; }
+    const data = snap.data();
+    if (!Array.isArray(data.collaborators) || !getCurrentUser() || !data.collaborators.includes(getCurrentUser().email)) {
+      unmarkCollab(app, id); stopWatchingCollab(app, id); return; // removed as a collaborator elsewhere
+    }
+    const cache = collabCache();
+    cache[mk] = { owner:data.owner, collaborators:data.collaborators, title:data.title };
+    store.set(COLLAB_CACHE, cache);
+    const me = getCurrentUser();
+    if (data.updatedBy && data.updatedBy !== me.email && data.content) {
+      if (isOpen(app, id)) {
+        ONE.toast((data.updatedBy) + ' updated “' + (data.title || 'this document') + '”. Reopen it to see their changes.');
+      } else {
+        applyingRemote.add(mk);
+        try { writeDoc(app, id, cleanDeep(Object.assign({}, data.content, { id }))); } finally { applyingRemote.delete(mk); }
+      }
+    }
+    window.ONE_SHELL_API && window.ONE_SHELL_API.refresh();
+  }, () => { unmarkCollab(app, id); stopWatchingCollab(app, id); });
+  collabUnsubs.set(mk, unsub);
+}
+function watchAllCollab() { Object.keys(collabMap()).forEach(mk => { const i = mk.indexOf(':'); watchCollabDoc(mk.slice(0, i), mk.slice(i + 1)); }); }
+function stopWatchingAllCollab() { collabUnsubs.forEach(u => u()); collabUnsubs.clear(); }
+
+async function pushCollabUpdate(app, id) {
+  const mk = mapKey(app, id); if (applyingRemote.has(mk) || !isCollab(app, id)) return;
+  const me = getCurrentUser(); if (!me) return;
+  const d = readDoc(app, id); if (!d) return;
+  const copy = Object.assign({}, d); delete copy.versions;
+  try {
+    await setDoc(doc(db, 'oneCollab', collabDocKey(app, id)), { content:copy, title:d.title || 'Untitled', updatedBy:me.email, updatedAt:serverTimestamp() }, { merge:true });
+  } catch {} // offline, or removed as a collaborator since the last snapshot — the local copy is still saved either way
+}
+const pushTimers = {};
+function pushCollabSoon(app, id) { const mk = mapKey(app, id); clearTimeout(pushTimers[mk]); pushTimers[mk] = setTimeout(() => pushCollabUpdate(app, id), 1200); }
+
+async function inviteCollaborator(t, email, redraw, input) {
+  email = String(email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { ONE.toast('Enter a valid email address.'); return; }
+  const me = getCurrentUser(); if (!me) return;
+  if (email === me.email) { ONE.toast('That’s already you.'); return; }
+  const ref = doc(db, 'oneCollab', collabDocKey(t.app, t.id));
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      const d = readDoc(t.app, t.id); if (!d) throw new Error('That document couldn’t be found');
+      const copy = Object.assign({}, d); delete copy.versions;
+      await setDoc(ref, { app:t.app, docId:t.id, title:t.title, owner:me.email, collaborators:[me.email, email], content:copy, updatedBy:me.email, updatedAt:serverTimestamp() });
+    } else {
+      await setDoc(ref, { collaborators:arrayUnion(email), updatedBy:me.email, updatedAt:serverTimestamp() }, { merge:true });
+    }
+    markCollab(t.app, t.id); watchCollabDoc(t.app, t.id);
+    if (input) input.value = '';
+    ONE.toast('Invited ' + email + '.');
+    redraw();
+  } catch (err) { ONE.toast('Couldn’t invite them: ' + (err.message || err)); }
+}
+async function removeCollaborator(t, email, redraw) {
+  const me = getCurrentUser(); if (!me) return;
+  try {
+    await setDoc(doc(db, 'oneCollab', collabDocKey(t.app, t.id)), { collaborators:arrayRemove(email), updatedBy:me.email, updatedAt:serverTimestamp() }, { merge:true });
+    if (email === me.email) { unmarkCollab(t.app, t.id); stopWatchingCollab(t.app, t.id); ONE.toast('You left this shared document.'); return; }
+    redraw();
+  } catch (err) { ONE.toast('Couldn’t remove them: ' + (err.message || err)); }
+}
+
+async function collaborate(t) {
+  if (!getCurrentUser()) { try { await signIn(); } catch {} }
+  const me = getCurrentUser(); if (!me) { ONE.toast('Sign in to your oeper.dev account to collaborate on files.'); return; }
+  const body = el('div', { class:'dlg-col collabbody' });
+  ONE.modal({ title:'Collaborate on “' + t.title + '”', icon:'group', width:480, body, actions:[{ label:'Close' }] });
+  const draw = async () => {
+    body.replaceChildren(el('p', { class:'muted', text:'Loading…' }));
+    let data = null;
+    if (isCollab(t.app, t.id)) { try { const snap = await getDoc(doc(db, 'oneCollab', collabDocKey(t.app, t.id))); if (snap.exists()) data = snap.data(); } catch {} }
+    const collaborators = data ? (data.collaborators || [me.email]) : [me.email];
+    const owner = data ? data.owner : me.email;
+    const list = el('div', { class:'colist' }, collaborators.map(em => el('div', { class:'corow' },
+      el('span', { class:'ms', html:icon('account_circle') }),
+      el('span', { class:'grow', text:em + (em === owner ? ' (owner)' : '') }),
+      (em !== owner && (em === me.email || owner === me.email))
+        ? el('button', { class:'btn text', text:em === me.email ? 'Leave' : 'Remove', onclick:() => removeCollaborator(t, em, draw) }) : null)));
+    const input = ONE.input({ placeholder:'person@example.com', type:'email' });
+    const invite = el('button', { class:'btn filled', html:icon('person_add') + 'Invite', onclick:() => inviteCollaborator(t, input.value, draw, input) });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); invite.click(); } });
+    let linkRow = null;
+    if (data) {
+      const link = SHARE_BASE + '#collab=' + t.app + ':' + t.id, box = ONE.input({ readonly:true, value:link });
+      box.addEventListener('focus', () => box.select());
+      const copy = async () => { try { await navigator.clipboard.writeText(link); } catch { box.select(); document.execCommand('copy'); } ONE.toast('Link copied.'); };
+      linkRow = el('div', {}, el('p', { class:'muted small', text:'Anyone you invite can open this link to start collaborating (they still need to be on the list above).' }), el('div', { class:'sharerow' }, box, el('button', { class:'btn tonal', html:icon('content_copy') + 'Copy link', onclick:copy })));
+    }
+    body.replaceChildren(
+      el('p', { class:'muted', text:'Everyone below can open, edit and re-share this exact document — changes sync between you automatically while you’re both online. Editing stops updating live while you have it open; reopen it to catch up.' }),
+      list, el('div', { class:'sharerow' }, input, invite), linkRow);
+  };
+  await draw();
+}
+
+async function openCollabLink(app, id) {
+  if (!ID_RE.test(id) || !LOCAL[app]) { ONE.toast('That collaboration link isn’t valid.'); return null; }
+  if (!getCurrentUser()) { try { await signIn(); } catch {} }
+  const me = getCurrentUser(); if (!me) { ONE.toast('Sign in to your oeper.dev account to open a shared document.'); return null; }
+  let snap;
+  try { snap = await getDoc(doc(db, 'oneCollab', collabDocKey(app, id))); } catch (err) { ONE.toast('Couldn’t open that document: ' + (err.message || err)); return null; }
+  if (!snap.exists()) { ONE.toast('That shared document doesn’t exist any more.'); return null; }
+  const data = snap.data();
+  if (!Array.isArray(data.collaborators) || !data.collaborators.includes(me.email)) { ONE.toast('You don’t have access to this document yet — ask ' + (data.owner || 'the owner') + ' to invite ' + me.email + '.'); return null; }
+  const d = cleanDeep(Object.assign({}, data.content, { id, title:data.title || (data.content && data.content.title) || 'Shared document' }));
+  writeDoc(app, id, d);
+  markCollab(app, id); watchCollabDoc(app, id);
+  ONE.toast('Opened “' + (d.title || 'shared document') + '” — you’re now a collaborator.');
+  return { app, id };
+}
+
 /* ---------- when to sync ---------- */
 let t; const soon = (ms = 2500) => { clearTimeout(t); t = setTimeout(syncAll, ms); };
-addEventListener('storage', e => { if (e.key && /^(ow|os|op|oi)-(doc|lib)/.test(e.key)) soon(); });
+addEventListener('storage', e => {
+  if (!e.key) return;
+  if (/^(ow|os|op|oi)-(doc|lib)/.test(e.key)) soon();
+  const info = appAndIdFromDocKey(e.key);
+  if (info && isCollab(info.app, info.id)) pushCollabSoon(info.app, info.id);
+});
 addEventListener('focus', () => soon(300));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) soon(300); });
 setInterval(() => soon(0), 60000); // also picks up onePDF saves, which IndexedDB doesn't announce
@@ -348,9 +502,11 @@ onAccountChange(async u => {
 })
 onAccountChange(async u => {
   user = u;
+  stopWatchingAllCollab();
   if (!u) setStatus({ state:settings().enabled ? 'signedout' : 'off' });
   else if (!settings().enabled) setStatus({ state:'off' });
   else await syncAll();
+  if (u) watchAllCollab();
   resolveReady(); renderChip();
 });
 setTimeout(() => resolveReady(), 8000); // never hold "open from oeper.dev/files" hostage to a slow sign-in check
@@ -399,6 +555,7 @@ async function publishSite(id, title, html) {
   return { url:j.publicUrl || j.url };
 }
 window.ONE_CLOUD = { ready, syncAll, publishSite, fetchOne, share, openShared, openSettings, enabled:() => settings().enabled, isSynced:(app, id) => app + ':' + id in store.get(STATE, {}),
+  collaborate, openCollabLink, isCollab, collabInfo,
   account:() => acct,
   onAccount:cb => { acctListeners.add(cb); cb(acct); return () => acctListeners.delete(cb); },
   signIn:async () => { try { await signIn(); } catch { ONE.toast('Sign-in didn’t finish.'); } },
