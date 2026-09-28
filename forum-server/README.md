@@ -283,6 +283,28 @@ sequence as `aio.sh`'s Restart, without opening a terminal at all.
 settings, and the same upload log with clickable links, from any browser,
 not just on the phone.
 
+## Not storing the same file twice
+
+Every upload endpoint (`/upload`, `/upload-video`, `/upload-project`,
+`/upload-message`, `/upload-file`) hashes the file after it's written and
+checks `dedupe.js`'s index (`content-hashes.json`) for a file already known
+to have those exact bytes — anywhere on the server, not just the same
+endpoint. If one's found, the just-written duplicate is replaced with a
+hard link to it instead of kept as a second copy, so attaching the same
+image to two feed posts, or sending the same voice clip in two chats, only
+uses the disk space once. Every endpoint's response and every other
+feature (deleting one of the copies, moderation, quotas — each upload still
+gets its own metadata entry, filename and URL) is unaffected either way.
+
+This only actually saves space when the filesystem supports hard links.
+Android's shared storage (`/storage/emulated/0`, the default for every
+`*_DIR`) commonly does not — a FUSE mount that refuses them outright — in
+which case this silently falls back to a normal full copy and every upload
+still works exactly as before. The startup log doesn't say which case
+you're in (it depends on where `*_DIR` points, not just the OS); check for
+`dedupe: hard links work here` or `dedupe: hard links are not available`
+the first time two duplicate files are actually uploaded.
+
 ## Upload logs — who uploaded what, and where
 
 Every upload endpoint (`/upload`, `/upload-video`, `/upload-project`,

@@ -309,6 +309,11 @@ const oneSync = require('./one-sync')(app, {
   publicBaseUrl: PUBLIC_BASE_URL,
 });
 
+// The exact same bytes uploaded twice (a feed image also sent as a chat
+// attachment, the same voice note in two conversations, ...) only takes up
+// disk space once, where the filesystem allows it — see dedupe.js.
+const dedupe = require('./dedupe')(process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname);
+
 // ── Forum post/comment attachments — any signed-in user, any file type. ──
 // Not part of the file-owners.json metadata system and never listed
 // publicly — only reachable via the specific URL a post/comment embeds.
@@ -322,9 +327,10 @@ const uploadAttachment = multer({
 });
 
 app.post('/upload', verifyFirebaseToken, storage.suspendGuard, (req, res) => {
-  uploadAttachment.single('file')(req, res, err => {
+  uploadAttachment.single('file')(req, res, async err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
+    await dedupe.dedupeUpload(req.file.path, req.file.size);
     const url = `${PUBLIC_BASE_URL}/files/${req.file.filename}`;
     storage.audit(req.user.email, 'upload', req.file.filename, { dest: 'forum', name: req.file.originalname, size: req.file.size, url });
     res.json({ url });
@@ -341,9 +347,10 @@ const uploadVideo = multer({
 });
 
 app.post('/upload-video', verifyFirebaseToken, storage.suspendGuard, (req, res) => {
-  uploadVideo.single('file')(req, res, err => {
+  uploadVideo.single('file')(req, res, async err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
+    await dedupe.dedupeUpload(req.file.path, req.file.size);
     const url = `${PUBLIC_BASE_URL}/videos/${req.file.filename}`;
     storage.audit(req.user.email, 'upload', req.file.filename, { dest: 'video', name: req.file.originalname, size: req.file.size, url });
     res.json({ url });
@@ -360,9 +367,10 @@ const uploadProject = multer({
 });
 
 app.post('/upload-project', verifyFirebaseToken, storage.suspendGuard, (req, res) => {
-  uploadProject.single('file')(req, res, err => {
+  uploadProject.single('file')(req, res, async err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
+    await dedupe.dedupeUpload(req.file.path, req.file.size);
     const url = `${PUBLIC_BASE_URL}/projects/${req.file.filename}`;
     storage.audit(req.user.email, 'upload', req.file.filename, { dest: 'project', name: req.file.originalname, size: req.file.size, url });
     res.json({ url });
@@ -380,9 +388,10 @@ const uploadMessageFile = multer({
 });
 
 app.post('/upload-message', verifyFirebaseToken, storage.suspendGuard, (req, res) => {
-  uploadMessageFile.single('file')(req, res, err => {
+  uploadMessageFile.single('file')(req, res, async err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
+    await dedupe.dedupeUpload(req.file.path, req.file.size);
     const url = `${PUBLIC_BASE_URL}/messages-media/${req.file.filename}`;
     storage.audit(req.user.email, 'upload', req.file.filename, { dest: 'message', name: req.file.originalname, size: req.file.size, url });
     res.json({ url });
@@ -413,7 +422,7 @@ app.post('/upload-file', optionalAuth, storage.uploadGate, (req, res) => {
   if (req.user) {
     const owner = isOwner(req.user.email);
     const uploader = owner ? uploadOwnerFile : uploadUserFile;
-    uploader.single('file')(req, res, err => {
+    uploader.single('file')(req, res, async err => {
       if (err) return res.status(400).json({ error: err.message });
       if (!req.file) return res.status(400).json({ error: 'No file received' });
       // Authoritative quota check now that the real size is known (the
@@ -422,6 +431,7 @@ app.post('/upload-file', optionalAuth, storage.uploadGate, (req, res) => {
         try { fs.unlinkSync(req.file.path); } catch {}
         return res.status(413).json({ error: 'Not enough storage for this file.' });
       }
+      await dedupe.dedupeUpload(req.file.path, req.file.size);
       // Folder is optional (root upload if omitted) and only meaningful for
       // signed-in uploads — validated the same way /folders validates a new
       // folder, but an upload into a not-yet-created folder implicitly
@@ -461,9 +471,10 @@ app.post('/upload-file', optionalAuth, storage.uploadGate, (req, res) => {
   if ((anon[ip] || 0) >= ANON_UPLOAD_LIMIT) {
     return res.status(403).json({ error: `Sign in to upload more — anonymous uploads are limited to ${ANON_UPLOAD_LIMIT} files per person.` });
   }
-  uploadAnonFile.single('file')(req, res, err => {
+  uploadAnonFile.single('file')(req, res, async err => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'No file received' });
+    await dedupe.dedupeUpload(req.file.path, req.file.size);
     anon[ip] = (anon[ip] || 0) + 1;
     saveAnon(anon);
     const expiresAt = expiryFor(req.file.size, ANON_PERMANENT_BYTES);
