@@ -403,7 +403,7 @@ const TOOLS = [
   },
   {
     name: 'remember_fact',
-    description: "Save something worth recalling in future conversations with this user — a stated preference, an ongoing project, a fact about their situation, anything that would genuinely help you help them better next time. Only call this for things actually worth carrying forward, not routine conversational detail (don't remember 'the user said hi', do remember 'the user is learning Rust' or 'the user's dog is named Waffles'). Has no effect if nobody's signed in.",
+    description: "Save something worth recalling in future conversations with this user, so next time you actually remember them instead of starting from zero. Call this fairly often — whenever they mention something that would help you help them better later: a stated preference, an ongoing project or goal, their job/field/studies, technical tools or languages they use, a hobby or interest, a person or pet they've mentioned, a recurring topic, an upcoming event or deadline, or how they'd like you to respond to them. Skip only pure one-off small talk ('the user said hi', 'the user said thanks') — when in doubt, remember it; a slightly-too-eager memory serves them far better than a blank one. Has no effect if nobody's signed in.",
     parameters: {
       type: 'object',
       properties: {
