@@ -1340,8 +1340,9 @@ function formatFileSize(bytes) {
   return (bytes / 1024 / 1024).toFixed(1) + ' MB';
 }
 function fileBubbleHtml(m) {
+  const dlUrl = m.fileUrl + (m.fileUrl.includes('?') ? '&' : '?') + 'dl=1';
   return `
-    <a class="msg-file" href="${escHtml(m.fileUrl)}" download="${escHtml(m.fileName || '')}" target="_blank" rel="noopener">
+    <a class="msg-file" href="${escHtml(dlUrl)}" download="${escHtml(m.fileName || '')}" target="_blank" rel="noopener">
       <span class="material-symbols-rounded">description</span>
       <div class="msg-file-info">
         <div class="msg-file-name">${escHtml(m.fileName || 'file')}</div>

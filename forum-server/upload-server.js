@@ -756,11 +756,27 @@ app.post('/report', verifyFirebaseToken, async (req, res) => {
   }
 });
 
-app.use('/files', express.static(UPLOAD_DIR, { maxAge: '30d' }));
-app.use('/docs', express.static(USER_FILES_DIR, { maxAge: '30d' }));
-app.use('/videos', express.static(VIDEO_DIR, { maxAge: '30d' }));
-app.use('/projects', express.static(PROJECT_DIR, { maxAge: '30d' }));
-app.use('/messages-media', express.static(MESSAGE_DIR, { maxAge: '30d' }));
+// The site's own origin (oeper.dev) is always cross-origin from this
+// server's (fs.oeper.dev), and browsers ignore an <a download> link's
+// request to save-as rather than navigate for a cross-origin URL unless the
+// response itself says so — so without this, every "download" button on the
+// site just opens the file in-browser like any other link. A `?dl=1` query
+// param (added by the client only on an actual download action, never on an
+// inline preview/thumbnail/player URL, which must keep rendering normally)
+// opts a request into a real attachment response.
+function asDownload(req, res, next) {
+  if (req.query.dl == null) return next();
+  let name;
+  try { name = decodeURIComponent(path.basename(req.path)).replace(/[\r\n"]/g, ''); } catch { return next(); }
+  const asciiName = name.replace(/[^\x20-\x7E]/g, '_');
+  res.setHeader('Content-Disposition', `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(name)}`);
+  next();
+}
+app.use('/files', asDownload, express.static(UPLOAD_DIR, { maxAge: '30d' }));
+app.use('/docs', asDownload, express.static(USER_FILES_DIR, { maxAge: '30d' }));
+app.use('/videos', asDownload, express.static(VIDEO_DIR, { maxAge: '30d' }));
+app.use('/projects', asDownload, express.static(PROJECT_DIR, { maxAge: '30d' }));
+app.use('/messages-media', asDownload, express.static(MESSAGE_DIR, { maxAge: '30d' }));
 
 app.get('/', (req, res) => res.send('oeperweb forum upload server is running.'));
 
