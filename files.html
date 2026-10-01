@@ -1164,7 +1164,11 @@ function buildFileTile(f) {
   if (mineOrOwner && !f.untracked) menuItems.push({ label: 'move to folder', icon: 'drive_file_move', onClick: () => openMoveModal(f) });
   menuItems.push({ label: 'download', icon: 'download', onClick: () => {
     const a = document.createElement('a');
-    a.href = f.url; a.download = ''; a.target = '_blank'; a.rel = 'noopener';
+    // ?dl=1 makes the server send Content-Disposition: attachment — the
+    // `download` attribute alone is ignored by browsers for a cross-origin
+    // URL like this one (fs.oeper.dev vs. the site's own origin), which
+    // otherwise just opens the file in-browser instead of saving it.
+    a.href = f.url + (f.url.includes('?') ? '&' : '?') + 'dl=1'; a.download = ''; a.target = '_blank'; a.rel = 'noopener';
     document.body.appendChild(a); a.click(); a.remove();
   } });
   if (mineOrOwner) menuItems.push({ label: 'delete', icon: 'delete', dangerous: true, onClick: () => deleteFile(f.filename) });
@@ -1198,7 +1202,7 @@ function buildCard(f) {
     </div>
     <div class="file-actions" draggable="false">
       <button class="icon-btn" data-copy title="copy link"><span class="material-symbols-rounded">link</span></button>
-      <a class="icon-btn" href="${f.url}" target="_blank" rel="noopener" download title="download"><span class="material-symbols-rounded">download</span></a>
+      <a class="icon-btn" href="${f.url}${f.url.includes('?') ? '&' : '?'}dl=1" target="_blank" rel="noopener" download title="download"><span class="material-symbols-rounded">download</span></a>
     </div>
   `;
 
@@ -1308,7 +1312,7 @@ document.getElementById('bulkDownloadBtn').addEventListener('click', () => {
   urls.forEach((url, i) => {
     setTimeout(() => {
       const a = document.createElement('a');
-      a.href = url;
+      a.href = url + (url.includes('?') ? '&' : '?') + 'dl=1';
       a.download = '';
       document.body.appendChild(a);
       a.click();

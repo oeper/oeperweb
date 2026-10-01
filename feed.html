@@ -903,7 +903,7 @@ function attachmentHtml(url, opts) {
 
   const icon = kind === 'archive' ? 'folder_zip' : kind === 'text' ? 'description' : kind === 'audio' ? 'music_note' : 'draft';
   const chip = `
-    <a class="file-chip ${cls}" href="${url}" target="_blank" rel="noopener" download>
+    <a class="file-chip ${cls}" href="${url}${url.includes('?') ? '&' : '?'}dl=1" target="_blank" rel="noopener" download>
       <span class="material-symbols-rounded">${icon}</span>
       <span class="file-chip-name">${escHtml(fileNameFromUrl(url))}</span>
     </a>
@@ -1305,10 +1305,25 @@ function runForum() {
       const input = container.querySelector('input[type="file"]');
       if (input) {
         input.addEventListener('change', e => {
+          // showToast() overwrites one shared toast element, so rejecting
+          // several files in this same loop (common on mobile: camera
+          // photos routinely exceed MAX_IMAGE_BYTES, and selecting many at
+          // once hits maxCount too) used to flash a toast per rejection
+          // that each immediately replaced the last — leaving the user with
+          // no visible explanation for why a post ended up with fewer
+          // attachments than they picked. Collect them and show one summary
+          // toast instead.
+          let tooBig = 0, overCap = false;
           for (const f of [...e.target.files]) {
-            if (totalCount() >= maxCount) { showToast(`Up to ${maxCount} files per post`); break; }
-            if (f.size > MAX_IMAGE_BYTES) { showToast(`Each file must be under ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB`); continue; }
+            if (totalCount() >= maxCount) { overCap = true; break; }
+            if (f.size > MAX_IMAGE_BYTES) { tooBig++; continue; }
             files.push(f);
+          }
+          if (tooBig || overCap) {
+            const parts = [];
+            if (tooBig) parts.push(`${tooBig} file${tooBig === 1 ? '' : 's'} over ${Math.round(MAX_IMAGE_BYTES/1024/1024)}MB skipped`);
+            if (overCap) parts.push(`up to ${maxCount} files per post`);
+            showToast(parts.join(' — '));
           }
           render();
         });
