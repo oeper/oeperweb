@@ -219,7 +219,7 @@ POP.fore = a => ONE.pop.open(a, ONE.colorGrid(c => P.exec('foreColor', c || '#00
 POP.hilite = a => ONE.pop.open(a, ONE.colorGrid(c => P.exec('hiliteColor', c === 'none' || !c ? 'transparent' : c), { noneLabel:'No color' }));
 POP.font = a => ONE.menuAt(a, [['', 'Google Sans (default)'], ['Georgia, serif', 'Georgia'], ['"EB Garamond", Garamond, serif', 'Garamond'], ['Calibri, Carlito, sans-serif', 'Calibri'], ['"Roboto Flex", sans-serif', 'Roboto'], ['"Courier New", monospace', 'Courier New'], ['Caveat, cursive', 'Caveat (handwriting)']].map(([f, n]) => ({ html:`<span style="font-family:${f || 'inherit'}">${n}</span>`, on:() => P.exec('fontName', f || 'Google Sans') })));
 POP.size = a => ONE.menuAt(a, [[1, '9'], [2, '11 (default)'], [3, '13'], [4, '16'], [5, '20'], [6, '26'], [7, '36']].map(([v, n]) => ({ label:n, on:() => P.exec('fontSize', v) })));
-POP.mmColor = a => MM.colorMenu(a); POP.mmMark = a => MM.markMenu(a); POP.mmLink = a => MM.linkMenu(a);
+POP.mmInsert = a => MM.insertMenu(a); POP.mmColor = a => MM.colorMenu(a); POP.mmMark = a => MM.markMenu(a); POP.mmLink = a => MM.linkMenu(a);
 POP.pageColor = a => ONE.menuAt(a, N.PAGE_COLORS.map(([c, n]) => ({ html:`<span class="swatch" style="background:${c || 'var(--surface-lowest)'}"></span>${n}`, checked:(N.page().bg || null) === c, on:() => { N.page().bg = c; N.dirty(); P.render(false); } })));
 POP.rules = a => ONE.menuAt(a, N.RULES.map(([k, n]) => ({ label:n, checked:(N.page().rules || 'none') === k, on:() => { N.page().rules = k; N.dirty(); P.render(false); } })));
 POP.newPage = a => ONE.menuAt(a, [...Object.entries(N.TEMPLATES).map(([k, t]) => ({ label:t.name, icon:t.icon, on:() => A.newPage(k) })), '-', { label:'New subpage', icon:'subdirectory_arrow_right', kbd:'Ctrl+Alt+Shift+N', on:() => A.newPage('blank', true) }]);
@@ -232,7 +232,7 @@ const penBar = () => { const b = $('#barPen'), h = $('#barHl'); if (b) b.style.b
 /* ---------- exports ---------- */
 function toMarkdown(p){
   if (p.kind === 'map') return MM.toMarkdown(p);
-  const conv = n => [...n.childNodes].map(c => { if (c.nodeType === 3) return c.textContent; if (c.nodeType !== 1) return ''; const t = c.tagName, inner = conv(c);
+  const conv = n => [...n.childNodes].map(c => { if (c.nodeType === 3) return c.textContent; if (c.nodeType !== 1) return ''; if (c.classList.contains('mmemb')) { const f = N.find(c.dataset.map); return f ? '\n' + MM.toMarkdown(f.p).replace(/^# /, '### Mind map: ') + '\n' : ''; } const t = c.tagName, inner = conv(c);
     const tag = c.dataset && c.dataset.tag ? (c.dataset.tag === 'todo' ? (c.hasAttribute('data-done') ? '- [x] ' : '- [ ] ') : `(${(P.TAGS[c.dataset.tag] || {}).label || c.dataset.tag}) `) : '';
     if (/^H[1-6]$/.test(t)) return '\n' + '#'.repeat(+t[1] + 1) + ' ' + inner.trim() + '\n'; if (t === 'P' || t === 'DIV') return '\n' + tag + inner.trim() + '\n';
     if (t === 'LI') return (c.parentElement.tagName === 'OL' ? '1. ' : '- ') + tag + inner.trim() + '\n'; if (t === 'UL' || t === 'OL') return '\n' + inner; if (t === 'B' || t === 'STRONG') return `**${inner}**`; if (t === 'I' || t === 'EM') return `*${inner}*`;
@@ -243,7 +243,7 @@ function toMarkdown(p){
 }
 function pageHTML(p){
   if (p.kind === 'map') return MM.pageHTML(p);
-  P.syncAll(); const css = `body{margin:0;font:15px/1.5 "Google Sans",Roboto,system-ui,sans-serif;color:#1f1f1f;background:${p.bg || '#fff'}}.pg{position:relative;min-height:100vh}.t{position:absolute;left:48px;top:28px;font-size:30px;font-weight:500}.d{position:absolute;left:48px;top:78px;color:#666;font-size:13px}.nc{position:absolute}img{max-width:100%;height:auto}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:4px 8px;min-width:60px}[data-tag]{position:relative;padding-left:26px}[data-tag]::before{position:absolute;left:0;font-family:"Material Symbols Rounded";font-size:20px;line-height:1.2}${Object.entries(P.TAGS).map(([k, t]) => `[data-tag="${k}"]::before{content:"${t.icon}";color:${t.color.startsWith('var') ? '#1a73e8' : t.color}}`).join('')}[data-tag="todo"][data-done]::before{content:"check_box"}[data-tag="todo"][data-done]{text-decoration:line-through;color:#777}[data-tag="remember"]{background:#fff3b0}svg path.hl{opacity:.4}`;
+  P.syncAll(); const css = `body{margin:0;font:15px/1.5 "Google Sans",Roboto,system-ui,sans-serif;color:#1f1f1f;background:${p.bg || '#fff'}}.pg{position:relative;min-height:100vh}.t{position:absolute;left:48px;top:28px;font-size:30px;font-weight:500}.d{position:absolute;left:48px;top:78px;color:#666;font-size:13px}.nc{position:absolute}img{max-width:100%;height:auto}.mmemb{margin:.4em 0}.mmemb img{border:1px solid #ddd;border-radius:8px}.mmemb-b{display:none}figcaption{color:#666;font-size:12px}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:4px 8px;min-width:60px}[data-tag]{position:relative;padding-left:26px}[data-tag]::before{position:absolute;left:0;font-family:"Material Symbols Rounded";font-size:20px;line-height:1.2}${Object.entries(P.TAGS).map(([k, t]) => `[data-tag="${k}"]::before{content:"${t.icon}";color:${t.color.startsWith('var') ? '#1a73e8' : t.color}}`).join('')}[data-tag="todo"][data-done]::before{content:"check_box"}[data-tag="todo"][data-done]{text-decoration:line-through;color:#777}[data-tag="remember"]{background:#fff3b0}svg path.hl{opacity:.4}`;
   const inkNode = $('#ink').cloneNode(true); inkNode.removeAttribute('id'); inkNode.setAttribute('style', 'position:absolute;left:0;top:0;pointer-events:none');
   const w = Math.max(900, ...p.items.map(i => i.x + i.w + 40)), h = Math.max(600, ...p.items.map(i => i.y + 400));
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(p.title || 'Untitled page')}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&family=Caveat:wght@500&family=EB+Garamond&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0"><style>${css}</style></head><body><div class="pg" style="width:${w}px;height:${h}px"><div class="t">${esc(p.title || 'Untitled page')}</div><div class="d">${esc(new Date(p.created).toLocaleString())}</div>${p.items.map(i => `<div class="nc" style="left:${i.x}px;top:${i.y}px;width:${i.w}px">${i.html}</div>`).join('')}${p === N.page() ? inkNode.outerHTML : ''}</div></body></html>`;
@@ -324,6 +324,7 @@ const SPEC = [
     { label:'Links', items:[['L','link','Link','link',{ kbd:'Ctrl+K' }]] },
     { label:'Recording', items:[['L','graphic_eq','Audio','record',{ state:'record' }]] },
     { label:'Time Stamp', items:[['C', [['S','calendar_today','Date','date',{ kbd:'Alt+Shift+D' }], ['S','schedule','Time','time',{ kbd:'Alt+Shift+T' }], ['S','event','Date & Time','dateTime',{ kbd:'Alt+Shift+F' }]]]] },
+    { label:'Mind map', items:[['LD','account_tree','Mind Map','pop:mmInsert']] },
     { label:'Pages', items:[['LD','dashboard_customize','Page Templates','pop:template']] },
     { label:'Symbols', items:[['C', [['SD','emoji_symbols','Symbol','symbol'], ['S','horizontal_rule','Divider','hr']]]] }
   ] },
@@ -331,7 +332,7 @@ const SPEC = [
     { label:'Flashcards', items:[['L','style','Flashcards','flashcards'], ['C', [['S','add_card','Make a card','cardMark'], ['S','menu_book','Definition','definition',{ kbd:'Ctrl+5' }]]]] },
     { label:'Remember', items:[['L','ink_highlighter','Key term','keyTerm',{ kbd:'Ctrl+Shift+H' }], ['L','bookmark','Must remember','remember',{ kbd:'Ctrl+4' }]] },
     { label:'Test yourself', items:[['L','visibility_off','Recall mode','recall',{ state:'recall' }]] },
-    { label:'Mind maps', items:[['L','account_tree','New mind map','newMap'], ['C', [['S','schema','Map from this page','pageToMap'], ['S','segment','Build from outline','mapOutline']]]] },
+    { label:'Mind maps', items:[['L','account_tree','New mind map','newMap'], ['C', [['S','schema','Map from this page','pageToMap'], ['S','segment','Build from outline','mapOutline'], ['SD','picture_in_picture','Put a map in a note','pop:mmInsert']]]] },
     { label:'Review', items:[['L','sell','Tags summary','findTags',{ state:'findTags' }]] }
   ] },
   { id:'draw', label:'Draw', groups:[

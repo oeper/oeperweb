@@ -259,3 +259,20 @@ button.side-item:hover{background:var(--surface-high);transform:translateX(2px)}
 .fc-actions kbd{margin-left:8px}
 .fc-src{align-self:center}
 @media (prefers-reduced-motion:reduce){.mm-node.in,.fc-card.fcflip,.page.recall .shown{animation:none}.mm-stage.smooth{transition:none}}
+
+/* ---------- mind map embedded in a note ---------- */
+.mmemb { margin:.5em 0; padding:0; max-width:100%; border:1px solid var(--outline-var, rgba(128,128,128,.35)); border-radius:12px; overflow:hidden; background:#fff; cursor:pointer; position:relative; user-select:none; -webkit-user-select:none; }
+.mmemb:hover { border-color:var(--primary); box-shadow:0 2px 10px rgba(0,0,0,.18); }
+.mmemb img { display:block; width:auto; max-width:100%; margin:0 auto; height:auto; max-height:420px; object-fit:contain; border-radius:0 !important; background:#fff; }
+.mmemb figcaption { display:flex; align-items:center; gap:6px; padding:6px 8px 6px 12px; font-family:inherit; font-weight:500; font-size:12px; line-height:1.2; color:#444; background:#f3f1f6; border-top:1px solid rgba(0,0,0,.08); }
+.mmemb-t { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mmemb-b { appearance:none; border:0; background:transparent; color:#444; cursor:pointer; border-radius:999px; height:26px; padding:0 10px; font-family:inherit; font-weight:600; font-size:12px; line-height:26px; opacity:.0; transition:opacity .12s, background .12s; }
+.mmemb-b::after { content:attr(title); }
+.mmemb:hover .mmemb-b, .mmemb:focus-within .mmemb-b { opacity:1; }
+.mmemb-b:hover { background:rgba(0,0,0,.09); }
+.mmemb-b[data-mm="remove"] { color:#b3261e; }
+.mmemb.gone { opacity:.6; }
+@media (hover:none) { .mmemb-b { opacity:1; } }
+.mm-back { position:absolute; left:14px; top:14px; z-index:6; display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 14px 0 10px; border:0; border-radius:999px; background:var(--primary); color:var(--on-primary, #fff); font-family:inherit; font-weight:600; font-size:13px; line-height:1; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35); }
+.mm-back[hidden] { display:none; }
+.mm-back .ms, .mm-back svg { width:18px; height:18px; font-size:18px; }

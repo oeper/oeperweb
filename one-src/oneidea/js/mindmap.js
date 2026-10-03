@@ -550,4 +550,40 @@ MM.outlineDialog = () => {
     actions:[{ label:'Cancel' }, { label:'Make the map', kind:'filled', on:() => { const r = parseOutline(ta.value); if (!r || !r.out.length) { ONE.toast('Add a few lines first.'); return false; } const cp = N.page(); insertAfterCurrent(N.mapFromOutline(r.title, r.out, cp ? Math.min(2, (cp.level || 0) + 1) : 0)); } }] });
   setTimeout(() => ta.focus(), 60);
 };
+/* ---------- mind maps inside notes ---------- */
+const embSrc = p => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(MM.toSVG(p));
+const embCap = p => 'Mind map: ' + (p.title || 'Mind map');
+const embHTML = p => `<figure class="mmemb" contenteditable="false" data-map="${p.id}"><img src="${embSrc(p)}" alt="${esc(embCap(p))}"><figcaption><span class="mmemb-t">${esc(embCap(p))}</span><button type="button" class="mmemb-b" data-mm="open" title="Open map" aria-label="Open map"></button><button type="button" class="mmemb-b" data-mm="remove" title="Remove from note" aria-label="Remove from note"></button></figcaption></figure><p><br></p>`;
+const backBtn = el('button', { class:'mm-back', type:'button', hidden:true, html:icon('arrow_back') + '<span>Back to note</span>', onclick:() => { const b = MM.back, f = b && N.find(b.from); if (f) N.go(f.si, f.pi); else ONE.toast('That note was deleted.'); } });
+$('#mm').append(backBtn);
+const showBack = () => { const b = MM.back; backBtn.hidden = !(active && cur && b && b.to === cur.id && N.find(b.from)); };
+const embOpen = id => { const f = N.find(id); if (!f || f.p.kind !== 'map') return ONE.toast('That mind map was deleted.'); const here = N.page(); P.syncAll(); MM.back = here ? { from:here.id, to:f.p.id } : null; N.go(f.si, f.pi); };
+const allMaps = () => { const out = []; N.nb.sections.forEach(s => s.pages.forEach(p => { if (p.kind === 'map') out.push(p); })); return out; };
+function embedNew() {
+  const cp = N.page(); if (!cp || cp.kind === 'map') return ONE.toast('Open a notes page first, then add a mind map to it.');
+  const mp = N.newMapPage(cp.title ? cp.title + ' map' : 'Mind map', Math.min(2, (cp.level || 0) + 1)), s = N.section();
+  P.insertHTML(embHTML(mp)); P.syncAll();
+  let j = N.nb.cur.p + 1; while (j < s.pages.length && s.pages[j].level > (cp.level || 0)) j++; s.pages.splice(j, 0, mp);
+  MM.back = { from:cp.id, to:mp.id }; N.go(N.nb.cur.s, j, { focusTitle:true });
+}
+MM.insertMenu = a => {
+  const cp = N.page(); if (!cp || cp.kind === 'map') return ONE.toast('Open a notes page first, then add a mind map to it.');
+  const maps = allMaps().slice(0, 14);
+  ONE.menuAt(a, [{ label:'New mind map here', icon:'add', on:embedNew }, ...(maps.length ? ['-', ...maps.map(m => ({ label:m.title || 'Mind map', icon:'account_tree', on:() => { P.insertHTML(embHTML(m)); P.syncAll(); ONE.toast('Added. It updates whenever you change the map.'); } }))] : [])]);
+};
+MM.refreshEmbeds = () => {
+  const root = $('#items'); if (!root || active) return;
+  root.querySelectorAll('figure.mmemb').forEach(fig => {
+    const f = N.find(fig.dataset.map), img = fig.querySelector('img'), cap = fig.querySelector('.mmemb-t');
+    if (f && f.p.kind === 'map') { const src = embSrc(f.p); if (img && img.getAttribute('src') !== src) img.setAttribute('src', src); if (img) img.alt = embCap(f.p); if (cap) cap.textContent = embCap(f.p); fig.classList.remove('gone'); }
+    else { fig.classList.add('gone'); if (cap) cap.textContent = 'This mind map was deleted'; }
+  });
+  P.syncAll();
+};
+$('#items').addEventListener('click', e => {
+  const fig = e.target.closest('figure.mmemb'); if (!fig) return; e.preventDefault();
+  if (e.target.closest('[data-mm="remove"]')) { const b = fig.closest('.nc-body'); fig.remove(); if (b) P.sync(b); return; }
+  embOpen(fig.dataset.map);
+});
+const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbeds(anim); MM.refreshEmbeds(); showBack(); };
 })();
