@@ -7,15 +7,17 @@ ONE.boot('oi', 'idea');
 const secEl = $('#sections'), pagesEl = $('#pages');
 
 /* ---------- navigation ---------- */
+const clone = x => JSON.parse(JSON.stringify(x));
+const versionOf = p => ({ t:Date.now(), title:p.title, items:clone(p.items), ink:clone(p.ink), map:p.kind === 'map' ? clone(p.map) : undefined });
 const snapshotIfChanged = () => {
   const p = N.page(); if (!p || !P.wasChanged()) return; P.syncAll();
   const last = p.versions[p.versions.length - 1];
-  if (!last || Date.now() - last.t > 5 * 60000) { p.versions.push({ t:Date.now(), title:p.title, items:JSON.parse(JSON.stringify(p.items)), ink:JSON.parse(JSON.stringify(p.ink)) }); if (p.versions.length > 15) p.versions.shift(); }
+  if (!last || Date.now() - last.t > 5 * 60000) { p.versions.push(versionOf(p)); if (p.versions.length > 15) p.versions.shift(); }
 };
 N.go = (s, p, opt = {}) => {
   snapshotIfChanged(); P.syncAll();
   N.nb.cur = { s:ONE.clamp(s, 0, N.nb.sections.length - 1), p:0 }; N.nb.cur.p = ONE.clamp(p, 0, N.section().pages.length - 1);
-  renderNav(); P.render(); N.dirty(); if (opt.focusTitle) setTimeout(() => { $('#ptitle').focus(); }, 30);
+  renderNav(); P.render(); N.dirty(); if (opt.focusTitle) setTimeout(() => { if (N.page().kind === 'map') MM.focusRoot(); else $('#ptitle').focus(); }, 30);
   $('#canvaswrap').scrollTo(0, 0); if (innerWidth < 900) $('#app').classList.remove('nav-open');
 };
 N.goPage = pid => { const f = N.find(pid); if (f) N.go(f.si, f.pi); return f; };
@@ -36,14 +38,14 @@ function renderPages(){
   pagesEl.append(el('div', { class:'pages-head' }, el('b', { text:s.name, style:{ color:'var(--on-surface)' } }), el('button', { class:'icon-btn', title:'Sort pages', html:icon('sort'), onclick:e => ONE.menuAt(e.currentTarget, [{ label:'Sort by title', icon:'sort_by_alpha', on:() => sortPages('title') }, { label:'Sort by date created', icon:'event', on:() => sortPages('created') }, { label:'Sort by date modified', icon:'update', on:() => sortPages('updated') }]) })));
   s.pages.forEach((p, i) => {
     const b = el('button', { class:'pg lv' + (p.level || 0) + (i === N.nb.cur.p ? ' active' : ''), draggable:'true', 'data-i':i, style:{ animationDelay:i * 25 + 'ms' } },
-      el('span', { class:'pg-t', text:p.title || 'Untitled page' }), el('small', { text:new Date(p.updated).toLocaleDateString(undefined, { month:'short', day:'numeric' }) + ' · ' + (N.text(p.items.map(x => x.html).join(' ')).slice(0, 60) || 'Empty') }));
+      el('span', { class:'pg-t', html:(p.kind === 'map' ? icon('account_tree', 'pg-ic') : '') + esc(p.title || 'Untitled page') }), el('small', { text:new Date(p.updated).toLocaleDateString(undefined, { month:'short', day:'numeric' }) + ' · ' + N.preview(p) }));
     b.onclick = () => N.go(N.nb.cur.s, i); b.oncontextmenu = e => { e.preventDefault(); pageMenu(i, { x:e.clientX, y:e.clientY }); };
     dnd(b, 'pg', i); pagesEl.append(b);
   });
-  pagesEl.append(el('button', { class:'addrow', html:`${icon('note_add')}<span>Add page</span>`, onclick:() => A.newPage() }));
+  pagesEl.append(el('button', { class:'addrow', html:`${icon('note_add')}<span>Add page</span>`, onclick:() => A.newPage() }), el('button', { class:'addrow', html:`${icon('account_tree')}<span>Add mind map</span>`, onclick:() => A.newPage('mindmap') }));
 }
-N.onTitle = () => { const n = pagesEl.querySelector(`.pg[data-i="${N.nb.cur.p}"] .pg-t`); if (n) n.textContent = N.page().title || 'Untitled page'; };
-let navT; N.onPageEdited = () => { clearTimeout(navT); navT = setTimeout(() => { const n = pagesEl.querySelector(`.pg[data-i="${N.nb.cur.p}"] small`); if (n) { const p = N.page(); n.textContent = new Date(p.updated).toLocaleDateString(undefined, { month:'short', day:'numeric' }) + ' · ' + (N.text(p.items.map(x => x.html).join(' ')).slice(0, 60) || 'Empty'); } }, 600); };
+N.onTitle = () => { const n = pagesEl.querySelector(`.pg[data-i="${N.nb.cur.p}"] .pg-t`); if (n) n.innerHTML = (N.page().kind === 'map' ? icon('account_tree', 'pg-ic') : '') + esc(N.page().title || 'Untitled page'); };
+let navT; N.onPageEdited = () => { clearTimeout(navT); navT = setTimeout(() => { const n = pagesEl.querySelector(`.pg[data-i="${N.nb.cur.p}"] small`); if (n) { const p = N.page(); n.textContent = new Date(p.updated).toLocaleDateString(undefined, { month:'short', day:'numeric' }) + ' · ' + N.preview(p); } }, 600); };
 
 /* drag to reorder sections and pages (drop a page on a section to move it there) */
 let dragging = null;
@@ -129,11 +131,13 @@ function refreshSide(){
     const hd = ONE.check('Hide completed to-dos', hideDone, { onchange:e => { hideDone = e.target.checked; refreshSide(); } });
     body.append(seg, hd.wrap);
     P.syncAll(); const found = {};
-    N.nb.sections.forEach((s, si) => { if (tagScope !== 'notebook' && si !== N.nb.cur.s) return; s.pages.forEach(p => { if (tagScope === 'page' && p !== N.page()) return; p.items.forEach(it => { const d = document.createElement('div'); d.innerHTML = it.html; d.querySelectorAll('[data-tag]').forEach(t => { if (hideDone && t.hasAttribute('data-done')) return; (found[t.dataset.tag] = found[t.dataset.tag] || []).push({ p, text:t.textContent.trim() || '(empty)', done:t.hasAttribute('data-done'), tid:t.dataset.tid }); }); }); }); });
+    N.nb.sections.forEach((s, si) => { if (tagScope !== 'notebook' && si !== N.nb.cur.s) return; s.pages.forEach(p => { if (tagScope === 'page' && p !== N.page()) return;
+      if (p.kind === 'map') p.map.nodes.forEach(n => { if (n.tag && P.TAGS[n.tag] && !(hideDone && n.done)) (found[n.tag] = found[n.tag] || []).push({ p, text:n.text || '(empty)', done:!!n.done, node:n.id }); });
+      p.items.forEach(it => { const d = document.createElement('div'); d.innerHTML = it.html; d.querySelectorAll('[data-tag]').forEach(t => { if (hideDone && t.hasAttribute('data-done')) return; (found[t.dataset.tag] = found[t.dataset.tag] || []).push({ p, text:t.textContent.trim() || '(empty)', done:t.hasAttribute('data-done'), tid:t.dataset.tid }); }); }); }); });
     const keys = Object.keys(P.TAGS).filter(k => found[k]);
     if (!keys.length) body.append(el('p', { class:'home-empty', text:'No tags here yet. Put your cursor in a line and press Ctrl+1 for a to-do, Ctrl+2 for important…' }));
     keys.forEach(k => { const T = P.TAGS[k]; body.append(el('h4', { class:'side-h', html:`<span class="ms" style="color:${T.color}">${T.icon}</span>${esc(T.label)} <small>${found[k].length}</small>` }));
-      found[k].forEach(f => body.append(el('button', { class:'side-item' + (f.done ? ' done' : ''), onclick:() => { if (N.page() !== f.p) N.goPage(f.p.id); setTimeout(() => P.flash(f.tid), 80); } }, el('span', { text:f.text }), el('small', { text:f.p.title || 'Untitled page' })))); });
+      found[k].forEach(f => body.append(el('button', { class:'side-item' + (f.done ? ' done' : ''), onclick:() => { if (N.page() !== f.p) N.goPage(f.p.id); setTimeout(() => f.node ? MM.focusNode(f.node) : P.flash(f.tid), 80); } }, el('span', { text:f.text }), el('small', { text:(f.node ? 'Mind map: ' : '') + (f.p.title || 'Untitled page') })))); });
   } else if (sideKind === 'search') {
     const inp = el('input', { class:'tf', placeholder:'Search this notebook', value:lastQuery, 'aria-label':'Search this notebook' }); const res = el('div');
     const run = () => { lastQuery = inp.value.trim(); res.innerHTML = ''; if (!lastQuery) { P.highlight(''); return; } P.syncAll(); const q = lastQuery.toLowerCase(); let n = 0;
@@ -143,8 +147,8 @@ function refreshSide(){
   } else if (sideKind === 'versions') {
     const p = N.page(); body.append(el('p', { class:'muted', text:'A version is kept when you leave a page you changed (at most one every 5 minutes, the last 15).' }));
     if (!p.versions.length) body.append(el('p', { class:'home-empty', text:'No earlier versions of this page yet.' }));
-    [...p.versions].reverse().forEach(v => body.append(el('div', { class:'side-item static' }, el('span', { html:`<b>${new Date(v.t).toLocaleString(undefined, { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}</b>` }), el('small', { text:(v.title || 'Untitled') + ' · ' + (N.text(v.items.map(i => i.html).join(' ')).slice(0, 80) || 'Empty') }),
-      el('div', { class:'bs-row' }, el('button', { class:'btn tonal', text:'Restore', onclick:() => { P.syncAll(); p.versions.push({ t:Date.now(), title:p.title, items:JSON.parse(JSON.stringify(p.items)), ink:JSON.parse(JSON.stringify(p.ink)) }); p.title = v.title; p.items = JSON.parse(JSON.stringify(v.items)); p.ink = JSON.parse(JSON.stringify(v.ink)); N.dirty(); P.render(); renderNav(); refreshSide(); ONE.toast('Version restored. The page as it was is kept as a version too.'); } })))));
+    [...p.versions].reverse().forEach(v => body.append(el('div', { class:'side-item static' }, el('span', { html:`<b>${new Date(v.t).toLocaleString(undefined, { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })}</b>` }), el('small', { text:(v.title || 'Untitled') + ' · ' + (v.map ? `Mind map, ${v.map.nodes.length} topics` : (N.text(v.items.map(i => i.html).join(' ')).slice(0, 80) || 'Empty')) }),
+      el('div', { class:'bs-row' }, el('button', { class:'btn tonal', text:'Restore', onclick:() => { P.syncAll(); p.versions.push(versionOf(p)); p.title = v.title; p.items = clone(v.items); p.ink = clone(v.ink); if (v.map) p.map = clone(v.map); N.dirty(); P.render(); renderNav(); refreshSide(); ONE.toast('Version restored. The page as it was is kept as a version too.'); } })))));
   } else if (sideKind === 'bin') {
     body.append(el('p', { class:'muted', text:'Deleted pages stay here until you empty the bin.' }));
     if (!N.nb.bin.length) body.append(el('p', { class:'home-empty', text:'The Recycle Bin is empty.' }));
@@ -159,7 +163,7 @@ A.immersive = () => {
   P.syncAll(); const p = N.page();
   const items = [...p.items].sort((a, b) => a.y - b.y || a.x - b.x);
   const ov = el('div', { class:'reader', tabindex:0 }), text = el('article', { class:'reader-text' });
-  text.innerHTML = `<h1>${esc(p.title || 'Untitled page')}</h1>` + items.map(i => i.html).join('');
+  text.innerHTML = `<h1>${esc(p.title || 'Untitled page')}</h1>` + (p.kind === 'map' ? MM.outlineHTML(p) : items.map(i => i.html).join(''));
   text.querySelectorAll('[contenteditable]').forEach(x => x.removeAttribute('contenteditable'));
   let size = 26, theme = 'paper', spacing = false, speaking = false;
   const apply = () => { text.style.fontSize = size + 'px'; ov.dataset.theme = theme; text.classList.toggle('wide', spacing); };
@@ -215,6 +219,7 @@ POP.fore = a => ONE.pop.open(a, ONE.colorGrid(c => P.exec('foreColor', c || '#00
 POP.hilite = a => ONE.pop.open(a, ONE.colorGrid(c => P.exec('hiliteColor', c === 'none' || !c ? 'transparent' : c), { noneLabel:'No color' }));
 POP.font = a => ONE.menuAt(a, [['', 'Google Sans (default)'], ['Georgia, serif', 'Georgia'], ['"EB Garamond", Garamond, serif', 'Garamond'], ['Calibri, Carlito, sans-serif', 'Calibri'], ['"Roboto Flex", sans-serif', 'Roboto'], ['"Courier New", monospace', 'Courier New'], ['Caveat, cursive', 'Caveat (handwriting)']].map(([f, n]) => ({ html:`<span style="font-family:${f || 'inherit'}">${n}</span>`, on:() => P.exec('fontName', f || 'Google Sans') })));
 POP.size = a => ONE.menuAt(a, [[1, '9'], [2, '11 (default)'], [3, '13'], [4, '16'], [5, '20'], [6, '26'], [7, '36']].map(([v, n]) => ({ label:n, on:() => P.exec('fontSize', v) })));
+POP.mmColor = a => MM.colorMenu(a); POP.mmMark = a => MM.markMenu(a); POP.mmLink = a => MM.linkMenu(a);
 POP.pageColor = a => ONE.menuAt(a, N.PAGE_COLORS.map(([c, n]) => ({ html:`<span class="swatch" style="background:${c || 'var(--surface-lowest)'}"></span>${n}`, checked:(N.page().bg || null) === c, on:() => { N.page().bg = c; N.dirty(); P.render(false); } })));
 POP.rules = a => ONE.menuAt(a, N.RULES.map(([k, n]) => ({ label:n, checked:(N.page().rules || 'none') === k, on:() => { N.page().rules = k; N.dirty(); P.render(false); } })));
 POP.newPage = a => ONE.menuAt(a, [...Object.entries(N.TEMPLATES).map(([k, t]) => ({ label:t.name, icon:t.icon, on:() => A.newPage(k) })), '-', { label:'New subpage', icon:'subdirectory_arrow_right', kbd:'Ctrl+Alt+Shift+N', on:() => A.newPage('blank', true) }]);
@@ -226,6 +231,7 @@ const penBar = () => { const b = $('#barPen'), h = $('#barHl'); if (b) b.style.b
 
 /* ---------- exports ---------- */
 function toMarkdown(p){
+  if (p.kind === 'map') return MM.toMarkdown(p);
   const conv = n => [...n.childNodes].map(c => { if (c.nodeType === 3) return c.textContent; if (c.nodeType !== 1) return ''; const t = c.tagName, inner = conv(c);
     const tag = c.dataset && c.dataset.tag ? (c.dataset.tag === 'todo' ? (c.hasAttribute('data-done') ? '- [x] ' : '- [ ] ') : `(${(P.TAGS[c.dataset.tag] || {}).label || c.dataset.tag}) `) : '';
     if (/^H[1-6]$/.test(t)) return '\n' + '#'.repeat(+t[1] + 1) + ' ' + inner.trim() + '\n'; if (t === 'P' || t === 'DIV') return '\n' + tag + inner.trim() + '\n';
@@ -236,6 +242,7 @@ function toMarkdown(p){
   return `# ${p.title || 'Untitled page'}\n\n` + [...p.items].sort((a, b) => a.y - b.y || a.x - b.x).map(i => { const d = document.createElement('div'); d.innerHTML = i.html; return conv(d).replace(/\n{3,}/g, '\n\n').trim(); }).join('\n\n') + '\n';
 }
 function pageHTML(p){
+  if (p.kind === 'map') return MM.pageHTML(p);
   P.syncAll(); const css = `body{margin:0;font:15px/1.5 "Google Sans",Roboto,system-ui,sans-serif;color:#1f1f1f;background:${p.bg || '#fff'}}.pg{position:relative;min-height:100vh}.t{position:absolute;left:48px;top:28px;font-size:30px;font-weight:500}.d{position:absolute;left:48px;top:78px;color:#666;font-size:13px}.nc{position:absolute}img{max-width:100%;height:auto}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:4px 8px;min-width:60px}[data-tag]{position:relative;padding-left:26px}[data-tag]::before{position:absolute;left:0;font-family:"Material Symbols Rounded";font-size:20px;line-height:1.2}${Object.entries(P.TAGS).map(([k, t]) => `[data-tag="${k}"]::before{content:"${t.icon}";color:${t.color.startsWith('var') ? '#1a73e8' : t.color}}`).join('')}[data-tag="todo"][data-done]::before{content:"check_box"}[data-tag="todo"][data-done]{text-decoration:line-through;color:#777}[data-tag="remember"]{background:#fff3b0}svg path.hl{opacity:.4}`;
   const inkNode = $('#ink').cloneNode(true); inkNode.removeAttribute('id'); inkNode.setAttribute('style', 'position:absolute;left:0;top:0;pointer-events:none');
   const w = Math.max(900, ...p.items.map(i => i.x + i.w + 40)), h = Math.max(600, ...p.items.map(i => i.y + 400));
@@ -271,13 +278,17 @@ $('#openInput').addEventListener('change', async e => {
 /* ---------- actions ---------- */
 Object.assign(A, {
   save:() => ONE.toast(N.save() ? 'Saved to this browser.' : 'Couldn’t save: storage is full or blocked.'), backstage:() => ONE.backstage.show('home'), collapseRibbon:() => ONE.ribbon.setScale(ONE.ribbon.scale || 1, !document.querySelector('.app').classList.contains('ribbon-min')),
-  seed:b => ONE.seedMenu(b), apps:b => ONE.appSwitcher(b), shortcuts:() => shortcuts(), undo:() => P.exec('undo'), redo:() => P.exec('redo'),
+  seed:b => ONE.seedMenu(b), apps:b => ONE.appSwitcher(b), shortcuts:() => shortcuts(), undo:() => MM.active() ? MM.undo() : P.exec('undo'), redo:() => MM.active() ? MM.redo() : P.exec('redo'),
+  flashcards:() => ST.open(), recall:() => ST.toggleRecall(), keyTerm:() => ST.keyTerm(), cardMark:() => ST.cardMark(), definition:() => P.tag('definition'), remember:() => P.tag('remember'),
+  newMap:() => A.newPage('mindmap'), pageToMap:() => MM.fromPage(), mapOutline:() => MM.outlineDialog(),
+  mmChild:() => MM.addChild(), mmSibling:() => MM.addSibling(), mmEdit:() => MM.editSel(), mmFold:() => MM.foldSel(), mmDelete:() => MM.deleteSel(), mmNote:() => MM.noteSel(), mmFit:() => MM.fit(), mmExpand:() => MM.expandAll(), mmCollapse:() => MM.collapseAll(), mmToNotes:() => MM.toNotes(),
+  mmPng:() => MM.png(N.page()), mmSvg:() => ONE.download(safeName(N.page().title) + '.svg', MM.toSVG(N.page()), 'image/svg+xml'), mmMd:() => ONE.download(safeName(N.page().title) + '.md', MM.toMarkdown(N.page()), 'text/markdown'),
   cut:() => P.exec('cut') || ONE.toast('Use Ctrl+X.'), copy:() => { if (!document.execCommand('copy')) ONE.toast('Use Ctrl+C.'); }, pasteHint:() => ONE.toast('Press Ctrl+V to paste. Pictures and files can be pasted or dropped onto the page.'),
   bold:() => P.exec('bold'), italic:() => P.exec('italic'), underline:() => P.exec('underline'), strike:() => P.exec('strikeThrough'), sub:() => P.exec('subscript'), sup:() => P.exec('superscript'), clearFmt:() => P.exec('removeFormat'),
   bullets:() => P.exec('insertUnorderedList'), numbering:() => P.exec('insertOrderedList'), indent:() => P.exec('indent'), outdent:() => P.exec('outdent'), alignL:() => P.exec('justifyLeft'), alignC:() => P.exec('justifyCenter'), alignR:() => P.exec('justifyRight'),
   todo:() => P.tag('todo'), important:() => P.tag('important'), question:() => P.tag('question'),
   findTags:() => sideKind === 'tags' ? A.closeSide() : showSide('tags', 'Tags Summary'), search:() => showSide('search', 'Search'), versions:() => sideKind === 'versions' ? A.closeSide() : showSide('versions', 'Page Versions'), bin:() => sideKind === 'bin' ? A.closeSide() : showSide('bin', 'Recycle Bin'),
-  newPage:() => A.newPage(), newSub:() => A.newPage('blank', true), newSectionBtn:A.newSection, deletePage:() => deletePage(N.nb.cur.p),
+  newSub:() => A.newPage('blank', true), newSectionBtn:A.newSection, deletePage:() => deletePage(N.nb.cur.p),
   picture:() => $('#picInput').click(), file:() => $('#fileInput').click(), space:() => { const s = P.freeSpot(); P.newContainerAt(s.x, s.y); },
   date:() => P.insertText(new Date().toLocaleDateString()), time:() => P.insertText(new Date().toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' })), dateTime:() => P.insertText(new Date().toLocaleString(undefined, { dateStyle:'medium', timeStyle:'short' })),
   hr:() => P.insertHTML('<hr><p><br></p>'), symbol:b => ONE.menuAt(b, ['→','←','✓','✗','•','©','®','™','°','±','×','÷','≈','≠','≤','≥','∞','π','Σ','√','€','£','¥','§','¶','…','—','★','♥','☐'].map(s => ({ label:s, on:() => P.insertText(s) }))),
@@ -285,13 +296,13 @@ Object.assign(A, {
   clearInk:() => { const p = N.page(); if (!p.ink.length) return ONE.toast('There’s no ink on this page.'); const old = p.ink; p.ink = []; P.drawInk(); N.dirty(); ONE.toast('Ink cleared.', { action:'Undo', fn:() => { p.ink = old; P.drawInk(); N.dirty(); } }); },
   fullPage:() => { $('#app').classList.toggle('fullpage'); setTimeout(P.layoutSize, 350); ONE.ribbon.refresh(); }, toggleNav:() => { $('#app').classList.toggle(innerWidth < 900 ? 'nav-open' : 'nav-hidden'); setTimeout(P.layoutSize, 350); ONE.ribbon.refresh(); },
   darkPage:() => { $('#page').classList.toggle('darkpage'); store.set('oi-darkpage', $('#page').classList.contains('darkpage')); ONE.ribbon.refresh(); },
-  zoomIn:() => P.setZoom(N.k + .1), zoomOut:() => P.setZoom(N.k - .1), zoom100:() => P.setZoom(1), pageWidth:() => { const p = N.page(); const w = Math.max(700, ...p.items.map(i => i.x + i.w + 60)); P.setZoom(($('#canvaswrap').clientWidth - 24) / w); },
+  zoomIn:() => P.setZoom(N.k + .1), zoomOut:() => P.setZoom(N.k - .1), zoom100:() => P.setZoom(1), pageWidth:() => { if (MM.active()) return MM.fit(); const p = N.page(); const w = Math.max(700, ...p.items.map(i => i.x + i.w + 60)); P.setZoom(($('#canvaswrap').clientWidth - 24) / w); },
   spell:() => { document.body.classList.toggle('nospell'); $$('.nc-body').forEach(b => b.spellcheck = !document.body.classList.contains('nospell')); ONE.ribbon.refresh(); },
   wordCount:() => { P.syncAll(); const p = N.page(), s = N.section(), wc = x => x.reduce((a, q) => a + N.words(q), 0); ONE.modal({ title:'Word count', icon:'numbers', body:`<div class="info"><span>This page</span><span>${N.words(p)}</span><span>This section</span><span>${wc(s.pages)}</span><span>Whole notebook</span><span>${N.nb.sections.reduce((a, x) => a + wc(x.pages), 0)}</span><span>Pages</span><span>${N.pageCount(N.nb)}</span></div>` }); },
   record:A.record, dictate:A.dictate, link:A.link, immersive:A.immersive, printPage:A.printPage
 });
 const STATES = { typeTool:() => N.tool === 'type', penTool:() => N.tool === 'pen', hlTool:() => N.tool === 'hl', eraser:() => N.tool === 'eraser', fullPage:() => $('#app').classList.contains('fullpage'), toggleNav:() => !$('#app').classList.contains('nav-hidden'),
-  darkPage:() => $('#page').classList.contains('darkpage'), findTags:() => sideKind === 'tags', versions:() => sideKind === 'versions', bin:() => sideKind === 'bin', spell:() => !document.body.classList.contains('nospell'), record:() => !!rec, dictate:() => !!dict,
+  recall:() => N.recall, darkPage:() => $('#page').classList.contains('darkpage'), findTags:() => sideKind === 'tags', versions:() => sideKind === 'versions', bin:() => sideKind === 'bin', spell:() => !document.body.classList.contains('nospell'), record:() => !!rec, dictate:() => !!dict,
   bold:() => q('bold'), italic:() => q('italic'), underline:() => q('underline'), strike:() => q('strikeThrough') };
 const q = c => { try { return !!P.body() && document.queryCommandState(c); } catch { return false; } };
 N.onSel = () => { clearTimeout(N._st); N._st = setTimeout(() => ONE.ribbon.refresh(), 80); };
@@ -316,6 +327,13 @@ const SPEC = [
     { label:'Pages', items:[['LD','dashboard_customize','Page Templates','pop:template']] },
     { label:'Symbols', items:[['C', [['SD','emoji_symbols','Symbol','symbol'], ['S','horizontal_rule','Divider','hr']]]] }
   ] },
+  { id:'study', label:'Study', groups:[
+    { label:'Flashcards', items:[['L','style','Flashcards','flashcards'], ['C', [['S','add_card','Make a card','cardMark'], ['S','menu_book','Definition','definition',{ kbd:'Ctrl+5' }]]]] },
+    { label:'Remember', items:[['L','ink_highlighter','Key term','keyTerm',{ kbd:'Ctrl+Shift+H' }], ['L','bookmark','Must remember','remember',{ kbd:'Ctrl+4' }]] },
+    { label:'Test yourself', items:[['L','visibility_off','Recall mode','recall',{ state:'recall' }]] },
+    { label:'Mind maps', items:[['L','account_tree','New mind map','newMap'], ['C', [['S','schema','Map from this page','pageToMap'], ['S','segment','Build from outline','mapOutline']]]] },
+    { label:'Review', items:[['L','sell','Tags summary','findTags',{ state:'findTags' }]] }
+  ] },
   { id:'draw', label:'Draw', groups:[
     { label:'Tools', items:[['L','text_fields','Type','typeTool',{ state:'typeTool' }], ['L','edit','Pen','penTool',{ state:'penTool', html:`<span class="ic-bar">${icon('edit')}<i id="barPen"></i></span>` }], ['ID','palette','Pen color & thickness','pop:penColor'], ['L','ink_highlighter','Highlighter','hlTool',{ state:'hlTool', html:`<span class="ic-bar">${icon('ink_highlighter')}<i id="barHl"></i></span>` }], ['ID','palette','Highlighter color','pop:hlColor'], ['L','ink_eraser','Eraser','eraser',{ state:'eraser' }]] },
     { label:'Edit', items:[['L','layers_clear','Clear Ink','clearInk']] }
@@ -332,6 +350,14 @@ const SPEC = [
   { id:'review', label:'Review', groups:[
     { label:'Proofing', items:[['L','spellcheck','Spelling','spell',{ state:'spell' }], ['L','numbers','Word Count','wordCount']] },
     { label:'Search', items:[['L','manage_search','Search Notebook','search',{ kbd:'Ctrl+E' }]] }
+  ] },
+  { id:'mindmap', label:'Mind map', ctx:'map', groups:[
+    { label:'Add', items:[['L','subdirectory_arrow_right','Sub-topic','mmChild',{ kbd:'Tab' }], ['L','playlist_add','Sibling','mmSibling',{ kbd:'Enter' }]] },
+    { label:'Topic', items:[['L','edit','Edit text','mmEdit',{ kbd:'F2' }], ['LD','palette','Color','pop:mmColor'], ['LD','sell','Mark','pop:mmMark'], ['L','sticky_note_2','Note','mmNote'], ['LD','link','Link','pop:mmLink'], ['L','unfold_less','Fold','mmFold',{ kbd:'Space' }], ['L','delete','Delete','mmDelete',{ kbd:'Del' }]] },
+    { label:'View', items:[['L','fit_screen','Fit','mmFit'], ['C', [['S','unfold_more','Unfold all','mmExpand'], ['S','unfold_less','Fold branches','mmCollapse']]]] },
+    { label:'Convert', items:[['L','description','Map to notes','mmToNotes'], ['L','segment','From outline','mapOutline']] },
+    { label:'Export', items:[['L','image','Picture','mmPng'], ['C', [['S','draw','SVG','mmSvg'], ['S','markdown','Outline','mmMd']]]] },
+    { label:'Self-test', items:[['L','visibility_off','Recall mode','recall',{ state:'recall' }], ['L','style','Flashcards','flashcards']] }
   ] }
 ];
 const run = (act, b, e) => { if (!act) return; if (act.startsWith('pop:')) { const p = POP[act.slice(4)]; return p ? p(b) : null; } const f = A[act]; if (f) f(b, e); else console.warn('Unknown action', act); };
@@ -346,11 +372,12 @@ $('#fileInput').addEventListener('change', e => { const f = [...e.target.files];
 
 /* ---------- shortcuts ---------- */
 function shortcuts(){
-  const list = [['New page / subpage','Ctrl+N / Ctrl+Alt+Shift+N'],['New section','Ctrl+T'],['Search the notebook','Ctrl+E'],['To Do / Important / Question tag','Ctrl+1 / 2 / 3'],['Other tags','Ctrl+4 … Ctrl+7'],['Remove tag','Ctrl+0'],['Heading 1 / 2 / 3','Ctrl+Alt+1 / 2 / 3'],['Normal text','Ctrl+Shift+N'],['Bullets / Numbering','Ctrl+. / Ctrl+/'],['Strikethrough','Ctrl+-'],['Link','Ctrl+K'],['Insert date / time / both','Alt+Shift+D / T / F'],['Quick math','type 12*4= then Space'],['Full page view','F11'],['Pen / Type','Ctrl+Shift+P / Esc'],['Zoom','Ctrl + wheel'],['Print page','Ctrl+P'],['Search commands','Alt+Q']];
+  const list = [['New page / subpage','Ctrl+N / Ctrl+Alt+Shift+N'],['New section','Ctrl+T'],['Search the notebook','Ctrl+E'],['To Do / Important / Question tag','Ctrl+1 / 2 / 3'],['Other tags','Ctrl+4 … Ctrl+7'],['Remove tag','Ctrl+0'],['Heading 1 / 2 / 3','Ctrl+Alt+1 / 2 / 3'],['Normal text','Ctrl+Shift+N'],['Bullets / Numbering','Ctrl+. / Ctrl+/'],['Strikethrough','Ctrl+-'],['Link','Ctrl+K'],['Insert date / time / both','Alt+Shift+D / T / F'],['Highlight a key term','Ctrl+Shift+H'],['Flashcard from a line','write Term :: meaning'],['Mind map: sub-topic / sibling','Tab / Enter'],['Quick math','type 12*4= then Space'],['Full page view','F11'],['Pen / Type','Ctrl+Shift+P / Esc'],['Zoom','Ctrl + wheel'],['Print page','Ctrl+P'],['Search commands','Alt+Q']];
   ONE.modal({ title:'Keyboard shortcuts', icon:'keyboard', width:560, body:`<div style="display:grid;grid-template-columns:1fr auto;gap:6px 18px;color:var(--on-surface)">${list.map(([a, k]) => `<span>${esc(a)}</span><kbd>${esc(k)}</kbd>`).join('')}</div>` });
 }
 document.addEventListener('keydown', e => {
-  if (ONE.topModal() || ONE.backstage.isOpen() || $('.reader')) { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); A.save(); } return; }
+  if (ONE.topModal() || ONE.backstage.isOpen() || $('.reader') || $('.fc')) { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); A.save(); } return; }
+  if (MM.active() && MM.key(e)) return;
   const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
   if (e.key === 'F11') { e.preventDefault(); return A.fullPage(); }
   if (e.key === 'F1') { e.preventDefault(); return shortcuts(); }
@@ -362,6 +389,7 @@ document.addEventListener('keydown', e => {
   if (e.altKey && ['1', '2', '3'].includes(e.key)) { e.preventDefault(); return P.exec('formatBlock', 'h' + e.key); }
   if (e.shiftKey && k === 'n') { e.preventDefault(); return P.exec('formatBlock', 'p'); }
   if (e.shiftKey && k === 'p') { e.preventDefault(); return P.setTool('pen'); }
+  if (e.shiftKey && k === 'h') { e.preventDefault(); return ST.keyTerm(); }
   const map = { s:A.save, n:() => A.newPage(), t:A.newSection, e:() => showSide('search', 'Search'), k:A.link, p:A.printPage, '.':A.bullets, '/':A.numbering, '-':A.strike, '0':() => P.tag(null) };
   const tagKeys = ['todo', 'important', 'question', 'remember', 'definition', 'idea', 'critical'];
   if (!e.altKey && /^[1-7]$/.test(e.key)) { e.preventDefault(); return P.tag(tagKeys[+e.key - 1]); }
@@ -395,7 +423,7 @@ ONE.backstage([
     b.append(el('h1', { text:'Info' }), el('div', { class:'info', html:`<span>Notebook</span><span>${esc(N.nb.title)}</span><span>Sections</span><span>${N.nb.sections.length}</span><span>Pages</span><span>${N.pageCount(N.nb)}</span><span>Words</span><span>${words}</span><span>Tags</span><span>${tags}</span><span>In the Recycle Bin</span><span>${N.nb.bin.length} pages</span><span>Size</span><span>${(size / 1048576).toFixed(2)} MB of about 5 MB this browser allows</span><span>Last saved</span><span>${fmtDate(N.nb.updated)}</span>` }), el('div', { class:'bs-row', style:{ marginTop:'18px' } }, el('button', { class:'btn outlined', html:`${icon('edit')}Rename notebook`, onclick:() => { ONE.backstage.close(); renameNotebook(); } }))); } },
   { id:'print', label:'Print', icon:'print', render:b => b.append(el('h1', { text:'Print' }), el('div', { class:'bs-row' }, el('button', { class:'btn filled', html:`${icon('print')}Print this page`, onclick:() => { ONE.backstage.close(); A.printPage(); } })), el('p', { class:'bs-note', text:'Prints the current page with its notes and ink. Choose “Save as PDF” in the dialog to make a PDF.' })) },
   { id:'export', label:'Export', icon:'ios_share', render:b => { const p = N.page();
-    b.append(el('h1', { text:'Export' }), el('h3', { text:'This page' }), el('div', { class:'list' }, ...[['Web page (.html)', 'Keeps the layout, pictures, tags and ink.', 'code', () => ONE.download(safeName(p.title) + '.html', pageHTML(p), 'text/html')], ['Markdown (.md)', 'Text, headings, lists, tables and to-dos.', 'markdown', () => ONE.download(safeName(p.title) + '.md', toMarkdown(p), 'text/markdown')], ['Plain text (.txt)', 'Just the words.', 'notes', () => ONE.download(safeName(p.title) + '.txt', N.pageText(p), 'text/plain')]].map(row)),
+    b.append(el('h1', { text:'Export' }), el('h3', { text:'This page' }), el('div', { class:'list' }, ...[...(p.kind === 'map' ? [['Picture (.png)', 'The whole mind map as an image.', 'image', () => MM.png(p)], ['Vector picture (.svg)', 'Sharp at any size.', 'draw', () => ONE.download(safeName(p.title) + '.svg', MM.toSVG(p), 'image/svg+xml')]] : []), ['Web page (.html)', 'Keeps the layout, pictures, tags and ink.', 'code', () => ONE.download(safeName(p.title) + '.html', pageHTML(p), 'text/html')], ['Markdown (.md)', 'Text, headings, lists, tables and to-dos.', 'markdown', () => ONE.download(safeName(p.title) + '.md', toMarkdown(p), 'text/markdown')], ['Plain text (.txt)', 'Just the words.', 'notes', () => ONE.download(safeName(p.title) + '.txt', N.pageText(p), 'text/plain')]].map(row)),
       el('h3', { text:'Whole notebook' }), el('div', { class:'list' }, ...[['oneIdea notebook (.json)', 'Everything, to reopen here or in another browser with File › Open.', 'data_object', () => { P.syncAll(); ONE.download(safeName(N.nb.title) + '.json', JSON.stringify(N.nb), 'application/json'); }], ['Markdown (.md)', 'Every page, one after another.', 'markdown', () => { P.syncAll(); ONE.download(safeName(N.nb.title) + '.md', N.nb.sections.map(s => `# ${s.name}\n\n` + s.pages.map(x => toMarkdown(x).replace(/^# /, '## ')).join('\n')).join('\n\n'), 'text/markdown'); }]].map(row)));
     function row([t, d, ic, fn]){ return el('div', { class:'list-item' }, el('span', { class:'ms', text:ic }), el('span', { class:'grow', html:`<b>${t}</b><small>${d}</small>` }), el('button', { class:'btn filled', text:'Save', onclick:fn })); } } },
   '-',

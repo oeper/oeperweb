@@ -64,6 +64,7 @@ const touch = () => { const p = N.page(); p.updated = Date.now(); changed = true
 P.sync = body => { const n = body.closest('.nc'), it = n && itemOf(n); if (!it) return; it.html = body.innerHTML; touch(); };
 P.syncAll = () => $$('.nc-body', itemsEl).forEach(b => { const it = itemOf(b.closest('.nc')); if (it) it.html = b.innerHTML; });
 P.wasChanged = () => changed;
+P.touch = touch; P.clearChanged = () => { changed = false; };
 
 /* ---------- title ---------- */
 titleEl.addEventListener('input', () => { const p = N.page(); p.title = titleEl.textContent.replace(/\n/g, ' '); titleEl.dataset.empty = !p.title; touch(); N.onTitle && N.onTitle(); });
@@ -85,7 +86,7 @@ itemsEl.addEventListener('focusout', e => {
 });
 let drag = null;
 pageEl.addEventListener('pointerdown', e => {
-  if (e.button !== 0 || N.tool !== 'type') return;
+  if (e.button !== 0 || N.tool !== 'type' || pageEl.classList.contains('recall')) return;
   const bar = e.target.closest('.nc-bar'), rsz = e.target.closest('.nc-rsz');
   if (bar || rsz) {
     e.preventDefault(); const n = (bar || rsz).closest('.nc'), p0 = pos(e);
@@ -218,7 +219,7 @@ P.highlight = q => {
   if (!window.CSS || !CSS.highlights) return;
   CSS.highlights.delete('found'); if (!q) return;
   const h = new Highlight(), ql = q.toLowerCase();
-  [titleEl, ...$$('.nc-body', itemsEl)].forEach(root => { const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const t = n.textContent.toLowerCase(); let i = t.indexOf(ql); while (i >= 0) { const r = new Range(); r.setStart(n, i); r.setEnd(n, i + q.length); h.add(r); i = t.indexOf(ql, i + q.length); } } });
+  [titleEl, ...$$('.nc-body', itemsEl), ...$$('#mm .mm-text')].forEach(root => { const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const t = n.textContent.toLowerCase(); let i = t.indexOf(ql); while (i >= 0) { const r = new Range(); r.setStart(n, i); r.setEnd(n, i + q.length); h.add(r); i = t.indexOf(ql, i + q.length); } } });
   CSS.highlights.set('found', h);
   const first = h.values().next().value; if (first) { const r = first.getBoundingClientRect(), wr = wrap.getBoundingClientRect(); wrap.scrollTo({ top:wrap.scrollTop + r.top - wr.top - 120, left:Math.max(0, wrap.scrollLeft + r.left - wr.left - 200), behavior:'smooth' }); }
 };

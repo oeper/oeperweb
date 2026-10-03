@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&family=Roboto+Flex:opsz,wght@8..144,300..800&family=Carlito:ital,wght@0,400;0,700;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Caveat:wght@500;700&display=swap">
 <link rel="stylesheet" href="shared/m3.css?v=5">
-<link rel="stylesheet" href="idea.css?v=1">
+<link rel="stylesheet" href="idea.css?v=2">
 
 <div class="app" id="app">
   <header class="titlebar">
@@ -44,6 +44,11 @@
           <svg class="ink" id="ink" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
         </div>
       </div>
+      <div class="mm" id="mm" tabindex="0" role="application" aria-label="Mind map. Tab adds a sub-topic, Enter adds a sibling, arrow keys move between topics.">
+        <div class="mm-stage" id="mmStage"><svg class="mm-edges" id="mmEdges" aria-hidden="true"></svg><div id="mmNodes"></div></div>
+        <div class="mm-tools" id="mmTools" hidden></div>
+        <div class="mm-hint" id="mmHint"></div>
+      </div>
     </section>
     <aside class="sidepane" id="side" hidden>
       <div class="sp-head"><b id="sideTitle">Tags</b><button class="icon-btn" id="sideClose" title="Close"><span class="ms" aria-hidden="true">close</span></button></div>
@@ -73,5 +78,7 @@
 
 <script src="shared/core.js?v=5"></script>
 <script src="js/model.js?v=1"></script>
-<script src="js/page.js?v=1"></script>
-<script src="js/app.js?v=1"></script>
+<script src="js/page.js?v=2"></script>
+<script src="js/mindmap.js?v=1"></script>
+<script src="js/study.js?v=1"></script>
+<script src="js/app.js?v=2"></script>

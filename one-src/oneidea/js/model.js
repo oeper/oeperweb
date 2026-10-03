@@ -13,6 +13,32 @@ N.RULES = [['none','None'],['narrow','Narrow Ruled'],['college','College Ruled']
 N.newPage = (title = '', items = [], level = 0) => ({ id:ONE.uid(), title, created:Date.now(), updated:Date.now(), level, bg:null, rules:'none', items, ink:[], versions:[] });
 N.newSection = (name = 'New Section', color) => ({ id:ONE.uid(), name, color:color || N.SECTION_COLORS[Math.floor(Math.random() * N.SECTION_COLORS.length)], pages:[N.newPage()] });
 N.item = (x, y, w, html) => ({ id:ONE.uid(), x, y, w, html });
+
+/* ---------- mind maps ----------
+   A page with kind:'map' is a mind map instead of a free-form canvas. map.nodes is a flat list (the order of a
+   node's siblings is their order in the list); the root has parent:null and its text is the page title. */
+N.MAP_COLORS = ['#4472C4','#ED7D31','#70AD47','#E0457B','#7030A0','#00A3A3','#C0504D','#E0A800'];
+N.newMap = (root = 'Central topic') => { const r = { id:ONE.uid(), parent:null, text:root }; return { nodes:[r], view:null, sel:r.id }; };
+N.newMapPage = (title = 'Mind map', level = 0) => Object.assign(N.newPage(title, [], level), { kind:'map', map:N.newMap(title) });
+// outline: [{ depth, text, note?, tag?, done? }] in reading order; depth 1 hangs off the root, a jump deeper attaches to the last node above.
+N.mapFromOutline = (title, outline, level = 0) => {
+  const pg = N.newMapPage(title || 'Mind map', level), m = pg.map, root = m.nodes[0], stack = [root], top = [];
+  outline.forEach(o => {
+    const text = String(o.text || '').trim(); if (!text) return;
+    const d = Math.max(1, Math.min(o.depth || 1, stack.length));
+    const n = { id:ONE.uid(), parent:stack[d - 1].id, text };
+    if (o.note) n.note = o.note; if (o.tag) n.tag = o.tag; if (o.done) n.done = true;
+    if (d === 1) { n.color = N.MAP_COLORS[top.length % N.MAP_COLORS.length]; n.side = top.length % 2 ? -1 : 1; top.push(n); }
+    m.nodes.push(n); stack[d] = n; stack.length = d + 1;
+  });
+  return pg;
+};
+N.mapFromTree = (tree, level = 0) => {
+  const out = []; const walk = (kids, d) => (kids || []).forEach(k => { out.push({ depth:d, text:k.t, note:k.note, tag:k.tag }); walk(k.c, d + 1); });
+  walk(tree.c, 1); return N.mapFromOutline(tree.t, out, level);
+};
+N.mapText = p => p.map.nodes.map(n => n.text + (n.note ? ' ' + n.note : '')).join(' ');
+N.preview = p => p.kind === 'map' ? `Mind map · ${p.map.nodes.length} node${p.map.nodes.length === 1 ? '' : 's'}` : (N.text(p.items.map(x => x.html).join(' ')).slice(0, 60) || 'Empty');
 N.newNotebook = (title = 'My Notebook') => ({ id:ONE.uid(), title, color:'#7719aa', updated:Date.now(), sections:[], bin:[], cur:{ s:0, p:0 } });
 
 /* ---------- page templates ---------- */
@@ -44,8 +70,53 @@ N.TEMPLATES = {
     N.item(80, 420, 260, `<p data-tag="idea" data-tid="${ONE.uid()}"></p>`), N.item(760, 420, 260, `<p data-tag="idea" data-tid="${ONE.uid()}"></p>`)]) }
 };
 
+/* study templates: no bold labels (Recall mode hides bold text), "Term :: meaning" lines become flashcards */
+const q = t => `<p data-tag="question" data-tid="${ONE.uid()}">${t}</p>`;
+const T = N.TEMPLATES;
+T.mindmap = { name:'Mind map', icon:'account_tree', make:() => N.newMapPage('Mind map') };
+T.cornell = { name:'Cornell notes', icon:'view_sidebar', make:() => N.newPage('Cornell: ', [
+  N.item(48, 130, 952, `<p>Course: &nbsp;&nbsp;&nbsp; Date: ${day()}</p>`),
+  N.item(48, 190, 250, `<h3>Cues and questions</h3>${q('')}${q('')}${q('')}`),
+  N.item(330, 190, 670, `<h3>Notes</h3><ul><li></li></ul>`),
+  N.item(48, 600, 952, `<h3>Summary</h3><p>Write 2 or 3 sentences that sum up this page.</p>`)]) };
+T.reading = { name:'Reading notes', icon:'import_contacts', make:() => N.newPage('Reading: ', [
+  N.item(48, 130, 460, `<h3>Source</h3><p>Title, author, pages</p><h3>Main argument</h3><p></p>`),
+  N.item(48, 360, 460, `<h3>Key quotes</h3><blockquote></blockquote><blockquote></blockquote>`),
+  N.item(560, 130, 440, `<h3>Key terms</h3><p data-tag="definition" data-tid="${ONE.uid()}">Term :: meaning</p>`),
+  N.item(560, 330, 440, `<h3>My thoughts</h3><p></p>${q('Questions I still have')}`)]) };
+T.revision = { name:'Revision sheet', icon:'fact_check', make:() => N.newPage('Revision: ', [
+  N.item(48, 130, 440, `<h3>Must remember</h3><p data-tag="remember" data-tid="${ONE.uid()}"></p><p data-tag="remember" data-tid="${ONE.uid()}"></p>`),
+  N.item(48, 330, 440, `<h3>Formulas and facts</h3><ul><li></li><li></li></ul>`),
+  N.item(540, 130, 460, `<h3>Key terms</h3><p data-tag="definition" data-tid="${ONE.uid()}">Term :: meaning</p><p data-tag="definition" data-tid="${ONE.uid()}">Term :: meaning</p>`),
+  N.item(540, 360, 460, `<h3>Practice questions</h3>${q('')}${q('')}`)]) };
+T.vocab = { name:'Vocabulary table', icon:'translate', make:() => N.newPage('Vocabulary: ', [
+  N.item(48, 130, 720, `<p>Fill in a term and its meaning on each row. Every row becomes a flashcard.</p><table><tr><th>Term</th><th>Meaning</th><th>Example</th></tr>${'<tr><td><br></td><td><br></td><td><br></td></tr>'.repeat(6)}</table>`)]) };
+// New-page menu order: study pages first
+{ const order = ['blank', 'mindmap', 'cornell', 'lecture', 'reading', 'revision', 'vocab', 'todo', 'meeting', 'project', 'brainstorm', 'journal', 'recipe']; N.TEMPLATES = Object.fromEntries(order.map(k => [k, T[k]])); }
+
+N.studyNotebook = () => {
+  const n = N.newNotebook('Study'); n.color = '#107c41';
+  const guide = N.newPage('How this notebook works', [
+    N.item(48, 130, 560, `<h3>Mind maps</h3><p>Open the Photosynthesis map. Click a branch, press <i>Tab</i> for a sub-topic and <i>Enter</i> for a sibling. Drag a branch onto another to move it.</p><h3>Notes</h3><p>Use Cornell pages for lectures. Press Ctrl+4 to tag what to remember and Ctrl+5 for a definition.</p>`),
+    N.item(660, 130, 420, `<h3>Flashcards</h3><p>Write a line like this and it becomes a card:</p><p data-tag="definition" data-tid="${ONE.uid()}">Chlorophyll :: the green pigment that absorbs light</p><p>Then open Study > Flashcards.</p>`),
+    N.item(48, 420, 560, `<h3>Test yourself</h3><p>Highlight key terms (Ctrl+Shift+H), then turn on Recall mode in the Study tab. Highlighted and bold text hides until you click it.</p>`)]);
+  const map = N.mapFromTree({ t:'Photosynthesis', c:[
+    { t:'Light reactions', note:'Happen in the thylakoid membranes and need light.', c:[{ t:'Split water, release oxygen' }, { t:'Make ATP and NADPH' }, { t:'Chlorophyll absorbs light', tag:'definition' }] },
+    { t:'Calvin cycle', note:'Happens in the stroma and does not need light directly.', c:[{ t:'Fixes carbon dioxide' }, { t:'Uses ATP and NADPH' }, { t:'Makes glucose' }] },
+    { t:'Inputs', c:[{ t:'Water' }, { t:'Carbon dioxide' }, { t:'Light energy' }] },
+    { t:'Outputs', c:[{ t:'Glucose' }, { t:'Oxygen', tag:'important' }] }] }, 0);
+  const cornell = Object.assign(T.cornell.make(), { title:'Cornell: Photosynthesis' });
+  cornell.items[1].html = `<h3>Cues and questions</h3>${q('Where do the light reactions happen?')}${q('What does the Calvin cycle need?')}`;
+  cornell.items[2].html = `<h3>Notes</h3><ul><li>Light reactions: <b>thylakoid membranes</b></li><li>Calvin cycle: <b>stroma</b></li></ul><p data-tag="definition" data-tid="${ONE.uid()}">Stroma :: the fluid space inside a chloroplast</p>`;
+  const course = name => Object.assign(N.newSection(name, N.SECTION_COLORS[n.sections.length % N.SECTION_COLORS.length]), { pages:[N.newMapPage(name + ' map'), Object.assign(T.cornell.make(), { title:'Lecture 1' })] });
+  n.sections = [Object.assign(N.newSection('Start here', '#7030A0'), { pages:[guide, map, cornell] })];
+  n.sections.push(course('Course 1'), course('Course 2'), Object.assign(N.newSection('Exam prep', '#E0457B'), { pages:[T.revision.make(), T.vocab.make()] }));
+  return n;
+};
+
 N.NOTEBOOK_TEMPLATES = {
   tour:{ name:'Getting started', desc:'A quick tour of oneIdea', icon:'tour', make:() => N.sample() },
+  study:{ name:'Study', desc:'Mind maps, Cornell notes, flashcards', icon:'psychology', make:() => N.studyNotebook() },
   blank:{ name:'Blank notebook', desc:'One empty section', icon:'book', make:() => { const n = N.newNotebook('My Notebook'); n.sections = [N.newSection('Quick Notes', '#4472C4')]; return n; } },
   personal:{ name:'Personal', desc:'Quick Notes, Journal, Recipes', icon:'favorite', make:() => { const n = N.newNotebook('Personal'); n.sections = [N.newSection('Quick Notes', '#4472C4'), Object.assign(N.newSection('Journal', '#E0457B'), { pages:[N.TEMPLATES.journal.make()] }), Object.assign(N.newSection('Recipes', '#ED7D31'), { pages:[N.TEMPLATES.recipe.make()] })]; return n; } },
   work:{ name:'Work', desc:'Meetings, Projects, To do', icon:'work', make:() => { const n = N.newNotebook('Work'); n.color = '#185abd'; n.sections = [Object.assign(N.newSection('Meetings', '#4472C4'), { pages:[N.TEMPLATES.meeting.make()] }), Object.assign(N.newSection('Projects', '#70AD47'), { pages:[N.TEMPLATES.project.make()] }), Object.assign(N.newSection('To do', '#FFC000'), { pages:[N.TEMPLATES.todo.make()] })]; return n; } },
@@ -71,8 +142,8 @@ N.section = () => N.nb.sections[N.nb.cur.s];
 N.page = () => { const s = N.section(); return s && s.pages[N.nb.cur.p]; };
 N.find = pid => { for (const [si, s] of N.nb.sections.entries()) { const pi = s.pages.findIndex(p => p.id === pid); if (pi >= 0) return { si, pi, s, p:s.pages[pi] }; } return null; };
 N.text = html => { const d = document.createElement('div'); d.innerHTML = (html || '').replace(/<\/(p|div|li|h[1-6]|tr|td|th|blockquote|pre)>|<br\s*\/?>/gi, '$& '); return d.textContent.replace(/\s+/g, ' ').trim(); };
-N.pageText = p => (p.title + ' ' + p.items.map(i => N.text(i.html)).join(' ')).trim();
-N.words = p => (p.items.map(i => N.text(i.html)).join(' ').match(/\S+/g) || []).length;
+N.pageText = p => (p.title + ' ' + (p.kind === 'map' ? N.mapText(p) : p.items.map(i => N.text(i.html)).join(' '))).trim();
+N.words = p => ((p.kind === 'map' ? N.mapText(p) : p.items.map(i => N.text(i.html)).join(' ')).match(/\S+/g) || []).length;
 N.pageCount = nb => nb.sections.reduce((a, s) => a + s.pages.length, 0);
 
 /* ---------- persistence ---------- */
