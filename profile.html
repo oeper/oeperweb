@@ -11,16 +11,15 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://fonts.cdnfonts.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./shared/fonts.css?v=1">
-<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :focus { outline: none; }
-  :focus-visible { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offset: 0; }
 
   :root {
     --md-sys-color-background: #111318;
@@ -250,17 +249,17 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav, setProfileMenuVisible } from './shared/topnav.js?v=37';
+import { mountTopNav, setProfileMenuVisible } from './shared/topnav.js?v=39';
 import {
   getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, officialBadgeHtml,
   openEditProfileModal, db, SERVER_ENDPOINT, isOwnerEmail, setUserBadge, sendNotification, linkifyMentions,
   getBadgeOverride, setOwnBadgeOverride, grantCredits, CREDITS_ICON,
-} from './shared/account.js?v=36';
-import { mountFooter } from './shared/footer.js?v=5';
+} from './shared/account.js?v=37';
+import { mountFooter } from './shared/footer.js?v=6';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=2';
 import { masonry } from './shared/masonry.js?v=1';
-import { reportContent } from './shared/report.js?v=7';
+import { reportContent } from './shared/report.js?v=8';
 import {
   collection, collectionGroup, query, where, getDocs, getCountFromServer, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
   arrayUnion, arrayRemove,

@@ -11,10 +11,8 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://fonts.cdnfonts.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./shared/fonts.css?v=1">
-<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -25,7 +23,8 @@
   .material-symbols-rounded { -webkit-user-select: none; user-select: none; }
 
   :focus { outline: none; }
-  :focus-visible { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offset: 0; }
 
   :root {
     --md-sys-color-background: #111318;
@@ -498,14 +497,14 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=37';
+import { mountTopNav } from './shared/topnav.js?v=39';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
   loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions, CREDITS_ICON,
-} from './shared/account.js?v=36';
-import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=8';
+} from './shared/account.js?v=37';
+import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=9';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
-import { reportContent } from './shared/report.js?v=7';
+import { reportContent } from './shared/report.js?v=8';
 import { observeList } from './shared/motion.js?v=2';
 import {
   collection, collectionGroup, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, orderBy, onSnapshot, serverTimestamp, Timestamp,
@@ -845,7 +844,7 @@ function showThreadPlaceholder() {
     <div class="dm-empty">
       <div class="dm-empty-icon"><span class="material-symbols-rounded">chat</span></div>
       <h2>your messages</h2>
-      <p>send private messages to a friend or a group.</p>
+      <p>send messages to a friend or a group.</p>
       <button type="button" class="dm-empty-btn" id="dmEmptyBtn">new group</button>
     </div>`;
   document.getElementById('dmEmptyBtn').addEventListener('click', () => {

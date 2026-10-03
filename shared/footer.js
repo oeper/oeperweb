@@ -34,6 +34,13 @@ const SITE_LINKS = [
   { name: 'server status', handle: 'server status', url: '/status', icon: STATUS_ICON },
 ];
 
+const LEGAL_LINKS = [
+  { name: 'privacy', url: '/privacy' },
+  { name: 'terms', url: '/terms' },
+  { name: 'refunds', url: '/refunds' },
+  { name: 'cookies', url: '/cookies' },
+];
+
 let stylesInjected = false;
 function injectStyles() {
   if (stylesInjected) return;
@@ -52,6 +59,9 @@ function injectStyles() {
     .oe-footer-link svg, .oe-footer-link-static svg { width: 18px; height: 18px; fill: currentColor; flex-shrink: 0; }
     .oe-footer-site-links { display: flex; flex-wrap: wrap; gap: 10px 24px; justify-content: center; margin-bottom: 20px; font-size: 13px; }
     .oe-footer-divider { height: 1px; background: var(--md-sys-color-outline-variant); opacity: 0.3; margin-bottom: 16px; }
+    .oe-footer-legal { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: center; margin-bottom: 14px; font-size: 13px; }
+    .oe-footer-legal a { color: var(--md-sys-color-on-surface-variant); text-decoration: none; }
+    .oe-footer-legal a:hover { color: var(--md-sys-color-primary); text-decoration: underline; }
     .oe-footer-bottom { text-align: center; font-size: 12px; color: var(--md-sys-color-on-surface-variant); opacity: 0.8; }
   `;
   document.head.appendChild(style);
@@ -72,7 +82,10 @@ export function mountFooter() {
         ${SITE_LINKS.map(s => `<a class="oe-footer-link" href="${s.url}" title="${s.name}">${s.icon}<span>${s.handle}</span></a>`).join('')}
       </div>
       <div class="oe-footer-divider"></div>
-      <div class="oe-footer-bottom">&copy; ${new Date().getFullYear()} oeper.dev</div>
+      <nav class="oe-footer-legal" aria-label="legal">
+        ${LEGAL_LINKS.map(l => `<a href="${l.url}">${l.name}</a>`).join('')}
+      </nav>
+      <div class="oe-footer-bottom">&copy; ${new Date().getFullYear()} oeper.dev, run by an individual. contact: <a href="mailto:sanhackerman@gmail.com" style="color:inherit;">sanhackerman@gmail.com</a></div>
     </footer>
   `;
   document.body.appendChild(el.firstElementChild);

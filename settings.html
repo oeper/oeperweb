@@ -16,16 +16,15 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://fonts.cdnfonts.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./shared/fonts.css?v=1">
-<link href="https://fonts.cdnfonts.com/css/product-sans" rel="stylesheet">
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   :focus { outline: none; }
-  :focus-visible { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offset: 0; }
 
   :root {
     --md-sys-color-background: #111318;
@@ -223,6 +222,31 @@
     </div>
   </div>
 
+  <div class="settings-section" id="dataSection">
+    <h2>your data and privacy</h2>
+    <p class="section-desc">you can delete your own posts, comments, files and messages from the site. for everything else, ask us and we'll do it by hand, usually within 30 days. details are in the <a href="/privacy" style="color:var(--md-sys-color-primary);">privacy policy</a>.</p>
+    <div class="group">
+      <a class="row" id="deleteDataRow" href="mailto:sanhackerman@gmail.com?subject=delete%20my%20oeper.dev%20account" style="text-decoration:none; color:inherit;">
+        <div class="row-icon"><span class="material-symbols-rounded">delete_forever</span></div>
+        <div class="row-text">
+          <div class="row-title">ask us to delete my account and data</div>
+          <div class="row-sub">opens an email to us. send it from the address on your account so we can check it's you.</div>
+        </div>
+      </a>
+      <a class="row" id="exportDataRow" href="mailto:sanhackerman@gmail.com?subject=copy%20of%20my%20oeper.dev%20data" style="text-decoration:none; color:inherit;">
+        <div class="row-icon"><span class="material-symbols-rounded">download</span></div>
+        <div class="row-text">
+          <div class="row-title">ask for a copy of my data</div>
+          <div class="row-sub">we'll send you what we hold about your account.</div>
+        </div>
+      </a>
+      <div class="row">
+        <div class="row-icon"><span class="material-symbols-rounded">gavel</span></div>
+        <div class="row-text"><div class="row-title">the legal stuff</div><div class="row-sub"><a href="/terms" style="color:var(--md-sys-color-primary);">terms</a> · <a href="/privacy" style="color:var(--md-sys-color-primary);">privacy</a> · <a href="/refunds" style="color:var(--md-sys-color-primary);">refunds</a> · <a href="/cookies" style="color:var(--md-sys-color-primary);">cookies</a></div></div>
+      </div>
+    </div>
+  </div>
+
   <div class="settings-section" id="accountActionsSection" style="display:none;">
     <div class="group">
       <button class="row" id="switchAccountRow" style="width:100%; border:none; background:none; text-align:left; cursor:pointer; font:inherit; color:inherit;">
@@ -250,10 +274,10 @@ import {
   onAccountChange, handleOf, signIn, signOutUser,
   isOwnerEmail, listSessions, removeSession, getCurrentDeviceId,
   getCurrentUser, isHandleAvailable, setMyHandle,
-} from './shared/account.js?v=36';
-import { mountTopNav } from './shared/topnav.js?v=37';
+} from './shared/account.js?v=37';
+import { mountTopNav } from './shared/topnav.js?v=39';
 import { mountThemePicker } from './shared/theme-picker.js?v=4';
-import { mountFooter } from './shared/footer.js?v=5';
+import { mountFooter } from './shared/footer.js?v=6';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=2';
 import { aiFeaturesEnabled, setAiFeaturesEnabled, onAiFeaturesChange } from './shared/ai-features.js?v=1';
@@ -290,6 +314,11 @@ onAccountChange(user => {
     sub.textContent = 'sign in to edit your display name, bio, and photo.';
   }
   document.getElementById('accountActionsSection').style.display = user ? '' : 'none';
+  ['deleteDataRow', 'exportDataRow'].forEach(id => {
+    const r = document.getElementById(id); if (!r) return;
+    const base = r.getAttribute('href').split('&body=')[0];
+    r.setAttribute('href', user ? base + '&body=' + encodeURIComponent('my account email: ' + user.email) : base);
+  });
   initBadgeSection(user);
   initSecuritySection(user);
   initHandleRow(user, handle);
@@ -411,7 +440,7 @@ function initBadgeSection(user) {
 }
 
 document.getElementById('switchAccountRow').addEventListener('click', () => {
-  signIn().catch(err => oeAlert('could not switch account: ' + err.message));
+  signIn().catch(err => { if (!err || err.code !== 'oe/consent-declined') oeAlert('could not switch account: ' + err.message); });
 });
 document.getElementById('signOutRow').addEventListener('click', async () => {
   if (await oeConfirm('sign out?')) signOutUser();

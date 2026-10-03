@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cookie policy | oeper.dev</title>
+<meta name="robots" content="index, follow">
+<meta name="description" content="What oeper.dev stores in your browser and why.">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
+<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./shared/fonts.css?v=1">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offset: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-success: #a6d9a8;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    background-image: var(--oe-bg-image, none);
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 640px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 28px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
+  .header h1 {
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400;
+    margin-bottom: 12px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px;
+  }
+  .header h1 .material-symbols-rounded { font-size: 0.8em; color: var(--md-sys-color-primary); }
+
+  
+  .doc { background: var(--md-sys-color-surface); border-radius: 24px; padding: 28px 28px 32px; line-height: 1.7; font-size: 15px; }
+  .doc h2 { font-size: 18px; font-weight: 500; margin: 28px 0 8px; color: var(--md-sys-color-on-surface); }
+  .doc h2:first-child { margin-top: 0; }
+  .doc p, .doc li { color: var(--md-sys-color-on-surface-variant); }
+  .doc p { margin-bottom: 10px; }
+  .doc ul { margin: 0 0 12px 20px; }
+  .doc li { margin-bottom: 6px; }
+  .doc a { color: var(--md-sys-color-primary); }
+  .doc strong { color: var(--md-sys-color-on-surface); font-weight: 500; }
+  .updated { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 20px; }
+  .legal-nav { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 20px; font-size: 13px; }
+  .legal-nav a { color: var(--md-sys-color-primary); text-decoration: none; }
+  .legal-nav a[aria-current="page"] { color: var(--md-sys-color-on-surface); font-weight: 500; text-decoration: underline; }
+  .table-wrap { overflow-x: auto; margin: 0 0 12px; }
+  .doc table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  .doc th, .doc td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface-variant); vertical-align: top; }
+  .doc th { color: var(--md-sys-color-on-surface); font-weight: 500; }
+  @media (min-width: 1000px) { .page { max-width: 820px; } }
+  @media (max-width: 600px) { .page { padding: 40px 14px 80px; } .doc { padding: 20px 16px 24px; } .doc table, .doc tbody, .doc tr, .doc td, .doc th { display: block; } .doc tr:first-child { display: none; } .doc td:first-child { color: var(--md-sys-color-on-surface); border-bottom: none; padding-bottom: 0; } .doc tr { border-bottom: 1px solid var(--md-sys-color-outline); padding: 6px 0; } .doc td { border-bottom: none; } }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <h1><span class="material-symbols-rounded" aria-hidden="true">cookie</span>cookie policy</h1>
+  </header>
+  <nav class="legal-nav" aria-label="legal pages"><a href="/privacy">privacy policy</a><a href="/terms">terms of service</a><a href="/refunds">refund policy</a><a href="/cookies" aria-current="page">cookie policy</a></nav>
+  <p class="updated">last updated october 3, 2026</p>
+  <main class="doc">
+
+    <h2>short version</h2>
+    <p>oeper.dev does not use advertising or analytics cookies and does not track you across other sites. It stores a small amount of data in your browser that the site needs in order to work.</p>
+
+    <h2>what is stored on your device</h2>
+    <div class="table-wrap"><table>
+      <tr><th>what</th><th>purpose</th><th>type</th></tr>
+      <tr><td>sign-in session (Firebase Authentication, in your browser's local storage or IndexedDB)</td><td>keeps you signed in</td><td>strictly necessary</td></tr>
+      <tr><td><code>oe_device_id</code></td><td>a random id so the signed-in devices list in settings can tell your devices apart</td><td>strictly necessary, only when signed in</td></tr>
+      <tr><td>theme, font, background and layout choices; sort and view options in files; read markers in messages; saved documents in the office tools; the notice choice below</td><td>remember your settings on this device</td><td>preferences you chose, never sent to us except where a feature syncs your own documents</td></tr>
+      <tr><td>cookies set by Cloudflare (for example a short-lived security cookie)</td><td>protect the site from bots and abuse</td><td>strictly necessary</td></tr>
+      <tr><td>cookies set by Google when you use the "sign in with google" popup</td><td>google's own sign-in on google.com</td><td>set by google on its own domain, see google's policy</td></tr>
+    </table></div>
+
+    <h2>third parties that see your browser</h2>
+    <p>When a page loads fonts and icons from Google Fonts, Google receives your IP address. No other advertising or analytics service is loaded on oeper.dev pages. A few tools hosted on the site (such as game or editor embeds) load their own libraries and may contact their own servers, see their pages for details.</p>
+
+    <h2>consent</h2>
+    <p>Because we only use strictly necessary storage and preferences you chose, the law in most places does not require a consent banner. We show a small notice once so you know this. If we ever add anything optional such as analytics, we will ask first, and you will be able to say no.</p>
+
+    <h2>controlling it</h2>
+    <p>You can clear site data in your browser settings at any time. If you do, you will be signed out and your saved preferences on this device will reset. Blocking all storage will stop sign-in from working.</p>
+
+    <p>More detail on the data we hold about you is in the <a href="/privacy">privacy policy</a>. Questions: <a href="mailto:sanhackerman@gmail.com">sanhackerman@gmail.com</a>.</p>
+
+  </main>
+</div>
+
+<script type="module" data-cfasync="false">
+import { mountTopNav } from './shared/topnav.js?v=39';
+import { mountFooter } from './shared/footer.js?v=6';
+mountTopNav();
+mountFooter();
+</script>
+</body>
+</html>

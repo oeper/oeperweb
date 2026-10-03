@@ -11,7 +11,7 @@
 import {
   mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange, signIn,
   onCreditsChange, CREDITS_ICON,
-} from './account.js?v=36';
+} from './account.js?v=37';
 import {
   collection, query, orderBy, limit, getDocs, onSnapshot, where, doc, updateDoc, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -449,8 +449,25 @@ function injectStyles() {
   document.head.appendChild(style);
 }
 
+// One-time notice that the site only stores what it needs (see /cookies).
+// Not a consent banner: nothing optional is loaded, so there is nothing to
+// accept or refuse. Dismissal is remembered in localStorage.
+function showStorageNotice() {
+  try { if (localStorage.getItem('oe_notice_ok') === '1') return; } catch { return; }
+  if (document.getElementById('oeStorageNotice')) return;
+  const bar = document.createElement('div');
+  bar.id = 'oeStorageNotice';
+  bar.setAttribute('role', 'region');
+  bar.setAttribute('aria-label', 'storage notice');
+  bar.setAttribute('style', 'position:fixed;left:16px;right:16px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:9000;max-width:520px;margin:0 auto;display:flex;align-items:center;gap:14px;padding:12px 14px 12px 18px;border-radius:20px;background:var(--md-sys-color-surface-variant,#2f353d);color:var(--md-sys-color-on-surface,#e2e2e6);font-family:var(--oe-font-override,"Google Sans","Product Sans",sans-serif);font-size:13px;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,0.4);');
+  bar.innerHTML = '<span style="flex:1;">this site only stores what it needs to work: your sign-in and your settings. no ads, no tracking. <a href="/cookies" style="color:var(--md-sys-color-primary,#a8c7fa);">details</a></span><button type="button" style="background:var(--md-sys-color-primary,#a8c7fa);color:var(--md-sys-color-on-primary,#062e6f);border:none;border-radius:100px;padding:8px 16px;font:inherit;font-weight:500;cursor:pointer;flex-shrink:0;">got it</button>';
+  bar.querySelector('button').addEventListener('click', () => { try { localStorage.setItem('oe_notice_ok', '1'); } catch {} bar.remove(); });
+  document.body.appendChild(bar);
+}
+
 export function mountTopNav(container) {
   injectStyles();
+  if (document.body) showStorageNotice(); else document.addEventListener('DOMContentLoaded', showStorageNotice);
   const el = document.createElement('div');
   el.innerHTML = `
     <div class="oe-nav-backdrop" id="oeNavBackdrop"></div>

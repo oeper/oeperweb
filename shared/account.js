@@ -644,7 +644,47 @@ export async function resolveUidsToEmails(uids) {
   return out;
 }
 
+// First-time sign-in consent. Remembered per browser (the stored value is
+// the version of the legal pages that was accepted, so bumping CONSENT_VERSION
+// asks everyone again after a material change to the terms/privacy policy).
+const CONSENT_VERSION = '1';
+function hasConsent() {
+  try { return localStorage.getItem('oe_terms_ok') === CONSENT_VERSION; } catch { return false; }
+}
+function askConsent() {
+  return new Promise(resolve => {
+    const back = document.createElement('div');
+    back.setAttribute('style', 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:20px;');
+    back.innerHTML = `
+      <div role="dialog" aria-modal="true" aria-labelledby="oeConsentTitle" style="background:var(--md-sys-color-surface,#1a1c22);color:var(--md-sys-color-on-surface,#e2e2e6);border-radius:24px;padding:24px;max-width:420px;width:100%;font-family:var(--oe-font-override,'Google Sans','Product Sans',sans-serif);box-shadow:0 8px 32px rgba(0,0,0,0.5);">
+        <div id="oeConsentTitle" style="font-size:20px;margin-bottom:10px;">before you sign in</div>
+        <p style="font-size:14px;line-height:1.6;color:var(--md-sys-color-on-surface-variant,#c4c7c5);margin:0 0 14px;">signing in uses your google account. we save your name, email and photo, plus what you post. read the <a href="/terms" target="_blank" rel="noopener" style="color:var(--md-sys-color-primary,#a8c7fa);">terms</a> and <a href="/privacy" target="_blank" rel="noopener" style="color:var(--md-sys-color-primary,#a8c7fa);">privacy policy</a> first.</p>
+        <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.5;cursor:pointer;margin-bottom:18px;">
+          <input type="checkbox" id="oeConsentBox" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;accent-color:var(--md-sys-color-primary,#a8c7fa);">
+          <span>i agree to the terms and privacy policy. i'm 13 or older, or a parent or guardian said it's ok for me to use this site.</span>
+        </label>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button type="button" id="oeConsentNo" style="background:none;border:none;color:var(--md-sys-color-primary,#a8c7fa);font:inherit;font-size:14px;font-weight:500;padding:10px 16px;border-radius:100px;cursor:pointer;">cancel</button>
+          <button type="button" id="oeConsentYes" disabled style="background:var(--md-sys-color-primary,#a8c7fa);color:var(--md-sys-color-on-primary,#062e6f);border:none;font:inherit;font-size:14px;font-weight:500;padding:10px 20px;border-radius:100px;cursor:pointer;opacity:0.4;">continue</button>
+        </div>
+      </div>`;
+    document.body.appendChild(back);
+    const box = back.querySelector('#oeConsentBox'), yes = back.querySelector('#oeConsentYes');
+    const done = ok => { back.remove(); document.removeEventListener('keydown', onKey, true); resolve(ok); };
+    const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); done(false); } };
+    document.addEventListener('keydown', onKey, true);
+    box.addEventListener('change', () => { yes.disabled = !box.checked; yes.style.opacity = box.checked ? '1' : '0.4'; });
+    yes.addEventListener('click', () => { try { localStorage.setItem('oe_terms_ok', CONSENT_VERSION); } catch {} done(true); });
+    back.querySelector('#oeConsentNo').addEventListener('click', () => done(false));
+    back.addEventListener('click', e => { if (e.target === back) done(false); });
+    box.focus();
+  });
+}
+
 export function signIn() {
+  if (!hasConsent()) {
+    return askConsent().then(ok => ok ? signIn() : Promise.reject(Object.assign(new Error('you need to agree to the terms first'), { code: 'oe/consent-declined' })));
+  }
   return signInWithPopup(auth, provider).catch(err => {
     // Popup-based sign-in is unreliable on a lot of mobile browsers — either
     // blocked outright, or the popup opens but Chrome-on-Android's window
@@ -1051,7 +1091,7 @@ export function mountAccountBar(container) {
     } else {
       container.innerHTML = `<button class="oe-acct-signin" id="oeAcctSignInBtn"><span class="material-symbols-rounded" style="font-size:18px;">login</span> sign in</button>`;
       container.querySelector('#oeAcctSignInBtn').addEventListener('click', () => {
-        signIn().catch(err => showToast('sign-in failed: ' + err.message));
+        signIn().catch(err => { if (err && err.code !== 'oe/consent-declined') showToast('sign-in failed: ' + err.message); });
       });
     }
   }

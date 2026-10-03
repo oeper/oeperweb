@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>privacy policy | oeper.dev</title>
+<meta name="robots" content="index, follow">
+<meta name="description" content="How oeper.dev collects, uses and protects your data, and how to ask us to delete it.">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
+<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./shared/fonts.css?v=1">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offset: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-success: #a6d9a8;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    background-image: var(--oe-bg-image, none);
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 640px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 28px; }
+  .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+  .header-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--md-sys-color-primary); text-decoration: none;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+  }
+  .header-link:hover { opacity: 0.8; }
+  .header-link:visited { color: var(--md-sys-color-primary); }
+  .header h1 {
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400;
+    margin-bottom: 12px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px;
+  }
+  .header h1 .material-symbols-rounded { font-size: 0.8em; color: var(--md-sys-color-primary); }
+
+  
+  .doc { background: var(--md-sys-color-surface); border-radius: 24px; padding: 28px 28px 32px; line-height: 1.7; font-size: 15px; }
+  .doc h2 { font-size: 18px; font-weight: 500; margin: 28px 0 8px; color: var(--md-sys-color-on-surface); }
+  .doc h2:first-child { margin-top: 0; }
+  .doc p, .doc li { color: var(--md-sys-color-on-surface-variant); }
+  .doc p { margin-bottom: 10px; }
+  .doc ul { margin: 0 0 12px 20px; }
+  .doc li { margin-bottom: 6px; }
+  .doc a { color: var(--md-sys-color-primary); }
+  .doc strong { color: var(--md-sys-color-on-surface); font-weight: 500; }
+  .updated { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 20px; }
+  .legal-nav { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0 0 20px; font-size: 13px; }
+  .legal-nav a { color: var(--md-sys-color-primary); text-decoration: none; }
+  .legal-nav a[aria-current="page"] { color: var(--md-sys-color-on-surface); font-weight: 500; text-decoration: underline; }
+  .table-wrap { overflow-x: auto; margin: 0 0 12px; }
+  .doc table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  .doc th, .doc td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface-variant); vertical-align: top; }
+  .doc th { color: var(--md-sys-color-on-surface); font-weight: 500; }
+  @media (min-width: 1000px) { .page { max-width: 820px; } }
+  @media (max-width: 600px) { .page { padding: 40px 14px 80px; } .doc { padding: 20px 16px 24px; } .doc table, .doc tbody, .doc tr, .doc td, .doc th { display: block; } .doc tr:first-child { display: none; } .doc td:first-child { color: var(--md-sys-color-on-surface); border-bottom: none; padding-bottom: 0; } .doc tr { border-bottom: 1px solid var(--md-sys-color-outline); padding: 6px 0; } .doc td { border-bottom: none; } }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <h1><span class="material-symbols-rounded" aria-hidden="true">shield</span>privacy policy</h1>
+  </header>
+  <nav class="legal-nav" aria-label="legal pages"><a href="/privacy" aria-current="page">privacy policy</a><a href="/terms">terms of service</a><a href="/refunds">refund policy</a><a href="/cookies">cookie policy</a></nav>
+  <p class="updated">last updated october 3, 2026</p>
+  <main class="doc">
+
+    <h2>who we are</h2>
+    <p>oeper.dev is a personal website run by an individual who goes by "oeper.dev". Anywhere this policy says "we", it means that person. You can reach us at <a href="mailto:sanhackerman@gmail.com">sanhackerman@gmail.com</a>.</p>
+
+    <h2>what we collect and why</h2>
+    <div class="table-wrap"><table>
+      <tr><th>what</th><th>why</th></tr>
+      <tr><td><strong>your google account name, email address and profile photo</strong>, received when you sign in with google</td><td>to create your account and show who you are to other people on the site. Your email address is also what your account is keyed by in our database.</td></tr>
+      <tr><td><strong>profile details you add</strong>: handle, bio, badge and similar</td><td>to show on your public profile.</td></tr>
+      <tr><td><strong>things you post</strong>: posts, comments, stories, videos, projects, notes, uploaded files, direct and group messages, follows, reactions</td><td>to run the features you asked to use. Posts, comments and profiles are public. Direct and group messages are visible to the people in that conversation and to the site owners (see "who can see it").</td></tr>
+      <tr><td><strong>ai chats and ai memory</strong></td><td>so the AI assistant can show your past chats and remember things you told it to remember.</td></tr>
+      <tr><td><strong>credits</strong>: balance, transfers between users, purchase records</td><td>to run the credits system. No payment card details are collected by us.</td></tr>
+      <tr><td><strong>signed-in devices</strong>: a random device id, a label such as your browser and operating system, and the last time that device was active</td><td>to show you a list of where you are signed in, in settings.</td></tr>
+      <tr><td><strong>your IP address</strong>, seen by our servers when you connect</td><td>for rate limiting and abuse prevention. For uploads without an account, the IP address is stored along with an upload count so we can enforce the anonymous upload limit.</td></tr>
+      <tr><td><strong>reports</strong> you send about content</td><td>to review and act on them. A report, with the reported content and your account, is sent to a private channel only the owners can read.</td></tr>
+      <tr><td><strong>preferences saved in your browser</strong></td><td>for example theme, font, sort order and read markers. These stay on your device. See the <a href="/cookies">cookie policy</a>.</td></tr>
+    </table></div>
+    <p>We do not run advertising, we do not use analytics or tracking scripts, and we do not sell your data.</p>
+
+    <h2>who can see it</h2>
+    <ul>
+      <li><strong>the public</strong>: your handle, name, photo, bio, public posts, comments, files you made public and your public activity.</li>
+      <li><strong>other users</strong>: only what you send them, such as messages and credit transfers.</li>
+      <li><strong>the site owners</strong>: because we run the database and the file server, we can technically read stored content. We only look at private content when needed to handle a report, enforce the terms, fix a fault or comply with the law.</li>
+    </ul>
+
+    <h2>services that process data for us</h2>
+    <p>We use these providers. Each receives the data needed for its job and has its own privacy policy.</p>
+    <div class="table-wrap"><table>
+      <tr><th>provider</th><th>used for</th></tr>
+      <tr><td>Google (Firebase Authentication and Cloud Firestore)</td><td>sign-in and the database that holds almost everything above.</td></tr>
+      <tr><td>Cloudflare (network and security layer in front of the site, Tunnel, and Workers AI)</td><td>delivering the site, connecting to our file server, and running the AI assistant and automated content moderation. Text and images you send to the AI assistant, and uploads that are checked by moderation, are processed by Cloudflare Workers AI.</td></tr>
+      <tr><td>GitHub (GitHub Pages)</td><td>hosting the website files.</td></tr>
+      <tr><td>Google Fonts</td><td>icon and text fonts. Your browser requests them from Google, which means Google sees your IP address and browser details.</td></tr>
+      <tr><td>Discord</td><td>receives user reports in a private owner channel.</td></tr>
+      <tr><td>our own file server</td><td>stores files you upload. It is a small server run by us and reached through a Cloudflare Tunnel.</td></tr>
+    </table></div>
+    <p>Some of these providers are located outside your country, so your data can be processed in other countries, including the United States.</p>
+
+    <h2>how long we keep it</h2>
+    <ul>
+      <li>Your account data and content stay until you delete them or delete your account.</li>
+      <li>Uploads made without an account expire automatically, and larger files expire sooner.</li>
+      <li>Deleted files move to a trash and are removed after a retention period.</li>
+      <li>Moderation and audit records may be kept for as long as needed to protect the site and other users.</li>
+    </ul>
+
+    <h2>your choices and rights</h2>
+    <p>Depending on where you live, you may have the right to access, correct, export or delete your data, to object to some processing, and to complain to your local data protection authority. In practice:</p>
+    <ul>
+      <li>You can edit your profile and delete your own posts, comments, files and messages from the site.</li>
+      <li>You can ask us to delete your account and the data tied to it, or to send you a copy of your data, by emailing <a href="mailto:sanhackerman@gmail.com">sanhackerman@gmail.com</a> from the email address on the account. We aim to reply within 30 days.</li>
+      <li>You can remove a signed-in device in settings, and you can revoke this site's access from your google account at any time.</li>
+    </ul>
+    <p>Deleting something from the site does not always remove it from copies other people made, or from backups, straight away.</p>
+
+    <h2>children</h2>
+    <p>Sign-in uses a google account, and google's own age rules apply to having one. We do not knowingly want personal information from children who do not have permission to use the site. If you are under 13, or under the age of digital consent where you live, use oeper.dev only with the permission and supervision of a parent or guardian. A parent or guardian can email <a href="mailto:sanhackerman@gmail.com">sanhackerman@gmail.com</a> to see, correct or delete a child's data, and we will act on a verified request quickly. Do not post personal details about yourself or others in public areas.</p>
+
+    <h2>security</h2>
+    <p>Connections to the site use HTTPS, and database access is limited by access rules. No online service can promise perfect security, so please do not share passwords or sensitive personal information in messages or posts.</p>
+
+    <h2>changes</h2>
+    <p>If we change this policy in a way that matters, we will update the date above and, for large changes, post a notice on the site.</p>
+
+  </main>
+</div>
+
+<script type="module" data-cfasync="false">
+import { mountTopNav } from './shared/topnav.js?v=39';
+import { mountFooter } from './shared/footer.js?v=6';
+mountTopNav();
+mountFooter();
+</script>
+</body>
+</html>
