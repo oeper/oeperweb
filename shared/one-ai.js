@@ -37,7 +37,7 @@ const IDEA_SYSTEM = 'The user is in oneIdea, a note-taking app with real mind ma
   'MIND MAP: put an indented outline between <<map title="Short title">> and <</map>>. Use "- " bullets with two spaces of indent per level. Aim for 3 to 7 main branches with 2 to 5 sub-topics each, going one or two levels deeper only where it helps. Keep every topic short (1 to 6 words, never a full sentence). A longer explanation goes on its own line directly under its topic, starting with "> " (it becomes that topic\'s note). Prefix a topic with [important], [question], [definition], [idea] or [ ] (a to-do) only when it really fits. ' +
   'The page that is open is shown to you as an outline in this same format. If it is a mind map and the user wants it changed, expanded or reorganized, put the COMPLETE updated outline between <<mapedit>> and <</mapedit>> instead. ' +
   'STUDY NOTES: put markdown between <<notes title="Short title">> and <</notes>>. Every "## Heading" becomes its own box on the page, so group the material under 3 to 6 meaningful headings (for example Overview, Key terms, How it works, Examples, Summary). Under them use short bullets (indent two spaces for sub-points), a table when comparing things, "Term :: meaning" lines for definitions (they become flashcards), "[ ] task" lines for to-dos, and "[important] ..." or "[question] ..." lines for key points and open questions. Never write one huge block of bullets. ' +
-  'CHOOSING: requests for a mind map, map, overview, brainstorm or how things connect get <<map>>. Requests for notes, a study guide, a summary in notes form or to organize something get <<notes>>. Write only the kind of block that was asked for, except that a request to make notes from a text, PDF or topic gets BOTH a <<notes>> block and a <<map>> block in the same reply. Use plain text only inside blocks: no LaTeX (write -> for arrows) and no em dashes. After the blocks, write one short sentence saying what you made.';
+  'CHOOSING: requests for a mind map, map, overview, brainstorm or how things connect get <<map>>. Requests for notes, a study guide, a summary in notes form or to organize something get <<notes>>. Write only the kind of block that was asked for, except that a request to make notes from a text, PDF or topic gets BOTH a <<notes>> block and a <<map>> block in the same reply. Use plain text only inside blocks: no LaTeX (write -> for arrows) and no em dashes. Never put these blocks inside <<edit>> or <<append>>. After the blocks, write one short sentence saying what you made.';
 const systemFor = c => SYSTEM + (c.build ? ' ' + IDEA_SYSTEM : '');
 
 let fab = null;
@@ -97,22 +97,50 @@ function readContextCore() {
   return { app, text: '', source: 'none', editable };
 }
 
-// tiny markdown -> HTML for inserting into a document
+// markdown -> HTML for writing into a document: headings, nested bullet / numbered lists, tables, quotes, code, rules, links, bold / italic / strike
+const texPlain = x => x.replace(/\\(?:rightarrow|to|longrightarrow)\b/g, '→').replace(/\\leftarrow\b/g, '←').replace(/\\times\b/g, '×').replace(/\\approx\b/g, '≈').replace(/\\(?:cdot|bullet)\b/g, '·').replace(/\\(?:text|mathrm|mathbf)\{([^}]*)\}/g, '$1')
+  .replace(/_\{([^}]*)\}|_(\w)/g, (_, a, b) => '<sub>' + (a || b) + '</sub>').replace(/\^\{([^}]*)\}|\^(\w)/g, (_, a, b) => '<sup>' + (a || b) + '</sup>').replace(/\\([a-zA-Z]+)/g, '$1');
+const mdInline = t => esc(t)
+  .replace(/\$([^$\n]+)\$/g, (_, x) => texPlain(x))
+  .replace(/`([^`]+)`/g, '<code>$1</code>')
+  .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+  .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/~~(.+?)~~/g, '<s>$1</s>').replace(/(^|[^*])\*(?!\s)(.+?)\*/g, '$1<i>$2</i>');
+function mdList(items) {
+  let html = '', stack = [];
+  items.forEach(it => {
+    while (stack.length && it.ind < stack[stack.length - 1].ind) html += '</li></' + (stack.pop().ord ? 'ol' : 'ul') + '>';
+    const top = stack[stack.length - 1];
+    if (top && it.ind === top.ind) html += '</li>'; else if (!top || it.ind > top.ind) { html += it.ord ? '<ol>' : '<ul>'; stack.push({ ind: it.ind, ord: it.ord }); }
+    html += '<li>' + mdInline(it.text);
+  });
+  while (stack.length) html += '</li></' + (stack.pop().ord ? 'ol' : 'ul') + '>';
+  return html;
+}
 function mdToHtml(md) {
-  const inline = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*(?!\s)(.+?)\*/g, '$1<i>$2</i>').replace(/`([^`]+)`/g, '<code>$1</code>');
-  const out = [];
-  let list = null;
-  const flush = () => { if (list) { out.push('<ul>' + list.map(i => `<li>${inline(i)}</li>`).join('') + '</ul>'); list = null; } };
-  for (const raw of String(md).replace(/\r/g, '').split('\n')) {
-    const line = raw.trimEnd();
-    let m;
-    if ((m = /^\s*[-*+]\s+(.*)$/.exec(line))) { (list = list || []).push(m[1]); continue; }
-    flush();
-    if (!line.trim()) continue;
-    if ((m = /^(#{1,3})\s+(.*)$/.exec(line))) out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`);
-    else out.push(`<p>${inline(line)}</p>`);
+  const lines = String(md).replace(/\r/g, '').replace(/\t/g, '    ').split('\n'), out = [];
+  let i = 0, m;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (!line.trim()) { i++; continue; }
+    if (/^\s*```/.test(line)) { const code = []; i++; while (i < lines.length && !/^\s*```/.test(lines[i])) code.push(lines[i++]); i++; out.push('<pre><code>' + esc(code.join('\n')) + '</code></pre>'); continue; }
+    if (/^\s*\|/.test(line)) {
+      const rows = [];
+      while (i < lines.length && /^\s*\|/.test(lines[i])) { if (!/^[\s|:\-]+$/.test(lines[i])) rows.push(lines[i].trim().replace(/^\||\|$/g, '').split('|').map(c => mdInline(c.trim()))); i++; }
+      if (rows.length) out.push('<table>' + rows.map((r, k) => '<tr>' + r.map(c => k ? `<td>${c}</td>` : `<th>${c}</th>`).join('') + '</tr>').join('') + '</table>');
+      continue;
+    }
+    if (/^\s*([-*+•]|\d+[.)])\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && (m = /^(\s*)([-*+•]|\d+[.)])\s+(.*)$/.exec(lines[i]))) { items.push({ ind: m[1].length, ord: /\d/.test(m[2]), text: m[3].trim() }); i++; }
+      out.push(mdList(items)); continue;
+    }
+    i++;
+    const t = line.trim();
+    if ((m = /^(#{1,6})\s+(.*)$/.exec(t))) out.push(`<h${m[1].length}>${mdInline(m[2])}</h${m[1].length}>`);
+    else if (/^([-*_])(\s*\1){2,}$/.test(t)) out.push('<hr>');
+    else if ((m = /^>\s?(.*)$/.exec(t))) out.push(`<blockquote>${mdInline(m[1])}</blockquote>`);
+    else out.push(`<p>${mdInline(t)}</p>`);
   }
-  flush();
   return out.join('') || '<p><br></p>';
 }
 
@@ -342,7 +370,8 @@ function parseMakes(reply) {
 }
 // Pulls the <<edit>> / <<append>> block out of a reply. A block that never got its closing tag (the stream was cut) still counts.
 function parseEdit(reply) {
-  const m = /<<(edit|append)>>([\s\S]*?)(?:<<\/\1>>|$)/.exec(reply || '');
+  reply = String(reply || '').replace(MAKE_RE, ''); // models sometimes nest a map / notes block inside an edit: that is not a text edit
+  const m = /<<(edit|append)>>([\s\S]*?)(?:<<\/\1>>|$)/.exec(reply);
   if (!m) return null;
   const text = m[2].replace(/^\n+|\n+$/g, '');
   if (!text.trim()) return null;
@@ -408,7 +437,8 @@ async function run(instruction) {
   busy = new AbortController();
   const mine = busy;
   try {
-    const reply = await askAI([{ role: 'system', content: systemFor(c) }, ...prior, { role: 'user', content: userMsg }], {
+    const msgs = [{ role: 'system', content: systemFor(c) }, ...prior, { role: 'user', content: userMsg }];
+    const opts = {
       signal: mine.signal,
       onThinking: t => { if (answering) return; sawThought = true; th.thought(t); },
       onStatus: st => { if (!answering) th.status(st); },
@@ -416,8 +446,12 @@ async function run(instruction) {
         if (!answering && t) { answering = true; th.answered(sawThought, Math.max(1, Math.round((Date.now() - t0) / 1000))); }
         am.b.textContent = shown(t) || (/<<(map|mapedit)/.test(t) ? 'Building the mind map...' : /<<notes/.test(t) ? 'Writing the notes...' : ''); scrollLog();
       },
-    });
-    const final = reply || '(no answer)';
+    };
+    let reply = await askAI(msgs, opts);
+    // The model stream sometimes ends before any answer text (a dropped connection): try once more before giving up.
+    if (!reply.trim() && !mine.signal.aborted) { th.status('The connection dropped. Trying again...'); reply = await askAI(msgs, opts); }
+    if (!reply.trim()) throw new Error('epic AI stopped before it answered. Please try again.');
+    const final = reply;
     ok = true;
     if (!answering) th.answered(sawThought, Math.max(1, Math.round((Date.now() - t0) / 1000)));
     hist.push({ r: 'a', t: final }); saveHist();
@@ -445,6 +479,12 @@ async function run(instruction) {
       } catch (err) { console.error(err); }
       if (u) { undos.push(u); notes.push(w); }
     });
+    // oneIdea has no single text to edit, so a plain rewrite becomes a new notes page and the original stays as it is
+    if (OI && ed && !canEdit && !undos.length) {
+      let u = null;
+      try { u = OI.newNotes(ed.text, ''); } catch (err) { console.error(err); }
+      if (u) { undos.push(u); notes.push('Made a new notes page. Your original is unchanged.'); }
+    }
     const said = (ed && ed.said) || shown(reply).replace(/\s+/g, ' ').trim();
     if (undos.length) {
       const where = notes.join(' ');
