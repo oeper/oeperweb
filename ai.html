@@ -474,9 +474,9 @@
         <div class="chat-inputbar">
           <div class="one-doc-menu" id="oneDocMenu"></div>
           <button type="button" class="attach-btn" id="oneDocBtn" title="attach a one document" style="display:none;"><span class="material-symbols-rounded">note_stack</span></button>
-          <label class="attach-btn" title="attach an image">
+          <label class="attach-btn" title="attach an image, PDF or text file">
             <span class="material-symbols-rounded">add_photo_alternate</span>
-            <input type="file" id="attachInput" accept="image/*">
+            <input type="file" id="attachInput" accept="image/*,application/pdf,.pdf,.txt,.md,.csv,.tsv,.json,.log">
           </label>
           <textarea id="chatInput" placeholder="message…" rows="1"></textarea>
           <button id="sendBtn" class="send-btn" title="send"><span class="material-symbols-rounded">arrow_upward</span></button>
@@ -510,6 +510,7 @@ import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=2';
 import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=3';
 import { codeBlockHtml, copyToClipboard, injectCodeBlockStyles } from './shared/code-block.js?v=3';
+import { readFileForAI, FILE_ACCEPT, isImage } from './shared/ai-files.js?v=1';
 import { aiFeaturesEnabled, onAiFeaturesChange, listOneDocs, readOneDocText, sanitizeForOne, createWordDoc, oneDocUrl } from './shared/ai-features.js?v=1';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
@@ -1509,6 +1510,7 @@ const oneDocMenu = document.getElementById('oneDocMenu');
 const docChip = document.getElementById('docChip');
 const docChipName = document.getElementById('docChipName');
 const MAX_DOC_CHARS = 12000;
+const MAX_FILE_DOC_CHARS = 24000; // PDFs and text files; the worker allows attached-document messages up to 40,000 characters
 let pendingDoc = null; // { id, title, text }
 function syncOneUi() {
   const on = aiFeaturesEnabled();
@@ -1600,8 +1602,26 @@ attachInput.addEventListener('change', async () => {
   const file = attachInput.files[0];
   attachInput.value = '';
   if (!file) return;
-  await handleAttachedImage(file);
+  if (isImage(file)) { await handleAttachedImage(file); return; }
+  await handleAttachedFile(file);
 });
+
+// A PDF or text file is read in the browser and sent as text, the same way an attached
+// one document is (see pendingDoc / <<one:...>> above): the file itself is never uploaded.
+async function handleAttachedFile(file) {
+  docChipName.textContent = 'reading ' + file.name + '...';
+  docChip.style.display = 'flex';
+  try {
+    const r = await readFileForAI(file, { maxChars: MAX_FILE_DOC_CHARS });
+    pendingDoc = { id: null, title: r.title, text: r.text };
+    docChipName.textContent = r.title + (r.note ? ' (' + r.note + ')' : '');
+    inputEl.focus();
+  } catch (err) {
+    pendingDoc = null;
+    docChip.style.display = 'none';
+    await oeAlert(err.message || 'could not read that file');
+  }
+}
 document.getElementById('attachRemoveBtn').addEventListener('click', () => {
   pendingImageFile = null;
   attachPreview.style.display = 'none';

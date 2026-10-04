@@ -14,6 +14,7 @@
 // tag (and in the published one/index.html).
 
 import { aiFeaturesEnabled, onAiFeaturesChange, askAI } from '/shared/ai-features.js?v=1';
+import { readFileForAI, isImage } from '/shared/ai-files.js?v=1';
 
 const MAX_CONTEXT_CHARS = 12000;
 const ACTIONS = [
@@ -32,6 +33,7 @@ let panel = null;
 let ui = {};
 let lastSel = { text: '', range: null, editable: null }; // last selection seen inside the app frame
 let busy = null; // AbortController while a request runs
+let attach = null; // { title, text, note }: a PDF or text file the user attached to the panel
 let frameDoc = null;
 let stopSelWatch = null;
 
@@ -143,6 +145,9 @@ function injectStyles() {
   .oai-ask{display:flex;gap:8px;padding:8px 16px 12px}
   .oai-ask textarea{flex:1;resize:none;height:44px;max-height:120px;border:1px solid var(--outline-variant,#c4c6d0);border-radius:14px;padding:10px 12px;background:var(--surface-lowest,#fff);color:inherit;font:inherit;outline:none}.oai-ask textarea:focus{border-color:var(--primary)}
   .oai-send{width:44px;height:44px;border:none;border-radius:14px;background:var(--primary);color:var(--on-primary);cursor:pointer;display:grid;place-items:center;flex-shrink:0}.oai-send:disabled{opacity:.5}
+  .oai-file{margin:8px 16px 0;padding:8px 8px 8px 12px;border-radius:12px;background:var(--secondary-container,#dbe2f3);color:var(--on-secondary-container,#1a2536);display:flex;align-items:center;gap:8px;font-size:12.5px}.oai-file[hidden]{display:none}.oai-file .ms{font-size:18px;flex-shrink:0}.oai-file span.n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.oai-file button{width:28px;height:28px;border:none;border-radius:50%;background:none;color:inherit;cursor:pointer;display:grid;place-items:center}.oai-file button:hover{background:rgba(0,0,0,.08)}
+  .oai-clip{width:44px;height:44px;border:none;border-radius:14px;background:var(--surface-high);color:var(--on-surface-variant);cursor:pointer;display:grid;place-items:center;flex-shrink:0}.oai-clip:hover{color:var(--on-surface)}
+  .oai-panel.drop{outline:3px dashed var(--primary);outline-offset:-6px}
   .oai-result{flex:1;min-height:0;margin:0 16px;overflow:auto;padding:12px 14px;border-radius:14px;background:var(--surface-low,#f3f3f9);white-space:pre-wrap;line-height:1.55;font-size:14px}
   .oai-result:empty::before{content:"Pick an action or ask anything.";color:var(--on-surface-variant)}
   .oai-result.err{color:var(--error)}
@@ -172,8 +177,11 @@ function build() {
     <div class="oai-head"><span class="ms" aria-hidden="true" style="color:var(--primary)">auto_awesome</span><b>epic AI</b><small id="oaiApp"></small><span class="grow"></span>
       <button class="oai-x" type="button" id="oaiClose" title="Close"><span class="ms" aria-hidden="true">close</span></button></div>
     <div class="oai-ctx"><span class="ms" aria-hidden="true">article</span><span id="oaiCtx"></span></div>
+    <div class="oai-file" id="oaiFile" hidden><span class="ms" aria-hidden="true">description</span><span class="n" id="oaiFileName"></span>
+      <button type="button" id="oaiFileX" title="Remove file" aria-label="Remove file"><span class="ms" aria-hidden="true">close</span></button></div>
     <div class="oai-chips" id="oaiChips"></div>
-    <div class="oai-ask"><textarea id="oaiPrompt" placeholder="Ask epic AI… (Enter to send)" rows="1"></textarea>
+    <div class="oai-ask"><button class="oai-clip" type="button" id="oaiClip" title="Attach a PDF or text file" aria-label="Attach a PDF or text file"><span class="ms" aria-hidden="true">attach_file</span></button>
+      <input type="file" id="oaiFileIn" hidden accept=".pdf,application/pdf,.txt,.md,.csv,.tsv,.json,.log"><textarea id="oaiPrompt" placeholder="Ask epic AI… (Enter to send)" rows="1"></textarea>
       <button class="oai-send" type="button" id="oaiSend" title="Send"><span class="ms" aria-hidden="true">arrow_upward</span></button></div>
     <div class="oai-result" id="oaiResult"></div>
     <div class="oai-acts" id="oaiActs">
@@ -185,10 +193,17 @@ function build() {
   ui = {
     app: $('#oaiApp'), ctx: $('#oaiCtx'), chips: $('#oaiChips'), prompt: $('#oaiPrompt'), send: $('#oaiSend'), result: $('#oaiResult'),
     replace: $('#oaiReplace'), insert: $('#oaiInsert'), copy: $('#oaiCopy'), acts: $('#oaiActs'),
+    file: $('#oaiFile'), fileName: $('#oaiFileName'), fileIn: $('#oaiFileIn'),
   };
   ui.chips.innerHTML = ACTIONS.map((a, i) => `<button class="oai-chip" type="button" data-i="${i}">${esc(a.label)}</button>`).join('');
   ui.chips.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b) run(ACTIONS[b.dataset.i].instr); });
   $('#oaiClose').onclick = closePanel;
+  $('#oaiClip').onclick = () => ui.fileIn.click();
+  ui.fileIn.onchange = () => { const f = ui.fileIn.files[0]; ui.fileIn.value = ''; if (f) attachFile(f); };
+  $('#oaiFileX').onclick = () => { attach = null; refresh(); };
+  panel.addEventListener('dragover', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); panel.classList.add('drop'); } });
+  panel.addEventListener('dragleave', e => { if (!panel.contains(e.relatedTarget)) panel.classList.remove('drop'); });
+  panel.addEventListener('drop', e => { panel.classList.remove('drop'); const f = e.dataTransfer && e.dataTransfer.files[0]; if (!f) return; e.preventDefault(); attachFile(f); });
   ui.send.onclick = () => { const q = ui.prompt.value.trim(); if (q) run(q); };
   ui.prompt.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ui.send.click(); } });
   ui.replace.onclick = () => applyToDocument('replace', ui.result.textContent);
@@ -204,19 +219,31 @@ function refresh() {
   ui.ctx.textContent = c.source === 'selection' ? `Working on your selection (${c.text.length.toLocaleString()} characters).`
     : c.source === 'document' ? 'Working on the whole document — select some text to focus on part of it.'
     : 'No text to work on here — you can still ask epic AI anything.';
+  if (attach) ui.ctx.textContent += ' The attached file is included too.';
+  ui.file.hidden = !attach;
+  if (attach) ui.fileName.textContent = attach.title + (attach.note ? ' (' + attach.note + ')' : '');
   const canEdit = !!c.editable;
-  ui.chips.querySelectorAll('button').forEach(b => { b.disabled = c.source === 'none'; });
+  ui.chips.querySelectorAll('button').forEach(b => { b.disabled = c.source === 'none' && !attach; });
   ui.replace.disabled = !(canEdit && c.source === 'selection');
   ui.insert.disabled = !canEdit;
   const hasResult = !!ui.result.textContent && !ui.result.classList.contains('err');
   ui.acts.style.display = hasResult ? '' : 'none';
 }
 
+async function attachFile(file) {
+  if (isImage(file)) return toast('Pictures can\'t be read here yet. Attach a PDF or a text file.');
+  ui.file.hidden = false; ui.fileName.textContent = 'Reading ' + file.name + '...';
+  try { attach = await readFileForAI(file); }
+  catch (err) { attach = null; toast(err.message || 'Couldn\'t read that file.'); }
+  refresh();
+}
+
 async function run(instruction) {
   if (busy) busy.abort();
   const c = readContext();
   const wantsCtx = c.source !== 'none';
-  const userMsg = wantsCtx ? `${instruction}\n\n<<one:${c.app.replace(/[<>\n]/g, ' ')}>>\n${c.text}\n<</one>>` : instruction;
+  let userMsg = wantsCtx ? `${instruction}\n\n<<one:${c.app.replace(/[<>\n]/g, ' ')}>>\n${c.text}\n<</one>>` : instruction;
+  if (attach) userMsg += `\n\n<<one:${attach.title.replace(/[<>\n]/g, ' ')}>>\n${attach.text}\n<</one>>`;
   ui.result.classList.remove('err');
   ui.result.textContent = '';
   ui.acts.style.display = 'none';

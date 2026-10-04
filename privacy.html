@@ -104,6 +104,7 @@
       <tr><td><strong>your google account name, email address and profile photo</strong>, received when you sign in with google</td><td>to create your account and show who you are to other people on the site. Your email address is also what your account is keyed by in our database.</td></tr>
       <tr><td><strong>profile details you add</strong>: handle, bio, badge and similar</td><td>to show on your public profile.</td></tr>
       <tr><td><strong>things you post</strong>: posts, comments, stories, videos, projects, notes, uploaded files, direct and group messages, follows, reactions</td><td>to run the features you asked to use. Posts, comments and profiles are public. Direct and group messages are visible to the people in that conversation and to the site owners (see "who can see it").</td></tr>
+      <tr><td><strong>files you attach to epic AI</strong> (PDFs and text files)</td><td>to let the AI answer questions about them. The file is read inside your browser and is not uploaded. Only the extracted text is sent to the AI service together with your message, and it is saved in your AI chat history like the rest of the conversation.</td></tr>
       <tr><td><strong>ai chats and ai memory</strong></td><td>so the AI assistant can show your past chats and remember things you told it to remember.</td></tr>
       <tr><td><strong>credits</strong>: balance, transfers between users, purchase records</td><td>to run the credits system. No payment card details are collected by us.</td></tr>
       <tr><td><strong>signed-in devices</strong>: a random device id, a label such as your browser and operating system, and the last time that device was active</td><td>to show you a list of where you are signed in, in settings.</td></tr>
@@ -127,6 +128,7 @@
       <tr><td>Google (Firebase Authentication and Cloud Firestore)</td><td>sign-in and the database that holds almost everything above.</td></tr>
       <tr><td>Cloudflare (network and security layer in front of the site, Tunnel, and Workers AI)</td><td>delivering the site, connecting to our file server, and running the AI assistant and automated content moderation. Text and images you send to the AI assistant, and uploads that are checked by moderation, are processed by Cloudflare Workers AI.</td></tr>
       <tr><td>GitHub (GitHub Pages)</td><td>hosting the website files.</td></tr>
+      <tr><td>jsDelivr (a public CDN)</td><td>delivers the PDF reading library. Your browser only requests it when you attach a PDF to epic AI, which means jsDelivr sees your IP address and browser details. The PDF itself never goes to jsDelivr.</td></tr>
       <tr><td>Google Fonts</td><td>icon and text fonts. Your browser requests them from Google, which means Google sees your IP address and browser details.</td></tr>
       <tr><td>Discord</td><td>receives user reports in a private owner channel.</td></tr>
       <tr><td>our own file server</td><td>stores files you upload. It is a small server run by us and reached through a Cloudflare Tunnel.</td></tr>

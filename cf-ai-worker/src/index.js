@@ -57,7 +57,7 @@ const MAX_MESSAGES = 40;
 const MAX_MESSAGE_CHARS = 4000;
 // A user message carrying a one document attached from ai.html (marked <<one:Title>>...<</one>>)
 // may be much longer than something a person typed.
-const MAX_ATTACHED_DOC_MESSAGE_CHARS = 16000;
+const MAX_ATTACHED_DOC_MESSAGE_CHARS = 40000;
 // The system message is app-constructed (site description + self-context
 // + remembered facts — see ai.html's toWireMessages), not something a
 // person is typing, so it doesn't need the same tight cap that exists to
