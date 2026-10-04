@@ -280,3 +280,27 @@ button.side-item:hover{background:var(--surface-high);transform:translateX(2px)}
 /* empty page hint */
 #items:empty::after{content:'Tap anywhere to start typing';position:absolute;left:48px;top:150px;opacity:.4;font:400 15px/1.4 "Google Sans",sans-serif;pointer-events:none}
 .is-map #items::after{display:none}
+
+/* ---------- mind map: + handles, labelled buttons, typing bar ---------- */
+.mm-add{position:absolute;display:none;place-items:center;width:24px;height:24px;padding:0;border-radius:50%;background:var(--primary);color:var(--on-primary);box-shadow:var(--elev2);z-index:4;transition:transform .15s var(--spring)}
+.mm-add .ms,.mm-add svg{font-size:18px;width:18px;height:18px}
+.mm-add::before{content:"";position:absolute;inset:-8px}
+.mm-add:hover{transform:scale(1.15)}
+.mm-add-c{top:50%;right:-34px;margin-top:-12px}
+.mm-node.hk .mm-add-c{right:-60px}
+.mm-node.l .mm-add-c{right:auto;left:-34px}
+.mm-node.l.hk .mm-add-c{left:-60px}
+.mm-add-s{left:50%;bottom:-30px;margin-left:-12px;background:var(--secondary-container);color:var(--on-secondary-container)}
+.mm-node.sel .mm-add,.mm-node.solo .mm-add-c{display:grid}
+.mm-node.editing .mm-add,.mm-node.dragging .mm-add,.mm.ro .mm-add{display:none}
+.mm-node.solo:not(.sel) .mm-add-c{animation:mmNudge 1.6s var(--ease) infinite}
+@keyframes mmNudge{0%,100%{transform:scale(1)}50%{transform:scale(1.22)}}
+.mm-tb.lab{width:auto;border-radius:999px;padding:0 12px 0 8px;gap:4px;display:inline-flex;align-items:center;font:500 13px "Google Sans",sans-serif;white-space:nowrap}
+.mm-tb.lab.primary{background:var(--primary);color:var(--on-primary)}
+.mm-tb.lab.primary:hover{background:var(--primary);color:var(--on-primary)}
+.mm-tb.lab[hidden]{display:none}
+.mm-first{white-space:normal;line-height:1.35;padding:4px 0}
+.mm-first b{color:var(--primary)}
+@media (pointer:coarse){.mm-add{width:30px;height:30px}.mm-add-c{margin-top:-15px;right:-40px}.mm-node.hk .mm-add-c{right:-68px}.mm-node.l .mm-add-c{left:-40px}.mm-node.l.hk .mm-add-c{left:-68px}.mm-add-s{bottom:-36px;margin-left:-15px}}
+@media (prefers-reduced-motion:reduce){.mm-node.solo:not(.sel) .mm-add-c{animation:none}}
+.mm-hint:has(.mm-first){border-radius:18px}

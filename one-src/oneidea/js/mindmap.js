@@ -104,6 +104,8 @@ function makeEl(n) {
     else if (e.key === 'Escape') { e.preventDefault(); endEdit(false); }
   });
   t.addEventListener('blur', () => { if (editing && editing.id === id) endEdit(true, true); });
+  t.addEventListener('input', () => { if (editing && editing.id === id) placeEditBar(); });
+  t.addEventListener('paste', e => { if (!editing || editing.id !== id) return; const txt = (e.clipboardData && e.clipboardData.getData('text/plain')) || ''; if (rowsOf(txt).length < 2) return; e.preventDefault(); pasteIntoEdit(txt, id); });
   return d;
 }
 function render() {
@@ -114,16 +116,19 @@ function render() {
   const seen = new Set();
   lay.L.forEach((b, id) => {
     seen.add(id); const n = b.n, d = els.get(id) || makeEl(n), t = d.querySelector('.mm-text'), isEd = editing && editing.id === id, depth = Math.min(b.depth, 2);
-    d.className = 'mm-node d' + depth + (b.side < 0 ? ' l' : '') + (d.classList.contains('in') ? ' in' : '') + (sel === id ? ' sel' : '') + (n.collapsed && b.hasKids ? ' folded' : '') + (hiddenInRecall(b) ? ' hid' : '') + (isEd ? ' editing' : '') + (n.done ? ' done' : '') + (drag && drag.id === id ? ' dragging' : '');
+    d.className = 'mm-node d' + depth + (b.side < 0 ? ' l' : '') + (d.classList.contains('in') ? ' in' : '') + (sel === id ? ' sel' : '') + (n.collapsed && b.hasKids ? ' folded' : '') + (hiddenInRecall(b) ? ' hid' : '') + (isEd ? ' editing' : '') + (b.hasKids && b.depth > 0 ? ' hk' : '') + (m.nodes.length === 1 ? ' solo' : '') + (n.done ? ' done' : '') + (drag && drag.id === id ? ' dragging' : '');
     d.style.left = b.x + 'px'; d.style.top = b.y + 'px';
     if (!isEd) { d.style.width = b.w + 'px'; d.style.height = b.h + 'px'; d.style.minWidth = ''; d.style.minHeight = ''; t.textContent = b.lines.join('\n'); }
     d.style.setProperty('--c', b.color); d.style.setProperty('--tc', textOn(b.color)); d.style.setProperty('--lh', b.st.lh + 'px'); d.style.setProperty('--tw', b.tw + 'px');
-    d.querySelectorAll('.mm-b,.mm-fold').forEach(x => x.remove());
+    d.querySelectorAll('.mm-b,.mm-fold,.mm-add').forEach(x => x.remove());
     if (n.tag && P.TAGS[n.tag]) { const T = P.TAGS[n.tag]; d.append(el('span', { class:'mm-b', 'data-b':'tag', title:T.label + (n.tag === 'todo' ? ' (click to tick off)' : ''), html:icon(n.tag === 'todo' ? (n.done ? 'check_box' : 'check_box_outline_blank') : T.icon), style:{ color:T.color } })); }
     if (n.note) d.append(el('span', { class:'mm-b', 'data-b':'note', title:n.note, html:icon('sticky_note_2') }));
     if (n.link) { const lp = N.find(n.link); d.append(el('span', { class:'mm-b', 'data-b':'link', title:lp ? 'Open page: ' + (lp.p.title || 'Untitled page') : 'The linked page was deleted', html:icon(lp ? 'description' : 'link_off') })); }
     if (b.hasKids && b.depth > 0) d.append(el('button', { class:'mm-fold', 'data-b':'fold', tabindex:'-1', title:n.collapsed ? 'Unfold (Space)' : 'Fold (Space)', text:n.collapsed ? String(subtreeSize(m, id) - 1) : '−' }));
+    d.append(el('button', { class:'mm-add mm-add-c', 'data-b':'addc', tabindex:'-1', title:b.depth ? 'Add sub-topic (Tab)' : 'Add a branch (Tab)', 'aria-label':'Add sub-topic', html:icon('add') }));
+    if (b.depth > 0) d.append(el('button', { class:'mm-add mm-add-s', 'data-b':'adds', tabindex:'-1', title:'Add sibling (Enter)', 'aria-label':'Add sibling', html:icon('add') }));
   });
+  mmEl.classList.toggle('ro', !!N.recall);
   els.forEach((d, id) => { if (!seen.has(id)) { d.remove(); els.delete(id); } });
   const useD = window.CSS && CSS.supports && CSS.supports('d', 'path("M0 0")'), seenP = new Set();
   lay.L.forEach((b, id) => {
@@ -242,6 +247,64 @@ function setTag(id, key) { change(() => { const n = byIdM(id); if (!key || n.tag
 const toggleDone = id => change(() => { const n = byIdM(id); if (n.done) delete n.done; else n.done = true; });
 MM.mark = key => { if (!active) return; if (!sel) sel = rootId(); setTag(sel, key); N.refreshTagPane && N.refreshTagPane(); };
 
+/* ---------- paste a list to make topics ---------- */
+function rowsOf(text) {
+  const rows = String(text).replace(/\t/g, '  ').split(/\r?\n/).filter(l => l.trim()).slice(0, 300).map(l => ({ ind:l.match(/^ */)[0].length, text:l.trim().replace(/^([-*+•▪◦]|\d+[.)])\s+/, '').slice(0, 300) })).filter(r => r.text);
+  if (!rows.length) return []; const nz = rows.map(r => r.ind).filter(x => x > 0), unit = nz.length ? Math.min(...nz) : 2, base = Math.min(...rows.map(r => r.ind));
+  return rows.map(r => ({ depth:Math.round((r.ind - base) / unit), text:r.text }));
+}
+function insertRows(rows, parentId, at, seed) {
+  const m = cur.map, stack = [{ depth:-1, id:parentId }].concat(seed ? [seed] : []); let first = null;
+  rows.forEach(r => {
+    while (stack.length > 1 && stack[stack.length - 1].depth >= r.depth) stack.pop();
+    const par = stack[stack.length - 1], n = { id:ONE.uid(), parent:par.id, text:r.text };
+    if (par.id === rootId()) { n.color = nextColor(m); n.side = pickSide(m); }
+    m.nodes.splice(at++, 0, n); stack.push({ depth:r.depth, id:n.id }); if (!first) first = n;
+  });
+  return first;
+}
+function pasteIntoEdit(txt, id) {
+  const rows = rowsOf(txt), n = byIdM(id), d = els.get(id), t = d && d.querySelector('.mm-text'); if (!n || !t || rows.length < 2) return;
+  const typed = t.innerText.replace(/ /g, ' ').trim(), wasFresh = editing.fresh; editBar.hidden = true; editing = null; t.contentEditable = 'false'; getSelection().removeAllRanges();
+  let first;
+  if (!typed && n.parent != null) {
+    if (!wasFresh) pushUndo(); n.text = rows[0].text; first = n;
+    insertRows(rows.slice(1), n.parent, cur.map.nodes.indexOf(n) + 1, { depth:rows[0].depth, id:n.id });
+  } else {
+    pushUndo(); if (typed && typed !== n.text) { n.text = typed; if (n.parent == null) { cur.title = typed; N.onTitle && N.onTitle(); } }
+    n.collapsed = false; first = insertRows(rows, n.id, cur.map.nodes.length);
+  }
+  sel = (first || n).id; afterChange(); ensureVisible(sel); mmEl.focus({ preventScroll:true });
+  ONE.toast(`Added ${rows.length} topics.`, { action:'Undo', fn:() => MM.undo() });
+}
+document.addEventListener('paste', e => {
+  if (e.defaultPrevented || !active || editing || !lay || N.recall) return; const ae = document.activeElement;
+  if (ae && ae !== document.body && ae !== mmEl && !mmEl.contains(ae)) return;
+  if (document.querySelector('.modal, .fc')) return;
+  const txt = (e.clipboardData && e.clipboardData.getData('text/plain')) || '', rows = rowsOf(txt); if (!rows.length) return;
+  e.preventDefault(); const id = sel || rootId(), n = byIdM(id); pushUndo(); n.collapsed = false;
+  const first = insertRows(rows, id, cur.map.nodes.length); sel = first.id; afterChange(); ensureVisible(sel);
+  ONE.toast(`Added ${rows.length} topic${rows.length === 1 ? '' : 's'} under “${(n.text || 'topic').slice(0, 30)}”.`, { action:'Undo', fn:() => MM.undo() });
+});
+
+/* ---------- on-screen bar while typing (so touch users can add the next topic without a Tab key) ---------- */
+const editBar = el('div', { class:'mm-tools mm-editbar', hidden:true, role:'toolbar', 'aria-label':'Typing actions' });
+[['child', 'subdirectory_arrow_right', 'Sub-topic'], ['sib', 'playlist_add', 'Sibling'], ['done', 'check', 'Done']].forEach(([k, ic, lab]) => editBar.append(el('button', { class:'mm-tb lab' + (k === 'done' ? ' primary' : ''), 'data-e':k, type:'button', 'aria-label':lab, html:icon(ic) + '<span>' + lab + '</span>' })));
+mmEl.append(editBar);
+editBar.addEventListener('mousedown', e => e.preventDefault());
+editBar.addEventListener('pointerdown', e => e.stopPropagation());
+editBar.addEventListener('click', e => {
+  const b = e.target.closest('[data-e]'); if (!b || !editing) return; const id = editing.id; endEdit(true); if (!byIdM(id)) return;
+  if (b.dataset.e === 'child') addChild(id); else if (b.dataset.e === 'sib') addSibling(id);
+});
+function placeEditBar() {
+  const d = editing && els.get(editing.id); if (!d || !lay) { editBar.hidden = true; return; }
+  const b = lay.L.get(editing.id); editBar.querySelector('[data-e="sib"]').hidden = !b || b.n.parent == null; editBar.hidden = false;
+  const r = d.getBoundingClientRect(), m = mmEl.getBoundingClientRect(), tw = editBar.offsetWidth, th = editBar.offsetHeight;
+  let y = r.bottom - m.top + 12; if (y + th > m.height - 8) y = r.top - m.top - th - 12;
+  editBar.style.left = ONE.clamp(r.left - m.left + r.width / 2 - tw / 2, 8, Math.max(8, m.width - tw - 8)) + 'px'; editBar.style.top = ONE.clamp(y, 8, Math.max(8, m.height - th - 8)) + 'px';
+}
+
 /* ---------- text editing ---------- */
 function edit(id, opt = {}) {
   if (N.recall) return blocked(); endEdit(true);
@@ -250,9 +313,10 @@ function edit(id, opt = {}) {
   toolsEl.hidden = true; d.classList.add('editing'); d.style.minWidth = d.offsetWidth + 'px'; d.style.minHeight = d.offsetHeight + 'px'; d.style.width = 'auto'; d.style.height = 'auto';
   t.textContent = b.n.text; t.contentEditable = 'plaintext-only'; if (t.contentEditable !== 'plaintext-only') t.contentEditable = 'true';
   t.focus(); const r = document.createRange(); r.selectNodeContents(t); if (!opt.selectAll) r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  placeEditBar(); requestAnimationFrame(placeEditBar);
 }
 function endEdit(commit = true, fromBlur = false) {
-  if (!editing) return; const { id, orig, fresh, snap: before } = editing; editing = null;
+  if (!editing) return; const { id, orig, fresh, snap: before } = editing; editing = null; editBar.hidden = true;
   const d = els.get(id), t = d && d.querySelector('.mm-text'), n = cur && byIdM(id);
   let val = t ? t.innerText.replace(/ /g, ' ').replace(/\r/g, '').trim() : orig;
   if (t) { t.contentEditable = 'false'; getSelection().removeAllRanges(); }
@@ -329,8 +393,8 @@ MM.active = () => active;
 MM.page = () => cur;
 
 /* ---------- floating tools and hint ---------- */
-const TOOLS = [['edit', 'edit', 'Edit text (F2 or double-click)'], ['child', 'subdirectory_arrow_right', 'Add sub-topic (Tab)'], ['sib', 'playlist_add', 'Add sibling (Enter)'], ['color', 'palette', 'Color'], ['mark', 'sell', 'Mark (Ctrl+1 to 7)'], ['note', 'sticky_note_2', 'Note'], ['link', 'link', 'Link to a page'], ['fold', 'unfold_less', 'Fold or unfold (Space)'], ['del', 'delete', 'Delete (Del)']];
-TOOLS.forEach(([k, ic, tip]) => toolsEl.append(el('button', { class:'mm-tb' + (k === 'del' ? ' danger' : ''), 'data-t':k, title:tip, 'aria-label':tip, html:icon(ic) })));
+const TOOLS = [['edit', 'edit', 'Edit text (F2 or double-click)'], ['child', 'subdirectory_arrow_right', 'Add sub-topic (Tab)', 'Sub-topic'], ['sib', 'playlist_add', 'Add sibling (Enter)', 'Sibling'], ['color', 'palette', 'Color'], ['mark', 'sell', 'Mark (Ctrl+1 to 7)'], ['note', 'sticky_note_2', 'Note'], ['link', 'link', 'Link to a page'], ['fold', 'unfold_less', 'Fold or unfold (Space)'], ['del', 'delete', 'Delete (Del)']];
+TOOLS.forEach(([k, ic, tip, lab]) => toolsEl.append(el('button', { class:'mm-tb' + (lab ? ' lab' : '') + (k === 'del' ? ' danger' : ''), 'data-t':k, title:tip, 'aria-label':tip, html:icon(ic) + (lab ? '<span>' + lab + '</span>' : '') })));
 toolsEl.addEventListener('mousedown', e => e.preventDefault());
 toolsEl.addEventListener('pointerdown', e => e.stopPropagation());
 toolsEl.addEventListener('click', e => {
@@ -349,11 +413,12 @@ function placeTools() {
 }
 function updateHint() {
   if (!cur) return; const touch = matchMedia('(pointer:coarse)').matches, few = cur.map.nodes.length <= 12;
-  hintEl.innerHTML = (few ? (touch ? '<span>Tap a topic, then use the buttons above it</span>' : '<span><kbd>Tab</kbd> sub-topic</span><span><kbd>Enter</kbd> sibling</span><span><kbd>Space</kbd> fold</span><span><kbd>Del</kbd> delete</span><span>drag a topic to move it</span>') : '') + '<button class="mm-help" title="Mind map shortcuts" aria-label="Mind map shortcuts">?</button>';
+  if (cur.map.nodes.length === 1 && !N.recall) { hintEl.innerHTML = '<span class="mm-first"><b>Start here:</b> ' + (touch ? 'tap the center to name it, then tap + to add branches.' : 'type to name the center, then press <kbd>Tab</kbd> or click + to add branches.') + ' You can also paste a list.</span><button class="mm-help" title="Mind map shortcuts" aria-label="Mind map shortcuts">?</button>'; hintEl.querySelector('.mm-help').onclick = MM.help; return; }
+  hintEl.innerHTML = (few ? (touch ? '<span>Tap a topic, then use + or the bar above it. Tap it again to edit</span>' : '<span><kbd>Tab</kbd> sub-topic</span><span><kbd>Enter</kbd> sibling</span><span><kbd>Space</kbd> fold</span><span><kbd>Del</kbd> delete</span><span>drag a topic to move it</span>') : '') + '<button class="mm-help" title="Mind map shortcuts" aria-label="Mind map shortcuts">?</button>';
   hintEl.querySelector('.mm-help').onclick = MM.help;
 }
 MM.help = () => {
-  const list = [['Add a sub-topic', 'Tab'], ['Add a sibling', 'Enter'], ['Edit the text', 'F2, double-click, or just start typing'], ['Finish typing', 'Esc'], ['Type the next topic faster', 'Tab or Enter while typing'], ['Move between topics', 'Arrow keys'], ['Fold or unfold', 'Space'], ['Delete', 'Delete'], ['Undo / redo', 'Ctrl+Z / Ctrl+Y'], ['Mark a topic', 'Ctrl+1 to Ctrl+7'], ['Move a topic', 'Drag it onto another topic'], ['Pan', 'Drag the background or scroll'], ['Zoom', 'Ctrl + scroll, or pinch']];
+  const list = [['Add a sub-topic', 'Tab'], ['Add a sibling', 'Enter'], ['Edit the text', 'F2, double-click, or just start typing'], ['Finish typing', 'Esc'], ['Type the next topic faster', 'Tab or Enter while typing'], ['Move between topics', 'Arrow keys'], ['Fold or unfold', 'Space'], ['Delete', 'Delete'], ['Undo / redo', 'Ctrl+Z / Ctrl+Y'], ['Mark a topic', 'Ctrl+1 to Ctrl+7'], ['Move a topic', 'Drag it onto another topic'], ['Add many topics at once', 'Paste a list (Ctrl+V) while a topic is selected or being typed in'], ['Edit on a phone', 'Tap a selected topic again'], ['Pan', 'Drag the background or scroll'], ['Zoom', 'Ctrl + scroll, or pinch']];
   ONE.modal({ title:'Mind map shortcuts', icon:'account_tree', width:560, body:`<div style="display:grid;grid-template-columns:1fr auto;gap:6px 18px;color:var(--on-surface)">${list.map(([a, k]) => `<span>${esc(a)}</span><kbd>${esc(k)}</kbd>`).join('')}</div>` });
 };
 
@@ -368,7 +433,7 @@ mmEl.addEventListener('pointerdown', e => {
   if (editing) { if (id === editing.id) return; endEdit(true); }
   mmEl.focus({ preventScroll:true });
   const v = cur.map.view;
-  if (id) { select(id); press = { kind:'node', id, badge:e.target.closest('[data-b]'), x:e.clientX, y:e.clientY, vx:v.x, vy:v.y, moved:false }; }
+  if (id) { const wasSel = sel === id; select(id); press = { kind:'node', id, wasSel, touch:e.pointerType !== 'mouse', badge:e.target.closest('[data-b]'), x:e.clientX, y:e.clientY, vx:v.x, vy:v.y, moved:false }; }
   else { press = { kind:'pan', x:e.clientX, y:e.clientY, vx:v.x, vy:v.y, moved:false }; mmEl.classList.add('panning'); }
 });
 window.addEventListener('pointermove', e => {
@@ -405,10 +470,10 @@ function endPress(e) {
   const b = lay.L.get(p.id); if (!b) return;
   if (N.recall && hiddenInRecall(b)) { revealed.add(p.id); render(); return; }
   const k = p.badge && p.badge.dataset.b;
-  if (k === 'fold') toggleFold(p.id); else if (k === 'link') goLink(p.id); else if (k === 'note') noteDialog(p.id); else if (k === 'tag' && b.n.tag === 'todo') toggleDone(p.id);
+  if (k === 'addc') addChild(p.id); else if (k === 'adds') addSibling(p.id); else if (k === 'fold') toggleFold(p.id); else if (k === 'link') goLink(p.id); else if (k === 'note') noteDialog(p.id); else if (k === 'tag' && b.n.tag === 'todo') toggleDone(p.id); else if (!k && p.wasSel && p.touch && !N.recall) edit(p.id, { selectAll:true });
 }
 window.addEventListener('pointerup', endPress); window.addEventListener('pointercancel', endPress);
-mmEl.addEventListener('dblclick', e => { if (!active || e.target.closest('[data-b],.mm-tools')) return; const id = nodeOf(e.target); if (id) edit(id, { selectAll:true }); });
+mmEl.addEventListener('dblclick', e => { if (!active || e.target.closest('[data-b],.mm-tools')) return; const id = nodeOf(e.target); if (id && !(editing && editing.id === id)) edit(id, { selectAll:true }); });
 mmEl.addEventListener('contextmenu', e => {
   if (!active) return; e.preventDefault(); const id = nodeOf(e.target);
   if (id) return nodeMenu(id, { x:e.clientX, y:e.clientY });
