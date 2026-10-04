@@ -651,4 +651,141 @@ $('#items').addEventListener('click', e => {
   embOpen(fig.dataset.map);
 });
 const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbeds(anim); MM.refreshEmbeds(); showBack(); };
+/* ---------- bridge for the epic AI panel: shared/one-ai.js reads the page and builds maps / notes through window.OIAI ---------- */
+{
+  const TAGSET = new Set(['todo', 'important', 'question', 'remember', 'definition', 'idea', 'critical']);
+  const flat = t => String(t || '').replace(/\s+/g, ' ').trim();
+  const plain = t => flat(t).replace(/\*\*(.+?)\*\*/g, '$1').replace(/`([^`]+)`/g, '$1');
+  const tagWord = n => n.tag === 'todo' ? (n.done ? '[x] ' : '[ ] ') : n.tag && TAGSET.has(n.tag) ? `[${n.tag}] ` : '';
+  // "[ ] text", "[x] text", "[important] text" ... -> { tag, done, text }
+  const lead = t => {
+    const m = /^\[(x| |[a-z]+)\]\s*(.*)$/i.exec(t); if (!m) return { text:t };
+    const k = m[1].toLowerCase();
+    if (k === ' ') return { tag:'todo', text:m[2] };
+    if (k === 'x' || k === 'done') return { tag:'todo', done:true, text:m[2] };
+    return TAGSET.has(k) ? { tag:k, text:m[2] } : { text:t };
+  };
+  const outlineText = p => {
+    const out = [`# ${p.title || 'Mind map'}`], walk = (x, d) => {
+      out.push('  '.repeat(d) + '- ' + tagWord(x.n) + String(x.n.text).replace(/\n+/g, ' ')); if (x.n.note) out.push('  '.repeat(d + 1) + '> ' + x.n.note.replace(/\n+/g, ' ')); x.c.forEach(c => walk(c, d + 1));
+    };
+    treeOf(p).c.forEach(c => walk(c, 0)); return out.join('\n');
+  };
+  const pageOutline = p => {
+    P.syncAll(); const rows = MM.outlineFromPage(p); if (!rows.length) return '';
+    return [`# ${p.title || 'Untitled page'}`, ...rows.flatMap(o => ['  '.repeat(Math.max(0, o.depth - 1)) + '- ' + tagWord(o) + o.text].concat(o.note ? ['  '.repeat(Math.max(0, o.depth)) + '> ' + o.note] : []))].join('\n');
+  };
+  // indented outline text -> { title, out:[{ depth, text, note, tag, done }] }
+  const parseOutlineAI = text => {
+    let title = '', rows = [], m;
+    String(text || '').replace(/\r/g, '').replace(/\t/g, '  ').split('\n').forEach(raw => {
+      if (!raw.trim() || rows.length >= 250) return;
+      if (!rows.length && !title && (m = /^\s*#{1,3}\s+(.*)$/.exec(raw))) { title = plain(m[1]); return; }
+      if ((m = /^\s*>\s?(.*)$/.exec(raw))) { const last = rows[rows.length - 1]; if (last) last.note = (last.note ? last.note + ' ' : '') + plain(m[1]); return; }
+      m = /^(\s*)(?:[-*+•]|\d+[.)])?\s*(.*)$/.exec(raw);
+      const l = lead(plain(m[2])); if (l.text) rows.push({ ind:m[1].length, text:l.text, tag:l.tag, done:l.done });
+    });
+    if (!rows.length) return null;
+    const nz = rows.map(r => r.ind).filter(x => x > 0), unit = nz.length ? Math.min(...nz) : 2;
+    const out = rows.map(r => ({ depth:Math.round(r.ind / unit) + 1, text:r.text, note:r.note, tag:r.tag, done:r.done }));
+    if (!title && out[0].depth === 1 && out.filter(o => o.depth === 1).length === 1) { title = out[0].text; out.shift(); out.forEach(o => { o.depth = Math.max(1, o.depth - 1); }); }
+    return { title:title || '', out };
+  };
+  const removePage = (id, backId) => {
+    const f = N.find(id); if (!f) return;
+    const b = N.find(backId); if (b) N.go(b.si, b.pi);
+    const g = N.find(id); if (!g) return;
+    if (g.s.pages.length > 1) g.s.pages.splice(g.pi, 1);
+    const at = N.find(backId); N.go(at ? at.si : g.si, at ? at.pi : Math.max(0, g.pi - 1));
+  };
+  const addPage = pg => { const here = N.page(), hid = here && here.id; P.syncAll(); insertAfterCurrent(pg); return () => removePage(pg.id, hid); };
+  const levelBelow = () => { const cp = N.page(); return cp ? Math.min(2, (cp.level || 0) + 1) : 0; };
+
+  const newMap = (text, title) => {
+    const r = parseOutlineAI(text); if (!r || !r.out.length) return null;
+    return addPage(N.mapFromOutline(plain(title) || r.title || 'Mind map', r.out, levelBelow()));
+  };
+  const setMap = text => {
+    if (!active || !cur || cur.kind !== 'map' || N.recall) return null;
+    const r = parseOutlineAI(text); if (!r || !r.out.length) return null;
+    const id = cur.id, tmp = N.mapFromOutline(r.title || cur.title, r.out);
+    // keep the colours of top-level branches that kept their name
+    const old = new Map(cur.map.nodes.filter(n => n.parent === rootId()).map(n => [flat(n.text).toLowerCase(), n]));
+    tmp.map.nodes.filter(n => n.parent === tmp.map.nodes[0].id).forEach(n => { const o = old.get(flat(n.text).toLowerCase()); if (o && o.color) n.color = o.color; });
+    change(() => { cur.map.nodes = tmp.map.nodes; sel = tmp.map.nodes[0].id; cur.title = tmp.map.nodes[0].text; N.onTitle && N.onTitle(); });
+    return () => { if (active && cur && cur.id === id) MM.undo(); };
+  };
+
+  /* markdown-ish notes -> one box per "## heading", laid out in two columns */
+  const inl = t => esc(t.replace(/\$\\(?:right|to)arrow\$/g, '->')).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*(?!\s)(.+?)\*/g, '$1<i>$2</i>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  const tattr = l => l.tag ? ` data-tag="${l.tag}" data-tid="${ONE.uid()}"${l.done ? ' data-done' : ''}` : '';
+  const listHTML = items => {
+    let html = '', stack = [];
+    items.forEach(it => {
+      while (stack.length && it.ind < stack[stack.length - 1].ind) html += '</li></' + (stack.pop().ord ? 'ol' : 'ul') + '>';
+      const top = stack[stack.length - 1];
+      if (top && it.ind === top.ind) html += '</li>'; else if (!top || it.ind > top.ind) { html += it.ord ? '<ol>' : '<ul>'; stack.push({ ind:it.ind, ord:it.ord }); }
+      html += it.open;
+    });
+    while (stack.length) html += '</li></' + (stack.pop().ord ? 'ol' : 'ul') + '>';
+    return html;
+  };
+  const sectionHTML = (head, lines) => {
+    let html = head ? `<h3>${inl(head)}</h3>` : '', h = head ? 44 : 0, i = 0, m;
+    const est = t => 10 + 24 * Math.max(1, Math.ceil(t.length / 50));
+    while (i < lines.length) {
+      const raw = lines[i];
+      if (!raw.trim()) { i++; continue; }
+      if (/^\s*\|/.test(raw)) {
+        const rows = []; while (i < lines.length && /^\s*\|/.test(lines[i])) { if (!/^[\s|:\-]+$/.test(lines[i])) rows.push(lines[i].trim().replace(/^\||\|$/g, '').split('|').map(c => inl(flat(c)))); i++; }
+        if (rows.length) { html += '<table>' + rows.map((r, k) => '<tr>' + r.map(c => k ? `<td>${c}</td>` : `<th>${c}</th>`).join('') + '</tr>').join('') + '</table>'; h += rows.length * 38 + 12; }
+        continue;
+      }
+      if (/^\s*([-*+•]|\d+[.)])\s+/.test(raw)) {
+        const items = [];
+        while (i < lines.length && (m = /^(\s*)([-*+•]|\d+[.)])\s+(.*)$/.exec(lines[i]))) {
+          const l = lead(flat(m[3])); if (!l.tag && l.text.includes(' :: ')) l.tag = 'definition'; items.push({ ind:m[1].replace(/\t/g, '  ').length, ord:/\d/.test(m[2]), open:`<li${tattr(l)}>${inl(l.text)}` }); h += est(l.text) - 8; i++;
+        }
+        html += listHTML(items); h += 10; continue;
+      }
+      i++;
+      const t = flat(raw);
+      if ((m = /^#{4,6}\s+(.*)$/.exec(t))) { html += `<h4>${inl(m[1])}</h4>`; h += 34; }
+      else if ((m = /^>\s?(.*)$/.exec(t))) { html += `<blockquote>${inl(m[1])}</blockquote>`; h += est(m[1]); }
+      else if (/^\[(x| |[a-z]+)\]\s/i.test(t) && lead(t).tag) { const l = lead(t); html += `<p${tattr(l)}>${inl(l.text)}</p>`; h += est(l.text); }
+      else if (t.includes(' :: ')) { html += `<p data-tag="definition" data-tid="${ONE.uid()}">${inl(t)}</p>`; h += est(t); }
+      else { html += `<p>${inl(t)}</p>`; h += est(t); }
+    }
+    return { html: html || '<p><br></p>', h: Math.max(h, 70) };
+  };
+  const newNotes = (md, title) => {
+    const lines = String(md || '').replace(/\r/g, '').split('\n'), secs = [];
+    let pageTitle = plain(title), cursec = null;
+    lines.forEach(raw => {
+      const m = /^\s*(#{1,3})\s+(.*)$/.exec(raw);
+      if (m) {
+        if (m[1] === '#' && !pageTitle && !secs.length && !cursec) { pageTitle = plain(m[2]); return; }
+        cursec = { head:plain(m[2]), lines:[] }; secs.push(cursec); return;
+      }
+      if (!cursec) { cursec = { head:'', lines:[] }; secs.push(cursec); }
+      cursec.lines.push(raw);
+    });
+    const built = secs.map(sc => sectionHTML(sc.head, sc.lines)).filter(b => b.html !== '<p><br></p>' || b.h > 70);
+    if (!built.length) return null;
+    const items = [];
+    if (built.length === 1) items.push(N.item(48, 130, 760, built[0].html));
+    else { const y = [130, 130]; built.forEach(b => { const c = y[0] <= y[1] ? 0 : 1; items.push(N.item(c ? 520 : 48, y[c], 440, b.html)); y[c] += b.h + 28; }); }
+    return addPage(N.newPage(pageTitle || 'Notes', items, levelBelow()));
+  };
+
+  window.OIAI = {
+    // what the panel shows the AI when nothing is selected
+    context() {
+      const p = N.page(); if (!p) return null;
+      if (p.kind === 'map') return { kind:'map', title:p.title, text:outlineText(p) };
+      return { kind:'page', title:p.title, text:pageOutline(p) };
+    },
+    newMap, setMap, newNotes,
+  };
+}
 })();

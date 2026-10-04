@@ -24,11 +24,21 @@ const ACTIONS = [
   { label: 'Expand', instr: 'Expand this with more detail and examples, keeping the tone.' },
   { label: 'Summarize', instr: 'Summarize this in one short paragraph.' },
   { label: 'Continue writing', instr: 'Continue writing from where this text stops, matching its style. Write only the continuation.' },
+  { label: 'Make a mind map', instr: 'Turn this into a clear mind map.', only: 'build' },
+  { label: 'Make study notes', instr: 'Turn this into well organized study notes, and also make a mind map of it.', only: 'build' },
+  { label: 'Improve this map', instr: 'Improve this mind map: balance the branches, tighten the wording and add any important sub-topics that are missing. Return the complete updated map.', only: 'map' },
 ];
 const SYSTEM = 'You are epic AI, an assistant built into the one office suite, helping with the user\'s document. Do exactly what the instruction says. ' +
   'You can change the document directly. When the user asks you to rewrite, fix, shorten, expand, translate, reformat or otherwise change their text, put ONLY the new text between <<edit>> and <</edit>>. It replaces the selected text, or the whole document when nothing is selected, so include everything that should remain. ' +
   'When they ask you to continue or add more, put ONLY the new text between <<append>> and <</append>>. It is added after the selection, or at the end. Inside those tags use no quotation marks, no code fences, and simple markdown (# headings, - bullets, **bold**) only if the text already has that structure. ' +
   'You may add one short sentence before or after the tags, such as what you changed. When the user asks a question or wants an explanation or summary, answer it clearly and briefly WITHOUT any tags. This is an ongoing conversation, so use the earlier messages as context.';
+
+const IDEA_SYSTEM = 'The user is in oneIdea, a note-taking app with real mind maps and free-form notes pages. You can build them directly, so do NOT dump a long plain list into a text answer when a map or structured notes would serve better. ' +
+  'MIND MAP: put an indented outline between <<map title="Short title">> and <</map>>. Use "- " bullets with two spaces of indent per level. Aim for 3 to 7 main branches with 2 to 5 sub-topics each, going one or two levels deeper only where it helps. Keep every topic short (1 to 6 words, never a full sentence). A longer explanation goes on its own line directly under its topic, starting with "> " (it becomes that topic\'s note). Prefix a topic with [important], [question], [definition], [idea] or [ ] (a to-do) only when it really fits. ' +
+  'The page that is open is shown to you as an outline in this same format. If it is a mind map and the user wants it changed, expanded or reorganized, put the COMPLETE updated outline between <<mapedit>> and <</mapedit>> instead. ' +
+  'STUDY NOTES: put markdown between <<notes title="Short title">> and <</notes>>. Every "## Heading" becomes its own box on the page, so group the material under 3 to 6 meaningful headings (for example Overview, Key terms, How it works, Examples, Summary). Under them use short bullets (indent two spaces for sub-points), a table when comparing things, "Term :: meaning" lines for definitions (they become flashcards), "[ ] task" lines for to-dos, and "[important] ..." or "[question] ..." lines for key points and open questions. Never write one huge block of bullets. ' +
+  'CHOOSING: requests for a mind map, map, overview, brainstorm or how things connect get <<map>>. Requests for notes, a study guide, a summary in notes form or to organize something get <<notes>>. Write only the kind of block that was asked for, except that a request to make notes from a text, PDF or topic gets BOTH a <<notes>> block and a <<map>> block in the same reply. Use plain text only inside blocks: no LaTeX (write -> for arrows) and no em dashes. After the blocks, write one short sentence saying what you made.';
+const systemFor = c => SYSTEM + (c.build ? ' ' + IDEA_SYSTEM : '');
 
 let fab = null;
 let panel = null;
@@ -57,6 +67,17 @@ function docOf(frame) { try { return frame.contentDocument; } catch { return nul
 
 // ── what the panel can see ──
 function readContext() {
+  const c = readContextCore(), f = activeFrame();
+  let w = null;
+  try { w = f && f.contentWindow; } catch {}
+  c.build = !!(w && w.OIAI);
+  if (c.build && c.source !== 'selection') {
+    // oneIdea: show the AI the whole open page (or map) as an outline, and never treat one note box as "the document".
+    try { const o = w.OIAI.context(); if (o) { c.idea = o.kind; c.editable = null; if (o.text) { c.text = o.text.slice(0, MAX_CONTEXT_CHARS); c.source = 'document'; } else c.source = 'none'; } } catch {}
+  }
+  return c;
+}
+function readContextCore() {
   const f = activeFrame();
   const d = f && docOf(f);
   if (!d) return { app: '', text: '', source: 'none', editable: null };
@@ -174,6 +195,7 @@ function injectStyles() {
   .oai-x{width:36px;height:36px;border:none;border-radius:50%;background:none;color:inherit;cursor:pointer;display:grid;place-items:center}.oai-x:hover{background:var(--surface-high)}
   .oai-ctx{margin:0 16px;padding:10px 12px;border-radius:14px;background:var(--surface-low,#f3f3f9);color:var(--on-surface-variant);font-size:12.5px;line-height:1.45;display:flex;gap:8px;align-items:flex-start}
   .oai-ctx .ms{font-size:18px;color:var(--primary);flex-shrink:0}
+  .oai-chip[hidden]{display:none}
   .oai-chips{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px 4px}
   .oai-chip{border:1px solid var(--outline-variant,#c4c6d0);background:none;color:inherit;font:inherit;font-size:13px;padding:6px 12px;border-radius:10px;cursor:pointer}.oai-chip:hover:not(:disabled){background:var(--surface-high)}.oai-chip:disabled{opacity:.45;cursor:default}
   .oai-ask{display:flex;gap:8px;padding:8px 16px 12px}
@@ -256,7 +278,7 @@ function build() {
     file: $('#oaiFile'), fileName: $('#oaiFileName'), fileIn: $('#oaiFileIn'),
 
   };
-  ui.chips.innerHTML = ACTIONS.map((a, i) => `<button class="oai-chip" type="button" data-i="${i}">${esc(a.label)}</button>`).join('');
+  ui.chips.innerHTML = ACTIONS.map((a, i) => `<button class="oai-chip" type="button" data-i="${i}" hidden>${esc(a.label)}</button>`).join('');
   ui.chips.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b && !ui.send.disabled) run(ACTIONS[b.dataset.i].instr); });
   $('#oaiClose').onclick = closePanel;
   $('#oaiNew').onclick = () => { if (busy) { busy.abort(); busy = null; } hist = []; saveHist(); renderHistory(); refresh(); ui.prompt.focus(); };
@@ -279,13 +301,18 @@ function refresh() {
   const c = readContext();
   ui.app.textContent = c.app;
   ui.ctx.textContent = c.source === 'selection' ? `Working on your selection (${c.text.length.toLocaleString()} characters).`
+    : c.source === 'document' && c.build ? `Reading this ${c.idea === 'map' ? 'mind map' : 'page'}. Select some text to focus on part of it.`
     : c.source === 'document' ? 'Working on the whole document — select some text to focus on part of it.'
     : 'No text to work on here — you can still ask epic AI anything.';
   if (attach) ui.ctx.textContent += ' The attached file is included too.';
   ui.file.hidden = !attach;
   if (attach) ui.fileName.textContent = attach.title + (attach.note ? ' (' + attach.note + ')' : '');
   const canEdit = !!c.editable;
-  ui.chips.querySelectorAll('button').forEach(b => { b.disabled = c.source === 'none' && !attach; });
+  ui.chips.querySelectorAll('button').forEach(b => {
+    const only = ACTIONS[b.dataset.i].only;
+    b.hidden = only === 'build' ? !c.build : only === 'map' ? c.idea !== 'map' : (c.build && c.source !== 'selection');
+    b.disabled = c.source === 'none' && !attach;
+  });
   ui.replace.disabled = !(canEdit && c.source === 'selection');
   ui.insert.disabled = !canEdit;
   ui.acts.style.display = lastAnswer && !busy ? '' : 'none';
@@ -300,7 +327,19 @@ async function attachFile(file) {
 }
 
 const TAG_RE = /<<\/?(?:edit|append)>>/g;
-const shown = t => String(t || '').replace(TAG_RE, '');
+// map / notes blocks are built into the app, so they are not shown as chat text
+const MAKE_RE = /<<(map|mapedit|notes)(?:\s[^>]*)?>>[\s\S]*?(?:<<\/\1>>|$)/g;
+const shown = t => String(t || '').replace(MAKE_RE, '').replace(TAG_RE, '');
+function parseMakes(reply) {
+  const out = [], re = /<<(map|mapedit|notes)((?:\s[^>]*)?)>>([\s\S]*?)(?:<<\/\1>>|$)/g;
+  let m;
+  while ((m = re.exec(reply || ''))) {
+    const text = m[3].replace(/^\n+|\n+$/g, ''); if (!text.trim()) continue;
+    const t = /title\s*=\s*"([^"]*)"/.exec(m[2]);
+    out.push({ kind: m[1], title: t ? t[1] : '', text });
+  }
+  return out;
+}
 // Pulls the <<edit>> / <<append>> block out of a reply. A block that never got its closing tag (the stream was cut) still counts.
 function parseEdit(reply) {
   const m = /<<(edit|append)>>([\s\S]*?)(?:<<\/\1>>|$)/.exec(reply || '');
@@ -311,7 +350,12 @@ function parseEdit(reply) {
 }
 
 // What a saved answer looks like when the chat is reopened: an applied edit shows as its one-line note, not the whole new text.
-const saved = t => { const e = parseEdit(t); return e ? (e.said || (e.kind === 'append' ? 'Added to the document.' : 'Edited the document.')) : shown(t); };
+const saved = t => {
+  const e = parseEdit(t), mk = parseMakes(t), said = shown(t).replace(/\s+/g, ' ').trim();
+  if (e) return e.said || (e.kind === 'append' ? 'Added to the document.' : 'Edited the document.');
+  if (mk.length) return said || 'Made ' + mk.map(b => b.kind === 'notes' ? 'a notes page' : 'a mind map').join(' and ') + '.';
+  return said;
+};
 
 function scrollLog() { ui.result.scrollTop = ui.result.scrollHeight; }
 function addMsg(role, text, tag) {
@@ -347,7 +391,8 @@ async function run(instruction) {
   if (busy) busy.abort();
   const c = readContext();
   const wantsCtx = c.source !== 'none';
-  let userMsg = wantsCtx ? `${instruction}\n\n<<one:${c.app.replace(/[<>\n]/g, ' ')}>>\n${c.text}\n<</one>>` : instruction;
+  const appLabel = c.build ? c.app + (c.source === 'selection' ? ' selection' : c.idea === 'map' ? ' mind map (outline)' : ' page (outline)') : c.app;
+  let userMsg = wantsCtx ? `${instruction}\n\n<<one:${appLabel.replace(/[<>\n]/g, ' ')}>>\n${c.text}\n<</one>>` : instruction;
   if (attach) userMsg += `\n\n<<one:${attach.title.replace(/[<>\n]/g, ' ')}>>\n${attach.text}\n<</one>>`;
   const tag = [c.source === 'selection' ? 'selection' : c.source === 'document' ? 'document' : '', attach ? attach.title : ''].filter(Boolean).join(' + ');
   // Earlier turns go back to the model as plain text (the document text is only attached to the newest question, to keep requests small).
@@ -363,13 +408,13 @@ async function run(instruction) {
   busy = new AbortController();
   const mine = busy;
   try {
-    const reply = await askAI([{ role: 'system', content: SYSTEM }, ...prior, { role: 'user', content: userMsg }], {
+    const reply = await askAI([{ role: 'system', content: systemFor(c) }, ...prior, { role: 'user', content: userMsg }], {
       signal: mine.signal,
       onThinking: t => { if (answering) return; sawThought = true; th.thought(t); },
       onStatus: st => { if (!answering) th.status(st); },
       onText: t => {
         if (!answering && t) { answering = true; th.answered(sawThought, Math.max(1, Math.round((Date.now() - t0) / 1000))); }
-        am.b.textContent = shown(t); scrollLog();
+        am.b.textContent = shown(t) || (/<<(map|mapedit)/.test(t) ? 'Building the mind map...' : /<<notes/.test(t) ? 'Writing the notes...' : ''); scrollLog();
       },
     });
     const final = reply || '(no answer)';
@@ -377,27 +422,43 @@ async function run(instruction) {
     if (!answering) th.answered(sawThought, Math.max(1, Math.round((Date.now() - t0) / 1000)));
     hist.push({ r: 'a', t: final }); saveHist();
     // If the model wrote an edit, put it into the document straight away (and offer Undo) instead of making the user copy it over.
-    const ed = parseEdit(reply);
-    let undo = null, where = '';
+    const ed = parseEdit(reply), makes = c.build ? parseMakes(reply) : [];
+    const undos = [], notes = [];
     if (ed && canEdit) {
-      if (ed.kind === 'append') { undo = applyToDocument('insert', ed.text, { quiet: true, range: runRange, atEnd: !runRange }); where = 'Added to your document.'; }
-      else if (runRange) { undo = applyToDocument('replace', ed.text, { quiet: true, range: runRange }); where = 'Changed your selection.'; }
-      else if (c.source === 'none') { undo = applyToDocument('insert', ed.text, { quiet: true, atEnd: true }); where = 'Added to your document.'; }
+      let u = null, w = '';
+      if (ed.kind === 'append') { u = applyToDocument('insert', ed.text, { quiet: true, range: runRange, atEnd: !runRange }); w = 'Added to your document.'; }
+      else if (runRange) { u = applyToDocument('replace', ed.text, { quiet: true, range: runRange }); w = 'Changed your selection.'; }
+      else if (c.source === 'none') { u = applyToDocument('insert', ed.text, { quiet: true, atEnd: true }); w = 'Added to your document.'; }
       else if (c.text.length >= MAX_CONTEXT_CHARS) { /* the AI only saw the start, so it must not overwrite everything */ }
-      else { undo = applyToDocument('replaceAll', ed.text, { quiet: true }); where = 'Changed your document.'; }
+      else { u = applyToDocument('replaceAll', ed.text, { quiet: true }); w = 'Changed your document.'; }
+      if (u) { undos.push(u); notes.push(w); }
     }
-    if (ed && undo) {
-      am.b.textContent = ed.said || where;
+    // oneIdea: build real mind maps and notes pages
+    let OI = null;
+    try { const fr = activeFrame(); OI = fr && fr.contentWindow.OIAI; } catch {}
+    if (OI) makes.forEach(blk => {
+      let u = null, w = '';
+      try {
+        if (blk.kind === 'mapedit' && (u = OI.setMap(blk.text))) w = 'Updated your mind map.';
+        else if (blk.kind === 'notes') { u = OI.newNotes(blk.text, blk.title); w = 'Made a notes page.'; }
+        else { u = OI.newMap(blk.text, blk.title); w = 'Made a mind map.'; }
+      } catch (err) { console.error(err); }
+      if (u) { undos.push(u); notes.push(w); }
+    });
+    const said = (ed && ed.said) || shown(reply).replace(/\s+/g, ' ').trim();
+    if (undos.length) {
+      const where = notes.join(' ');
+      am.b.textContent = said || where;
       const bar = document.createElement('div'); bar.className = 'oai-applied';
       bar.innerHTML = '<span class="ms" aria-hidden="true">check_circle</span><span>' + esc(where) + '</span>';
       const u = document.createElement('button'); u.type = 'button'; u.textContent = 'Undo';
-      u.onclick = () => { try { undo(); u.disabled = true; u.textContent = 'Undone'; toast('Undone.'); } catch { toast('Use Ctrl+Z in the document to undo.'); } };
+      u.onclick = () => { try { undos.slice().reverse().forEach(f => f()); u.disabled = true; u.textContent = 'Undone'; toast('Undone.'); } catch { toast('Use Ctrl+Z in the document to undo.'); } };
       bar.append(u); am.d.append(bar);
       lastAnswer = '';
     } else {
-      am.b.textContent = shown(final);
-      if (ed && canEdit) { const n = document.createElement('small'); n.textContent = 'Couldn\'t apply this automatically. Use the buttons below.'; am.d.append(n); }
-      lastAnswer = ed ? ed.text : reply;
+      am.b.textContent = shown(final) || makes.map(blk => blk.text).join('\n\n');
+      if ((ed && canEdit) || makes.length) { const n = document.createElement('small'); n.textContent = makes.length ? 'Couldn\'t build this here. You can copy it instead.' : 'Couldn\'t apply this automatically. Use the buttons below.'; am.d.append(n); }
+      lastAnswer = ed ? ed.text : makes.length ? makes[0].text : reply;
     }
   } catch (err) {
     hist.pop(); saveHist(); // the question never got an answer: don't keep it as a dangling turn

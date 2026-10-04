@@ -80,7 +80,7 @@ const MAX_IMAGE_CONTENT_CHARS = 6 * 1024 * 1024;
 // real answer, that ate the whole budget. Context window is 256k so there's
 // no real ceiling pushing back — chose 4096 as a generous-but-not-reckless
 // number for a personal site's usage.
-const MAX_TOKENS = 4096;
+const MAX_TOKENS = 8192; // reasoning + answer; structured notes and mind maps need more than the old 4096
 const STALL_MS = 30000; // no upstream data for this long mid-stream = treat as stalled (the browser gives up at 45s)
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const RATE_LIMIT_MAX = 20; // requests per IP per window, per isolate
