@@ -276,3 +276,7 @@ button.side-item:hover{background:var(--surface-high);transform:translateX(2px)}
 .mm-back { position:absolute; left:14px; top:14px; z-index:6; display:inline-flex; align-items:center; gap:6px; height:34px; padding:0 14px 0 10px; border:0; border-radius:999px; background:var(--primary); color:var(--on-primary, #fff); font-family:inherit; font-weight:600; font-size:13px; line-height:1; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35); }
 .mm-back[hidden] { display:none; }
 .mm-back .ms, .mm-back svg { width:18px; height:18px; font-size:18px; }
+
+/* empty page hint */
+#items:empty::after{content:'Tap anywhere to start typing';position:absolute;left:48px;top:150px;opacity:.4;font:400 15px/1.4 "Google Sans",sans-serif;pointer-events:none}
+.is-map #items::after{display:none}

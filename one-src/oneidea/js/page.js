@@ -84,7 +84,7 @@ itemsEl.addEventListener('focusout', e => {
   const b = e.target.closest('.nc-body'); if (!b) return;
   setTimeout(() => { if (b.isConnected && document.activeElement !== b && isEmpty(b)) { const n = b.closest('.nc'); const p = N.page(); p.items = p.items.filter(i => i.id !== n.dataset.id); n.classList.add('out'); setTimeout(() => n.remove(), 160); touch(); } }, 120);
 });
-let drag = null;
+let drag = null, lastTap = null;
 pageEl.addEventListener('pointerdown', e => {
   if (e.button !== 0 || N.tool !== 'type' || pageEl.classList.contains('recall')) return;
   const bar = e.target.closest('.nc-bar'), rsz = e.target.closest('.nc-rsz');
@@ -103,7 +103,16 @@ pageEl.addEventListener('pointermove', e => {
 });
 pageEl.addEventListener('pointerup', e => {
   const d = drag; drag = null; if (!d) return;
-  if (d.kind === 'new') { const p = pos(e); if (Math.abs(p.x - d.p0.x) < 6 && Math.abs(p.y - d.p0.y) < 6 && !getSelection().toString()) P.newContainerAt(p.x - 8, p.y - 14); return; }
+  if (d.kind === 'new') {
+    const p = pos(e); if (Math.abs(p.x - d.p0.x) >= 6 || Math.abs(p.y - d.p0.y) >= 6 || getSelection().toString()) return;
+    /* A page with content only starts a new text box on a double click or double tap, so tapping to read or scroll never pops up the keyboard.
+       An empty page still starts one on a single click so it isn't a dead end. */
+    const now = performance.now(), lt = lastTap, empty = !N.page().items.length;
+    if (empty || (lt && now - lt.t < 450 && Math.hypot(lt.x - p.x, lt.y - p.y) < 28)) { lastTap = null; P.newContainerAt(p.x - 8, p.y - 14); return; }
+    lastTap = { t:now, x:p.x, y:p.y };
+    try { if (!localStorage.getItem('oi-tap-hint')) { localStorage.setItem('oi-tap-hint', '1'); ONE.toast('Double-click or double-tap an empty spot to add a text box.'); } } catch {}
+    return;
+  }
   d.n.classList.remove('dragging');
   if (d.moved && d.it) { d.it.x = d.n.offsetLeft; d.it.y = d.n.offsetTop; d.it.w = d.n.offsetWidth; touch(); P.layoutSize(); }
   else if (d.kind === 'move') { const b = $('.nc-body', d.n); b.focus(); }

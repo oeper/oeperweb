@@ -319,7 +319,7 @@ const SPEC = [
     { label:'Voice', items:[['L','mic','Dictate','dictate',{ state:'dictate' }]] }
   ] },
   { id:'insert', label:'Insert', groups:[
-    { label:'Insert', items:[['L','post_add','Space','space'], ['LD','table','Table','pop:table']] },
+    { label:'Insert', items:[['L','text_fields','Text box','space'], ['LD','table','Table','pop:table']] },
     { label:'Files', items:[['L','attach_file','File','file'], ['L','image','Pictures','picture']] },
     { label:'Links', items:[['L','link','Link','link',{ kbd:'Ctrl+K' }]] },
     { label:'Recording', items:[['L','graphic_eq','Audio','record',{ state:'record' }]] },
