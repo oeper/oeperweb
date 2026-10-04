@@ -81,6 +81,7 @@ const MAX_IMAGE_CONTENT_CHARS = 6 * 1024 * 1024;
 // no real ceiling pushing back — chose 4096 as a generous-but-not-reckless
 // number for a personal site's usage.
 const MAX_TOKENS = 4096;
+const STALL_MS = 30000; // no upstream data for this long mid-stream = treat as stalled (the browser gives up at 45s)
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const RATE_LIMIT_MAX = 20; // requests per IP per window, per isolate
 
@@ -120,6 +121,47 @@ function json(data, status, request) {
   });
 }
 
+// Splits a string of back-to-back JSON objects ('{"a":1}{"b":2}') into the
+// individual objects, ignoring braces inside strings. Returns [] if nothing
+// balanced was found.
+function splitJsonObjects(s) {
+  const out = []; let depth = 0, start = -1, inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true;
+    else if (ch === '{') { if (depth === 0) start = i; depth++; }
+    else if (ch === '}' && depth > 0 && --depth === 0) out.push(s.slice(start, i + 1));
+  }
+  return out;
+}
+
+// The API rejects the next request outright if any assistant tool call has
+// arguments that aren't valid JSON, so repair what the stream accumulated:
+// valid args pass through, glued-together objects become separate calls, and
+// anything unrecoverable becomes '{}' (the tool then just reports a bad query).
+function normalizeToolCalls(acc) {
+  const out = [], used = new Set(), call = (id, name, args) => ({ id, type: 'function', function: { name, arguments: args } });
+  acc.forEach((tc, i) => {
+    if (used.has(i)) return;
+    const id = tc.id || `call_${i}`, raw = (tc.arguments || '').trim() || '{}';
+    let ok = true; try { JSON.parse(raw); } catch { ok = false; }
+    if (ok) { out.push(call(id, tc.name, raw)); return; }
+    const parts = splitJsonObjects(raw).filter(p => { try { JSON.parse(p); return true; } catch { return false; } });
+    if (!parts.length) { out.push(call(id, tc.name, '{}')); return; }
+    // Parallel calls sometimes arrive as ONE call holding every argument object
+    // and the rest empty. Hand each object to the next empty call of the same
+    // tool; anything left over becomes its own call.
+    out.push(call(id, tc.name, parts[0]));
+    let k = 1;
+    for (let j = i + 1; j < acc.length && k < parts.length; j++) {
+      if (acc[j] && acc[j].name === tc.name && !(acc[j].arguments || '').trim()) { out.push(call(acc[j].id || `call_${j}`, tc.name, parts[k++])); used.add(j); }
+    }
+    for (; k < parts.length; k++) out.push(call(`${id}_${k}`, tc.name, parts[k]));
+  });
+  return out;
+}
+
 // Reads one round's raw SSE stream from env.AI.run(), forwarding
 // reasoning/content deltas to `send` as they arrive and silently
 // accumulating any tool_calls deltas (which stream in fragments — an id +
@@ -138,8 +180,17 @@ async function streamOneRound(upstream, send) {
   let sawToolCall = false;
   let finishReason = null;
 
+  let stalled = false;
   while (true) {
-    const { done, value } = await reader.read();
+    // If the upstream goes quiet mid-answer (it occasionally does), give up on
+    // it here instead of leaving the viewer staring at a half-written reply
+    // until the browser's own watchdog fires.
+    let stallTimer;
+    const stall = new Promise(resolve => { stallTimer = setTimeout(() => resolve({ stalled: true }), STALL_MS); });
+    const got = await Promise.race([reader.read(), stall]);
+    clearTimeout(stallTimer);
+    if (got.stalled) { stalled = true; try { await reader.cancel(); } catch {} break; }
+    const { done, value } = got;
     if (done) break;
     buf += decoder.decode(value, { stream: true });
     const lines = buf.split('\n');
@@ -159,7 +210,11 @@ async function streamOneRound(upstream, send) {
       if (delta.tool_calls) {
         sawToolCall = true;
         for (const tc of delta.tool_calls) {
-          const idx = tc.index || 0;
+          let idx = tc.index || 0;
+          // Some responses reuse index 0 for every parallel call. A fresh id on a
+          // slot that already has a different one means it's really a new call;
+          // without this their arguments were glued together into invalid JSON.
+          if (tc.id && toolCallAcc[idx] && toolCallAcc[idx].id && toolCallAcc[idx].id !== tc.id) idx = toolCallAcc.length;
           if (!toolCallAcc[idx]) toolCallAcc[idx] = { id: '', name: '', arguments: '' };
           if (tc.id) toolCallAcc[idx].id = tc.id;
           if (tc.function) {
@@ -182,6 +237,10 @@ async function streamOneRound(upstream, send) {
   }
 
   const finishedWithToolCalls = sawToolCall && toolCallAcc.length > 0;
+  // Harmless to the browser (it ignores events it doesn't know) but lets us
+  // see in a raw response why a reply ended: 'stop' / 'tool_calls' are normal,
+  // anything else (length, null, stalled) is a truncated answer.
+  send({ meta: { finish: finishReason, stalled, chars: assistantContent.length } });
   // Ran out of max_tokens (finish_reason 'length') without calling a tool.
   // finish_reason never used to reach the client at all, so a response
   // that got cut off mid-sentence looked identical to a normal, complete
@@ -193,7 +252,13 @@ async function streamOneRound(upstream, send) {
   //  - a partial answer that got cut off mid-thought — append a short,
   //    visibly different note so it's clear more was coming, instead of
   //    silently truncating like it used to.
-  if (!finishedWithToolCalls && finishReason === 'length') {
+  if (!finishedWithToolCalls && stalled) {
+    const note = assistantContent
+      ? '\n\n*(cut off. the connection to the model stalled. ask it to continue.)*'
+      : '(the model stalled before answering. please try again.)';
+    assistantContent += note;
+    send({ choices: [{ delta: { content: note } }] });
+  } else if (!finishedWithToolCalls && finishReason === 'length') {
     const note = assistantContent
       ? '\n\n*(cut off — hit the response length limit. ask it to continue.)*'
       : "(ran out of room to answer that — could you try rephrasing, or asking something more specific?)";
@@ -203,11 +268,7 @@ async function streamOneRound(upstream, send) {
 
   return {
     finishedWithToolCalls,
-    toolCalls: toolCallAcc.filter(Boolean).map((tc, i) => ({
-      id: tc.id || `call_${i}`,
-      type: 'function',
-      function: { name: tc.name, arguments: tc.arguments },
-    })),
+    toolCalls: normalizeToolCalls(toolCallAcc.filter(Boolean)),
     assistantContent,
   };
 }
@@ -224,7 +285,14 @@ function streamToolLoop(env, initialMessages, tools) {
       let workingMessages = initialMessages;
       try {
         for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-          const upstream = await env.AI.run(MODEL, { messages: workingMessages, tools: tools || TOOLS, stream: true, max_tokens: MAX_TOKENS });
+          // The last round gets no tools at all. Otherwise a model that keeps
+          // wanting "one more search" would call a tool on the final round, the
+          // loop would stop right there, and the viewer got a half-written
+          // answer that just ended (sometimes mid-heading).
+          const lastRound = round === MAX_TOOL_ROUNDS;
+          const upstream = await env.AI.run(MODEL, lastRound
+            ? { messages: workingMessages, stream: true, max_tokens: MAX_TOKENS }
+            : { messages: workingMessages, tools: tools || TOOLS, stream: true, max_tokens: MAX_TOKENS });
           const { finishedWithToolCalls, toolCalls, assistantContent } = await streamOneRound(upstream, send);
           if (!finishedWithToolCalls || round === MAX_TOOL_ROUNDS) break;
 
