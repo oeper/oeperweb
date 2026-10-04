@@ -121,6 +121,19 @@ function json(data, status, request) {
   });
 }
 
+// Short human line for the "what is it doing" indicator while a tool runs.
+function toolStatus(name, args) {
+  const clip = s => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  switch (name) {
+    case 'search_web': return args && args.query ? `Searching the web for "${clip(args.query)}"` : 'Searching the web';
+    case 'lookup_oeper_user': return args && args.handle ? `Looking up @${clip(String(args.handle).replace(/^@/, ''))}` : 'Looking up a profile';
+    case 'create_document': return 'Writing a document';
+    case 'remember_fact': case 'update_memory': case 'forget_fact': return 'Updating memory';
+    case 'set_follow': return 'Updating who you follow';
+    default: return 'Working on it';
+  }
+}
+
 // Splits a string of back-to-back JSON objects ('{"a":1}{"b":2}') into the
 // individual objects, ignoring braces inside strings. Returns [] if nothing
 // balanced was found.
@@ -302,6 +315,9 @@ function streamToolLoop(env, initialMessages, tools) {
             let toolResult;
             let args = {};
             try { args = JSON.parse(call.function.arguments || '{}'); } catch {}
+            // Tell the browser what is happening during the gap while a tool runs
+            // (clients that don't know about `status` events just ignore them).
+            send({ status: toolStatus(call.function.name, args) });
             // None of the memory tools have anywhere to actually persist to
             // — this Worker has no Firestore write credentials, deliberately
             // (see the firestoreGetDoc comment above: reads work

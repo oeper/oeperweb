@@ -47,6 +47,7 @@ export async function askAI(messages, opts) {
   const decoder = new TextDecoder();
   let buf = '';
   let text = '';
+  let thinking = '';
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -59,7 +60,11 @@ export async function askAI(messages, opts) {
       const payload = t.slice(5).trim();
       if (!payload || payload === '[DONE]') continue;
       try {
-        const delta = (JSON.parse(payload).choices || [{}])[0].delta || {};
+        const evt = JSON.parse(payload);
+        if (evt.status && opts && opts.onStatus) { opts.onStatus(String(evt.status)); continue; }
+        const delta = (evt.choices || [{}])[0].delta || {};
+        const thought = delta.reasoning_content || delta.reasoning;
+        if (thought) { thinking += thought; if (opts && opts.onThinking) opts.onThinking(thinking); }
         if (delta.content) {
           text += delta.content;
           if (opts && opts.onText) opts.onText(stripThinking(text));
