@@ -509,7 +509,7 @@ import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=2';
 import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=3';
-import { codeBlockHtml, copyToClipboard, injectCodeBlockStyles } from './shared/code-block.js?v=2';
+import { codeBlockHtml, copyToClipboard, injectCodeBlockStyles } from './shared/code-block.js?v=3';
 import { aiFeaturesEnabled, onAiFeaturesChange, listOneDocs, readOneDocText, sanitizeForOne, createWordDoc, oneDocUrl } from './shared/ai-features.js?v=1';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
@@ -592,6 +592,7 @@ function renderMathOrFallback(expr, display) {
 // none of this ever sees raw < > & from the model's own output.
 function parseInline(text) {
   return text
+    .replace(/&lt;(https?:\/\/[^\s<>&]+)&gt;/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>')
@@ -610,18 +611,19 @@ function parseInline(text) {
 // Returns null if `lines` isn't actually a list so the block parser can
 // fall through to its other block types.
 function parseListBlock(lines) {
-  const itemRe = /^([ \t]*)(?:([-*+])|(\d+)\.)[ \t]+(.*)$/;
+  const itemRe = /^([ \t]*)(?:([-*+])|(\d+)[.)])[ \t]+(.*)$/;
   if (!itemRe.test(lines[0])) return null;
   let i = 0;
   function parseAt(indentLevel) {
     const items = [];
-    let ordered = null;
+    let ordered = null, start = 1;
     while (i < lines.length) {
       const m = lines[i].match(itemRe);
       if (!m) break;
       const indent = m[1].replace(/\t/g, '  ').length;
       if (indent !== indentLevel) break; // shallower: belongs to caller. deeper: consumed by the recursive call below, never seen here.
-      if (ordered === null) ordered = m[3] !== undefined;
+      if (ordered === null) { ordered = m[3] !== undefined; if (ordered) start = Math.max(0, parseInt(m[3], 10) || 1); }
+      else if ((m[3] !== undefined) !== ordered) break; // bullets turned into numbers (or back): that is a new list
       i++;
       let content = m[4];
       let checkbox = '';
@@ -639,9 +641,15 @@ function parseListBlock(lines) {
       items.push(`<li>${checkbox}${parseInline(content)}${sub}</li>`);
     }
     const tag = ordered ? 'ol' : 'ul';
-    return `<${tag}>${items.join('')}</${tag}>`;
+    return `<${tag}${ordered && start !== 1 ? ` start="${start}"` : ''}>${items.join('')}</${tag}>`;
   }
-  return parseAt(0);
+  let html = '';
+  while (i < lines.length) {
+    const before = i, m = lines[i].match(itemRe);
+    html += parseAt(m ? m[1].replace(/\t/g, '  ').length : 0);
+    if (i === before) break;
+  }
+  return html;
 }
 
 // Splits already-placeholder-stashed, HTML-escaped text into blocks
@@ -704,14 +712,18 @@ function parseBlocks(src) {
       continue;
     }
 
-    if (/^[ \t]*(?:[-*+]|\d+\.)[ \t]+/.test(line)) {
+    if (/^[ \t]*(?:[-*+]|\d+[.)])[ \t]+/.test(line)) {
       // Only actual "- "/"1. " item lines are collected here — a plain
       // indented continuation line wouldn't match parseListBlock's itemRe
       // and would otherwise get silently dropped rather than rendered, so
       // it's better left for the next paragraph to pick up.
-      const listLines = [];
-      while (i < lines.length && /^[ \t]*(?:[-*+]|\d+\.)[ \t]+/.test(lines[i])) {
-        listLines.push(lines[i]); i++;
+      const listLines = [], itemTest = /^[ \t]*(?:[-*+]|\d+[.)])[ \t]+/;
+      while (i < lines.length) {
+        if (itemTest.test(lines[i])) { listLines.push(lines[i]); i++; continue; }
+        // A "loose" list (blank line between items, which models do all the time) stays one list so numbering does not restart at 1.
+        let j = i; while (j < lines.length && !lines[j].trim()) j++;
+        if (j > i && j < lines.length && listLines.length && itemTest.test(lines[j])) { i = j; continue; }
+        break;
       }
       out.push(parseListBlock(listLines));
       continue;
@@ -724,7 +736,7 @@ function parseBlocks(src) {
     const paraLines = [];
     while (i < lines.length && lines[i].trim() && !/^\u0000\d+\u0000$/.test(lines[i].trim())
       && !/^(#{1,6})[ \t]+/.test(lines[i]) && !/^[ \t]*&gt;[ \t]?/.test(lines[i])
-      && !/^[ \t]*(?:[-*+]|\d+\.)[ \t]+/.test(lines[i]) && !/^[ \t]*([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(lines[i])) {
+      && !/^[ \t]*(?:[-*+]|\d+[.)])[ \t]+/.test(lines[i]) && !/^[ \t]*([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(lines[i])) {
       paraLines.push(lines[i]); i++;
     }
     if (paraLines.length) out.push(`<p>${parseInline(paraLines.join('\n')).replace(/\n/g, '<br>')}</p>`);

@@ -145,7 +145,7 @@ export function injectCodeBlockStyles() {
   stylesInjected = true;
   const style = document.createElement('style');
   style.textContent = `
-    .code-block-wrap { background: rgba(0,0,0,0.32); border-radius: 8px; margin: 8px 0; overflow: hidden; }
+    .code-block-wrap { white-space: normal; background: rgba(0,0,0,0.32); border-radius: 8px; margin: 8px 0; overflow: hidden; }
     .code-block-header {
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
       padding: 6px 8px 6px 14px; background: rgba(0,0,0,0.22); font-size: 12px;
