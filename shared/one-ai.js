@@ -680,6 +680,14 @@ async function runDeep(instruction) {
         for (let i = from; i < to; i++) {
           const byTitle = blocks.find(b => sameTitle(b.title, sections[i].title)), mk = byTitle || blocks[i - from];
           results[i] = ((mk ? mk.text : (blocks.length ? '' : shown(reply))) || '').trim();
+          // a part that came back thin is written again on its own (once), keeping whichever version is longer
+          if (to - from > 1 && results[i].split(/\s+/).length < 250 && !mine.signal.aborted) {
+            try {
+              const one = await askRetry([{ role: 'system', content: sys }, { role: 'user', content: withSrc(`${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}. This part must be long and detailed: at least 500 words, covering every point, with definitions, examples and key terms, in one <<notes title="${sections[i].title}">> block and no other blocks.`) }], { signal: mine.signal }, 1);
+              const b2 = parseMakes(one).filter(b => b.kind === 'notes')[0], t2 = ((b2 ? b2.text : '') || '').trim();
+              if (t2.split(/\s+/).length > results[i].split(/\s+/).length) results[i] = t2;
+            } catch (err) { if (err && err.name === 'AbortError') throw err; }
+          }
           finished++;
         }
         apply(); status();
