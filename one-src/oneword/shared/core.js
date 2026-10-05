@@ -488,11 +488,12 @@ ONE.setLocalName = n => { ONE.store.set('one-name', n); dispatchEvent(new Custom
 const initialsOf = n => (n || 'You').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
 ONE.renderAvatars = () => {
   const h = ONE.accountHost(), a = h && h.account(), name = ONE.displayName();
+  const waiting = !h && ONE.embedded && !ONE.localName(); // the shell's account code hasn't loaded yet: don't flash "Y" (from "You")
   $$('.avatar[data-account]').forEach(av => {
     av.title = a ? `${a.name} (${a.email})` : h ? 'Sign in to oeper.dev' : name;
     av.setAttribute('aria-label', 'Account: ' + av.title);
-    av.classList.toggle('signed-out', !!h && !a);
-    av.innerHTML = a && a.photo ? `<img src="${ONE.esc(a.photo)}" alt="" referrerpolicy="no-referrer">` : h && !a ? ONE.icon('account_circle') : ONE.esc(initialsOf(name));
+    av.classList.toggle('signed-out', (!!h && !a) || waiting);
+    av.innerHTML = a && a.photo ? `<img src="${ONE.esc(a.photo)}" alt="" referrerpolicy="no-referrer">` : (h && !a) || waiting ? ONE.icon('account_circle') : ONE.esc(initialsOf(name));
     const img = av.querySelector('img'); if (img) img.onerror = () => { av.textContent = initialsOf(name); };
   });
 };
@@ -503,7 +504,12 @@ ONE.mountAvatar = slot => {
   av.dataset.account = '1'; av.removeAttribute('id'); if (av.tagName !== 'BUTTON') { av.setAttribute('role', 'button'); av.tabIndex = 0; }
   av.addEventListener('click', () => ONE.accountMenu(av));
   av.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ONE.accountMenu(av); } });
-  const h = ONE.accountHost(); if (h && h.onAccount) h.onAccount(() => { ONE.renderAvatars(); dispatchEvent(new CustomEvent('one-name', { detail:ONE.displayName() })); });
+  const watch = h => h.onAccount(() => { ONE.renderAvatars(); dispatchEvent(new CustomEvent('one-name', { detail:ONE.displayName() })); });
+  const h = ONE.accountHost();
+  if (h && h.onAccount) watch(h);
+  else if (ONE.embedded) { // an app can start before the shell has finished loading its account code: keep looking for it
+    let tries = 0; const iv = setInterval(() => { const x = ONE.accountHost(); if (x && x.onAccount) { clearInterval(iv); watch(x); } else if (++tries > 60) { clearInterval(iv); ONE.renderAvatars(); } }, 250);
+  }
   ONE.renderAvatars();
 };
 ONE.accountMenu = anchor => {

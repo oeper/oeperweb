@@ -22,15 +22,17 @@
   // the main page at oeper.dev/one, or just a local name in a standalone copy.
   (function account() {
     const av = document.getElementById('acctBtn'); if (!av) return;
-    let host = null; try { host = embedded && window.parent.ONE_CLOUD ? window.parent.ONE_CLOUD : null; } catch (e) {}
+    const findHost = () => { try { return embedded && window.parent.ONE_CLOUD ? window.parent.ONE_CLOUD : null; } catch (e) { return null; } };
+    let host = findHost();
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const localName = () => { try { return JSON.parse(localStorage.getItem('one-name') || '""') || ''; } catch (e) { return ''; } };
     const initials = n => (n || 'You').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
     const render = () => {
       const a = host && host.account(), name = (a && a.name) || localName() || 'You';
       av.title = a ? `${a.name} (${a.email})` : host ? 'Sign in to oeper.dev' : name;
-      av.classList.toggle('signed-out', !!host && !a);
-      av.innerHTML = a && a.photo ? `<img src="${esc(a.photo)}" alt="" referrerpolicy="no-referrer">` : host && !a ? '<span class="ms">account_circle</span>' : esc(initials(name));
+      const waiting = !host && embedded && !localName(); // the main page's account code hasn't loaded yet: no "Y" from "You"
+      av.classList.toggle('signed-out', (!!host && !a) || waiting);
+      av.innerHTML = a && a.photo ? `<img src="${esc(a.photo)}" alt="" referrerpolicy="no-referrer">` : (host && !a) || waiting ? '<span class="ms">account_circle</span>' : esc(initials(name));
     };
     let pop = null; const close = () => { if (pop) { pop.remove(); pop = null; } };
     const openTop = url => { try { window.open(url, '_blank', 'noopener'); } catch (e) { location.href = url; } };
@@ -47,6 +49,7 @@
     });
     document.addEventListener('mousedown', e => { if (pop && !pop.contains(e.target) && !e.target.closest('#acctBtn')) close(); });
     if (host && host.onAccount) host.onAccount(render);
+    else if (embedded) { let tries = 0; const iv = setInterval(() => { host = findHost(); if (host && host.onAccount) { clearInterval(iv); host.onAccount(render); } else if (++tries > 60) clearInterval(iv); }, 250); }
     addEventListener('storage', e => { if (e.key === 'one-name') render(); });
     render();
   })();
