@@ -55,7 +55,7 @@ export function providerLabel() { const p = getProvider(); return p ? p.model : 
 export function getMcpServers() {
   const list = readJson(MKEY, []);
   return (Array.isArray(list) ? list : []).filter(s => s && typeof s.url === 'string').map(s => ({
-    id: String(s.id || ''), name: String(s.name || 'MCP server'), url: String(s.url), header: String(s.header || 'Authorization'), auth: String(s.auth || ''), auto: !!s.auto, on: s.on !== false,
+    id: String(s.id || 'u:' + s.url), name: String(s.name || 'MCP server'), url: String(s.url), header: String(s.header || 'Authorization'), auth: String(s.auth || ''), auto: !!s.auto, on: s.on !== false,
   }));
 }
 export function saveMcpServers(list) {
@@ -135,6 +135,7 @@ function toAnthropic(messages) {
     if (m.role === 'system') { system += (system ? '\n\n' : '') + textOf(m.content); return; }
     out.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.anthropic ? m.content : conv(m.content) });
   });
+  while (out.length && out[0].role === 'assistant') out.shift(); // Anthropic wants the first message to be the user's
   return { system, messages: out };
 }
 
@@ -158,11 +159,13 @@ function roundFetch(p, messages, tools, signal) {
 
 // Each reader streams text and reasoning to `send` as it arrives and returns what the round produced.
 async function readOpenAI(res, send) {
-  let text = '';
+  let text = '', cut = false;
   const calls = [];
   await readSse(res, evt => {
     if (evt.error) throw new Error(evt.error.message || 'The provider returned an error.');
-    const d = ((evt.choices || [])[0] || {}).delta || {};
+    const ch0 = (evt.choices || [])[0] || {};
+    if (ch0.finish_reason === 'length') cut = true;
+    const d = ch0.delta || {};
     const r = d.reasoning_content || d.reasoning;
     if (r) send({ choices: [{ delta: { reasoning_content: r } }] });
     if (d.content) { text += d.content; send({ choices: [{ delta: { content: d.content } }] }); }
@@ -173,13 +176,14 @@ async function readOpenAI(res, send) {
       if (tc.function) { if (tc.function.name && !c.name) c.name = tc.function.name; if (tc.function.arguments) c.args += tc.function.arguments; }
     });
   });
-  return { text, calls: calls.filter(c => c && c.name).map((c, i) => ({ id: c.id || 'call_' + i, name: c.name, args: jsonOr(c.args || '{}', {}) })) };
+  return { text, cut, calls: calls.filter(c => c && c.name).map((c, i) => ({ id: c.id || 'call_' + i, name: c.name, args: jsonOr(c.args || '{}', {}) })) };
 }
 
 async function readAnthropic(res, send) {
-  let text = '';
+  let text = '', cut = false;
   const blocks = [];
   await readSse(res, evt => {
+    if (evt.type === 'message_delta' && evt.delta && evt.delta.stop_reason === 'max_tokens') cut = true;
     if (evt.type === 'error') throw new Error((evt.error && evt.error.message) || 'The provider returned an error.');
     if (evt.type === 'content_block_start') blocks[evt.index] = Object.assign({ args: '' }, evt.content_block);
     else if (evt.type === 'content_block_delta') {
@@ -189,7 +193,7 @@ async function readAnthropic(res, send) {
       else if (d.type === 'input_json_delta' && blocks[evt.index]) blocks[evt.index].args += d.partial_json || '';
     }
   });
-  return { text, calls: blocks.filter(b => b && b.type === 'tool_use').map(b => ({ id: b.id, name: b.name, args: jsonOr(b.args || '{}', {}) })) };
+  return { text, cut, calls: blocks.filter(b => b && b.type === 'tool_use').map(b => ({ id: b.id, name: b.name, args: jsonOr(b.args || '{}', {}) })) };
 }
 
 // ── MCP (Streamable HTTP) ──
@@ -331,6 +335,8 @@ export async function customChatResponse(body, signal) {
             if (!res.ok) { const e = await errorResponse(res, p); send({ choices: [{ delta: { content: '\n\n[error: ' + (await e.json()).error + ']' } }] }); break; }
           }
           const r = await read(res, send);
+          // say so when the model stopped because it ran out of room (the worker does the same for the built-in model)
+          if (r.cut && !r.calls.length) send({ choices: [{ delta: { content: '\n\n*(cut off: the model hit its length limit. ask it to continue.)*' } }] });
           if (!r.calls.length || round === MAX_ROUNDS) break;
 
           const results = [];

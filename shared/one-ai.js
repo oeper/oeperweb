@@ -13,7 +13,7 @@
 // behavior change needs its `?v=N` bumped where one-src/bundle.py adds the script
 // tag (and in the published one/index.html).
 
-import { aiFeaturesEnabled, onAiFeaturesChange, askAI } from '/shared/ai-features.js?v=3';
+import { aiFeaturesEnabled, onAiFeaturesChange, askAI } from '/shared/ai-features.js?v=4';
 import { readFileForAI, isImage } from '/shared/ai-files.js?v=1';
 
 const MAX_CONTEXT_CHARS = 12000;
@@ -106,7 +106,8 @@ function readContextCore() {
   const editable = (node && node.closest && node.closest('[contenteditable]:not([contenteditable="false"])')) || d.querySelector('#editor') || null;
   if (selText) {
     lastSel = { text: selText, range: sel.getRangeAt(0).cloneRange(), editable };
-  } else if (!lastSel.text || !d.contains(lastSel.editable)) {
+  } else if (!lastSel.text || !d.contains(lastSel.editable) || d.hasFocus()) {
+    // (a collapsed selection while the document has focus means the person clicked away; while the panel has focus it is just the panel taking focus)
     lastSel = { text: '', range: null, editable };
   }
   const app = f.title || 'this app';
@@ -125,7 +126,7 @@ const texPlain = x => x.replace(/\\(?:rightarrow|to|longrightarrow)\b/g, '→').
 function mdInline(text) {
   const hold = [], keep = h => '\u0000' + (hold.push(h) - 1) + '\u0000';
   const link = (u, label, extra) => `<a href="${esc(u).replace(/"/g, '%22')}" target="_blank" rel="noopener"${extra || ''}>${label}</a>`;
-  let x = String(text);
+  let x = String(text).replace(/\u0000/g, ''); // a stray NUL in the model's text must not be able to point at a placeholder
   x = x.replace(/\\([\\`*_{}\[\]()#+\-.!~|$=<>])/g, (_, c) => keep(esc(c)));
   x = x.replace(/`([^`]+)`/g, (_, c) => keep('<code>' + esc(c) + '</code>'));
   x = x.replace(/\$([^$\n]+)\$/g, (m, c) => /[\\_^{]/.test(c) ? keep(texPlain(esc(c))) : m);
@@ -406,23 +407,23 @@ const TAG_RE = /<<\/?(?:edit|append)>>/g;
 const MAKE_RE = /<<(map|mapedit|notes|site)(?:\s[^>]*)?>>[\s\S]*?(?:<<\/\1>>|$)/g;
 const shown = t => String(t || '').replace(MAKE_RE, '').replace(TAG_RE, '');
 function parseMakes(reply) {
-  const out = [], re = /<<(map|mapedit|notes|site)((?:\s[^>]*)?)>>([\s\S]*?)(?:<<\/\1>>|$)/g;
+  const out = [], re = /<<(map|mapedit|notes|site)((?:\s[^>]*)?)>>([\s\S]*?)(<<\/\1>>|$)/g;
   let m;
   while ((m = re.exec(reply || ''))) {
     const text = m[3].replace(/^\n+|\n+$/g, ''); if (!text.trim()) continue;
     const t = /title\s*=\s*"([^"]*)"/.exec(m[2]);
-    out.push({ kind: m[1], title: t ? t[1] : '', text });
+    out.push({ kind: m[1], title: t ? t[1] : '', text, closed: !!m[4] });
   }
   return out;
 }
 // Pulls the <<edit>> / <<append>> block out of a reply. A block that never got its closing tag (the stream was cut) still counts.
 function parseEdit(reply) {
   reply = String(reply || '').replace(MAKE_RE, ''); // models sometimes nest a map / notes block inside an edit: that is not a text edit
-  const m = /<<(edit|append)>>([\s\S]*?)(?:<<\/\1>>|$)/.exec(reply);
+  const m = /<<(edit|append)>>([\s\S]*?)(<<\/\1>>|$)/.exec(reply);
   if (!m) return null;
   const text = m[2].replace(/^\n+|\n+$/g, '');
   if (!text.trim()) return null;
-  return { kind: m[1], text, said: shown((reply.slice(0, m.index) + ' ' + reply.slice(m.index + m[0].length)).replace(/\s+/g, ' ')).trim() };
+  return { kind: m[1], text, closed: !!m[3], said: shown((reply.slice(0, m.index) + ' ' + reply.slice(m.index + m[0].length)).replace(/\s+/g, ' ')).trim() };
 }
 
 // What a saved answer looks like when the chat is reopened: an applied edit shows as its one-line note, not the whole new text.
@@ -445,7 +446,8 @@ function renderHistory() {
   ui.result.textContent = '';
   hist.forEach(m => addMsg(m.r === 'u' ? 'user' : 'ai', m.r === 'u' ? m.t : saved(m.t), m.r === 'u' && m.x ? 'with ' + m.x : ''));
   const lastA = [...hist].reverse().find(m => m.r === 'a');
-  lastAnswer = lastA ? (parseEdit(lastA.t) || { text: shown(lastA.t) }).text : '';
+  // only a plain answer can be inserted by hand; an edit / map / notes answer was applied when it arrived
+  lastAnswer = lastA && !parseEdit(lastA.t) && !parseMakes(lastA.t).length ? shown(lastA.t) : '';
 }
 // The "what is it doing" box inside an answer that is still being written: its reasoning as it
 // streams, plus what it is searching for when it uses a tool. Collapses to "Thought for Ns".
@@ -477,7 +479,7 @@ async function run(instruction) {
   // So earlier turns go back shortened: built blocks and edits become a one-line note, and everything is capped.
   const forModel = m => m.r === 'u' ? m.t.slice(0, 3800)
     : m.t.replace(MAKE_RE, (_, k) => k === 'site' ? '[the site was changed]' : k === 'notes' ? '[a notes page was made]' : k === 'mapedit' ? '[the mind map was updated]' : '[a mind map was made]')
-      .replace(/<<(edit|append)>>[\s\S]*?(?:<<\/>>|$)/g, (_, k) => k === 'edit' ? '[the text was edited]' : '[text was added]').slice(0, 3800);
+      .replace(/<<(edit|append)>>[\s\S]*?(?:<<\/\1>>|$)/g, (_, k) => k === 'edit' ? '[the text was edited]' : '[text was added]').slice(0, 3800);
   const prior = hist.slice(-12).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: forModel(m) })).filter(m => m.content.trim());
   hist.push({ r: 'u', t: instruction, x: tag }); saveHist();
   addMsg('user', instruction, tag ? 'with ' + tag : '');
@@ -486,7 +488,7 @@ async function run(instruction) {
   ui.send.disabled = true;
   const runRange = c.source === 'selection' && lastSel.range ? lastSel.range.cloneRange() : null, canEdit = !!c.editable;
   const am = addMsg('ai', ''), th = makeThink(am.d, am.b);
-  const t0 = Date.now(); let answering = false, sawThought = false, ok = false;
+  const t0 = Date.now(); let answering = false, sawThought = false, ok = false, stored = false;
   busy = new AbortController();
   const mine = busy;
   try {
@@ -507,9 +509,12 @@ async function run(instruction) {
     const final = reply;
     ok = true;
     if (!answering) th.answered(sawThought, Math.max(1, Math.round((Date.now() - t0) / 1000)));
-    hist.push({ r: 'a', t: final }); saveHist();
+    hist.push({ r: 'a', t: final }); saveHist(); stored = true;
     // If the model wrote an edit, put it into the document straight away (and offer Undo) instead of making the user copy it over.
-    const ed = parseEdit(reply), makes = c.build ? parseMakes(reply) : [];
+    // A reply cut off inside a block (the connection dropped, or the model ran out of room) is only half a change: never apply it.
+    const edAll = parseEdit(reply), makesAll = c.build ? parseMakes(reply) : [];
+    const cutOff = (edAll && !edAll.closed) || makesAll.some(b => !b.closed);
+    const ed = cutOff ? null : edAll, makes = cutOff ? [] : makesAll;
     const undos = [], notes = [];
     if (ed && canEdit) {
       let u = null, w = '';
@@ -556,12 +561,13 @@ async function run(instruction) {
       bar.append(u); am.d.append(bar);
       lastAnswer = '';
     } else {
-      am.b.textContent = shown(final) || makes.map(blk => blk.text).join('\n\n');
+      am.b.textContent = shown(final) || makesAll.map(blk => blk.text).join('\n\n');
+      if (cutOff) { const n = document.createElement('small'); n.textContent = 'This answer was cut off, so nothing was changed. Ask again, or ask it to continue.'; am.d.append(n); }
       if ((ed && canEdit) || makes.length) { const n = document.createElement('small'); n.textContent = makes.length ? (makes[0].kind === 'site' ? ((() => { try { return activeFrame().contentWindow.OSAI.lastError; } catch { return ''; } })() || 'Couldn\'t apply this to the site.') : 'Couldn\'t build this here. You can copy it instead.') : 'Couldn\'t apply this automatically. Use the buttons below.'; am.d.append(n); }
-      lastAnswer = ed ? ed.text : makes.length ? makes[0].text : reply;
+      lastAnswer = cutOff ? '' : ed ? ed.text : makes.length ? makes[0].text : reply;
     }
   } catch (err) {
-    hist.pop(); saveHist(); // the question never got an answer: don't keep it as a dangling turn
+    if (!stored) { hist.pop(); saveHist(); } // the question never got an answer: don't keep it as a dangling turn
     if (err.name === 'AbortError') { am.d.remove(); return; }
     am.d.classList.add('err'); th.box.hidden = true;
     am.b.textContent = 'Couldn\'t reach epic AI: ' + err.message;

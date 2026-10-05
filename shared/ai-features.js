@@ -12,7 +12,7 @@
 // behavior change needs its `?v=N` bumped on every
 // `from './shared/ai-features.js?v=N'` import across the site (grep for it).
 
-import { chatFetch } from './ai-provider.js?v=1';
+import { chatFetch } from './ai-provider.js?v=2';
 
 export const AI_ENDPOINT = 'https://oeper-ai.oeper.workers.dev';
 const KEY = 'oe-ai-features';
