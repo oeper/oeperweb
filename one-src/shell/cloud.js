@@ -2,7 +2,7 @@
    Off by default. When on and signed in, every document is mirrored to fs.oeper.dev (forum-server/one-sync.js)
    under oneWord/, oneSheet/, oneSlide/, oneIdea/ and onePDF/, which is also where oeper.dev/files shows them.
    The browser copy stays the working copy; sync is last-writer-wins on each document's own "updated" time. */
-import { onAccountChange, getCurrentUser, signIn, signOutUser, SERVER_ENDPOINT, ensureProfileLoaded, getProfile, handleOf, uploadFile, db } from '/shared/account.js?v=36';
+import { onAccountChange, getCurrentUser, signIn, signOutUser, SERVER_ENDPOINT, ensureProfileLoaded, getProfile, handleOf, uploadFile, db } from '/shared/account.js?v=37';
 import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc, onSnapshot, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 document.documentElement.classList.add('cloud'); // shows the Share buttons (they don't exist in the standalone build)
 

@@ -16,6 +16,8 @@ import { doc, onSnapshot, setDoc, serverTimestamp } from 'https://www.gstatic.co
 export const SYNCED_KEYS = [
   'oe-theme', 'oe-theme-flip', 'oe-ai-features', 'oe-search-engine',
   'oe-files-view', 'oe-files-sort', 'oe-files-sort-dir', 'oePlayerVolume', 'oe-pinned-chats',
+  // the one suite: whether it follows the site theme, and each app's accent colour (stored as JSON by ONE.store)
+  'one-site-look', 'one-seed', 'ow-seed', 'os-seed', 'op-seed', 'oi-seed', 'ob-seed',
 ];
 const FLAG = 'oe-sync-settings';   // '0' = off, anything else = on
 const TIMES = 'oe-sync-times';     // { key: ms } when each setting last changed on this device
@@ -116,7 +118,7 @@ function applyChanges(changed) {
   window.dispatchEvent(new CustomEvent('oe-settings-synced', { detail: changed }));
   // Pages read most of these once when they load. On the first pull after load, reload once so they show the
   // synced values (the guard stops it ever looping); later changes arrive while the page is open and don't reload.
-  const needsReload = firstPull && changed.some(k => !THEME_KEYS.includes(k) && k !== 'oe-ai-features');
+  const needsReload = firstPull && !window.ONE_SHELL && changed.some(k => !THEME_KEYS.includes(k) && k !== 'oe-ai-features');
   if (needsReload) {
     const last = Number(sessionStorage.getItem('oe-sync-reloaded') || 0);
     if (Date.now() - last > 15000) { sessionStorage.setItem('oe-sync-reloaded', String(Date.now())); location.reload(); }

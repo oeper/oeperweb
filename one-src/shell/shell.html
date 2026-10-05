@@ -267,6 +267,9 @@ addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; dz.
 addEventListener('dragover', e => { if (hasFiles(e) && !$('#home').hidden) e.preventDefault(); });
 addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth = 0; dz.hidden = true; if (!$('#home').hidden) importFiles(e.dataTransfer.files); });
 
+// The oeper.dev theme (or this build's own switch for it) changed: restyle the home screen and every open app.
+window.ONE_SITE_LOOK_CHANGED = () => { try { ONE.applySiteLook(); } catch {} document.querySelectorAll('#frames iframe').forEach(f => { try { f.contentWindow.ONE.applySiteLook(); } catch {} }); };
+addEventListener('oe-settings-synced', window.ONE_SITE_LOOK_CHANGED);
 window.ONE_SHELL_API = { importFiles, refresh:() => { if (!$('#home').hidden) loadFiles(); }, frameLoaded:id => !!frames[id] && !!ready[id], openApp };
 loadFiles();
 // #word opens an app; #open=word:<id> (the links oeper.dev/files uses) opens one document, once cloud sync had a chance to bring it in.

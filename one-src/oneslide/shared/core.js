@@ -168,12 +168,31 @@ ONE.check = (label, checked, props = {}) => { const i = ONE.el('input', Object.a
 /* ---------- dynamic colour (Material You seed) ---------- */
 ONE.SEEDS = [['Ocean','#185abd'],['Violet','#6750a4'],['Teal','#006a60'],['Moss','#4c662b'],['Amber','#8b5000'],['Brick','#a8322d'],['Rose','#984061'],['Slate','#535f70']];
 ONE.setSeed = (c, save = true) => { document.documentElement.style.setProperty('--seed', c); if (save) ONE.store.set(ONE.appKey + '-seed', c); };
+/* Light/dark mode follows the oeper.dev theme when this runs on oeper.dev (the page injects window.ONE_SITE_THEMES; a standalone copy has none and keeps following the device). Apps keep their own accent colour; the home screen takes the site theme's. */
+ONE.siteLook = () => {
+  try {
+    const T = window.ONE_SITE_THEMES || (window.parent !== window && window.parent.ONE_SITE_THEMES); if (!T) return null;
+    if (localStorage.getItem('one-site-look') === '0') return null;
+    const t = T[localStorage.getItem('oe-theme') || 'material-dark'] || T['material-dark']; if (!t) return null;
+    return { dark:localStorage.getItem('oe-theme-flip') === '1' ? !t.dark : t.dark, seed:t.swatch };
+  } catch { return null; }
+};
+ONE.applySiteLook = () => {
+  const l = ONE.siteLook(), r = document.documentElement;
+  if (l) r.dataset.theme = l.dark ? 'dark' : 'light'; else r.removeAttribute('data-theme');
+  if (ONE.appId === 'home') { const own = ONE.store.get(ONE.appKey + '-seed'); if (own) r.style.setProperty('--seed', own); else if (l) r.style.setProperty('--seed', l.seed); else r.style.removeProperty('--seed'); }
+};
 ONE.seedMenu = anchor => {
   const d = ONE.el('div', { class:'seedpop' }, ONE.el('div', { class:'menu-title', text:'App color' }));
   const g = ONE.el('div', { class:'seedgrid' });
   const cur = getComputedStyle(document.documentElement).getPropertyValue('--seed').trim().toLowerCase();
   ONE.SEEDS.forEach(([n, c]) => g.append(ONE.el('button', { class:'seed' + (cur === c ? ' on' : ''), title:n, 'aria-label':n, style:{ '--c':c }, html:'<i></i><i></i><i></i>', onclick:() => { ONE.setSeed(c); pop.close(); } })));
   d.append(g);
+  if (window.ONE_SITE_THEMES || (window.parent !== window && window.parent.ONE_SITE_THEMES)) {
+    const m = ONE.check('Match the oeper.dev theme', localStorage.getItem('one-site-look') !== '0');
+    m.input.onchange = () => { try { if (m.input.checked) localStorage.removeItem('one-site-look'); else localStorage.setItem('one-site-look', '0'); } catch {} ONE.applySiteLook(); try { if (window.parent !== window) window.parent.ONE_SITE_LOOK_CHANGED(); else window.ONE_SITE_LOOK_CHANGED(); } catch {} };
+    d.append(m.wrap);
+  }
   const lab = ONE.el('label', { class:'menu-item nomd', html:`${ONE.icon('colorize')}<span class="mi-label">Custom color…</span>` });
   const inp = ONE.el('input', { type:'color', class:'vh', value:cur || '#185abd', oninput:() => ONE.setSeed(inp.value) }); lab.append(inp); d.append(lab);
   pop.open(anchor, d);
@@ -539,6 +558,8 @@ ONE.accountMenu = anchor => {
 ONE.boot = (appKey, appId) => {
   ONE.appKey = appKey; ONE.appId = appId || appKey;
   const seed = ONE.store.get(appKey + '-seed'); if (seed) ONE.setSeed(seed, false);
+  ONE.applySiteLook();
+  addEventListener('storage', e => { if (!e.key || /^(oe-theme|oe-theme-flip|one-site-look|[a-z]+-seed)$/.test(e.key)) { const s = ONE.store.get(ONE.appKey + '-seed'); if (s && e.key === ONE.appKey + '-seed') ONE.setSeed(s, false); ONE.applySiteLook(); } });
   ONE.loadIcons();
   setTimeout(() => ONE.post({ type:'ready' }), 0);
   if (!ONE.embedded) document.querySelectorAll('[data-act="apps"]').forEach(b => b.hidden = true);
