@@ -26,10 +26,9 @@ const ACTIONS = [
   { label: 'Summarize', instr: 'Summarize this in one short paragraph.' },
   { label: 'Continue writing', instr: 'Continue writing from where this text stops, matching its style. Write only the continuation.' },
   { label: 'Make a mind map', instr: 'Turn this into a clear mind map.', only: 'idea' },
-  { label: 'Make study notes', instr: 'Turn this into well organized study notes, and also make a mind map of it.', only: 'idea' },
+  { label: 'Make study notes', instr: 'Make complete, thorough study notes covering everything in this.', only: 'idea', deep: true },
   { label: 'Improve this page', instr: 'Improve the notes on this page: correct mistakes, fill in missing detail, definitions, examples and key points, and make them clearer. Change this page itself, do not make a new page.', only: 'idea' },
   { label: 'Make flashcards', instr: 'Make flashcards from this.', only: 'idea' },
-  { label: 'Full notes (thorough)', instr: 'Make complete, thorough study notes covering everything in this.', only: 'idea', deep: true },
   { label: 'Make a quiz', instr: 'Make a multiple choice quiz from this with 15 questions.', only: 'idea' },
   { label: 'Quiz me in chat', instr: 'Quiz me on this in the chat, one question at a time. Ask the first question now.', only: 'idea' },
   { label: 'Quiz page (self-test)', instr: 'Make a quiz page from this, with the answers in bold so Recall mode can hide them.', only: 'idea' },
@@ -627,7 +626,10 @@ async function run(instruction) {
 // own notes page (two at a time), then add a mind map of the plan. Pages appear one by one, in order, while it works.
 const DEEP_RE = /\b(full|complete|detailed|thorough|comprehensive|in[- ]depth|extensive)\b[^.?!]{0,40}\b(notes|study guide)\b|\b(notes|study guide)\b[^.?!]{0,40}\b(full|complete|detailed|thorough|comprehensive|in[- ]depth|extensive)\b/i;
 const sameTitle = (a, b) => String(a || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() === String(b || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-function wantsDeepNotes(q) { if (!DEEP_RE.test(q)) return false; try { const fr = activeFrame(); return !!(fr && fr.contentWindow.OIAI); } catch { return false; } }
+// ANY request to make notes gets the thorough route (plan, then write each section), unless the user asked for something short or for a different kind of study material
+const NOTES_ASK = /\b(notes?|study guide|study sheet|summar(y|ies|ise|ize))\b/i;
+const NOT_DEEP = /\b(brief|briefly|short|quick|quickly|few|tl;?dr|concise|one page|one-page|a paragraph|one paragraph|cornell|revision sheet|flash ?cards?|quiz|improve|fix|correct|expand|edit|rewrite|shorten|translate|reformat|continue|add (to|more|a|an|some)|tidy|clean up)\b/i;
+function wantsDeepNotes(q) { if (!DEEP_RE.test(q) && !(NOTES_ASK.test(q) && !NOT_DEEP.test(q))) return false; try { const fr = activeFrame(); return !!(fr && fr.contentWindow.OIAI); } catch { return false; } }
 // The model stream sometimes ends before it has written anything (a dropped connection, or the reply budget spent on thinking): ask again.
 async function askRetry(msgs, opts, tries = 2) {
   let reply = '';
@@ -641,9 +643,21 @@ async function runDeep(instruction) {
   if (busy) busy.abort();
   const c = readContext(true);
   instruction = instruction.slice(0, 1500);
-  const src = attach ? attach.text.slice(0, 38000) : c.source !== 'none' ? c.text : '';
-  const srcLabel = (attach ? attach.title : c.source === 'selection' ? 'selection' : 'page (outline)').replace(/[<>\n]/g, ' ');
-  const withSrc = text => src ? `${text}\n\n<<one:${srcLabel}>>\n${src}\n<</one>>` : text;
+  // the WHOLE source is used (not the 24000 character preview of the page), cut into chunks that fit one request; each chunk is planned and written on its own
+  let full = attach ? attach.text : c.source === 'selection' ? c.text : '';
+  if (!attach && c.source === 'document') { try { const o = OI.context({}); full = (o && o.text) || c.text || ''; } catch { full = c.text || ''; } }
+  full = full.slice(0, 120000);
+  const CH = 30000, chunks = [];
+  for (let at = 0; at < full.length;) {
+    let end = Math.min(full.length, at + CH);
+    if (end < full.length) { const cut = full.lastIndexOf('\n', end); if (cut > at + CH * .6) end = cut; }
+    chunks.push(full.slice(at, end)); at = end;
+  }
+  const src = chunks.length ? chunks[0] : '';
+  const srcLabel = (attach ? attach.title : c.source === 'selection' ? 'selection' : 'page').replace(/[<>\n]/g, ' ');
+  const wrap = (text, body) => body ? `${text}\n\n<<one:${srcLabel}>>\n${body}\n<</one>>` : text;
+  const withSrc = text => wrap(text, src);
+  const srcWords = Math.round(full.length / 6), wantSecs = Math.max(5, Math.min(14, Math.round(srcWords / 600)));
   const tag = attach ? attach.title : src ? 'document' : '';
   hist.push({ r: 'u', t: instruction, x: tag }); saveHist();
   addMsg('user', instruction, tag ? 'with ' + tag : '');
@@ -654,12 +668,18 @@ async function runDeep(instruction) {
   const sys = SYSTEM + ' ' + IDEA_SYSTEM;
   try {
     th.status('Planning the notes...'); am.b.textContent = 'Planning the notes...';
-    const planReply = await askRetry([{ role: 'system', content: sys }, { role: 'user', content: withSrc(`${instruction}\n\nFirst plan the notes. Reply with ONLY JSON and no other text: {"title":"short title for the whole set","sections":[{"title":"short section title","covers":"one sentence saying exactly what this section must cover"}]}. Use 5 to 8 sections that together cover EVERYTHING${src ? ' in the material' : ' a student needs on this topic'}, in a sensible teaching order.`) }], { signal: mine.signal });
-    let plan = null;
-    try { const i = planReply.indexOf('{'), z = planReply.lastIndexOf('}'); plan = JSON.parse(planReply.slice(i, z + 1)); } catch {}
-    const sections = plan && Array.isArray(plan.sections) ? plan.sections.map(x => ({ title: String(x && x.title || '').trim().slice(0, 80), covers: String(x && x.covers || '').trim().slice(0, 300) })).filter(x => x.title).slice(0, 8) : [];
+    const nCh = Math.max(1, chunks.length), per = Math.max(3, Math.ceil(wantSecs / nCh));
+    const planOne = async k => {
+      const part = nCh > 1 ? ` This is part ${k + 1} of ${nCh} of the material, so plan only what is in this part.` : '';
+      const reply = await askRetry([{ role: 'system', content: sys }, { role: 'user', content: wrap(`${instruction}\n\nFirst plan the notes.${part} Reply with ONLY JSON and no other text: {"title":"short title for the whole set","sections":[{"title":"short section title","covers":"one or two sentences listing exactly which topics, terms, facts and examples this section must cover"}]}. Use ${chunks.length ? per : '6 to 8'} sections that together cover EVERYTHING${chunks.length ? ' in the material, leaving nothing out' : ' a student needs on this topic'}, in a sensible teaching order.`, chunks[k] || '') }], { signal: mine.signal });
+      let pl = null; try { const i = reply.indexOf('{'), z = reply.lastIndexOf('}'); pl = JSON.parse(reply.slice(i, z + 1)); } catch {}
+      return pl;
+    };
+    const plans = []; for (let k = 0; k < nCh; k += 2) { const got = await Promise.all([planOne(k), k + 1 < nCh ? planOne(k + 1) : null]); plans.push(...got.filter((_, j) => k + j < nCh)); }
+    const sections = [];
+    plans.forEach((pl, k) => { if (pl && Array.isArray(pl.sections)) pl.sections.forEach(x => { const t = String(x && x.title || '').trim().slice(0, 80); if (t && sections.length < 16) sections.push({ title: t, covers: String(x.covers || '').trim().slice(0, 300), ch: k }); }); });
     if (sections.length < 2) throw new Error('could not plan the notes. Please try again.');
-    const setTitle = String(plan.title || 'Notes').trim().slice(0, 80), n = sections.length;
+    const plan = plans.find(Boolean), setTitle = String((plan && plan.title) || 'Notes').trim().slice(0, 80), n = sections.length;
     const outline = sections.map((x, i) => `${i + 1}. ${x.title}`).join('; ');
     const results = new Array(n).fill(null); let nextJob = 0, applied = 0, finished = 0;
     const apply = () => {
@@ -673,21 +693,22 @@ async function runDeep(instruction) {
     };
     const status = () => { const msg = `Writing the notes: ${finished} of ${n} sections done`; th.status(msg); am.b.textContent = msg + (titles.length ? '. Pages so far: ' + titles.join(', ') : '') + '.'; scrollLog(); };
     status();
-    const groups = []; for (let i = 0; i < n; i += 2) groups.push([i, Math.min(n, i + 2)]);
+    const groups = []; for (let i = 0; i < n;) { let j = i + 1; if (j < n && sections[j].ch === sections[i].ch) j++; groups.push([i, j]); i = j; }
+    const need = chunks.length ? Math.max(500, Math.min(900, Math.round(CH / 6 / per * .6))) : 600;
     const worker = async () => {
       while (nextJob < groups.length && !mine.signal.aborted) {
         const [from, to] = groups[nextJob++], part = [];
         for (let i = from; i < to; i++) part.push(`part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}`);
-        const ask = `${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY ${to - from > 1 ? 'these ' + (to - from) + ' parts' : 'this part'}: ${part.join('; ')}. Write each part as its own <<notes title="the part title">> block, thorough (at least 500 words each) and following the study notes rules, with no other blocks. The other parts are written separately, so do not repeat them.`;
-        const reply = await askRetry([{ role: 'system', content: sys }, { role: 'user', content: withSrc(ask) }], { signal: mine.signal });
+        const ask = `${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY ${to - from > 1 ? 'these ' + (to - from) + ' parts' : 'this part'}: ${part.join('; ')}. Write each part as its own <<notes title="the part title">> block, very thorough (at least ${need} words each, never a short summary) and following the study notes rules, with no other blocks. Include every definition, fact, formula, date, name and example from the material that belongs to the part, explained properly. The other parts are written separately, so do not repeat them.`;
+        const reply = await askRetry([{ role: 'system', content: sys }, { role: 'user', content: wrap(ask, chunks[sections[from].ch] || '') }], { signal: mine.signal });
         const blocks = parseMakes(reply).filter(b => b.kind === 'notes');
         for (let i = from; i < to; i++) {
           const byTitle = blocks.find(b => sameTitle(b.title, sections[i].title)), mk = byTitle || blocks[i - from];
           results[i] = ((mk ? mk.text : (blocks.length ? '' : shown(reply))) || '').trim();
           // a part that came back thin is written again on its own (once), keeping whichever version is longer
-          if (to - from > 1 && results[i].split(/\s+/).length < 250 && !mine.signal.aborted) {
+          if (results[i].split(/\s+/).length < Math.round(need * .6) && !mine.signal.aborted) {
             try {
-              const one = await askRetry([{ role: 'system', content: sys }, { role: 'user', content: withSrc(`${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}. This part must be long and detailed: at least 500 words, covering every point, with definitions, examples and key terms, in one <<notes title="${sections[i].title}">> block and no other blocks.`) }], { signal: mine.signal }, 1);
+              const one = await askRetry([{ role: 'system', content: sys }, { role: 'user', content: wrap(`${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}. This part must be long and detailed: at least ${need} words, covering every point of the material for it, with definitions, examples and key terms, in one <<notes title="${sections[i].title}">> block and no other blocks.`, chunks[sections[i].ch] || '') }], { signal: mine.signal }, 1);
               const b2 = parseMakes(one).filter(b => b.kind === 'notes')[0], t2 = ((b2 ? b2.text : '') || '').trim();
               if (t2.split(/\s+/).length > results[i].split(/\s+/).length) results[i] = t2;
             } catch (err) { if (err && err.name === 'AbortError') throw err; }
