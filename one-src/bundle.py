@@ -38,7 +38,7 @@ shell = shell.replace('/*APP_SRC*/', blob)
 # oeper.dev build: same page plus cloud saving (needs /shared/account.js from the site)
 cloud = (D / 'shell' / 'cloud.js').read_text(encoding='utf-8')
 # epic AI assistant (optional, off unless enabled in oeper.dev/settings) — shared/one-ai.js on the site
-site = shell.replace('<!--CLOUD-->', '<script type="module">\n' + cloud.replace('</script', '<\\/script') + '\n</script>\n<script type="module" src="/shared/one-ai.js?v=9"></script>')
+site = shell.replace('<!--CLOUD-->', '<script type="module">\n' + cloud.replace('</script', '<\\/script') + '\n</script>\n<script type="module" src="/shared/one-ai.js?v=12"></script>')
 (OUT / 'one-oeper.html').write_text(site, encoding='utf-8')
 # published copy: oeper.dev/one
 (D.parent / 'one' / 'index.html').write_text(site, encoding='utf-8')

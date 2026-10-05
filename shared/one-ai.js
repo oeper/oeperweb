@@ -30,7 +30,7 @@ const ACTIONS = [
 ];
 const SYSTEM = 'You are epic AI, an assistant built into the one office suite, helping with the user\'s document. Do exactly what the instruction says. ' +
   'You can change the document directly. When the user asks you to rewrite, fix, shorten, expand, translate, reformat or otherwise change their text, put ONLY the new text between <<edit>> and <</edit>>. It replaces the selected text, or the whole document when nothing is selected, so include everything that should remain. ' +
-  'When they ask you to continue or add more, put ONLY the new text between <<append>> and <</append>>. It is added after the selection, or at the end. Inside those tags use no quotation marks, no code fences, and simple markdown (# headings, - bullets, **bold**) only if the text already has that structure. ' +
+  'When they ask you to continue or add more, put ONLY the new text between <<append>> and <</append>>. It is added after the selection, or at the end. Inside those tags use no quotation marks, no code fences, and simple markdown (# headings, - bullets, **bold**) only if the text already has that structure. Links are written [text](https://address) and a clickable button is [[Label]](https://address); only add them when the user asks or the text already has them. ' +
   'You may add one short sentence before or after the tags, such as what you changed. When the user asks a question or wants an explanation or summary, answer it clearly and briefly WITHOUT any tags. This is an ongoing conversation, so use the earlier messages as context.';
 
 const IDEA_SYSTEM = 'The user is in oneIdea, a note-taking app with real mind maps and free-form notes pages. You can build them directly, so do NOT dump a long plain list into a text answer when a map or structured notes would serve better. ' +
@@ -97,36 +97,60 @@ function readContextCore() {
   return { app, text: '', source: 'none', editable };
 }
 
-// markdown -> HTML for writing into a document: headings, nested bullet / numbered lists, tables, quotes, code, rules, links, bold / italic / strike
+// markdown -> HTML for writing into a document. Supports: headings (# and underlined), nested bullet / numbered / task lists, tables (with
+// alignment), block quotes, code blocks, rules, links, bare links, buttons ([[Label]](url)), images (kept as links), **bold**, *italic*,
+// ~~strike~~, ==highlight==, `code`, \escapes, <br>, simple math like $H_2O$.
+const SAFE_URL = /^(?:https?:\/\/|mailto:)[^\s"'<>]+$/i;
+const BTN_STYLE = 'display:inline-block;padding:8px 18px;border-radius:8px;background:#1a73e8;color:#fff;text-decoration:none;font-weight:600';
 const texPlain = x => x.replace(/\\(?:rightarrow|to|longrightarrow)\b/g, '→').replace(/\\leftarrow\b/g, '←').replace(/\\times\b/g, '×').replace(/\\approx\b/g, '≈').replace(/\\(?:cdot|bullet)\b/g, '·').replace(/\\(?:text|mathrm|mathbf)\{([^}]*)\}/g, '$1')
   .replace(/_\{([^}]*)\}|_(\w)/g, (_, a, b) => '<sub>' + (a || b) + '</sub>').replace(/\^\{([^}]*)\}|\^(\w)/g, (_, a, b) => '<sup>' + (a || b) + '</sup>').replace(/\\([a-zA-Z]+)/g, '$1');
-const mdInline = t => esc(t)
-  .replace(/\$([^$\n]+)\$/g, (_, x) => texPlain(x))
-  .replace(/`([^`]+)`/g, '<code>$1</code>')
-  .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-  .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/~~(.+?)~~/g, '<s>$1</s>').replace(/(^|[^*])\*(?!\s)(.+?)\*/g, '$1<i>$2</i>');
+function mdInline(text) {
+  const hold = [], keep = h => '\u0000' + (hold.push(h) - 1) + '\u0000';
+  const link = (u, label, extra) => `<a href="${esc(u).replace(/"/g, '%22')}" target="_blank" rel="noopener"${extra || ''}>${label}</a>`;
+  let x = String(text);
+  x = x.replace(/\\([\\`*_{}\[\]()#+\-.!~|$=<>])/g, (_, c) => keep(esc(c)));
+  x = x.replace(/`([^`]+)`/g, (_, c) => keep('<code>' + esc(c) + '</code>'));
+  x = x.replace(/\$([^$\n]+)\$/g, (m, c) => /[\\_^{]/.test(c) ? keep(texPlain(esc(c))) : m);
+  x = x.replace(/\[\[([^\]]+)\]\]\(([^\s)]+)\)/g, (m, l, u) => SAFE_URL.test(u) ? keep(link(u, mdInline(l), ` style="${BTN_STYLE}"`)) : m);
+  x = x.replace(/!?\[([^\]]*)\]\(([^\s)]+)(?:\s+"[^"]*")?\)/g, (m, l, u) => SAFE_URL.test(u) ? keep(link(u, mdInline(l || u))) : m);
+  x = x.replace(/<((?:https?:\/\/|mailto:)[^\s>]+)>/gi, (m, u) => keep(link(u, esc(u))));
+  x = x.replace(/(^|[\s(])(https?:\/\/[^\s<>"]*[^\s<>".,;:!?)'])/g, (m, pre, u) => pre + keep(link(u, esc(u))));
+  x = esc(x).replace(/&lt;br\s*\/?&gt;/gi, '<br>')
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/~~(.+?)~~/g, '<s>$1</s>').replace(/==(.+?)==/g, '<mark>$1</mark>')
+    .replace(/(^|[^*])\*(?!\s)(.+?)\*/g, '$1<i>$2</i>').replace(/(^|[^\w])_(?!\s)(.+?)_(?!\w)/g, '$1<i>$2</i>');
+  while (/\u0000\d+\u0000/.test(x)) x = x.replace(/\u0000(\d+)\u0000/g, (_, i) => hold[+i]);
+  return x;
+}
 function mdList(items) {
   let html = '', stack = [];
   items.forEach(it => {
     while (stack.length && it.ind < stack[stack.length - 1].ind) html += '</li></' + (stack.pop().ord ? 'ol' : 'ul') + '>';
-    const top = stack[stack.length - 1];
+    let top = stack[stack.length - 1];
+    if (top && it.ind === top.ind && top.ord !== it.ord) { html += '</li></' + (stack.pop().ord ? 'ol' : 'ul') + '>'; top = stack[stack.length - 1]; } // bullets -> numbers: start a new list
     if (top && it.ind === top.ind) html += '</li>'; else if (!top || it.ind > top.ind) { html += it.ord ? '<ol>' : '<ul>'; stack.push({ ind: it.ind, ord: it.ord }); }
-    html += '<li>' + mdInline(it.text);
+    const tk = /^\[( |x|X)\]\s+(.*)$/.exec(it.text);
+    html += '<li>' + (tk ? (tk[1] === ' ' ? '☐ ' : '☑ ') + mdInline(tk[2]) : mdInline(it.text));
   });
   while (stack.length) html += '</li></' + (stack.pop().ord ? 'ol' : 'ul') + '>';
   return html;
 }
 function mdToHtml(md) {
   const lines = String(md).replace(/\r/g, '').replace(/\t/g, '    ').split('\n'), out = [];
+  const cellsOf = l => l.trim().replace(/^\||\|$/g, '').split('|');
   let i = 0, m;
   while (i < lines.length) {
     const line = lines[i];
     if (!line.trim()) { i++; continue; }
     if (/^\s*```/.test(line)) { const code = []; i++; while (i < lines.length && !/^\s*```/.test(lines[i])) code.push(lines[i++]); i++; out.push('<pre><code>' + esc(code.join('\n')) + '</code></pre>'); continue; }
     if (/^\s*\|/.test(line)) {
-      const rows = [];
-      while (i < lines.length && /^\s*\|/.test(lines[i])) { if (!/^[\s|:\-]+$/.test(lines[i])) rows.push(lines[i].trim().replace(/^\||\|$/g, '').split('|').map(c => mdInline(c.trim()))); i++; }
-      if (rows.length) out.push('<table>' + rows.map((r, k) => '<tr>' + r.map(c => k ? `<td>${c}</td>` : `<th>${c}</th>`).join('') + '</tr>').join('') + '</table>');
+      const rows = []; let al = [];
+      while (i < lines.length && /^\s*\|/.test(lines[i])) {
+        if (/^[\s|:\-]+$/.test(lines[i])) al = cellsOf(lines[i]).map(c => /^\s*:-+:\s*$/.test(c) ? 'center' : /-:\s*$/.test(c) ? 'right' : '');
+        else rows.push(cellsOf(lines[i]).map(c => mdInline(c.trim())));
+        i++;
+      }
+      const st = k => al[k] ? ` style="text-align:${al[k]}"` : '';
+      if (rows.length) out.push('<table>' + rows.map((r, k) => '<tr>' + r.map((c, j) => k ? `<td${st(j)}>${c}</td>` : `<th${st(j)}>${c}</th>`).join('') + '</tr>').join('') + '</table>');
       continue;
     }
     if (/^\s*([-*+•]|\d+[.)])\s+/.test(line)) {
@@ -134,11 +158,16 @@ function mdToHtml(md) {
       while (i < lines.length && (m = /^(\s*)([-*+•]|\d+[.)])\s+(.*)$/.exec(lines[i]))) { items.push({ ind: m[1].length, ord: /\d/.test(m[2]), text: m[3].trim() }); i++; }
       out.push(mdList(items)); continue;
     }
+    if (/^\s*>/.test(line)) {
+      const q = []; while (i < lines.length && /^\s*>/.test(lines[i])) q.push(mdInline(lines[i++].replace(/^(\s*>\s?)+/, '').trim()));
+      out.push('<blockquote>' + q.join('<br>') + '</blockquote>'); continue;
+    }
     i++;
     const t = line.trim();
-    if ((m = /^(#{1,6})\s+(.*)$/.exec(t))) out.push(`<h${m[1].length}>${mdInline(m[2])}</h${m[1].length}>`);
+    if ((m = /^(#{1,6})\s+(.*)$/.exec(t))) out.push(`<h${m[1].length}>${mdInline(m[2].replace(/\s+#+$/, ''))}</h${m[1].length}>`);
     else if (/^([-*_])(\s*\1){2,}$/.test(t)) out.push('<hr>');
-    else if ((m = /^>\s?(.*)$/.exec(t))) out.push(`<blockquote>${mdInline(m[1])}</blockquote>`);
+    else if (i < lines.length && /^=+\s*$/.test(lines[i])) { i++; out.push(`<h1>${mdInline(t)}</h1>`); }
+    else if (i < lines.length && /^-{2,}\s*$/.test(lines[i])) { i++; out.push(`<h2>${mdInline(t)}</h2>`); }
     else out.push(`<p>${mdInline(t)}</p>`);
   }
   return out.join('') || '<p><br></p>';
@@ -474,7 +503,7 @@ async function run(instruction) {
       let u = null, w = '';
       try {
         if (blk.kind === 'mapedit' && (u = OI.setMap(blk.text))) w = 'Updated your mind map.';
-        else if (blk.kind === 'notes') { u = OI.newNotes(blk.text, blk.title); w = 'Made a notes page.'; }
+        else if (blk.kind === 'notes') { u = OI.newNotes(blk.text, blk.title, { inline: mdInline }); w = 'Made a notes page.'; }
         else { u = OI.newMap(blk.text, blk.title); w = 'Made a mind map.'; }
       } catch (err) { console.error(err); }
       if (u) { undos.push(u); notes.push(w); }
@@ -482,7 +511,7 @@ async function run(instruction) {
     // oneIdea has no single text to edit, so a plain rewrite becomes a new notes page and the original stays as it is
     if (OI && ed && !canEdit && !undos.length) {
       let u = null;
-      try { u = OI.newNotes(ed.text, ''); } catch (err) { console.error(err); }
+      try { u = OI.newNotes(ed.text, '', { inline: mdInline }); } catch (err) { console.error(err); }
       if (u) { undos.push(u); notes.push('Made a new notes page. Your original is unchanged.'); }
     }
     const said = (ed && ed.said) || shown(reply).replace(/\s+/g, ' ').trim();

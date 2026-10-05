@@ -683,7 +683,8 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
       if (!rows.length && !title && (m = /^\s*#{1,3}\s+(.*)$/.exec(raw))) { title = plain(m[1]); return; }
       if ((m = /^\s*>\s?(.*)$/.exec(raw))) { const last = rows[rows.length - 1]; if (last) last.note = (last.note ? last.note + ' ' : '') + plain(m[1]); return; }
       m = /^(\s*)(?:[-*+•]|\d+[.)])?\s*(.*)$/.exec(raw);
-      const l = lead(plain(m[2])); if (l.text) rows.push({ ind:m[1].length, text:l.text, tag:l.tag, done:l.done });
+      const urls = []; const bare = m[2].replace(/\[\[([^\]]+)\]\]/g, '[$1]').replace(/!?\[([^\]]*)\]\((https?:\/\/[^\s)]+)[^)]*\)/g, (_, tx, u) => { urls.push(u); return tx || u; });
+      const l = lead(plain(bare)); if (l.text) rows.push({ ind:m[1].length, text:l.text, tag:l.tag, done:l.done, note:urls.length ? urls.join(' ') : undefined });
     });
     if (!rows.length) return null;
     const nz = rows.map(r => r.ind).filter(x => x > 0), unit = nz.length ? Math.min(...nz) : 2;
@@ -717,13 +718,15 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
   };
 
   /* markdown-ish notes -> one box per "## heading", laid out in two columns */
-  const inl = t => esc(t.replace(/\$\\(?:right|to)arrow\$/g, '->')).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*(?!\s)(.+?)\*/g, '$1<i>$2</i>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  const inlLocal = t => esc(t.replace(/\$\\(?:right|to)arrow\$/g, '->')).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*(?!\s)(.+?)\*/g, '$1<i>$2</i>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  let inl = inlLocal; // newNotes swaps in the panel's richer converter (links, buttons, ...) while it builds
   const tattr = l => l.tag ? ` data-tag="${l.tag}" data-tid="${ONE.uid()}"${l.done ? ' data-done' : ''}` : '';
   const listHTML = items => {
     let html = '', stack = [];
     items.forEach(it => {
       while (stack.length && it.ind < stack[stack.length - 1].ind) html += '</li></' + (stack.pop().ord ? 'ol' : 'ul') + '>';
-      const top = stack[stack.length - 1];
+      let top = stack[stack.length - 1];
+      if (top && it.ind === top.ind && top.ord !== it.ord) { html += '</li></' + (stack.pop().ord ? 'ol' : 'ul') + '>'; top = stack[stack.length - 1]; }
       if (top && it.ind === top.ind) html += '</li>'; else if (!top || it.ind > top.ind) { html += it.ord ? '<ol>' : '<ul>'; stack.push({ ind:it.ind, ord:it.ord }); }
       html += it.open;
     });
@@ -758,7 +761,8 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
     }
     return { html: html || '<p><br></p>', h: Math.max(h, 70) };
   };
-  const newNotes = (md, title) => {
+  const newNotes = (md, title, o) => {
+    inl = (o && typeof o.inline === 'function') ? o.inline : inlLocal;
     const lines = String(md || '').replace(/\r/g, '').split('\n'), secs = [];
     let pageTitle = plain(title), cursec = null;
     lines.forEach(raw => {
@@ -770,7 +774,7 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
       if (!cursec) { cursec = { head:'', lines:[] }; secs.push(cursec); }
       cursec.lines.push(raw);
     });
-    const built = secs.map(sc => sectionHTML(sc.head, sc.lines)).filter(b => b.html !== '<p><br></p>' || b.h > 70);
+    let built; try { built = secs.map(sc => sectionHTML(sc.head, sc.lines)).filter(b => b.html !== '<p><br></p>' || b.h > 70); } finally { inl = inlLocal; }
     if (!built.length) return null;
     const items = [];
     if (built.length === 1) items.push(N.item(48, 130, 760, built[0].html));
