@@ -49,6 +49,7 @@ function rate(c, ok) {
   if (ok) { p.box = Math.min(5, p.box + 1); p.due = Date.now() + GAPS[p.box] * DAY; } else { p.box = 1; p.due = Date.now(); }
   N.dirty();
 }
+ST.rate = rate;
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
 /* ---------- the flashcard screen ---------- */

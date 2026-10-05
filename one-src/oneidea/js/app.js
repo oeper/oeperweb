@@ -279,7 +279,7 @@ $('#openInput').addEventListener('change', async e => {
 Object.assign(A, {
   save:() => ONE.toast(N.save() ? 'Saved to this browser.' : 'Couldn’t save: storage is full or blocked.'), backstage:() => ONE.backstage.show('home'), collapseRibbon:() => ONE.ribbon.setScale(ONE.ribbon.scale || 1, !document.querySelector('.app').classList.contains('ribbon-min')),
   seed:b => ONE.seedMenu(b), apps:b => ONE.appSwitcher(b), shortcuts:() => shortcuts(), undo:() => MM.active() ? MM.undo() : P.exec('undo'), redo:() => MM.active() ? MM.redo() : P.exec('redo'),
-  flashcards:() => ST.open(), recall:() => ST.toggleRecall(), keyTerm:() => ST.keyTerm(), cardMark:() => ST.cardMark(), definition:() => P.tag('definition'), remember:() => P.tag('remember'),
+  flashcards:() => ST.open(), quiz:() => QZ.open(), recall:() => ST.toggleRecall(), keyTerm:() => ST.keyTerm(), cardMark:() => ST.cardMark(), definition:() => P.tag('definition'), remember:() => P.tag('remember'),
   newMap:() => A.newPage('mindmap'), pageToMap:() => MM.fromPage(), mapOutline:() => MM.outlineDialog(),
   mmChild:() => MM.addChild(), mmSibling:() => MM.addSibling(), mmEdit:() => MM.editSel(), mmFold:() => MM.foldSel(), mmDelete:() => MM.deleteSel(), mmNote:() => MM.noteSel(), mmFit:() => MM.fit(), mmExpand:() => MM.expandAll(), mmCollapse:() => MM.collapseAll(), mmToNotes:() => MM.toNotes(),
   mmPng:() => MM.png(N.page()), mmSvg:() => ONE.download(safeName(N.page().title) + '.svg', MM.toSVG(N.page()), 'image/svg+xml'), mmMd:() => ONE.download(safeName(N.page().title) + '.md', MM.toMarkdown(N.page()), 'text/markdown'),
@@ -329,7 +329,7 @@ const SPEC = [
     { label:'Symbols', items:[['C', [['SD','emoji_symbols','Symbol','symbol'], ['S','horizontal_rule','Divider','hr']]]] }
   ] },
   { id:'study', label:'Study', groups:[
-    { label:'Flashcards', items:[['L','style','Flashcards','flashcards'], ['C', [['S','add_card','Make a card','cardMark'], ['S','menu_book','Definition','definition',{ kbd:'Ctrl+5' }]]]] },
+    { label:'Flashcards', items:[['L','style','Flashcards','flashcards'], ['L','quiz','Quiz','quiz'], ['C', [['S','add_card','Make a card','cardMark'], ['S','menu_book','Definition','definition',{ kbd:'Ctrl+5' }]]]] },
     { label:'Remember', items:[['L','ink_highlighter','Key term','keyTerm',{ kbd:'Ctrl+Shift+H' }], ['L','bookmark','Must remember','remember',{ kbd:'Ctrl+4' }]] },
     { label:'Test yourself', items:[['L','visibility_off','Recall mode','recall',{ state:'recall' }]] },
     { label:'Mind maps', items:[['L','account_tree','New mind map','newMap'], ['C', [['S','schema','Map from this page','pageToMap'], ['S','segment','Build from outline','mapOutline'], ['SD','picture_in_picture','Put a map in a note','pop:mmInsert']]]] },
@@ -358,7 +358,7 @@ const SPEC = [
     { label:'View', items:[['L','fit_screen','Fit','mmFit'], ['C', [['S','unfold_more','Unfold all','mmExpand'], ['S','unfold_less','Fold branches','mmCollapse']]]] },
     { label:'Convert', items:[['L','description','Map to notes','mmToNotes'], ['L','segment','From outline','mapOutline']] },
     { label:'Export', items:[['L','image','Picture','mmPng'], ['C', [['S','draw','SVG','mmSvg'], ['S','markdown','Outline','mmMd']]]] },
-    { label:'Self-test', items:[['L','visibility_off','Recall mode','recall',{ state:'recall' }], ['L','style','Flashcards','flashcards']] }
+    { label:'Self-test', items:[['L','visibility_off','Recall mode','recall',{ state:'recall' }], ['L','style','Flashcards','flashcards'], ['L','quiz','Quiz','quiz']] }
   ] }
 ];
 const run = (act, b, e) => { if (!act) return; if (act.startsWith('pop:')) { const p = POP[act.slice(4)]; return p ? p(b) : null; } const f = A[act]; if (f) f(b, e); else console.warn('Unknown action', act); };
