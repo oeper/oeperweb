@@ -17,6 +17,7 @@ import { aiFeaturesEnabled, onAiFeaturesChange, askAI } from '/shared/ai-feature
 import { readFileForAI, isImage } from '/shared/ai-files.js?v=1';
 
 const MAX_CONTEXT_CHARS = 12000;
+const BUILD_CONTEXT_CHARS = 24000; // oneIdea outlines and oneSite pages are read whole, so they get more room
 const ACTIONS = [
   { label: 'Improve writing', instr: 'Improve the writing: clearer, tighter, better flow. Keep the meaning, tone and language.' },
   { label: 'Fix spelling & grammar', instr: 'Fix spelling, grammar and punctuation only. Change nothing else.' },
@@ -24,9 +25,13 @@ const ACTIONS = [
   { label: 'Expand', instr: 'Expand this with more detail and examples, keeping the tone.' },
   { label: 'Summarize', instr: 'Summarize this in one short paragraph.' },
   { label: 'Continue writing', instr: 'Continue writing from where this text stops, matching its style. Write only the continuation.' },
-  { label: 'Make a mind map', instr: 'Turn this into a clear mind map.', only: 'build' },
-  { label: 'Make study notes', instr: 'Turn this into well organized study notes, and also make a mind map of it.', only: 'build' },
+  { label: 'Make a mind map', instr: 'Turn this into a clear mind map.', only: 'idea' },
+  { label: 'Make study notes', instr: 'Turn this into well organized study notes, and also make a mind map of it.', only: 'idea' },
   { label: 'Improve this map', instr: 'Improve this mind map: balance the branches, tighten the wording and add any important sub-topics that are missing. Return the complete updated map.', only: 'map' },
+  { label: 'Improve the copy', instr: 'Rewrite the text on this page to be clearer, friendlier and more convincing. Keep the same sections and layout.', only: 'site' },
+  { label: 'Add a section', instr: 'Add one more useful section to this page that fits the rest of it.', only: 'site' },
+  { label: 'Add a page', instr: 'Add a new page that would suit this site (pick a sensible one that is missing), with real content.', only: 'site' },
+  { label: 'Fresh look', instr: 'Pick a different colour palette, font and corner style that fit this site.', only: 'site' },
 ];
 const SYSTEM = 'You are epic AI, an assistant built into the one office suite, helping with the user\'s document. Do exactly what the instruction says. ' +
   'You can change the document directly. When the user asks you to rewrite, fix, shorten, expand, translate, reformat or otherwise change their text, put ONLY the new text between <<edit>> and <</edit>>. It replaces the selected text, or the whole document when nothing is selected, so include everything that should remain. ' +
@@ -38,7 +43,11 @@ const IDEA_SYSTEM = 'The user is in oneIdea, a note-taking app with real mind ma
   'The page that is open is shown to you as an outline in this same format. If it is a mind map and the user wants it changed, expanded or reorganized, put the COMPLETE updated outline between <<mapedit>> and <</mapedit>> instead. ' +
   'STUDY NOTES: put markdown between <<notes title="Short title">> and <</notes>>. Every "## Heading" becomes its own box on the page, so group the material under 3 to 6 meaningful headings (for example Overview, Key terms, How it works, Examples, Summary). Under them use short bullets (indent two spaces for sub-points), a table when comparing things, "Term :: meaning" lines for definitions (they become flashcards), "[ ] task" lines for to-dos, and "[important] ..." or "[question] ..." lines for key points and open questions. Never write one huge block of bullets. ' +
   'CHOOSING: requests for a mind map, map, overview, brainstorm or how things connect get <<map>>. Requests for notes, a study guide, a summary in notes form or to organize something get <<notes>>. Write only the kind of block that was asked for, except that a request to make notes from a text, PDF or topic gets BOTH a <<notes>> block and a <<map>> block in the same reply. Use plain text only inside blocks: no LaTeX (write -> for arrows) and no em dashes. Never put these blocks inside <<edit>> or <<append>>. After the blocks, write one short sentence saying what you made.';
-const systemFor = c => SYSTEM + (c.build ? ' ' + IDEA_SYSTEM : '');
+const SITE_SYSTEM = 'The user is in oneSite, a website builder. A site is a list of pages and each page is a stack of sections. You can change the site directly. The open page is shown to you as JSON in exactly the shape you answer with (title, theme, settings, header, footer, page). To change anything, reply with ONE block: <<site>> a JSON object <</site>>. ' +
+  'The object may hold any of these keys, and you include ONLY the keys you change: "page" (the COMPLETE new list of sections for the open page, in order; keep the "id" of every section you keep and leave "id" out for new ones; a section you leave out is deleted), "addPages" (a list of {"name","sections"} for new pages), "theme" ({"palette","font","radius","accent"}), "settings" ({"description","favicon"}), "header" and "footer" ({"v","data"}), "title" (the site name). ' +
+  'A section is {"id","type","v","bg","pad","data"} and data holds the fields listed below. A picture shown as "(picture kept)" must be copied back exactly. Never invent picture links: use a placeholder such as "ph:g1" or an https link the user gave you. ' +
+  'Write real, specific copy for what the user described, never lorem ipsum, in plain text without markdown or HTML (a line break is \\n). Never use <<edit>>, <<append>>, <<map>> or <<notes>> here. When the user only asks a question or for advice, answer without a block. After a block, write one short sentence saying what you changed. ';
+const systemFor = c => SYSTEM + (c.kind === 'site' ? ' ' + SITE_SYSTEM + (c.schema || '') : c.build ? ' ' + IDEA_SYSTEM : '');
 
 let fab = null;
 let panel = null;
@@ -70,10 +79,19 @@ function readContext() {
   const c = readContextCore(), f = activeFrame();
   let w = null;
   try { w = f && f.contentWindow; } catch {}
-  c.build = !!(w && w.OIAI);
+  const br = w && (w.OIAI ? w.OIAI : w.OSAI ? w.OSAI : null);
+  c.build = !!br;
+  c.kind = w && w.OIAI ? 'idea' : w && w.OSAI ? 'site' : '';
   if (c.build && c.source !== 'selection') {
-    // oneIdea: show the AI the whole open page (or map) as an outline, and never treat one note box as "the document".
-    try { const o = w.OIAI.context(); if (o) { c.idea = o.kind; c.editable = null; if (o.text) { c.text = o.text.slice(0, MAX_CONTEXT_CHARS); c.source = 'document'; } else c.source = 'none'; } } catch {}
+    // oneIdea / oneSite: show the AI the whole open page (an outline, or the site page as JSON), and never treat one box as "the document".
+    try {
+      const o = br.context();
+      if (o) {
+        c.idea = o.kind; c.editable = null;
+        if (o.text) { c.text = o.text.slice(0, BUILD_CONTEXT_CHARS); c.truncated = o.text.length > BUILD_CONTEXT_CHARS; c.source = 'document'; } else c.source = 'none';
+        if (c.kind === 'site') c.schema = w.OSAI.schema();
+      }
+    } catch {}
   }
   return c;
 }
@@ -358,7 +376,7 @@ function refresh() {
   const c = readContext();
   ui.app.textContent = c.app;
   ui.ctx.textContent = c.source === 'selection' ? `Working on your selection (${c.text.length.toLocaleString()} characters).`
-    : c.source === 'document' && c.build ? `Reading this ${c.idea === 'map' ? 'mind map' : 'page'}. Select some text to focus on part of it.`
+    : c.source === 'document' && c.build ? (c.kind === 'site' ? 'Reading this page of your site.' : `Reading this ${c.idea === 'map' ? 'mind map' : 'page'}. Select some text to focus on part of it.`)
     : c.source === 'document' ? 'Working on the whole document — select some text to focus on part of it.'
     : 'No text to work on here — you can still ask epic AI anything.';
   if (attach) ui.ctx.textContent += ' The attached file is included too.';
@@ -367,7 +385,7 @@ function refresh() {
   const canEdit = !!c.editable;
   ui.chips.querySelectorAll('button').forEach(b => {
     const only = ACTIONS[b.dataset.i].only;
-    b.hidden = only === 'build' ? !c.build : only === 'map' ? c.idea !== 'map' : (c.build && c.source !== 'selection');
+    b.hidden = only === 'idea' ? c.kind !== 'idea' : only === 'site' ? c.kind !== 'site' : only === 'map' ? c.idea !== 'map' : (c.build && c.source !== 'selection');
     b.disabled = c.source === 'none' && !attach;
   });
   ui.replace.disabled = !(canEdit && c.source === 'selection');
@@ -385,10 +403,10 @@ async function attachFile(file) {
 
 const TAG_RE = /<<\/?(?:edit|append)>>/g;
 // map / notes blocks are built into the app, so they are not shown as chat text
-const MAKE_RE = /<<(map|mapedit|notes)(?:\s[^>]*)?>>[\s\S]*?(?:<<\/\1>>|$)/g;
+const MAKE_RE = /<<(map|mapedit|notes|site)(?:\s[^>]*)?>>[\s\S]*?(?:<<\/\1>>|$)/g;
 const shown = t => String(t || '').replace(MAKE_RE, '').replace(TAG_RE, '');
 function parseMakes(reply) {
-  const out = [], re = /<<(map|mapedit|notes)((?:\s[^>]*)?)>>([\s\S]*?)(?:<<\/\1>>|$)/g;
+  const out = [], re = /<<(map|mapedit|notes|site)((?:\s[^>]*)?)>>([\s\S]*?)(?:<<\/\1>>|$)/g;
   let m;
   while ((m = re.exec(reply || ''))) {
     const text = m[3].replace(/^\n+|\n+$/g, ''); if (!text.trim()) continue;
@@ -411,7 +429,7 @@ function parseEdit(reply) {
 const saved = t => {
   const e = parseEdit(t), mk = parseMakes(t), said = shown(t).replace(/\s+/g, ' ').trim();
   if (e) return e.said || (e.kind === 'append' ? 'Added to the document.' : 'Edited the document.');
-  if (mk.length) return said || 'Made ' + mk.map(b => b.kind === 'notes' ? 'a notes page' : 'a mind map').join(' and ') + '.';
+  if (mk.length) return said || (mk[0].kind === 'site' ? 'Updated the site.' : 'Made ' + mk.map(b => b.kind === 'notes' ? 'a notes page' : 'a mind map').join(' and ') + '.');
   return said;
 };
 
@@ -449,16 +467,16 @@ async function run(instruction) {
   if (busy) busy.abort();
   const c = readContext();
   const wantsCtx = c.source !== 'none';
-  const appLabel = c.build ? c.app + (c.source === 'selection' ? ' selection' : c.idea === 'map' ? ' mind map (outline)' : ' page (outline)') : c.app;
+  const appLabel = c.build ? c.app + (c.source === 'selection' ? ' selection' : c.idea === 'map' ? ' mind map (outline)' : c.kind === 'site' ? ' site page (JSON)' : ' page (outline)') : c.app;
   instruction = instruction.slice(0, 3800);
   let userMsg = wantsCtx ? `${instruction}\n\n<<one:${appLabel.replace(/[<>\n]/g, ' ')}>>\n${c.text}\n<</one>>` : instruction;
-  if (attach) userMsg += `\n\n<<one:${attach.title.replace(/[<>\n]/g, ' ')}>>\n${attach.text}\n<</one>>`;
+  if (attach) userMsg += `\n\n<<one:${attach.title.replace(/[<>\n]/g, ' ')}>>\n${attach.text.slice(0, Math.max(0, 38000 - userMsg.length))}\n<</one>>`;
   const tag = [c.source === 'selection' ? 'selection' : c.source === 'document' ? 'document' : '', attach ? attach.title : ''].filter(Boolean).join(' + ');
   // Earlier turns go back to the model as plain text (the document text is only attached to the newest question, to keep requests small).
   // The server refuses any single earlier message over 4000 characters, and an answer holding a whole notes page + map is longer than that.
   // So earlier turns go back shortened: built blocks and edits become a one-line note, and everything is capped.
   const forModel = m => m.r === 'u' ? m.t.slice(0, 3800)
-    : m.t.replace(MAKE_RE, (_, k) => k === 'notes' ? '[a notes page was made]' : k === 'mapedit' ? '[the mind map was updated]' : '[a mind map was made]')
+    : m.t.replace(MAKE_RE, (_, k) => k === 'site' ? '[the site was changed]' : k === 'notes' ? '[a notes page was made]' : k === 'mapedit' ? '[the mind map was updated]' : '[a mind map was made]')
       .replace(/<<(edit|append)>>[\s\S]*?(?:<<\/>>|$)/g, (_, k) => k === 'edit' ? '[the text was edited]' : '[text was added]').slice(0, 3800);
   const prior = hist.slice(-12).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: forModel(m) })).filter(m => m.content.trim());
   hist.push({ r: 'u', t: instruction, x: tag }); saveHist();
@@ -479,7 +497,7 @@ async function run(instruction) {
       onStatus: st => { if (!answering) th.status(st); },
       onText: t => {
         if (!answering && t) { answering = true; th.answered(sawThought, Math.max(1, Math.round((Date.now() - t0) / 1000))); }
-        am.b.textContent = shown(t) || (/<<(map|mapedit)/.test(t) ? 'Building the mind map...' : /<<notes/.test(t) ? 'Writing the notes...' : ''); scrollLog();
+        am.b.textContent = shown(t) || (/<<(map|mapedit)/.test(t) ? 'Building the mind map...' : /<<notes/.test(t) ? 'Writing the notes...' : /<<site/.test(t) ? 'Updating your site...' : ''); scrollLog();
       },
     };
     let reply = await askAI(msgs, opts);
@@ -505,7 +523,14 @@ async function run(instruction) {
     // oneIdea: build real mind maps and notes pages
     let OI = null;
     try { const fr = activeFrame(); OI = fr && fr.contentWindow.OIAI; } catch {}
-    if (OI) makes.forEach(blk => {
+    let OS = null;
+    try { const fr2 = activeFrame(); OS = fr2 && fr2.contentWindow.OSAI; } catch {}
+    if (OS) makes.filter(blk => blk.kind === 'site').forEach(blk => {
+      let u = null;
+      try { u = OS.apply(blk.text, { truncated: c.truncated }); } catch (err) { console.error(err); }
+      if (u) { undos.push(u); notes.push('Updated your site.'); }
+    });
+    if (OI) makes.filter(blk => blk.kind !== 'site').forEach(blk => {
       let u = null, w = '';
       try {
         if (blk.kind === 'mapedit' && (u = OI.setMap(blk.text))) w = 'Updated your mind map.';
@@ -532,7 +557,7 @@ async function run(instruction) {
       lastAnswer = '';
     } else {
       am.b.textContent = shown(final) || makes.map(blk => blk.text).join('\n\n');
-      if ((ed && canEdit) || makes.length) { const n = document.createElement('small'); n.textContent = makes.length ? 'Couldn\'t build this here. You can copy it instead.' : 'Couldn\'t apply this automatically. Use the buttons below.'; am.d.append(n); }
+      if ((ed && canEdit) || makes.length) { const n = document.createElement('small'); n.textContent = makes.length ? (makes[0].kind === 'site' ? ((() => { try { return activeFrame().contentWindow.OSAI.lastError; } catch { return ''; } })() || 'Couldn\'t apply this to the site.') : 'Couldn\'t build this here. You can copy it instead.') : 'Couldn\'t apply this automatically. Use the buttons below.'; am.d.append(n); }
       lastAnswer = ed ? ed.text : makes.length ? makes[0].text : reply;
     }
   } catch (err) {

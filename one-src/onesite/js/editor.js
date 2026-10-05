@@ -254,6 +254,7 @@ frame.addEventListener('load', () => { fd().addEventListener('pointerdown', e =>
 
 /* ---------- inspector ---------- */
 const ICONS = ['star', 'bolt', 'favorite', 'verified', 'rocket_launch', 'eco', 'restaurant', 'wine_bar', 'local_cafe', 'school', 'work', 'palette', 'brush', 'photo_camera', 'music_note', 'fitness_center', 'spa', 'pets', 'home', 'shield', 'lock', 'support_agent', 'chat', 'mail', 'call', 'location_on', 'schedule', 'calendar_month', 'payments', 'savings', 'shopping_bag', 'local_shipping', 'thumb_up', 'emoji_events', 'lightbulb', 'code', 'devices', 'cloud', 'public', 'handshake', 'groups', 'auto_awesome', 'celebration', 'park', 'water_drop', 'sunny', 'diamond', 'build'];
+ED.ICONS = ICONS; // the epic AI assistant (js/ai.js) offers these to the model
 const linkTargets = () => [['', 'Choose…'], ...M.site.pages.map(p => ['page:' + p.id, 'Page: ' + p.name]), ...M.page().sections.map(b => ['#' + (b.anchor || b.type), 'Section: ' + BLOCKS[b.type].name]), ['custom', 'Web address, email or phone…']];
 function field(b, id, [key, type, label, opt], base = '') {
   const path = base + key, val = get(b.data, path), upd = (v, rerender = true) => { set(b.data, path, v); M.dirty(); if (rerender) { clearTimeout(E._rt); E._rt = setTimeout(() => { E.renderBlock(id); M.record(); }, 180); } };
