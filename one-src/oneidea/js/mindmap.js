@@ -960,8 +960,9 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
     N.nb.sections.push(sec); N.go(N.nb.sections.length - 1, 0);
     return {
       id: sec.id,
-      finish: () => { const i = N.nb.sections.findIndex(x => x.id === sec.id); if (i < 0) return; if (sec.pages.length > 1 && sec.pages[0] === starter) { sec.pages.shift(); N.go(i, 0); } N.dirty(); },
-      undo: () => { const i = N.nb.sections.findIndex(x => x.id === sec.id); if (i < 0 || N.nb.sections.length < 2) return; N.nb.sections.splice(i, 1); N.go(Math.min(was.s > i ? was.s - 1 : was.s, N.nb.sections.length - 1), 0); N.dirty(); },
+      finish: () => { const i = N.nb.sections.findIndex(x => x.id === sec.id); if (i < 0) return; if (sec.pages.length > 1 && sec.pages[0] === starter) { P.syncAll(); sec.pages.shift(); N.nb.cur = { s:i, p:0 }; N.go(i, 0); } N.dirty(); },
+      // the current position is set by hand before the section goes, because N.go() reads the page it is leaving
+      undo: () => { const i = N.nb.sections.findIndex(x => x.id === sec.id); if (i < 0 || N.nb.sections.length < 2) return; P.syncAll(); const j = i > 0 ? i - 1 : 1; N.nb.cur = { s:j, p:0 }; N.nb.sections.splice(i, 1); N.go(j > i ? j - 1 : j, 0); N.dirty(); },
     };
   };
   const OIAI = window.OIAI = {
