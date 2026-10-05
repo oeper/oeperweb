@@ -675,6 +675,47 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
     P.syncAll(); const rows = MM.outlineFromPage(p); if (!rows.length) return '';
     return [`# ${p.title || 'Untitled page'}`, ...rows.flatMap(o => ['  '.repeat(Math.max(0, o.depth - 1)) + '- ' + tagWord(o) + o.text].concat(o.note ? ['  '.repeat(Math.max(0, o.depth)) + '> ' + o.note] : []))].join('\n');
   };
+  // the open notes page as markdown the AI can edit and send back whole (headings, bullets, tags, tables)
+  const pageMarkdown = p => {
+    P.syncAll();
+    const tagOf = x => x.dataset && TAGSET.has(x.dataset.tag) ? (x.dataset.tag === 'todo' ? (x.hasAttribute('data-done') ? '[x] ' : '[ ] ') : `[${x.dataset.tag}] `) : '';
+    const inline = n => {
+      if (n.nodeType === 3) return n.nodeValue.replace(/\s+/g, ' ');
+      if (n.nodeType !== 1) return '';
+      const T = n.tagName, k = [...n.childNodes].map(inline).join('');
+      if (/^(UL|OL|TABLE)$/.test(T)) return '';
+      if (T === 'B' || T === 'STRONG') return k.trim() ? `**${k.trim()}**` : k;
+      if (T === 'I' || T === 'EM') return k.trim() ? `*${k.trim()}*` : k;
+      if (T === 'CODE') return '`' + k + '`';
+      if (T === 'BR') return ' ';
+      if (T === 'A' && n.getAttribute('href')) return `[${k.trim()}](${n.getAttribute('href')})`;
+      if (T === 'IMG') return '';
+      return k;
+    };
+    const lines = [];
+    const list = (node, d) => [...node.children].forEach(li => {
+      if (li.tagName !== 'LI') return;
+      const t = flat([...li.childNodes].map(inline).join('')); const ord = node.tagName === 'OL';
+      if (t) lines.push('  '.repeat(d) + (ord ? '1. ' : '- ') + tagOf(li) + t);
+      [...li.children].filter(x => /^(UL|OL)$/.test(x.tagName)).forEach(x => list(x, d + 1));
+    });
+    const walk = node => [...node.children].forEach(c => {
+      const T = c.tagName;
+      if (/^H[1-6]$/.test(T)) { const t = flat(inline(c)); if (t) lines.push('', (+T[1] <= 3 ? '## ' : '#### ') + t); }
+      else if (T === 'UL' || T === 'OL') list(c, 0);
+      else if (T === 'TABLE') {
+        const rows = [...c.rows].map(r => [...r.cells].map(x => flat(inline(x)).replace(/\|/g, '/')));
+        rows.forEach((r, i) => { lines.push('| ' + r.join(' | ') + ' |'); if (i === 0) lines.push('|' + r.map(() => '---').join('|') + '|'); });
+      }
+      else if (/^(P|DIV|BLOCKQUOTE|PRE|FIGCAPTION)$/.test(T)) {
+        if (c.querySelector('ul,ol,table,h1,h2,h3,h4,p,div')) walk(c);
+        else { const t = flat(inline(c)); if (t) lines.push((T === 'BLOCKQUOTE' ? '> ' : '') + tagOf(c) + t); }
+      }
+      else { const t = flat(inline(c)); if (t) lines.push(t); }
+    });
+    [...p.items].sort((a, b) => a.y - b.y || a.x - b.x).forEach(it => { const d = document.createElement('div'); d.innerHTML = it.html; walk(d); if (!d.children.length) { const t = flat(inline(d)); if (t) lines.push(t); } });
+    return lines.join('\n').replace(/^\n+/, '');
+  };
   // indented outline text -> { title, out:[{ depth, text, note, tag, done }] }
   const parseOutlineAI = text => {
     let title = '', rows = [], m;
@@ -761,7 +802,7 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
     }
     return { html: html || '<p><br></p>', h: Math.max(h, 70) };
   };
-  const newNotes = (md, title, o) => {
+  const buildNotes = (md, title, o) => {
     inl = (o && typeof o.inline === 'function') ? o.inline : inlLocal;
     const lines = String(md || '').replace(/\r/g, '').split('\n'), secs = [];
     let pageTitle = plain(title), cursec = null;
@@ -784,7 +825,41 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
       built.slice(2).forEach(b => { items.push(N.item(48, yy, 952, b.html)); yy += b.h + 28; });
     } else if (built.length === 1) items.push(N.item(48, 130, 760, built[0].html));
     else { const y = [130, 130]; built.forEach(b => { const c = y[0] <= y[1] ? 0 : 1; items.push(N.item(c ? 520 : 48, y[c], 440, b.html)); y[c] += b.h + 28; }); }
-    return addPage(N.newPage(pageTitle || 'Notes', items, levelBelow()));
+    return { title:pageTitle, items };
+  };
+  const newNotes = (md, title, o) => {
+    const b = buildNotes(md, title, o); if (!b) return null;
+    return addPage(N.newPage(b.title || 'Notes', b.items, levelBelow()));
+  };
+  /* editing the notes page that is open (instead of making another page) */
+  const RICH = /<(img|iframe|video|audio|canvas|svg|embed|object|figure)\b/i;
+  const bottomOfPage = () => { let y = 100; $$('.nc').forEach(n => { y = Math.max(y, n.offsetTop + n.offsetHeight); }); return y; };
+  const canEditNotes = () => { const p = N.page(); return !!(p && p.kind !== 'map' && !N.recall); };
+  const redraw = pg => { if (N.page() === pg) { P.render(false); } N.dirty(); };
+  // add more boxes underneath what is already on the page
+  const addNotes = (md, o) => {
+    if (!canEditNotes()) return null;
+    const pg = N.page(); P.syncAll();
+    const b = buildNotes(md, '', o); if (!b || !b.items.length) return null;
+    const dy = bottomOfPage() + 28 - 130; b.items.forEach(it => { it.y += dy; });
+    pg.items.push(...b.items); const ids = new Set(b.items.map(i => i.id)); redraw(pg);
+    const undo = () => { pg.items = pg.items.filter(i => !ids.has(i.id)); redraw(pg); };
+    undo.note = 'Added to this page.'; return undo;
+  };
+  // replace the text on the open page with the AI's improved version (pictures, embeds and drawings stay)
+  const setNotes = (md, title, o) => {
+    if (!canEditNotes()) return null;
+    const pg = N.page(); P.syncAll();
+    const b = buildNotes(md, title, o); if (!b || !b.items.length) return null;
+    const before = { items:JSON.parse(JSON.stringify(pg.items)), title:pg.title };
+    const keep = pg.items.filter(i => RICH.test(i.html));
+    // measure the new content from the layout estimate, then park the kept boxes below it
+    const tall = b.items.reduce((m, it) => Math.max(m, it.y + 60 + Math.ceil(String(it.html).replace(/<[^>]+>/g, '').length / 50) * 24), 130);
+    keep.forEach(k => { k.y = tall + 28; });
+    pg.items = b.items.concat(keep); if (b.title && !pg.title) pg.title = b.title;
+    redraw(pg); if (pg.title !== before.title && N.onTitle) N.onTitle();
+    const undo = () => { pg.items = before.items; pg.title = before.title; redraw(pg); if (N.onTitle) N.onTitle(); };
+    undo.note = 'Updated this page.'; return undo;
   };
 
   /* ---------- study tools: flashcards, quizzes, key terms, Recall mode ---------- */
@@ -885,9 +960,9 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
       const p = N.page(); if (!p) return null;
       const study = o && o.send ? studyStatus() : ''; // the flashcard tally is only worked out when a question is actually sent
       if (p.kind === 'map') return { kind:'map', title:p.title, text:outlineText(p) + study };
-      return { kind:'page', title:p.title, text:pageOutline(p) + study };
+      return { kind:'page', title:p.title, text:`# ${p.title || 'Untitled page'}\n` + pageMarkdown(p) + study, md:true };
     },
-    newMap, setMap, newNotes, newCards, newQuiz, newMcq, highlight,
+    newMap, setMap, newNotes, setNotes, addNotes, canEditNotes, newCards, newQuiz, newMcq, highlight,
   };
 }
 })();
