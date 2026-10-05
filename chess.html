@@ -323,6 +323,7 @@
 
 <script type="module" data-cfasync="false">
 import { mountTopNav } from './shared/topnav.js?v=40';
+import { revealStatic } from './shared/motion.js?v=3';
 import { mountFooter } from './shared/footer.js?v=6';
 import {
   db, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile,
@@ -333,6 +334,7 @@ import {
   doc, addDoc, updateDoc, onSnapshot, collection, query, where, getDocs, serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
+revealStatic(document.querySelector('.page'));
 mountFooter();
 
 // ── Board indexing ──────────────────────────────────────────────────────

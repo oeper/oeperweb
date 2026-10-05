@@ -110,6 +110,7 @@
 
 <script type="module" data-cfasync="false">
 import { mountTopNav, HIDDEN_PAGES, hiddenPageRank } from './shared/topnav.js?v=40';
+import { reveal, observeList } from './shared/motion.js?v=3';
 import { mountFooter } from './shared/footer.js?v=6';
 import { db } from './shared/account.js?v=37';
 import {
@@ -117,6 +118,8 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 mountTopNav();
+reveal(document.querySelector('.search-header'));
+observeList(document.getElementById('content'));
 mountFooter();
 
 // Fill these in to turn on the "from the web" section (see the README
@@ -285,6 +288,7 @@ async function runSearch(qRaw) {
     if (!el) return;
     if (!results.length) { el.innerHTML = `no oeper.dev results for "${escHtml(q)}".`; return; }
     el.outerHTML = `<div id="oeperResults">${results.map(resultRowHtml).join('')}</div>`;
+    observeList(document.getElementById('oeperResults'));
   }).catch(err => {
     const el = document.getElementById('oeperResults');
     if (el) el.textContent = 'could not search oeper.dev: ' + err.message;
@@ -302,6 +306,7 @@ async function runSearch(qRaw) {
       breadcrumb: it.displayLink || it.link, title: it.title, snippet: it.snippet, url: it.link, external: true,
     })).join('');
     el.outerHTML = `<div id="webResults">${rows}</div>`;
+    observeList(document.getElementById('webResults'));
   }).catch(err => {
     const el = document.getElementById('webResults');
     if (el) el.textContent = 'could not search the web: ' + err.message;

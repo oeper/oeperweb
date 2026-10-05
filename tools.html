@@ -146,8 +146,11 @@
 
 <script type="module" data-cfasync="false">
   import { mountTopNav } from './shared/topnav.js?v=40';
+  import { reveal, revealStatic } from './shared/motion.js?v=3';
   import { mountFooter } from './shared/footer.js?v=6';
   mountTopNav();
+  reveal(document.querySelector('.page > .header'));
+  revealStatic(document.querySelector('.grid-layout'));
   mountFooter();
 </script>
 </body>

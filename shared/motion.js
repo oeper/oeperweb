@@ -88,4 +88,17 @@ function observeList(container) {
   return mo;
 }
 
-export { injectStyles, fadeImg, reveal, observeList };
+// For a page whose content is plain HTML in the file (no render loop to observe): fade the blocks of `container`
+// in one after another once, skipping the site's own chrome (anything whose class starts with oe-, scripts, styles).
+function revealStatic(container) {
+  if (!container) return;
+  injectStyles();
+  let i = 0;
+  Array.from(container.children).forEach(el => {
+    if (!(el instanceof HTMLElement) || /^(SCRIPT|STYLE|NAV)$/.test(el.tagName)) return;
+    if (Array.from(el.classList).some(c => c.startsWith('oe-'))) return;
+    reveal(el, i++);
+  });
+}
+
+export { injectStyles, fadeImg, reveal, observeList, revealStatic };

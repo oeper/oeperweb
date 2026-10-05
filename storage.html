@@ -253,12 +253,15 @@
 
 <script type="module" data-cfasync="false">
 import { mountTopNav } from './shared/topnav.js?v=40';
+import { reveal, observeList } from './shared/motion.js?v=3';
 import { SERVER_ENDPOINT, getCurrentUser, onAccountChange, isOwnerEmail } from './shared/account.js?v=37';
 import { mountFooter } from './shared/footer.js?v=6';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 
 mountTopNav();
+reveal(document.querySelector('.page > .header'));
+observeList(document.getElementById('panel'));
 mountFooter();
 
 const GB = 1024 ** 3;

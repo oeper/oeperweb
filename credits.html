@@ -181,6 +181,7 @@
 
 <script type="module" data-cfasync="false">
 import { mountTopNav } from './shared/topnav.js?v=40';
+import { revealStatic, reveal } from './shared/motion.js?v=3';
 import {
   getCurrentUser, onAccountChange, isOwnerEmail, onCreditsChange, getCredits, CREDITS_ICON,
   transferCredits, grantCredits, getCreditHistory, getCreditPurchaseHistory, creditTransferNet, handleOf, getProfile, ensureProfileLoaded, db,
@@ -337,6 +338,7 @@ let historyLoaded = false;
 let purchaseHistory = [];
 let purchaseHistoryLoaded = false;
 
+let cardsRevealed = false;
 function render() {
   const user = getCurrentUser();
   if (!user) {
@@ -411,6 +413,7 @@ function render() {
       <div id="purchaseHistoryList">${purchaseHistoryLoaded ? purchaseHistoryHtml() : '<div class="empty-note">loading…</div>'}</div>
     </div>
   `;
+  if (!cardsRevealed) { cardsRevealed = true; reveal(document.querySelector('.page > .header')); revealStatic(content); }
 
   content.querySelectorAll('.pkg-buy').forEach(btn => {
     btn.addEventListener('click', () => buyPackage(Number(btn.dataset.pkg)));
