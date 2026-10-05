@@ -777,19 +777,93 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
     let built; try { built = secs.map(sc => sectionHTML(sc.head, sc.lines)).filter(b => b.html !== '<p><br></p>' || b.h > 70); } finally { inl = inlLocal; }
     if (!built.length) return null;
     const items = [];
-    if (built.length === 1) items.push(N.item(48, 130, 760, built[0].html));
+    if (o && o.layout === 'cornell' && built.length >= 2) {
+      // Cornell notes: narrow cues on the left, wide notes on the right, summary underneath
+      items.push(N.item(48, 130, 250, built[0].html), N.item(330, 130, 670, built[1].html));
+      let yy = 130 + Math.max(built[0].h, built[1].h) + 28;
+      built.slice(2).forEach(b => { items.push(N.item(48, yy, 952, b.html)); yy += b.h + 28; });
+    } else if (built.length === 1) items.push(N.item(48, 130, 760, built[0].html));
     else { const y = [130, 130]; built.forEach(b => { const c = y[0] <= y[1] ? 0 : 1; items.push(N.item(c ? 520 : 48, y[c], 440, b.html)); y[c] += b.h + 28; }); }
     return addPage(N.newPage(pageTitle || 'Notes', items, levelBelow()));
   };
 
-  window.OIAI = {
+  /* ---------- study tools: flashcards, quizzes, key terms, Recall mode ---------- */
+  const withPrefix = (title, prefix) => { const t = plain(title); return !t ? prefix : new RegExp('^' + prefix + '\\b', 'i').test(t) ? t : prefix + ': ' + t; };
+  const fail = m => { OIAI.lastError = m; return null; };
+  // Flashcards: a notes page whose "Term :: meaning" lines the Flashcards screen turns into cards (with spaced review).
+  const newCards = (md, title, o) => {
+    OIAI.lastError = '';
+    const undo = newNotes(md, withPrefix(title, 'Flashcards'), o); if (!undo) return fail('There were no cards in that answer.');
+    const pg = N.page(), n = window.ST ? window.ST.cardsFrom([pg]).length : 0;
+    if (!n) { undo(); return fail('No "Term :: meaning" lines were found, so no flashcards were made.'); }
+    undo.note = 'Made ' + n + ' flashcards.';
+    undo.actions = [{ label:'Study them', run:() => window.ST.open('page') }];
+    return undo;
+  };
+  // Quiz: questions tagged Question, each answer in bold on the next line, so Recall mode hides the answers.
+  const newQuiz = (md, title, o) => {
+    OIAI.lastError = '';
+    const undo = newNotes(md, withPrefix(title, 'Quiz'), o); if (!undo) return fail('There were no questions in that answer.');
+    const n = (N.page().items.map(i => i.html).join('').match(/data-tag="question"/g) || []).length;
+    undo.note = 'Made a quiz' + (n ? ' with ' + n + ' questions' : '') + '. Recall mode hides the answers so you can test yourself.';
+    undo.actions = [{ label:'Test myself', run:() => { if (!N.recall && window.ST) window.ST.toggleRecall(); } }];
+    return undo;
+  };
+  // Highlight key terms on the open notes page (the same yellow as the Key term button), so Recall mode can hide them.
+  const reEsc = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const highlight = text => {
+    OIAI.lastError = '';
+    const p = N.page();
+    if (!p || p.kind === 'map') return fail('Key terms can only be highlighted on a notes page.');
+    const terms = [...new Set(String(text || '').split('\n').map(l => plain(l.replace(/^\s*(?:[-*+•]|\d+[.)])\s+/, '').replace(/^["“]|["”]$/g, ''))).filter(t => t.length >= 2 && t.length <= 80))].slice(0, 40);
+    if (!terms.length) return fail('There were no key terms in that answer.');
+    P.syncAll();
+    const before = p.items.map(i => i.html);
+    let found = 0;
+    p.items.forEach(it => {
+      const d = document.createElement('div'); d.innerHTML = it.html;
+      terms.forEach(term => {
+        const re = new RegExp(reEsc(term), 'i'); let left = 2;
+        const w = document.createTreeWalker(d, NodeFilter.SHOW_TEXT), nodes = [];
+        while (w.nextNode()) nodes.push(w.currentNode);
+        nodes.forEach(node => {
+          if (left <= 0 || !node.parentElement || node.parentElement.closest('[style*="background-color"],b,strong,a')) return;
+          const m = re.exec(node.nodeValue); if (!m) return;
+          const mid = node.splitText(m.index); mid.splitText(m[0].length);
+          const span = document.createElement('span'); span.style.backgroundColor = '#FFE14D'; span.textContent = mid.nodeValue; mid.replaceWith(span);
+          left--; found++;
+        });
+      });
+      it.html = d.innerHTML;
+    });
+    if (!found) { p.items.forEach((it, i) => { it.html = before[i]; }); return fail('None of those terms appear on this page.'); }
+    P.render(false); N.dirty();
+    const undo = () => { const q = N.find(p.id); if (!q) return; q.p.items.forEach((it, i) => { if (before[i] !== undefined) it.html = before[i]; }); if (N.page() === q.p) P.render(false); N.dirty(); };
+    undo.note = 'Highlighted ' + found + ' key terms.';
+    undo.actions = [{ label:'Test myself', run:() => { if (!N.recall && window.ST) window.ST.toggleRecall(); } }];
+    return undo;
+  };
+  // What the learner has done with the flashcards in this notebook, so the AI can aim at the weak spots.
+  const studyStatus = () => {
+    if (!window.ST) return '';
+    let cards; try { P.syncAll(); cards = window.ST.cardsFrom(N.nb.sections.flatMap(sc => sc.pages)); } catch { return ''; }
+    if (!cards.length) return '';
+    const prog = (N.nb.study && N.nb.study.cards) || {}, now = Date.now();
+    const due = cards.filter(c => !prog[c.id] || prog[c.id].due <= now).length, strong = cards.filter(c => prog[c.id] && prog[c.id].box >= 4).length;
+    const weak = cards.filter(c => prog[c.id] && prog[c.id].seen > 0 && prog[c.id].box <= 1).slice(0, 12).map(c => c.front);
+    return `\n\n# Study status (flashcards in this whole notebook)\n- ${cards.length} cards, ${due} due now, ${strong} well learned` + (weak.length ? `\n- Still learning: ${weak.join('; ')}` : '');
+  };
+
+  const OIAI = window.OIAI = {
+    lastError: '',
     // what the panel shows the AI when nothing is selected
-    context() {
+    context(o) {
       const p = N.page(); if (!p) return null;
-      if (p.kind === 'map') return { kind:'map', title:p.title, text:outlineText(p) };
-      return { kind:'page', title:p.title, text:pageOutline(p) };
+      const study = o && o.send ? studyStatus() : ''; // the flashcard tally is only worked out when a question is actually sent
+      if (p.kind === 'map') return { kind:'map', title:p.title, text:outlineText(p) + study };
+      return { kind:'page', title:p.title, text:pageOutline(p) + study };
     },
-    newMap, setMap, newNotes,
+    newMap, setMap, newNotes, newCards, newQuiz, highlight,
   };
 }
 })();

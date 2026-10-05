@@ -27,6 +27,9 @@ const ACTIONS = [
   { label: 'Continue writing', instr: 'Continue writing from where this text stops, matching its style. Write only the continuation.' },
   { label: 'Make a mind map', instr: 'Turn this into a clear mind map.', only: 'idea' },
   { label: 'Make study notes', instr: 'Turn this into well organized study notes, and also make a mind map of it.', only: 'idea' },
+  { label: 'Make flashcards', instr: 'Make flashcards from this.', only: 'idea' },
+  { label: 'Make a quiz', instr: 'Make a quiz from this, with the answers in bold so Recall mode can hide them.', only: 'idea' },
+  { label: 'Highlight key terms', instr: 'Highlight the key terms on this page so I can test myself in Recall mode.', only: 'page' },
   { label: 'Improve this map', instr: 'Improve this mind map: balance the branches, tighten the wording and add any important sub-topics that are missing. Return the complete updated map.', only: 'map' },
   { label: 'Improve the copy', instr: 'Rewrite the text on this page to be clearer, friendlier and more convincing. Keep the same sections and layout.', only: 'site' },
   { label: 'Add a section', instr: 'Add one more useful section to this page that fits the rest of it.', only: 'site' },
@@ -42,7 +45,8 @@ const IDEA_SYSTEM = 'The user is in oneIdea, a note-taking app with real mind ma
   'MIND MAP: put an indented outline between <<map title="Short title">> and <</map>>. Use "- " bullets with two spaces of indent per level. Aim for 3 to 7 main branches with 2 to 5 sub-topics each, going one or two levels deeper only where it helps. Keep every topic short (1 to 6 words, never a full sentence). A longer explanation goes on its own line directly under its topic, starting with "> " (it becomes that topic\'s note). Prefix a topic with [important], [question], [definition], [idea] or [ ] (a to-do) only when it really fits. ' +
   'The page that is open is shown to you as an outline in this same format. If it is a mind map and the user wants it changed, expanded or reorganized, put the COMPLETE updated outline between <<mapedit>> and <</mapedit>> instead. ' +
   'STUDY NOTES: put markdown between <<notes title="Short title">> and <</notes>>. Every "## Heading" becomes its own box on the page, so group the material under 3 to 6 meaningful headings (for example Overview, Key terms, How it works, Examples, Summary). Under them use short bullets (indent two spaces for sub-points), a table when comparing things, "Term :: meaning" lines for definitions (they become flashcards), "[ ] task" lines for to-dos, and "[important] ..." or "[question] ..." lines for key points and open questions. Never write one huge block of bullets. ' +
-  'CHOOSING: requests for a mind map, map, overview, brainstorm or how things connect get <<map>>. Requests for notes, a study guide, a summary in notes form or to organize something get <<notes>>. Write only the kind of block that was asked for, except that a request to make notes from a text, PDF or topic gets BOTH a <<notes>> block and a <<map>> block in the same reply. Use plain text only inside blocks: no LaTeX (write -> for arrows) and no em dashes. Never put these blocks inside <<edit>> or <<append>>. After the blocks, write one short sentence saying what you made.';
+  'CHOOSING: requests for a mind map, map, overview, brainstorm or how things connect get <<map>>. Requests for notes, a study guide, a summary in notes form or to organize something get <<notes>>. Write only the kind of block that was asked for, except that a request to make notes from a text, PDF or topic gets BOTH a <<notes>> block and a <<map>> block in the same reply. Use plain text only inside blocks: no LaTeX (write -> for arrows) and no em dashes. STUDY TOOLS (all of these are real features of oneIdea): (a) FLASHCARDS: <<cards title="Topic">> then one card per line written as Term :: short meaning. Use "## Heading" lines to group several topics. Make 10 to 30 cards unless told otherwise, and every card line must contain " :: ". The user can then open the Flashcards screen, which reviews them with spaced repetition. (b) QUIZ: <<quiz title="Topic">> with, for each question, a line "[question] The question?" followed by a line holding the answer in **bold**. Recall mode hides bold text, so the user can test themselves. Mix recall, why/how and application questions. (c) KEY TERMS: <<highlight>> with one key term per line, copied exactly as written on the open page (at most 25), to highlight them on the page. (d) CORNELL NOTES: <<notes title="Cornell: Topic" layout="cornell">> with exactly three headings: "## Cues and questions" (lines starting [question]), "## Notes" (bullets) and "## Summary" (2 or 3 sentences). (e) REVISION SHEET: <<notes title="Revision: Topic">> with the headings Must remember ([remember] lines), Formulas and facts, Key terms (Term :: meaning lines) and Practice questions ([question] lines). The page can end with a "Study status" section listing how many flashcards are due and which ones the user is still learning: use it when they ask what to study or for a quiz on their weak spots, and put those exact terms first. If the user only wants to be quizzed in the chat, ask ONE question at a time, wait for the answer, then say if it was right, and write no block. ' +
+  'Never put these blocks inside <<edit>> or <<append>>. After the blocks, write one short sentence saying what you made.';
 const SITE_SYSTEM = 'The user is in oneSite, a website builder. A site is a list of pages and each page is a stack of sections. You can change the site directly. The open page is shown to you as JSON in exactly the shape you answer with (title, theme, settings, header, footer, page). To change anything, reply with ONE block: <<site>> a JSON object <</site>>. ' +
   'The object may hold any of these keys, and you include ONLY the keys you change: "page" (the COMPLETE new list of sections for the open page, in order; keep the "id" of every section you keep and leave "id" out for new ones; a section you leave out is deleted), "addPages" (a list of {"name","sections"} for new pages), "theme" ({"palette","font","radius","accent"}), "settings" ({"description","favicon"}), "header" and "footer" ({"v","data"}), "title" (the site name). ' +
   'A section is {"id","type","v","bg","pad","data"} and data holds the fields listed below. A picture shown as "(picture kept)" must be copied back exactly. Never invent picture links: use a placeholder such as "ph:g1" or an https link the user gave you. ' +
@@ -75,7 +79,7 @@ function activeFrame() {
 function docOf(frame) { try { return frame.contentDocument; } catch { return null; } }
 
 // ── what the panel can see ──
-function readContext() {
+function readContext(forSend) {
   const c = readContextCore(), f = activeFrame();
   let w = null;
   try { w = f && f.contentWindow; } catch {}
@@ -85,7 +89,7 @@ function readContext() {
   if (c.build && c.source !== 'selection') {
     // oneIdea / oneSite: show the AI the whole open page (an outline, or the site page as JSON), and never treat one box as "the document".
     try {
-      const o = br.context();
+      const o = br.context({ send: !!forSend });
       if (o) {
         c.idea = o.kind; c.editable = null;
         if (o.text) { c.text = o.text.slice(0, BUILD_CONTEXT_CHARS); c.truncated = o.text.length > BUILD_CONTEXT_CHARS; c.source = 'document'; } else c.source = 'none';
@@ -310,7 +314,10 @@ function injectStyles() {
   .oai-ask{padding-top:0}
   .oai-acts{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px 16px}
   .oai-acts .btn2{border:none;border-radius:100px;padding:9px 16px;font:600 13px "Google Sans",sans-serif;cursor:pointer;background:var(--surface-high);color:inherit;display:inline-flex;align-items:center;gap:6px}.oai-acts .btn2.main{background:var(--primary);color:var(--on-primary)}.oai-acts .btn2:disabled{opacity:.45;cursor:default}.oai-acts .ms{font-size:18px}
-  @media(max-width:560px){.oai-fab span:not(.ms){display:none}.oai-fab{padding:0 16px;bottom:16px;right:16px}}`;
+  .oai-home{display:inline-grid}
+  @media(max-width:560px){.oai-fab span:not(.ms){display:none}.oai-fab{padding:0 16px;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+    .oai-panel{width:100vw;height:100vh;height:100dvh;bottom:auto;padding-bottom:env(safe-area-inset-bottom,0px)}
+    .oai-ask textarea{font-size:16px}.oai-chip{padding:8px 12px}.oai-x,.oai-new{width:44px;height:44px}}`;
   document.head.append(st);
 }
 
@@ -386,7 +393,7 @@ function refresh() {
   const canEdit = !!c.editable;
   ui.chips.querySelectorAll('button').forEach(b => {
     const only = ACTIONS[b.dataset.i].only;
-    b.hidden = only === 'idea' ? c.kind !== 'idea' : only === 'site' ? c.kind !== 'site' : only === 'map' ? c.idea !== 'map' : (c.build && c.source !== 'selection');
+    b.hidden = only === 'idea' ? c.kind !== 'idea' : only === 'page' ? !(c.kind === 'idea' && c.idea === 'page') : only === 'site' ? c.kind !== 'site' : only === 'map' ? c.idea !== 'map' : (c.build && c.source !== 'selection');
     b.disabled = c.source === 'none' && !attach;
   });
   ui.replace.disabled = !(canEdit && c.source === 'selection');
@@ -404,15 +411,16 @@ async function attachFile(file) {
 
 const TAG_RE = /<<\/?(?:edit|append)>>/g;
 // map / notes blocks are built into the app, so they are not shown as chat text
-const MAKE_RE = /<<(map|mapedit|notes|site)(?:\s[^>]*)?>>[\s\S]*?(?:<<\/\1>>|$)/g;
+const MAKE_RE = /<<(map|mapedit|notes|site|cards|quiz|highlight)(?:\s[^>]*)?>>[\s\S]*?(?:<<\/\1>>|$)/g;
 const shown = t => String(t || '').replace(MAKE_RE, '').replace(TAG_RE, '');
 function parseMakes(reply) {
-  const out = [], re = /<<(map|mapedit|notes|site)((?:\s[^>]*)?)>>([\s\S]*?)(<<\/\1>>|$)/g;
+  const out = [], re = /<<(map|mapedit|notes|site|cards|quiz|highlight)((?:\s[^>]*)?)>>([\s\S]*?)(<<\/\1>>|$)/g;
   let m;
   while ((m = re.exec(reply || ''))) {
     const text = m[3].replace(/^\n+|\n+$/g, ''); if (!text.trim()) continue;
     const t = /title\s*=\s*"([^"]*)"/.exec(m[2]);
-    out.push({ kind: m[1], title: t ? t[1] : '', text, closed: !!m[4] });
+    const lay = /layout\s*=\s*"([^"]*)"/.exec(m[2]);
+    out.push({ kind: m[1], title: t ? t[1] : '', layout: lay ? lay[1] : '', text, closed: !!m[4] });
   }
   return out;
 }
@@ -430,7 +438,7 @@ function parseEdit(reply) {
 const saved = t => {
   const e = parseEdit(t), mk = parseMakes(t), said = shown(t).replace(/\s+/g, ' ').trim();
   if (e) return e.said || (e.kind === 'append' ? 'Added to the document.' : 'Edited the document.');
-  if (mk.length) return said || (mk[0].kind === 'site' ? 'Updated the site.' : 'Made ' + mk.map(b => b.kind === 'notes' ? 'a notes page' : 'a mind map').join(' and ') + '.');
+  if (mk.length) return said || (mk[0].kind === 'site' ? 'Updated the site.' : mk[0].kind === 'cards' ? 'Made flashcards.' : mk[0].kind === 'quiz' ? 'Made a quiz.' : mk[0].kind === 'highlight' ? 'Highlighted key terms.' : 'Made ' + mk.map(b => b.kind === 'notes' ? 'a notes page' : 'a mind map').join(' and ') + '.');
   return said;
 };
 
@@ -467,7 +475,7 @@ function makeThink(parent, before) {
 
 async function run(instruction) {
   if (busy) busy.abort();
-  const c = readContext();
+  const c = readContext(true);
   const wantsCtx = c.source !== 'none';
   const appLabel = c.build ? c.app + (c.source === 'selection' ? ' selection' : c.idea === 'map' ? ' mind map (outline)' : c.kind === 'site' ? ' site page (JSON)' : ' page (outline)') : c.app;
   instruction = instruction.slice(0, 3800);
@@ -478,7 +486,7 @@ async function run(instruction) {
   // The server refuses any single earlier message over 4000 characters, and an answer holding a whole notes page + map is longer than that.
   // So earlier turns go back shortened: built blocks and edits become a one-line note, and everything is capped.
   const forModel = m => m.r === 'u' ? m.t.slice(0, 3800)
-    : m.t.replace(MAKE_RE, (_, k) => k === 'site' ? '[the site was changed]' : k === 'notes' ? '[a notes page was made]' : k === 'mapedit' ? '[the mind map was updated]' : '[a mind map was made]')
+    : m.t.replace(MAKE_RE, (_, k) => k === 'site' ? '[the site was changed]' : k === 'cards' ? '[flashcards were made]' : k === 'quiz' ? '[a quiz was made]' : k === 'highlight' ? '[key terms were highlighted]' : k === 'notes' ? '[a notes page was made]' : k === 'mapedit' ? '[the mind map was updated]' : '[a mind map was made]')
       .replace(/<<(edit|append)>>[\s\S]*?(?:<<\/\1>>|$)/g, (_, k) => k === 'edit' ? '[the text was edited]' : '[text was added]').slice(0, 3800);
   const prior = hist.slice(-12).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: forModel(m) })).filter(m => m.content.trim());
   hist.push({ r: 'u', t: instruction, x: tag }); saveHist();
@@ -499,7 +507,7 @@ async function run(instruction) {
       onStatus: st => { if (!answering) th.status(st); },
       onText: t => {
         if (!answering && t) { answering = true; th.answered(sawThought, Math.max(1, Math.round((Date.now() - t0) / 1000))); }
-        am.b.textContent = shown(t) || (/<<(map|mapedit)/.test(t) ? 'Building the mind map...' : /<<notes/.test(t) ? 'Writing the notes...' : /<<site/.test(t) ? 'Updating your site...' : ''); scrollLog();
+        am.b.textContent = shown(t) || (/<<(map|mapedit)/.test(t) ? 'Building the mind map...' : /<<notes/.test(t) ? 'Writing the notes...' : /<<site/.test(t) ? 'Updating your site...' : /<<cards/.test(t) ? 'Writing the flashcards...' : /<<quiz/.test(t) ? 'Writing the quiz...' : ''); scrollLog();
       },
     };
     let reply = await askAI(msgs, opts);
@@ -537,12 +545,17 @@ async function run(instruction) {
     });
     if (OI) makes.filter(blk => blk.kind !== 'site').forEach(blk => {
       let u = null, w = '';
+      OI.lastError = '';
+      const o = { inline: mdInline, layout: blk.layout };
       try {
         if (blk.kind === 'mapedit' && (u = OI.setMap(blk.text))) w = 'Updated your mind map.';
-        else if (blk.kind === 'notes') { u = OI.newNotes(blk.text, blk.title, { inline: mdInline }); w = 'Made a notes page.'; }
+        else if (blk.kind === 'notes') { u = OI.newNotes(blk.text, blk.title, o); w = 'Made a notes page.'; }
+        else if (blk.kind === 'cards') u = OI.newCards(blk.text, blk.title, o);
+        else if (blk.kind === 'quiz') u = OI.newQuiz(blk.text, blk.title, o);
+        else if (blk.kind === 'highlight') u = OI.highlight(blk.text);
         else { u = OI.newMap(blk.text, blk.title); w = 'Made a mind map.'; }
       } catch (err) { console.error(err); }
-      if (u) { undos.push(u); notes.push(w); }
+      if (u) { undos.push(u); notes.push(u.note || w); }
     });
     // oneIdea has no single text to edit, so a plain rewrite becomes a new notes page and the original stays as it is
     if (OI && ed && !canEdit && !undos.length) {
@@ -556,14 +569,17 @@ async function run(instruction) {
       am.b.textContent = said || where;
       const bar = document.createElement('div'); bar.className = 'oai-applied';
       bar.innerHTML = '<span class="ms" aria-hidden="true">check_circle</span><span>' + esc(where) + '</span>';
+      const extra = [];
       const u = document.createElement('button'); u.type = 'button'; u.textContent = 'Undo';
-      u.onclick = () => { try { undos.slice().reverse().forEach(f => f()); u.disabled = true; u.textContent = 'Undone'; toast('Undone.'); } catch { toast('Use Ctrl+Z in the document to undo.'); } };
-      bar.append(u); am.d.append(bar);
+      u.onclick = () => { try { undos.slice().reverse().forEach(f => f()); u.disabled = true; u.textContent = 'Undone'; extra.forEach(x => { x.disabled = true; }); toast('Undone.'); } catch { toast('Use Ctrl+Z in the document to undo.'); } };
+      bar.append(u);
+      undos.flatMap(f => f.actions || []).forEach(act => { const x = document.createElement('button'); x.type = 'button'; x.textContent = act.label; x.onclick = () => { try { act.run(); } catch (err) { console.error(err); } }; extra.push(x); bar.append(x); });
+      am.d.append(bar);
       lastAnswer = '';
     } else {
       am.b.textContent = shown(final) || makesAll.map(blk => blk.text).join('\n\n');
       if (cutOff) { const n = document.createElement('small'); n.textContent = 'This answer was cut off, so nothing was changed. Ask again, or ask it to continue.'; am.d.append(n); }
-      if ((ed && canEdit) || makes.length) { const n = document.createElement('small'); n.textContent = makes.length ? (makes[0].kind === 'site' ? ((() => { try { return activeFrame().contentWindow.OSAI.lastError; } catch { return ''; } })() || 'Couldn\'t apply this to the site.') : 'Couldn\'t build this here. You can copy it instead.') : 'Couldn\'t apply this automatically. Use the buttons below.'; am.d.append(n); }
+      if ((ed && canEdit) || makes.length) { const n = document.createElement('small'); n.textContent = makes.length ? (makes[0].kind === 'site' ? ((() => { try { return activeFrame().contentWindow.OSAI.lastError; } catch { return ''; } })() || 'Couldn\'t apply this to the site.') : ((() => { try { return activeFrame().contentWindow.OIAI.lastError; } catch { return ''; } })() || 'Couldn\'t build this here. You can copy it instead.')) : 'Couldn\'t apply this automatically. Use the buttons below.'; am.d.append(n); }
       lastAnswer = cutOff ? '' : ed ? ed.text : makes.length ? makes[0].text : reply;
     }
   } catch (err) {
@@ -624,8 +640,26 @@ function disable() {
   if (fab) fab.hidden = true;
 }
 
+// The app switcher inside every app (and a button on the home screen) opens the panel, so it is one tap away on a phone.
+function toggleFromMenu() { if (!panel) return; if (panel.hidden) openPanel(); else closePanel(); }
+window.addEventListener('message', e => { const m = e.data; if (e.origin === location.origin && m && m.one && m.type === 'ai' && aiFeaturesEnabled()) { if (!panel) enable(); toggleFromMenu(); } });
+function syncHomeBtn(on) {
+  let b = document.getElementById('oaiHomeBtn');
+  const top = document.querySelector('#home .top');
+  if (!on || !top) { if (b) b.remove(); return; }
+  if (b) return;
+  b = document.createElement('button');
+  b.id = 'oaiHomeBtn'; b.type = 'button'; b.className = 'tb-btn oai-home'; b.title = 'Ask epic AI'; b.setAttribute('aria-label', 'Ask epic AI');
+  b.innerHTML = '<span class="ms" aria-hidden="true">auto_awesome</span>';
+  b.addEventListener('click', () => { if (!panel) enable(); toggleFromMenu(); });
+  const before = document.getElementById('seedBtn');
+  top.insertBefore(b, before && before.parentNode === top ? before : null);
+}
+
 function start() {
   if (aiFeaturesEnabled()) enable();
+  syncHomeBtn(aiFeaturesEnabled());
+  onAiFeaturesChange(on => syncHomeBtn(on));
   onAiFeaturesChange(on => (on ? enable() : disable()));
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });

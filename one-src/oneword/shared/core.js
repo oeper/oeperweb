@@ -445,6 +445,9 @@ ONE.appSwitcher = anchor => {
     return t;
   };
   g.append(tile(null, 'Home', () => { ONE.pop.close(); ONE.post({ type:'home' }); }));
+  // epic AI (optional): a way in that is always one tap from any app, which matters on a phone where the floating button is easy to miss
+  let aiOn = false; try { aiOn = localStorage.getItem('oe-ai-features') === '1'; } catch {}
+  if (aiOn) g.append(tile({ id:'ai', icon:'auto_awesome', color:'#6750a4' }, 'epic AI', () => { ONE.pop.close(); ONE.post({ type:'ai' }); }));
   ONE.APPS.forEach(a => g.append(tile(a, a.name, () => { ONE.pop.close(); if (a.id !== ONE.appId) ONE.post({ type:'switch', app:a.id }); })));
   d.append(g);
   ONE.pop.open(anchor, d, { alignRight:true });
