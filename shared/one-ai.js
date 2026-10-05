@@ -14,7 +14,7 @@
 // tag (and in the published one/index.html).
 
 import { aiFeaturesEnabled, onAiFeaturesChange, askAI } from '/shared/ai-features.js?v=4';
-import { readFileForAI, isImage } from '/shared/ai-files.js?v=1';
+import { readFileForAI, isImage } from '/shared/ai-files.js?v=2';
 
 const MAX_CONTEXT_CHARS = 12000;
 const BUILD_CONTEXT_CHARS = 24000; // oneIdea outlines and oneSite pages are read whole, so they get more room
@@ -417,7 +417,7 @@ function refresh() {
 async function attachFile(file) {
   if (isImage(file)) return toast('Pictures can\'t be read here yet. Attach a PDF or a text file.');
   ui.file.hidden = false; ui.fileName.textContent = 'Reading ' + file.name + '...';
-  try { attach = await readFileForAI(file); }
+  try { attach = await readFileForAI(file, { maxChars: 900000, maxPages: 500, onProgress: (n, t) => { if (n % 10 === 0 || n === t) ui.fileName.textContent = 'Reading ' + file.name + ': page ' + n + ' of ' + t + '...'; } }); }
   catch (err) { attach = null; toast(err.message || 'Couldn\'t read that file.'); }
   refresh();
 }
@@ -636,6 +636,133 @@ async function askRetry(msgs, opts, tries = 2) {
   for (let k = 0; k < tries && !reply.trim(); k++) { if (opts.signal && opts.signal.aborted) break; reply = await askAI(msgs, opts); }
   return reply;
 }
+const sleep = (ms, signal) => new Promise((res, rej) => {
+  if (signal && signal.aborted) return rej(Object.assign(new Error('stopped'), { name: 'AbortError' }));
+  const t = setTimeout(res, ms);
+  if (signal) signal.addEventListener('abort', () => { clearTimeout(t); rej(Object.assign(new Error('stopped'), { name: 'AbortError' })); }, { once: true });
+});
+// Like askRetry, but when the server says "too many requests" it waits for the limit to reset and carries on
+// (a whole textbook is a few hundred requests, so hitting the limit is normal there, not an error).
+async function askPatient(msgs, opts, tries, wait) {
+  for (let waits = 0; ; waits++) {
+    try { return await askRetry(msgs, opts, tries); }
+    catch (err) {
+      if (err && err.name === 'AbortError') throw err;
+      if (!/too many|rate limit|429/i.test((err && err.message) || '') || waits >= 16) throw err;
+      for (let s = 60; s > 0; s -= 5) { if (wait) wait(s); await sleep(5000, opts && opts.signal); }
+    }
+  }
+}
+
+const CHUNK = 30000;     // characters of source sent with one request
+const BOOK_MIN = 70000;  // more source than this is treated as a book: one section per chapter
+const stripPages = t => String(t || '').replace(/^\[Page \d+\]\n?/gm, '');
+function chunkOf(full) {
+  const chunks = [];
+  for (let at = 0; at < full.length;) {
+    let end = Math.min(full.length, at + CHUNK);
+    if (end < full.length) { const cut = full.lastIndexOf('\n', end); if (cut > at + CHUNK * .6) end = cut; }
+    chunks.push(full.slice(at, end)); at = end;
+  }
+  return chunks;
+}
+// Cuts a textbook into chapters. Lines like "Chapter 4", "Chapter 4: Cell Biology", "Unit 2" start one; the table of contents (tiny
+// pieces) folds into the first real chapter. With no such headings the text is cut into equal parts instead.
+const NUMW = 'one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty';
+const CH_RE = new RegExp('^\\s*(?:#{1,6}\\s*)?(?:\\*\\*)?(chapter|unit|module|lesson)\\s+(\\d{1,3}|[ivxl]{1,6}|' + NUMW + ')\\b\\s*[:.\\-–—)]*\\s*(.{0,90})$', 'i');
+function splitChapters(raw) {
+  const lines = raw.split('\n'), marks = []; let off = 0;
+  lines.forEach((ln, i) => {
+    const m = CH_RE.exec(ln), len = ln.length + 1;
+    if (m && !(/[.!?,;]$/.test(ln.trim()) && ln.trim().length > 40) && ln.trim().length <= 110) {
+      let name = ln.trim().replace(/^#+\s*/, '').replace(/\*+/g, '');
+      if (!m[3].trim()) { for (let j = i + 1; j < Math.min(lines.length, i + 4); j++) { const nx = lines[j].trim(); if (nx) { if (nx.length <= 90 && !CH_RE.test(nx)) name += ': ' + nx; break; } } }
+      name = name.replace(/\s+/g, ' ').slice(0, 70);
+      const key = name.toLowerCase();
+      if (!marks.length || marks[marks.length - 1].key !== key) marks.push({ name, key, start: off });
+    }
+    off += len;
+  });
+  let segs = marks.map((mk, i) => ({ name: mk.name, start: mk.start, end: i + 1 < marks.length ? marks[i + 1].start : raw.length }));
+  // tiny pieces (the table of contents, running page headers) join the piece after them
+  for (let i = 0; i < segs.length - 1;) { if (segs[i].end - segs[i].start < 3000) { segs[i + 1].start = segs[i].start; segs.splice(i, 1); } else i++; }
+  if (segs.length > 1 && segs[segs.length - 1].end - segs[segs.length - 1].start < 3000) { segs[segs.length - 2].end = segs[segs.length - 1].end; segs.pop(); }
+  if (segs.length >= 2) {
+    if (segs[0].start >= 8000) segs.unshift({ name: 'Introduction', start: 0, end: segs[0].start }); else segs[0].start = 0;
+    return segs.slice(0, 40).map(g => ({ name: g.name, text: raw.slice(g.start, g.end) }));
+  }
+  const n = Math.max(2, Math.ceil(raw.length / 60000)), size = Math.ceil(raw.length / n), out = [];
+  for (let i = 0; i < n; i++) { let a = i * size, b = Math.min(raw.length, a + size); if (b < raw.length) { const cut = raw.indexOf('\n', b); if (cut > 0 && cut < b + 3000) b = cut; } out.push({ name: 'Part ' + (i + 1), text: raw.slice(a, b) }); }
+  return out;
+}
+
+/* The writing engine: plan the sections of every chunk of the source, write them (two per request, two requests at a time), and hand each
+   finished section to o.onPage in order. Used for one chapter or topic (runDeep) and once per chapter of a textbook (runBook). */
+async function deepWrite(o) {
+  const { instruction, chunks, sys, signal, label } = o;
+  const wrap = (text, body) => body ? `${text}\n\n<<one:${label}>>\n${body}\n<</one>>` : text;
+  const ask = (text, tries) => askPatient([{ role: 'system', content: sys }, { role: 'user', content: text }], { signal }, tries, o.wait);
+  const nCh = Math.max(1, chunks.length), per = chunks.length ? Math.max(3, Math.min(o.maxPer || 8, Math.ceil(o.wantSecs / nCh))) : 7;
+  const planOne = async k => {
+    const part = nCh > 1 ? ` This is part ${k + 1} of ${nCh} of the material, so plan only what is in this part.` : '';
+    const reply = await ask(wrap(`${instruction}\n\nFirst plan the notes.${part} Reply with ONLY JSON and no other text: {"title":"short title for the whole set","sections":[{"title":"short section title","covers":"one or two sentences listing exactly which topics, terms, facts and examples this section must cover"}]}. Use ${chunks.length ? per : '6 to 8'} sections that together cover EVERYTHING${chunks.length ? ' in the material, leaving nothing out' : ' a student needs on this topic'}, in a sensible teaching order.`, chunks[k] || ''));
+    let pl = null; try { const i = reply.indexOf('{'), z = reply.lastIndexOf('}'); pl = JSON.parse(reply.slice(i, z + 1)); } catch {}
+    return pl;
+  };
+  const plans = []; for (let k = 0; k < nCh; k += 2) { const got = await Promise.all([planOne(k), k + 1 < nCh ? planOne(k + 1) : null]); plans.push(...got.filter((_, j) => k + j < nCh)); }
+  const sections = [], cap = o.maxSections || 16;
+  plans.forEach((pl, k) => { if (pl && Array.isArray(pl.sections)) pl.sections.forEach(x => { const t = String(x && x.title || '').trim().slice(0, 80); if (t && sections.length < cap) sections.push({ title: t, covers: String(x.covers || '').trim().slice(0, 300), ch: k }); }); });
+  if (sections.length < 2) throw new Error('could not plan the notes. Please try again.');
+  const plan = plans.find(Boolean), setTitle = String((plan && plan.title) || o.title || 'Notes').trim().slice(0, 80), n = sections.length;
+  const outline = sections.map((x, i) => `${i + 1}. ${x.title}`).join('; ');
+  const need = chunks.length ? Math.max(500, Math.min(900, Math.round(CHUNK / 6 / per * .6))) : 600;
+  const results = new Array(n).fill(null); let nextJob = 0, applied = 0, finished = 0;
+  const apply = () => {
+    while (applied < n && results[applied] !== null) {
+      const sec = sections[applied], text = results[applied]; applied++;
+      if (text) { try { o.onPage(text, sec.title); } catch (err) { console.error(err); } }
+    }
+  };
+  const progress = () => { if (o.progress) o.progress(finished, n); };
+  progress();
+  const groups = []; for (let i = 0; i < n;) { let j = i + 1; if (j < n && sections[j].ch === sections[i].ch) j++; groups.push([i, j]); i = j; }
+  const worker = async () => {
+    while (nextJob < groups.length && !signal.aborted) {
+      const [from, to] = groups[nextJob++], part = [];
+      for (let i = from; i < to; i++) part.push(`part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}`);
+      const body = chunks[sections[from].ch] || '';
+      const reply = await ask(wrap(`${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY ${to - from > 1 ? 'these ' + (to - from) + ' parts' : 'this part'}: ${part.join('; ')}. Write each part as its own <<notes title="the part title">> block, very thorough (at least ${need} words each, never a short summary) and following the study notes rules, with no other blocks. Include every definition, fact, formula, date, name and example from the material that belongs to the part, explained properly. The other parts are written separately, so do not repeat them.`, body));
+      const blocks = parseMakes(reply).filter(b => b.kind === 'notes');
+      for (let i = from; i < to; i++) {
+        const byTitle = blocks.find(b => sameTitle(b.title, sections[i].title)), mk = byTitle || blocks[i - from];
+        results[i] = ((mk ? mk.text : (blocks.length ? '' : shown(reply))) || '').trim();
+        // a part that came back thin is written again on its own (once), keeping whichever version is longer
+        if (results[i].split(/\s+/).length < Math.round(need * .6) && !signal.aborted) {
+          try {
+            const one = await ask(wrap(`${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}. This part must be long and detailed: at least ${need} words, covering every point of the material for it, with definitions, examples and key terms, in one <<notes title="${sections[i].title}">> block and no other blocks.`, body), 1);
+            const b2 = parseMakes(one).filter(b => b.kind === 'notes')[0], t2 = ((b2 ? b2.text : '') || '').trim();
+            if (t2.split(/\s+/).length > results[i].split(/\s+/).length) results[i] = t2;
+          } catch (err) { if (err && err.name === 'AbortError') throw err; }
+        }
+        finished++;
+      }
+      apply(); progress();
+    }
+  };
+  await Promise.all([worker(), worker()]);
+  if (signal.aborted) throw Object.assign(new Error('stopped'), { name: 'AbortError' });
+  apply();
+  return { setTitle, sections };
+}
+const planMap = (setTitle, sections) => `- ${setTitle}\n` + sections.map(x => `  - ${x.title}\n    > ${x.covers}`).join('\n');
+
+// the text to write notes from: an attached file, the selection, or the whole open page
+function notesSource(OI, c) {
+  let full = attach ? attach.text : c.source === 'selection' ? c.text : '';
+  if (!attach && c.source === 'document') { try { const o = OI.context({}); full = (o && o.text) || c.text || ''; } catch { full = c.text || ''; } }
+  return { full: full.slice(0, 900000), label: (attach ? attach.title : c.source === 'selection' ? 'selection' : 'page').replace(/[<>\n]/g, ' ') };
+}
+
 async function runDeep(instruction) {
   let OI = null, frameWin = null;
   try { const fr = activeFrame(); frameWin = fr && fr.contentWindow; OI = frameWin && frameWin.OIAI; } catch {}
@@ -643,22 +770,10 @@ async function runDeep(instruction) {
   if (busy) busy.abort();
   const c = readContext(true);
   instruction = instruction.slice(0, 1500);
-  // the WHOLE source is used (not the 24000 character preview of the page), cut into chunks that fit one request; each chunk is planned and written on its own
-  let full = attach ? attach.text : c.source === 'selection' ? c.text : '';
-  if (!attach && c.source === 'document') { try { const o = OI.context({}); full = (o && o.text) || c.text || ''; } catch { full = c.text || ''; } }
-  full = full.slice(0, 120000);
-  const CH = 30000, chunks = [];
-  for (let at = 0; at < full.length;) {
-    let end = Math.min(full.length, at + CH);
-    if (end < full.length) { const cut = full.lastIndexOf('\n', end); if (cut > at + CH * .6) end = cut; }
-    chunks.push(full.slice(at, end)); at = end;
-  }
-  const src = chunks.length ? chunks[0] : '';
-  const srcLabel = (attach ? attach.title : c.source === 'selection' ? 'selection' : 'page').replace(/[<>\n]/g, ' ');
-  const wrap = (text, body) => body ? `${text}\n\n<<one:${srcLabel}>>\n${body}\n<</one>>` : text;
-  const withSrc = text => wrap(text, src);
-  const srcWords = Math.round(full.length / 6), wantSecs = Math.max(5, Math.min(14, Math.round(srcWords / 600)));
-  const tag = attach ? attach.title : src ? 'document' : '';
+  const { full, label } = notesSource(OI, c);
+  if (full.length >= BOOK_MIN) return runBook(instruction, full, label, OI, frameWin);
+  const chunks = chunkOf(stripPages(full)), srcWords = Math.round(full.length / 6), wantSecs = Math.max(5, Math.min(14, Math.round(srcWords / 600)));
+  const tag = attach ? attach.title : full ? 'document' : '';
   hist.push({ r: 'u', t: instruction, x: tag }); saveHist();
   addMsg('user', instruction, tag ? 'with ' + tag : '');
   lastAnswer = ''; ui.acts.style.display = 'none'; ui.send.disabled = true;
@@ -666,82 +781,115 @@ async function runDeep(instruction) {
   busy = new AbortController(); const mine = busy;
   const undos = [], titles = []; let stored = false;
   const sys = SYSTEM + ' ' + IDEA_SYSTEM;
+  const say = msg => { th.status(msg); am.b.textContent = msg + (titles.length ? '. Pages so far: ' + titles.join(', ') : '') + '.'; scrollLog(); };
   try {
-    th.status('Planning the notes...'); am.b.textContent = 'Planning the notes...';
-    const nCh = Math.max(1, chunks.length), per = Math.max(3, Math.ceil(wantSecs / nCh));
-    const planOne = async k => {
-      const part = nCh > 1 ? ` This is part ${k + 1} of ${nCh} of the material, so plan only what is in this part.` : '';
-      const reply = await askRetry([{ role: 'system', content: sys }, { role: 'user', content: wrap(`${instruction}\n\nFirst plan the notes.${part} Reply with ONLY JSON and no other text: {"title":"short title for the whole set","sections":[{"title":"short section title","covers":"one or two sentences listing exactly which topics, terms, facts and examples this section must cover"}]}. Use ${chunks.length ? per : '6 to 8'} sections that together cover EVERYTHING${chunks.length ? ' in the material, leaving nothing out' : ' a student needs on this topic'}, in a sensible teaching order.`, chunks[k] || '') }], { signal: mine.signal });
-      let pl = null; try { const i = reply.indexOf('{'), z = reply.lastIndexOf('}'); pl = JSON.parse(reply.slice(i, z + 1)); } catch {}
-      return pl;
-    };
-    const plans = []; for (let k = 0; k < nCh; k += 2) { const got = await Promise.all([planOne(k), k + 1 < nCh ? planOne(k + 1) : null]); plans.push(...got.filter((_, j) => k + j < nCh)); }
-    const sections = [];
-    plans.forEach((pl, k) => { if (pl && Array.isArray(pl.sections)) pl.sections.forEach(x => { const t = String(x && x.title || '').trim().slice(0, 80); if (t && sections.length < 16) sections.push({ title: t, covers: String(x.covers || '').trim().slice(0, 300), ch: k }); }); });
-    if (sections.length < 2) throw new Error('could not plan the notes. Please try again.');
-    const plan = plans.find(Boolean), setTitle = String((plan && plan.title) || 'Notes').trim().slice(0, 80), n = sections.length;
-    const outline = sections.map((x, i) => `${i + 1}. ${x.title}`).join('; ');
-    const results = new Array(n).fill(null); let nextJob = 0, applied = 0, finished = 0;
-    const apply = () => {
-      while (applied < n && results[applied] !== null) {
-        const sec = sections[applied], text = results[applied]; applied++;
-        if (!text) continue;
-        let u = null;
-        try { OI.lastError = ''; u = OI.newNotes(text, sec.title, { inline: mdInline }); } catch (err) { console.error(err); }
-        if (u) { undos.push(u); titles.push(sec.title); }
-      }
-    };
-    const status = () => { const msg = `Writing the notes: ${finished} of ${n} sections done`; th.status(msg); am.b.textContent = msg + (titles.length ? '. Pages so far: ' + titles.join(', ') : '') + '.'; scrollLog(); };
-    status();
-    const groups = []; for (let i = 0; i < n;) { let j = i + 1; if (j < n && sections[j].ch === sections[i].ch) j++; groups.push([i, j]); i = j; }
-    const need = chunks.length ? Math.max(500, Math.min(900, Math.round(CH / 6 / per * .6))) : 600;
-    const worker = async () => {
-      while (nextJob < groups.length && !mine.signal.aborted) {
-        const [from, to] = groups[nextJob++], part = [];
-        for (let i = from; i < to; i++) part.push(`part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}`);
-        const ask = `${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY ${to - from > 1 ? 'these ' + (to - from) + ' parts' : 'this part'}: ${part.join('; ')}. Write each part as its own <<notes title="the part title">> block, very thorough (at least ${need} words each, never a short summary) and following the study notes rules, with no other blocks. Include every definition, fact, formula, date, name and example from the material that belongs to the part, explained properly. The other parts are written separately, so do not repeat them.`;
-        const reply = await askRetry([{ role: 'system', content: sys }, { role: 'user', content: wrap(ask, chunks[sections[from].ch] || '') }], { signal: mine.signal });
-        const blocks = parseMakes(reply).filter(b => b.kind === 'notes');
-        for (let i = from; i < to; i++) {
-          const byTitle = blocks.find(b => sameTitle(b.title, sections[i].title)), mk = byTitle || blocks[i - from];
-          results[i] = ((mk ? mk.text : (blocks.length ? '' : shown(reply))) || '').trim();
-          // a part that came back thin is written again on its own (once), keeping whichever version is longer
-          if (results[i].split(/\s+/).length < Math.round(need * .6) && !mine.signal.aborted) {
-            try {
-              const one = await askRetry([{ role: 'system', content: sys }, { role: 'user', content: wrap(`${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}. This part must be long and detailed: at least ${need} words, covering every point of the material for it, with definitions, examples and key terms, in one <<notes title="${sections[i].title}">> block and no other blocks.`, chunks[sections[i].ch] || '') }], { signal: mine.signal }, 1);
-              const b2 = parseMakes(one).filter(b => b.kind === 'notes')[0], t2 = ((b2 ? b2.text : '') || '').trim();
-              if (t2.split(/\s+/).length > results[i].split(/\s+/).length) results[i] = t2;
-            } catch (err) { if (err && err.name === 'AbortError') throw err; }
-          }
-          finished++;
-        }
-        apply(); status();
-      }
-    };
-    await Promise.all([worker(), worker()]);
-    if (mine.signal.aborted) throw Object.assign(new Error('stopped'), { name: 'AbortError' });
-    apply();
+    say('Planning the notes...');
+    const r = await deepWrite({
+      instruction, chunks, sys, signal: mine.signal, label, wantSecs, title: 'Notes',
+      wait: s => say(`The AI's request limit was reached. Continuing in ${s}s`),
+      progress: (f, n) => say(`Writing the notes: ${f} of ${n} sections done`),
+      onPage: (text, title) => { let u = null; try { OI.lastError = ''; u = OI.newNotes(text, title, { inline: mdInline, flat: true }); } catch (err) { console.error(err); } if (u) { undos.push(u); titles.push(title); } },
+    });
     // a mind map of the plan, so the whole set can be seen at a glance
-    try { const out = `- ${setTitle}\n` + sections.map(x => `  - ${x.title}\n    > ${x.covers}`).join('\n'); const u = OI.newMap(out, setTitle); if (u) undos.push(u); } catch (err) { console.error(err); }
+    try { const u = OI.newMap(planMap(r.setTitle, r.sections), r.setTitle, { flat: true }); if (u) undos.push(u); } catch (err) { console.error(err); }
     th.box.hidden = true;
     const summary = `Wrote ${titles.length} pages of notes: ${titles.join(', ')}.`;
     am.b.textContent = titles.length ? summary + ' I also added a mind map of the whole set.' : 'Nothing could be written. Please try again.';
     hist.push({ r: 'a', t: summary }); saveHist(); stored = true;
-    if (undos.length) {
-      const bar = document.createElement('div'); bar.className = 'oai-applied';
-      bar.innerHTML = '<span class="ms" aria-hidden="true">check_circle</span><span>' + esc(`Added ${titles.length} notes pages and a mind map.`) + '</span>';
-      const extra = [];
-      const u = document.createElement('button'); u.type = 'button'; u.textContent = 'Undo all';
-      u.onclick = () => { try { undos.slice().reverse().forEach(f => f()); u.disabled = true; u.textContent = 'Undone'; extra.forEach(x => { x.disabled = true; }); toast('Undone.'); } catch { toast('Use Ctrl+Z in the document to undo.'); } };
-      bar.append(u);
-      [['Flashcards', () => frameWin.ST.open('section')], ['Take a quiz', () => frameWin.QZ.open({ scope: 'section' })]].forEach(([label, fn]) => { const x = document.createElement('button'); x.type = 'button'; x.textContent = label; x.onclick = () => { try { fn(); } catch (err) { console.error(err); } }; extra.push(x); bar.append(x); });
-      am.d.append(bar);
-    }
+    if (undos.length) doneBar(am, undos, `Added ${titles.length} notes pages and a mind map.`, frameWin, 'section');
   } catch (err) {
     if (!stored) { hist.pop(); saveHist(); }
     if (err.name === 'AbortError') { am.d.remove(); }
     else { am.d.classList.add('err'); th.box.hidden = true; am.b.textContent = (titles.length ? `Stopped after ${titles.length} pages: ` : 'Couldn\'t write the notes: ') + err.message; }
   } finally {
+    if (busy === mine) busy = null;
+    ui.send.disabled = false; scrollLog(); refresh();
+  }
+}
+// "Undo all / Flashcards / Take a quiz" under a finished set of notes
+function doneBar(am, undos, text, frameWin, scope) {
+  const bar = document.createElement('div'); bar.className = 'oai-applied';
+  bar.innerHTML = '<span class="ms" aria-hidden="true">check_circle</span><span>' + esc(text) + '</span>';
+  const extra = [];
+  const u = document.createElement('button'); u.type = 'button'; u.textContent = 'Undo all';
+  u.onclick = () => { try { undos.slice().reverse().forEach(f => f()); u.disabled = true; u.textContent = 'Undone'; extra.forEach(x => { x.disabled = true; }); toast('Undone.'); } catch { toast('Use Ctrl+Z in the document to undo.'); } };
+  bar.append(u);
+  [['Flashcards', () => frameWin.ST.open(scope)], ['Take a quiz', () => frameWin.QZ.open({ scope })]].forEach(([label, fn]) => { const x = document.createElement('button'); x.type = 'button'; x.textContent = label; x.onclick = () => { try { fn(); } catch (err) { console.error(err); } }; extra.push(x); bar.append(x); });
+  am.d.append(bar);
+}
+
+// A textbook: find the chapters, let the user pick which to do, then write every chapter as its own section of the notebook.
+async function runBook(instruction, full, label, OI, frameWin) {
+  const text = stripPages(full), chapters = splitChapters(text);
+  const tag = attach ? attach.title : 'document';
+  hist.push({ r: 'u', t: instruction, x: tag }); saveHist();
+  addMsg('user', instruction, 'with ' + tag);
+  lastAnswer = ''; ui.acts.style.display = 'none'; ui.send.disabled = true;
+  const am = addMsg('ai', ''), th = makeThink(am.d, am.b); th.box.hidden = true;
+  const have = new Set(); try { frameWin.N.nb.sections.forEach(s => have.add(s.name.toLowerCase())); } catch {}
+  const info = chapters.map(ch => { const chunks = chunkOf(ch.text), words = Math.round(ch.text.length / 6), per = Math.max(3, Math.min(6, Math.ceil(Math.max(5, Math.min(24, Math.round(words / 600))) / chunks.length))); return { ch, chunks, words, req: chunks.length * (1 + Math.ceil(per / 2)) }; });
+  // 1. ask which chapters
+  const picked = await new Promise(resolve => {
+    const totalWords = info.reduce((a, x) => a + x.words, 0);
+    am.b.textContent = `This looks like a book: about ${totalWords.toLocaleString()} words in ${chapters.length} chapters. Each chapter becomes its own section of your notebook, written in detail one after another. Tick the chapters to do.`;
+    const box = document.createElement('div'); box.style.cssText = 'display:flex;flex-direction:column;gap:4px;margin:8px 0;max-height:240px;overflow:auto;font-size:13px';
+    const checks = info.map((x, i) => {
+      const done = have.has(x.ch.name.toLowerCase());
+      const l = document.createElement('label'); l.style.cssText = 'display:flex;gap:8px;align-items:center;cursor:pointer';
+      const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !done; l.append(cb);
+      const sp = document.createElement('span'); sp.textContent = `${x.ch.name} (${x.words.toLocaleString()} words)${done ? ' - already in your notebook' : ''}`; l.append(sp); box.append(l); return cb;
+    });
+    const est = document.createElement('small'); const upd = () => { const sel = info.filter((_, i) => checks[i].checked), req = sel.reduce((a, x) => a + x.req, 0); est.textContent = sel.length ? `About ${req} AI requests, roughly ${Math.max(1, Math.round(req * 40 / 60 / 2))} minutes. You can keep using oneIdea while it works.` : 'Pick at least one chapter.'; go.disabled = !sel.length; };
+    const row = document.createElement('div'); row.className = 'oai-applied';
+    const go = document.createElement('button'); go.type = 'button'; go.textContent = 'Start';
+    const no = document.createElement('button'); no.type = 'button'; no.textContent = 'Cancel';
+    go.onclick = () => { box.remove(); row.remove(); est.remove(); resolve(info.filter((_, i) => checks[i].checked)); };
+    no.onclick = () => { box.remove(); row.remove(); est.remove(); resolve(null); };
+    checks.forEach(cb => { cb.onchange = upd; });
+    row.append(go, no); am.d.append(box, est, row); upd(); scrollLog();
+  });
+  if (!picked) { hist.pop(); saveHist(); am.d.remove(); ui.send.disabled = false; refresh(); return; }
+  // 2. write them
+  if (busy) busy.abort();
+  busy = new AbortController(); const mine = busy;
+  const handles = [], done = [], failed = []; let pages = 0, stored = false;
+  const stopRow = document.createElement('div'); stopRow.className = 'oai-applied'; const stopB = document.createElement('button'); stopB.type = 'button'; stopB.textContent = 'Stop'; stopB.onclick = () => mine.abort(); stopRow.append(stopB); am.d.append(stopRow);
+  const sys = SYSTEM + ' ' + IDEA_SYSTEM;
+  let where = '';
+  const say = msg => { am.b.textContent = (where ? where + '\n' : '') + msg + (done.length ? `\nDone: ${done.join(', ')}` : ''); scrollLog(); };
+  try {
+    for (let ci = 0; ci < picked.length; ci++) {
+      const x = picked[ci]; where = `Chapter ${ci + 1} of ${picked.length}: ${x.ch.name}`;
+      say('Planning...');
+      const h = OI.newSection(x.ch.name); if (!h) throw new Error('could not add a section to the notebook.');
+      handles.push(h); let n = 0;
+      try {
+        const words = x.words, r = await deepWrite({
+          instruction, chunks: x.chunks, sys, signal: mine.signal, label: x.ch.name, title: x.ch.name, maxPer: 6, maxSections: 30,
+          wantSecs: Math.max(5, Math.min(24, Math.round(words / 600))),
+          wait: s => say(`The AI's request limit was reached. Continuing in ${s}s`),
+          progress: (f, tot) => say(`Writing: ${f} of ${tot} sections`),
+          onPage: (t, title) => { let u = null; try { OI.lastError = ''; u = OI.newNotes(t, title, { inline: mdInline, flat: true }); } catch (err) { console.error(err); } if (u) { n++; pages++; } },
+        });
+        try { OI.newMap(planMap(x.ch.name, r.sections), x.ch.name + ' map', { flat: true }); } catch (err) { console.error(err); }
+        h.finish(); done.push(x.ch.name);
+      } catch (err) {
+        h.finish();
+        if (err && err.name === 'AbortError') throw err;
+        failed.push(x.ch.name + (err && err.message ? ' (' + err.message + ')' : ''));
+        if (failed.length >= 3 && !done.length) throw new Error(failed[failed.length - 1]);
+      }
+    }
+    const summary = `Wrote ${pages} pages of notes in ${done.length} chapter${done.length === 1 ? '' : 's'}.` + (failed.length ? ` Not finished: ${failed.join('; ')}. Ask again to redo those.` : '');
+    am.b.textContent = summary; hist.push({ r: 'a', t: summary }); saveHist(); stored = true;
+    if (handles.length) doneBar(am, handles.map(h => h.undo), `Added ${done.length} chapters (${pages} pages).`, frameWin, 'notebook');
+  } catch (err) {
+    if (!stored) { hist.pop(); saveHist(); }
+    am.d.classList.toggle('err', !(err && err.name === 'AbortError'));
+    am.b.textContent = (err && err.name === 'AbortError' ? 'Stopped. ' : 'Couldn\'t finish: ' + ((err && err.message) || '') + ' ') + (done.length ? `${done.length} chapters were written and are kept: ${done.join(', ')}.` : 'Nothing was kept.');
+    if (handles.length) doneBar(am, handles.map(h => h.undo), 'Written so far is kept in your notebook.', frameWin, 'notebook');
+  } finally {
+    stopRow.remove();
     if (busy === mine) busy = null;
     ui.send.disabled = false; scrollLog(); refresh();
   }

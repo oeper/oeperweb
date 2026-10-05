@@ -83,7 +83,7 @@ const MAX_IMAGE_CONTENT_CHARS = 6 * 1024 * 1024;
 const MAX_TOKENS = 8192; // reasoning + answer; structured notes and mind maps need more than the old 4096
 const STALL_MS = 30000; // no upstream data for this long mid-stream = treat as stalled (the browser gives up at 45s)
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
-const RATE_LIMIT_MAX = 20; // requests per IP per window, per isolate
+const RATE_LIMIT_MAX = 150; // requests per IP per window, per isolate (a whole textbook turned into notes is about 100 requests)
 
 // Best-effort only — a Worker isolate's memory doesn't persist across cold
 // starts and isn't shared across Cloudflare's edge locations, so this is

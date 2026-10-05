@@ -743,9 +743,9 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
   const addPage = pg => { const here = N.page(), hid = here && here.id; P.syncAll(); insertAfterCurrent(pg); return () => removePage(pg.id, hid); };
   const levelBelow = () => { const cp = N.page(); return cp ? Math.min(2, (cp.level || 0) + 1) : 0; };
 
-  const newMap = (text, title) => {
+  const newMap = (text, title, o) => {
     const r = parseOutlineAI(text); if (!r || !r.out.length) return null;
-    return addPage(N.mapFromOutline(plain(title) || r.title || 'Mind map', r.out, levelBelow()));
+    return addPage(N.mapFromOutline(plain(title) || r.title || 'Mind map', r.out, o && o.flat ? 0 : levelBelow()));
   };
   const setMap = text => {
     if (!active || !cur || cur.kind !== 'map' || N.recall) return null;
@@ -829,7 +829,7 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
   };
   const newNotes = (md, title, o) => {
     const b = buildNotes(md, title, o); if (!b) return null;
-    return addPage(N.newPage(b.title || 'Notes', b.items, levelBelow()));
+    return addPage(N.newPage(b.title || 'Notes', b.items, o && o.flat ? 0 : levelBelow()));
   };
   /* editing the notes page that is open (instead of making another page) */
   const RICH = /<(img|iframe|video|audio|canvas|svg|embed|object|figure)\b/i;
@@ -953,6 +953,17 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
     return undo;
   };
 
+  // a whole textbook: one new section per chapter. The blank starter page goes away once real pages are in it.
+  const newSection = name => {
+    P.syncAll(); const was = { s:N.nb.cur.s, p:N.nb.cur.p };
+    const sec = N.newSection(plain(name).slice(0, 60) || 'Chapter', N.SECTION_COLORS[N.nb.sections.length % N.SECTION_COLORS.length]), starter = sec.pages[0];
+    N.nb.sections.push(sec); N.go(N.nb.sections.length - 1, 0);
+    return {
+      id: sec.id,
+      finish: () => { const i = N.nb.sections.findIndex(x => x.id === sec.id); if (i < 0) return; if (sec.pages.length > 1 && sec.pages[0] === starter) { sec.pages.shift(); N.go(i, 0); } N.dirty(); },
+      undo: () => { const i = N.nb.sections.findIndex(x => x.id === sec.id); if (i < 0 || N.nb.sections.length < 2) return; N.nb.sections.splice(i, 1); N.go(Math.min(was.s > i ? was.s - 1 : was.s, N.nb.sections.length - 1), 0); N.dirty(); },
+    };
+  };
   const OIAI = window.OIAI = {
     lastError: '',
     // what the panel shows the AI when nothing is selected
@@ -962,7 +973,7 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
       if (p.kind === 'map') return { kind:'map', title:p.title, text:outlineText(p) + study };
       return { kind:'page', title:p.title, text:`# ${p.title || 'Untitled page'}\n` + pageMarkdown(p) + study, md:true };
     },
-    newMap, setMap, newNotes, setNotes, addNotes, canEditNotes, newCards, newQuiz, newMcq, highlight,
+    newMap, setMap, newNotes, newSection, setNotes, addNotes, canEditNotes, newCards, newQuiz, newMcq, highlight,
   };
 }
 })();

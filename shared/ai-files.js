@@ -11,7 +11,7 @@
 // Served with a long cache lifetime: bump ?v=N on every importer after a change.
 
 const PDFJS_VERSION = '5.6.205';
-const MAX_FILE_BYTES = 20 * 1024 * 1024;
+const MAX_FILE_BYTES = 60 * 1024 * 1024;
 const MAX_PAGES = 80;
 export const FILE_ACCEPT = 'application/pdf,.pdf,.txt,.md,.csv,.tsv,.json,.log';
 export const MAX_FILE_CHARS = 24000;
@@ -35,7 +35,7 @@ function tidy(s) {
   return s.replace(/\r\n?/g, '\n').replace(/[ \t ]+/g, ' ').replace(/ ?\n ?/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-async function pdfToText(file, maxChars) {
+async function pdfToText(file, maxChars, maxPages, onProgress) {
   const pdfjs = await loadPdfJs();
   let doc;
   try {
@@ -44,14 +44,14 @@ async function pdfToText(file, maxChars) {
     if (err && err.name === 'PasswordException') throw new Error('this PDF is password protected, so it can’t be read');
     throw new Error('this file couldn’t be read as a PDF');
   }
-  const total = doc.numPages, limit = Math.min(total, MAX_PAGES);
+  const total = doc.numPages, limit = Math.min(total, maxPages || MAX_PAGES);
   let out = '', read = 0;
   for (let n = 1; n <= limit; n++) {
     const page = await doc.getPage(n);
     const tc = await page.getTextContent();
     const text = tidy(tc.items.map(it => it.str + (it.hasEOL ? '\n' : '')).join(''));
     out += (out ? '\n\n' : '') + (total > 1 ? `[Page ${n}]\n` : '') + text;
-    read = n;
+    read = n; if (onProgress) onProgress(n, total);
     if (out.length >= maxChars) break;
   }
   try { doc.destroy(); } catch {}
@@ -64,10 +64,10 @@ async function pdfToText(file, maxChars) {
 export async function readFileForAI(file, opts) {
   const maxChars = (opts && opts.maxChars) || MAX_FILE_CHARS;
   if (!file) throw new Error('no file chosen');
-  if (file.size > MAX_FILE_BYTES) throw new Error('that file is over 20 MB, which is too big to read here');
+  if (file.size > MAX_FILE_BYTES) throw new Error('that file is over 60 MB, which is too big to read here');
   let text = '', note = '';
   if (isPdf(file)) {
-    const r = await pdfToText(file, maxChars);
+    const r = await pdfToText(file, maxChars, opts && opts.maxPages, opts && opts.onProgress);
     text = r.text;
     if (text.replace(/\[Page \d+\]/g, '').trim().length < 20) throw new Error('this PDF has no selectable text (it looks scanned), and reading scanned PDFs isn’t supported yet');
     note = r.pagesRead < r.pages || text.length > maxChars ? `pages 1-${r.pagesRead} of ${r.pages}` : `${r.pages} page${r.pages === 1 ? '' : 's'}`;
