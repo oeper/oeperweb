@@ -450,11 +450,17 @@ async function run(instruction) {
   const c = readContext();
   const wantsCtx = c.source !== 'none';
   const appLabel = c.build ? c.app + (c.source === 'selection' ? ' selection' : c.idea === 'map' ? ' mind map (outline)' : ' page (outline)') : c.app;
+  instruction = instruction.slice(0, 3800);
   let userMsg = wantsCtx ? `${instruction}\n\n<<one:${appLabel.replace(/[<>\n]/g, ' ')}>>\n${c.text}\n<</one>>` : instruction;
   if (attach) userMsg += `\n\n<<one:${attach.title.replace(/[<>\n]/g, ' ')}>>\n${attach.text}\n<</one>>`;
   const tag = [c.source === 'selection' ? 'selection' : c.source === 'document' ? 'document' : '', attach ? attach.title : ''].filter(Boolean).join(' + ');
   // Earlier turns go back to the model as plain text (the document text is only attached to the newest question, to keep requests small).
-  const prior = hist.slice(-12).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: m.t }));
+  // The server refuses any single earlier message over 4000 characters, and an answer holding a whole notes page + map is longer than that.
+  // So earlier turns go back shortened: built blocks and edits become a one-line note, and everything is capped.
+  const forModel = m => m.r === 'u' ? m.t.slice(0, 3800)
+    : m.t.replace(MAKE_RE, (_, k) => k === 'notes' ? '[a notes page was made]' : k === 'mapedit' ? '[the mind map was updated]' : '[a mind map was made]')
+      .replace(/<<(edit|append)>>[\s\S]*?(?:<<\/>>|$)/g, (_, k) => k === 'edit' ? '[the text was edited]' : '[text was added]').slice(0, 3800);
+  const prior = hist.slice(-12).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: forModel(m) })).filter(m => m.content.trim());
   hist.push({ r: 'u', t: instruction, x: tag }); saveHist();
   addMsg('user', instruction, tag ? 'with ' + tag : '');
   lastAnswer = '';
