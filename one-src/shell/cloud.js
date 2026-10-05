@@ -563,5 +563,7 @@ window.ONE_CLOUD = { ready, syncAll, publishSite, fetchOne, share, openShared, o
 };
 ONE.mountAvatar(document.getElementById('avatarSlot')); window.ONE_CLOUD.onAccount(() => ONE.renderAvatars());
 const slot = document.getElementById('cloudSlot'); if (slot) slot.append(chip);
+// A way back to the rest of oeper.dev from the home screen (the apps have their own Home button)
+{ const brand = document.querySelector('#home .top .brand'); if (brand) { const back = document.createElement('a'); back.className = 'tb-btn'; back.href = '/'; back.title = 'Back to oeper.dev'; back.setAttribute('aria-label', 'Back to oeper.dev'); back.innerHTML = '<span class="ms" aria-hidden="true">arrow_back</span>'; brand.before(back); } }
 const gear = document.getElementById('settingsBtn'); if (gear) { gear.hidden = false; gear.onclick = openSettings; }
 renderChip();

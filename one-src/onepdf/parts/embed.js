@@ -39,7 +39,7 @@
     av.addEventListener('click', () => {
       if (pop) return close();
       const a = host && host.account();
-      const items = a ? [['cloud_' + (host.enabled() ? 'done' : 'off'), 'Cloud saving: ' + (host.enabled() ? 'on' : 'off'), () => host.openSettings()], ['folder_open', 'My files on oeper.dev', () => openTop('/files')], ['person', 'My profile', () => openTop(a.profileUrl || '/profile')], ['logout', 'Sign out', () => host.signOut()]]
+      const items = a ? [['cloud_' + (host.enabled() ? 'done' : 'off'), 'Cloud saving: ' + (host.enabled() ? 'on' : 'off'), () => host.openSettings()], ['folder_open', 'My files on oeper.dev', () => openTop('/files')], ['settings', 'oeper.dev settings', () => openTop('/settings')], ['person', 'My profile', () => openTop(a.profileUrl || '/profile')], ['logout', 'Sign out', () => host.signOut()]]
         : host ? [['login', 'Sign in with your oeper.dev account', () => host.signIn()]] : [['open_in_new', 'Open at oeper.dev/one to sign in', () => openTop('https://oeper.dev/one/')]];
       pop = document.createElement('div'); pop.className = 'seedpop morepop acctpop';
       pop.innerHTML = `<div class="acct-head"><span class="avatar big">${a && a.photo ? `<img src="${esc(a.photo)}" alt="" referrerpolicy="no-referrer">` : esc(initials((a && a.name) || localName()))}</span><div class="acct-id"><b>${esc(a ? a.name : localName() || 'You')}</b><small>${esc(a ? a.email : host ? 'Not signed in' : 'Only on this device')}</small></div></div>`;

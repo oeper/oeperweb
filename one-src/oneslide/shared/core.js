@@ -542,6 +542,7 @@ ONE.accountMenu = anchor => {
     items.push({ label:'Cloud saving: ' + (h.enabled() ? 'on' : 'off'), sub:h.enabled() ? 'Your files are saved to oeper.dev' : 'Only in this browser', icon:h.enabled() ? 'cloud_done' : 'cloud_off', on:() => h.openSettings() });
     items.push({ label:'My files on oeper.dev', icon:'folder_open', on:() => openTop('/files') });
     items.push({ label:'My profile', icon:'person', on:() => openTop(a.profileUrl || '/profile') });
+    items.push({ label:'oeper.dev settings', sub:'Theme, epic AI and sync across your devices', icon:'settings', on:() => openTop('/settings') });
   } else if (h) {
     items.push({ label:'Sign in with your oeper.dev account', sub:'Save files to your account and use them anywhere', icon:'login', on:() => h.signIn() });
   } else {
