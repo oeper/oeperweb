@@ -90,6 +90,23 @@
   .row-title { font-size: 15px; font-weight: 500; }
   .row-sub { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; }
   .row-block { padding: 4px 22px 22px; }
+  .pf { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+  .pf label { font-size: 12.5px; color: var(--md-sys-color-on-surface-variant); }
+  .pf input[type=text], .pf input[type=password], .pf input[type=url], .pf select, .pf textarea {
+    width: 100%; background: var(--md-sys-color-background); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 12px; padding: 11px 14px; font: inherit; font-size: 14px;
+  }
+  .pf textarea { min-height: 72px; resize: vertical; }
+  .pf .hint { font-size: 12px; color: var(--md-sys-color-outline-variant); line-height: 1.45; }
+  .pbtns { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
+  .pbtn { border: none; border-radius: 100px; padding: 10px 18px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+  .pbtn.main { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .pbtn.danger { background: none; color: var(--md-sys-color-error); }
+  .pmsg { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .pmsg.err { color: var(--md-sys-color-error); } .pmsg.ok { color: var(--md-sys-color-success); }
+  .pchecks { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 12px; font-size: 13.5px; }
+  .pchecks label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+  .mcard { border: 1px solid var(--md-sys-color-outline); border-radius: 16px; padding: 4px 16px 16px; margin: 14px 22px 0; }
   .switch { position: relative; flex-shrink: 0; width: 52px; height: 32px; }
   .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
   .switch-track { position: absolute; inset: 0; border-radius: 16px; background: var(--md-sys-color-surface-variant); border: 2px solid var(--md-sys-color-outline); transition: background-color 0.2s, border-color 0.2s; }
@@ -173,6 +190,46 @@
         <div><span class="material-symbols-rounded">attach_file</span><span>attach your one documents to a chat on <a href="/ai">epic AI</a>, and save its answers as new documents</span></div>
         <div><span class="material-symbols-rounded">note_add</span><span>ask epic AI to write a document straight into oneWord</span></div>
       </div>
+    </div>
+  </div>
+
+  <div class="settings-section" id="providerSection">
+    <h2>your own AI model</h2>
+    <p class="section-desc">use your own model and key instead of the built-in one. chats go straight from this browser to the provider you pick, so oeper.dev never sees them or your key. it only affects this browser.</p>
+    <div class="group">
+      <label class="row" for="provToggle" style="cursor:pointer;">
+        <div class="row-icon"><span class="material-symbols-rounded">neurology</span></div>
+        <div class="row-text">
+          <div class="row-title">use my own provider</div>
+          <div class="row-sub" id="provSub">off. epic AI uses the built-in model</div>
+        </div>
+        <span class="switch"><input type="checkbox" id="provToggle"><span class="switch-track"></span></span>
+      </label>
+      <div class="row-block">
+        <div class="pf"><label for="provPreset">provider</label><select id="provPreset"></select></div>
+        <div class="pf"><label for="provUrl">base address</label><input type="url" id="provUrl" placeholder="https://api.openai.com/v1" autocomplete="off" spellcheck="false"></div>
+        <div class="pf"><label for="provKey">API key</label><input type="password" id="provKey" placeholder="sk-..." autocomplete="off" spellcheck="false">
+          <div class="hint">saved only in this browser, in plain text, like any site setting. use a key with a spending limit, and remove it on a shared computer.</div></div>
+        <div class="pf"><label for="provModel">model</label><input type="text" id="provModel" list="provModels" placeholder="model name" autocomplete="off" spellcheck="false"><datalist id="provModels"></datalist></div>
+        <div class="pf"><label for="provFormat">API style</label><select id="provFormat"><option value="openai">OpenAI compatible</option><option value="anthropic">Anthropic</option></select></div>
+        <div class="pf"><label for="provSys">extra instructions (optional)</label><textarea id="provSys" placeholder="for example: answer briefly and in plain English"></textarea></div>
+        <div class="pbtns">
+          <button class="pbtn main" id="provTest" type="button">test it</button>
+          <button class="pbtn" id="provLoad" type="button">load model names</button>
+          <button class="pbtn danger" id="provClear" type="button">forget key</button>
+          <span class="pmsg" id="provMsg"></span>
+        </div>
+        <div class="pf"><div class="hint">the web search, memory and "write into oneWord" tools only work with the built-in model. a provider must allow requests from websites (CORS). OpenAI, Anthropic, OpenRouter and Gemini do. for Ollama, start it with OLLAMA_ORIGINS set to this site.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section" id="mcpSection">
+    <h2>MCP tools</h2>
+    <p class="section-desc">connect MCP servers so epic AI can use their tools, such as search, files or your own apps. this needs your own AI model above. servers must support Streamable HTTP and allow requests from websites (CORS). tool results are treated as data, and every call asks you first unless you allow a server.</p>
+    <div class="group">
+      <div id="mcpList"></div>
+      <div class="row-block"><div class="pbtns"><button class="pbtn main" id="mcpAdd" type="button">add a server</button><span class="pmsg" id="mcpMsg"></span></div></div>
     </div>
   </div>
 
@@ -280,7 +337,8 @@ import { mountThemePicker } from './shared/theme-picker.js?v=4';
 import { mountFooter } from './shared/footer.js?v=6';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=2';
-import { aiFeaturesEnabled, setAiFeaturesEnabled, onAiFeaturesChange } from './shared/ai-features.js?v=2';
+import { aiFeaturesEnabled, setAiFeaturesEnabled, onAiFeaturesChange } from './shared/ai-features.js?v=3';
+import { PRESETS, readProviderSettings, saveProviderSettings, fetchModels, testProvider, getMcpServers, saveMcpServers, listMcpTools } from './shared/ai-provider.js?v=1';
 
 mountTopNav();
 mountFooter();
@@ -293,6 +351,87 @@ mountFooter();
   paint(aiFeaturesEnabled());
   toggle.addEventListener('change', () => setAiFeaturesEnabled(toggle.checked));
   onAiFeaturesChange(paint);
+}
+
+// your own AI model and MCP servers (see shared/ai-provider.js)
+{
+  const $ = id => document.getElementById(id);
+  const msg = (el, text, kind) => { el.textContent = text || ''; el.className = 'pmsg' + (kind ? ' ' + kind : ''); };
+  const okUrl = u => { try { const x = new URL(u); return x.protocol === 'https:' || (x.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(x.hostname)); } catch { return false; } };
+  const preset = $('provPreset');
+  PRESETS.forEach(pr => preset.add(new Option(pr.name, pr.id)));
+  let st = readProviderSettings();
+  const paint = () => {
+    $('provToggle').checked = st.on;
+    $('provSub').textContent = st.on ? 'on. epic AI uses ' + (st.model || 'your model') : 'off. epic AI uses the built-in model';
+    preset.value = st.preset; $('provUrl').value = st.baseUrl; $('provKey').value = st.apiKey; $('provModel').value = st.model; $('provFormat').value = st.format; $('provSys').value = st.system;
+  };
+  const read = () => Object.assign({}, st, { preset: preset.value, baseUrl: $('provUrl').value.trim(), apiKey: $('provKey').value.trim(), model: $('provModel').value.trim(), format: $('provFormat').value, system: $('provSys').value });
+  const save = () => { st = read(); saveProviderSettings(st); $('provSub').textContent = st.on ? 'on. epic AI uses ' + (st.model || 'your model') : 'off. epic AI uses the built-in model'; };
+  paint();
+  preset.addEventListener('change', () => {
+    const pr = PRESETS.find(x => x.id === preset.value);
+    if (pr) { $('provUrl').value = pr.baseUrl; $('provFormat').value = pr.format; if (pr.model) $('provModel').value = pr.model; }
+    msg($('provMsg'), ''); save();
+  });
+  ['provUrl', 'provKey', 'provModel', 'provFormat', 'provSys'].forEach(id => $(id).addEventListener('change', save));
+  $('provToggle').addEventListener('change', () => {
+    const p = read();
+    if ($('provToggle').checked && !okUrl(p.baseUrl)) { $('provToggle').checked = false; msg($('provMsg'), 'enter a base address first (https, or http on this computer)', 'err'); return; }
+    if ($('provToggle').checked && !p.model) { $('provToggle').checked = false; msg($('provMsg'), 'enter a model name first', 'err'); return; }
+    st = Object.assign(p, { on: $('provToggle').checked }); saveProviderSettings(st); paint(); msg($('provMsg'), '');
+  });
+  $('provTest').addEventListener('click', async () => {
+    const p = read();
+    if (!okUrl(p.baseUrl) || !p.model) return msg($('provMsg'), 'fill in the address and model first', 'err');
+    msg($('provMsg'), 'testing...');
+    try { const r = await testProvider(p); msg($('provMsg'), 'works. the model said: ' + r.slice(0, 60), 'ok'); } catch (e) { msg($('provMsg'), e.message, 'err'); }
+  });
+  $('provLoad').addEventListener('click', async () => {
+    const p = read();
+    if (!okUrl(p.baseUrl)) return msg($('provMsg'), 'enter the base address first', 'err');
+    msg($('provMsg'), 'loading...');
+    try {
+      const names = await fetchModels(p);
+      $('provModels').innerHTML = '';
+      names.forEach(n => $('provModels').appendChild(new Option(n)));
+      msg($('provMsg'), names.length + ' models. click the model box to pick one', 'ok');
+    } catch (e) { msg($('provMsg'), e.message, 'err'); }
+  });
+  $('provClear').addEventListener('click', () => { $('provKey').value = ''; st = Object.assign(read(), { on: false }); saveProviderSettings(st); paint(); msg($('provMsg'), 'key removed from this browser', 'ok'); });
+
+  // MCP servers
+  let servers = getMcpServers();
+  const persist = () => saveMcpServers(servers);
+  const renderServers = () => {
+    const list = $('mcpList'); list.innerHTML = '';
+    servers.forEach((sv, i) => {
+      const card = document.createElement('div'); card.className = 'mcard';
+      const uid = 'mcp' + i + '_';
+      card.innerHTML = `
+        <div class="pf"><label for="${uid}n">name</label><input type="text" id="${uid}n" autocomplete="off"></div>
+        <div class="pf"><label for="${uid}u">server address</label><input type="url" id="${uid}u" placeholder="https://example.com/mcp" autocomplete="off" spellcheck="false"></div>
+        <div class="pf"><label for="${uid}a">access header value (optional)</label><input type="password" id="${uid}a" placeholder="Bearer ..." autocomplete="off" spellcheck="false"></div>
+        <div class="pchecks"><label><input type="checkbox" id="${uid}o"> on</label><label><input type="checkbox" id="${uid}x"> run its tools without asking</label></div>
+        <div class="pbtns"><button class="pbtn" type="button" data-t>test it</button><button class="pbtn danger" type="button" data-d>remove</button><span class="pmsg"></span></div>`;
+      const q = k => card.querySelector('#' + uid + k);
+      q('n').value = sv.name; q('u').value = sv.url; q('a').value = sv.auth; q('o').checked = sv.on; q('x').checked = sv.auto;
+      const sync = () => { Object.assign(sv, { name: q('n').value.trim() || 'MCP server', url: q('u').value.trim(), auth: q('a').value.trim(), on: q('o').checked, auto: q('x').checked }); persist(); };
+      ['n', 'u', 'a', 'o', 'x'].forEach(k => q(k).addEventListener('change', sync));
+      const m = card.querySelector('.pmsg');
+      card.querySelector('[data-t]').addEventListener('click', async () => {
+        sync();
+        if (!okUrl(sv.url)) return msg(m, 'enter the server address (https)', 'err');
+        msg(m, 'connecting...');
+        try { const t = await listMcpTools(sv); msg(m, t.length ? 'works. ' + t.length + ' tools: ' + t.slice(0, 6).map(x => x.name).join(', ') + (t.length > 6 ? '...' : '') : 'connected, but it offers no tools', 'ok'); } catch (e) { msg(m, e.message, 'err'); }
+      });
+      card.querySelector('[data-d]').addEventListener('click', () => { servers.splice(i, 1); persist(); renderServers(); });
+      list.appendChild(card);
+    });
+  };
+  $('mcpAdd').addEventListener('click', () => { servers.push({ id: Math.random().toString(36).slice(2, 9), name: 'MCP server', url: '', header: 'Authorization', auth: '', auto: false, on: true }); persist(); renderServers(); msg($('mcpMsg'), ''); });
+  servers.forEach(sv => { if (!sv.id) sv.id = Math.random().toString(36).slice(2, 9); });
+  renderServers();
 }
 
 onAccountChange(user => {

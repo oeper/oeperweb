@@ -511,7 +511,8 @@ import { observeList } from './shared/motion.js?v=2';
 import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=3';
 import { codeBlockHtml, copyToClipboard, injectCodeBlockStyles } from './shared/code-block.js?v=3';
 import { readFileForAI, FILE_ACCEPT, isImage } from './shared/ai-files.js?v=1';
-import { aiFeaturesEnabled, onAiFeaturesChange, listOneDocs, readOneDocText, sanitizeForOne, createWordDoc, oneDocUrl } from './shared/ai-features.js?v=2';
+import { chatFetch, providerLabel } from './shared/ai-provider.js?v=1';
+import { aiFeaturesEnabled, onAiFeaturesChange, listOneDocs, readOneDocText, sanitizeForOne, createWordDoc, oneDocUrl } from './shared/ai-features.js?v=3';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 injectCodeBlockStyles();
@@ -921,6 +922,18 @@ function renderAssistantContent(bubble, reasoningBuf, contentBuf, done) {
 // when not currently loaded.
 const modelDropdown = createDropdown([{ value: '', label: 'a small local model (default)' }], { value: '' });
 document.getElementById('modelBar').appendChild(modelDropdown.el);
+// With the person's own provider switched on (settings > epic AI) the model picker is replaced by its name.
+function paintProviderBar() {
+  const bar = document.getElementById('modelBar'), lbl = providerLabel();
+  let t = document.getElementById('customModelLabel');
+  modelDropdown.el.style.display = lbl ? 'none' : '';
+  if (!lbl) { if (t) t.remove(); return; }
+  if (!t) { t = document.createElement('a'); t.id = 'customModelLabel'; t.href = '/settings'; t.title = 'change in settings'; t.style.cssText = 'color:var(--md-sys-color-on-surface-variant,#c4c7c5);font-size:13px;text-decoration:none;'; bar.appendChild(t); }
+  t.textContent = 'your model: ' + lbl;
+}
+paintProviderBar();
+window.addEventListener('oe-ai-provider', paintProviderBar);
+window.addEventListener('storage', paintProviderBar);
 let defaultModelName = 'a small local model';
 let liveModels = [];
 let configuredModels = [];
@@ -1867,12 +1880,8 @@ async function sendToModel(chat) {
   }, 5000);
   try {
     const wireMessages = await toWireMessages(chat.messages);
-    const res = await fetch(AI_ENDPOINT + '/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: wireMessages, model: modelDropdown.getValue() || undefined, oneTools: aiFeaturesEnabled() || undefined }),
-      signal: controller.signal,
-    });
+    // the oeper.dev model, or the person's own provider (settings > epic AI); ai-provider.js hands back the same stream either way
+    const res = await chatFetch(AI_ENDPOINT, { messages: wireMessages, model: modelDropdown.getValue() || undefined, oneTools: aiFeaturesEnabled() || undefined }, controller.signal);
     if (!res.ok || !res.body) {
       let msg = `Server error (${res.status})`;
       try { msg = (await res.json()).error || msg; } catch {}

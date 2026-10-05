@@ -13,7 +13,7 @@
 // behavior change needs its `?v=N` bumped where one-src/bundle.py adds the script
 // tag (and in the published one/index.html).
 
-import { aiFeaturesEnabled, onAiFeaturesChange, askAI } from '/shared/ai-features.js?v=2';
+import { aiFeaturesEnabled, onAiFeaturesChange, askAI } from '/shared/ai-features.js?v=3';
 import { readFileForAI, isImage } from '/shared/ai-files.js?v=1';
 
 const MAX_CONTEXT_CHARS = 12000;

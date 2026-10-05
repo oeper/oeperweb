@@ -12,6 +12,8 @@
 // behavior change needs its `?v=N` bumped on every
 // `from './shared/ai-features.js?v=N'` import across the site (grep for it).
 
+import { chatFetch } from './ai-provider.js?v=1';
+
 export const AI_ENDPOINT = 'https://oeper-ai.oeper.workers.dev';
 const KEY = 'oe-ai-features';
 
@@ -32,12 +34,8 @@ export function onAiFeaturesChange(cb) {
 // Streams /api/chat and returns the final answer text. Reasoning goes through
 // its own delta field (ignored here); any inline <think> block is stripped.
 export async function askAI(messages, opts) {
-  const res = await fetch(AI_ENDPOINT + '/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages }),
-    signal: opts && opts.signal,
-  });
+  // the oeper.dev model, or the person's own provider when they set one up in settings (see ai-provider.js)
+  const res = await chatFetch(AI_ENDPOINT, { messages }, opts && opts.signal);
   if (!res.ok || !res.body) {
     let msg = `Server error (${res.status})`;
     try { msg = (await res.json()).error || msg; } catch {}
