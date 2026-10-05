@@ -257,6 +257,16 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.token.email == email;
     }
 
+    // Settings synced across a person's devices (shared/settings-sync.js): theme, search engine, file view and
+    // the like. Private to the account, and capped so it can only ever hold a handful of small preferences.
+    match /userSettings/{email} {
+      allow read: if isSignedIn() && request.auth.token.email == email;
+      allow write: if isSignedIn() && request.auth.token.email == email
+        && request.resource.data.keys().hasOnly(['values', 'times', 'updatedAt'])
+        && request.resource.data.values.size() <= 30
+        && request.resource.data.times.size() <= 30;
+    }
+
     // @handle -> email lookup, so profile URLs never contain a real email
     // address. Create-only and only for your own account — once a handle
     // is claimed it's permanent (no update/delete), so links never break.

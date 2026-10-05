@@ -170,12 +170,21 @@
         </div>
       </div>
       <div class="row-block" id="themePicker"></div>
+      <label class="row" for="syncToggle" style="cursor:pointer;">
+        <div class="row-icon"><span class="material-symbols-rounded">sync</span></div>
+        <div class="row-text">
+          <div class="row-title">same settings on all my devices</div>
+          <div class="row-sub" id="syncSub">sign in to turn this on</div>
+        </div>
+        <span class="switch"><input type="checkbox" id="syncToggle"><span class="switch-track"></span></span>
+      </label>
     </div>
+    <p class="section-desc" style="margin-top:8px;">when this is on, your theme, epic AI switch, search engine, file view and sort, video volume and pinned chats follow you to every device you sign in on. it's a choice for each device. your own AI provider keys never leave the device.</p>
   </div>
 
   <div class="settings-section">
     <h2>epic AI</h2>
-    <p class="section-desc">lets epic AI work with the rest of the site. it's off by default — nothing below happens until you turn it on, and it only affects this browser.</p>
+    <p class="section-desc">lets epic AI work with the rest of the site. it's off by default — nothing below happens until you turn it on, and it only affects this browser (unless you sync settings across your devices, under appearance).</p>
     <div class="group">
       <label class="row" for="aiFeaturesToggle" style="cursor:pointer;">
         <div class="row-icon"><span class="material-symbols-rounded">auto_awesome</span></div>
@@ -332,16 +341,33 @@ import {
   isOwnerEmail, listSessions, removeSession, getCurrentDeviceId,
   getCurrentUser, isHandleAvailable, setMyHandle,
 } from './shared/account.js?v=37';
-import { mountTopNav } from './shared/topnav.js?v=39';
+import { mountTopNav } from './shared/topnav.js?v=40';
 import { mountThemePicker } from './shared/theme-picker.js?v=4';
 import { mountFooter } from './shared/footer.js?v=6';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=2';
 import { aiFeaturesEnabled, setAiFeaturesEnabled, onAiFeaturesChange } from './shared/ai-features.js?v=4';
+import { isSyncEnabled, setSyncEnabled, onSyncStatus } from './shared/settings-sync.js?v=1';
 import { PRESETS, readProviderSettings, saveProviderSettings, fetchModels, testProvider, getMcpServers, saveMcpServers, listMcpTools } from './shared/ai-provider.js?v=2';
 
 mountTopNav();
 mountFooter();
+
+// same settings on every device (shared/settings-sync.js) — on by default, chosen per device
+{
+  const toggle = document.getElementById('syncToggle');
+  const sub = document.getElementById('syncSub');
+  toggle.checked = isSyncEnabled();
+  toggle.addEventListener('change', () => setSyncEnabled(toggle.checked));
+  onSyncStatus(st => {
+    toggle.checked = isSyncEnabled();
+    sub.textContent = !isSyncEnabled() ? 'off. this device keeps its own settings'
+      : st === 'signed-out' ? 'on. sign in and your settings will follow you'
+      : st === 'error' ? 'on, but it could not reach your account just now'
+      : st === 'syncing' ? 'on. checking your account...'
+      : 'on. changes here appear on your other devices';
+  });
+}
 
 // epic AI features — off until switched on (see shared/ai-features.js).
 {
