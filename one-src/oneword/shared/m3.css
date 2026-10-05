@@ -51,7 +51,7 @@
 }
 :root{--hover:color-mix(in srgb,var(--on-surface) 8%,transparent);--press:color-mix(in srgb,var(--on-surface) 12%,transparent)}
 
-*{box-sizing:border-box}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--surface-cont);color:var(--on-surface);font:14px/1.4 "Google Sans","Roboto Flex",Roboto,"Segoe UI",system-ui,sans-serif;overflow:hidden;transition:background-color .4s var(--ease)}

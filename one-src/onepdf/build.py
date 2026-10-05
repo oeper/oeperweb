@@ -16,6 +16,9 @@ s = re.sub(r' data-cf-modified-[0-9a-f]+-=""', '', s)
 s = re.sub(r'<script src="/cdn-cgi/scripts/[^"]+rocket-loader\.min\.js"[^>]*></script>', '', s)
 assert 'cfRL' not in s and 'rocket-loader' not in s
 
+# --- 1b. no blue tap flash on touch screens (same rule the oeper.dev pages use) ---
+rep('* { box-sizing: border-box; }', '* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }')
+
 # --- 2. head: seed applied before first paint, fonts, skin stylesheet ---
 start = s.index('<script>\n// Applies a previously-saved accent color')
 end = s.index('</script>', start) + len('</script>')
