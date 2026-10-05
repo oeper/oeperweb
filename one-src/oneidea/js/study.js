@@ -45,6 +45,7 @@ const store = () => (N.nb.study = N.nb.study || { cards:{} });
 const prog = c => store().cards[c.id] || { box:0, due:0, seen:0 };
 const isDue = c => prog(c).due <= Date.now();
 function rate(c, ok) {
+  if (window.HUB) HUB.tick();
   const p = store().cards[c.id] = prog(c); p.seen++;
   if (ok) { p.box = Math.min(5, p.box + 1); p.due = Date.now() + GAPS[p.box] * DAY; } else { p.box = 1; p.due = Date.now(); }
   N.dirty();

@@ -28,7 +28,10 @@ const ACTIONS = [
   { label: 'Make a mind map', instr: 'Turn this into a clear mind map.', only: 'idea' },
   { label: 'Make study notes', instr: 'Turn this into well organized study notes, and also make a mind map of it.', only: 'idea' },
   { label: 'Make flashcards', instr: 'Make flashcards from this.', only: 'idea' },
-  { label: 'Make a quiz', instr: 'Make a quiz from this, with the answers in bold so Recall mode can hide them.', only: 'idea' },
+  { label: 'Full notes (thorough)', instr: 'Make complete, thorough study notes covering everything in this.', only: 'idea', deep: true },
+  { label: 'Make a quiz', instr: 'Make a multiple choice quiz from this with 15 questions.', only: 'idea' },
+  { label: 'Quiz me in chat', instr: 'Quiz me on this in the chat, one question at a time. Ask the first question now.', only: 'idea' },
+  { label: 'Quiz page (self-test)', instr: 'Make a quiz page from this, with the answers in bold so Recall mode can hide them.', only: 'idea' },
   { label: 'Highlight key terms', instr: 'Highlight the key terms on this page so I can test myself in Recall mode.', only: 'page' },
   { label: 'Add totals', instr: 'Add totals and any other useful summary formulas for this data (keep the existing cells).', only: 'sheet' },
   { label: 'Format it nicely', instr: 'Format this sheet professionally: a bold header row with a fill colour, sensible number formats, column widths that fit, borders where they help, and a frozen header row.', only: 'sheet' },
@@ -52,8 +55,8 @@ const SYSTEM = 'You are epic AI, an assistant built into the one office suite, h
 const IDEA_SYSTEM = 'The user is in oneIdea, a note-taking app with real mind maps and free-form notes pages. You can build them directly, so do NOT dump a long plain list into a text answer when a map or structured notes would serve better. ' +
   'MIND MAP: put an indented outline between <<map title="Short title">> and <</map>>. Use "- " bullets with two spaces of indent per level. Aim for 3 to 7 main branches with 2 to 5 sub-topics each, going one or two levels deeper only where it helps. Keep every topic short (1 to 6 words, never a full sentence). A longer explanation goes on its own line directly under its topic, starting with "> " (it becomes that topic\'s note). Prefix a topic with [important], [question], [definition], [idea] or [ ] (a to-do) only when it really fits. ' +
   'The page that is open is shown to you as an outline in this same format. If it is a mind map and the user wants it changed, expanded or reorganized, put the COMPLETE updated outline between <<mapedit>> and <</mapedit>> instead. ' +
-  'STUDY NOTES: put markdown between <<notes title="Short title">> and <</notes>>. Every "## Heading" becomes its own box on the page, so group the material under 3 to 6 meaningful headings (for example Overview, Key terms, How it works, Examples, Summary). Under them use short bullets (indent two spaces for sub-points), a table when comparing things, "Term :: meaning" lines for definitions (they become flashcards), "[ ] task" lines for to-dos, and "[important] ..." or "[question] ..." lines for key points and open questions. Never write one huge block of bullets. ' +
-  'CHOOSING: requests for a mind map, map, overview, brainstorm or how things connect get <<map>>. Requests for notes, a study guide, a summary in notes form or to organize something get <<notes>>. Write only the kind of block that was asked for, except that a request to make notes from a text, PDF or topic gets BOTH a <<notes>> block and a <<map>> block in the same reply. Use plain text only inside blocks: no LaTeX (write -> for arrows) and no em dashes. STUDY TOOLS (all of these are real features of oneIdea): (a) FLASHCARDS: <<cards title="Topic">> then one card per line written as Term :: short meaning. Use "## Heading" lines to group several topics. Make 10 to 30 cards unless told otherwise, and every card line must contain " :: ". The user can then open the Flashcards screen, which reviews them with spaced repetition. (b) QUIZ: <<quiz title="Topic">> with, for each question, a line "[question] The question?" followed by a line holding the answer in **bold**. Recall mode hides bold text, so the user can test themselves. Mix recall, why/how and application questions. (c) KEY TERMS: <<highlight>> with one key term per line, copied exactly as written on the open page (at most 25), to highlight them on the page. (d) CORNELL NOTES: <<notes title="Cornell: Topic" layout="cornell">> with exactly three headings: "## Cues and questions" (lines starting [question]), "## Notes" (bullets) and "## Summary" (2 or 3 sentences). (e) REVISION SHEET: <<notes title="Revision: Topic">> with the headings Must remember ([remember] lines), Formulas and facts, Key terms (Term :: meaning lines) and Practice questions ([question] lines). The page can end with a "Study status" section listing how many flashcards are due and which ones the user is still learning: use it when they ask what to study or for a quiz on their weak spots, and put those exact terms first. If the user only wants to be quizzed in the chat, ask ONE question at a time, wait for the answer, then say if it was right, and write no block. ' +
+  'STUDY NOTES: put markdown between <<notes title="Short title">> and <</notes>>. Make them THOROUGH, like the complete notes of a top student, never a thin summary. Unless the user asks for brief notes, use 8 to 12 headings for a whole topic or document (every "## Heading" becomes its own box on the page) and under each heading 4 to 10 bullets with indented sub-points, so notes on a chapter or topic run to roughly 800 to 1500 words. Cover EVERYTHING in the source or topic: definitions, how and why things work, formulas with what each symbol means, a worked example for each formula or method, examples, causes and effects, comparisons in a table, common mistakes and exam tips. Use "Term :: meaning" lines for every definition (they become flashcards), "[important] ..." lines for what must be remembered, "[question] ..." lines for open questions and "[ ] task" lines for to-dos, and finish with a Summary and a few practice questions. When the material is too big for one page, write several <<notes>> blocks (one per chapter or sub-topic) in the same reply. Never write one huge block of bullets and never stop early: finish every section. ' +
+  'CHOOSING: requests for a mind map, map, overview, brainstorm or how things connect get <<map>>. Requests for notes, a study guide, a summary in notes form or to organize something get <<notes>>. Write only the kind of block that was asked for, except that a request to make notes from a text, PDF or topic gets BOTH a <<notes>> block and a <<map>> block in the same reply. Use plain text only inside blocks: no LaTeX (write -> for arrows) and no em dashes. STUDY TOOLS (all of these are real features of oneIdea): (a) FLASHCARDS: <<cards title="Topic">> then one card per line written as Term :: short meaning. Use "## Heading" lines to group several topics. Make 10 to 30 cards unless told otherwise, and every card line must contain " :: ". The user can then open the Flashcards screen, which reviews them with spaced repetition. (b) QUIZ: <<quiz title="Topic">> with, for each question, a line "[question] The question?" followed by a line holding the answer in **bold**. Recall mode hides bold text, so the user can test themselves. Mix recall, why/how and application questions. (c) KEY TERMS: <<highlight>> with one key term per line, copied exactly as written on the open page (at most 25), to highlight them on the page. (d) CORNELL NOTES: <<notes title="Cornell: Topic" layout="cornell">> with exactly three headings: "## Cues and questions" (lines starting [question]), "## Notes" (bullets) and "## Summary" (2 or 3 sentences). (e) REVISION SHEET: <<notes title="Revision: Topic">> with the headings Must remember ([remember] lines), Formulas and facts, Key terms (Term :: meaning lines) and Practice questions ([question] lines). The page can end with a "Study status" section listing how many flashcards are due and which ones the user is still learning: use it when they ask what to study or for a quiz on their weak spots, and put those exact terms first. (f) MULTIPLE CHOICE QUIZ: <<mcq>> followed by a JSON array like [{"q":"The question?","options":["A","B","C","D"],"answer":0,"why":"one sentence explaining the right answer"}] then <</mcq>>. Give each question 4 options with exactly one right ("answer" is the 0 based index of the right option), plausible wrong options from the same topic, no "all of the above", and 10 to 20 questions that mix recall, understanding and application. They are added to the Quiz screen (ribbon: Study, Quiz) which has practice mode, a timed exam mode, a mistakes notebook and scores. CHAT QUIZ: when the user wants to be quizzed in the chat (for example "quiz me"), ask exactly ONE question, wait for the answer, then say whether it was right, explain briefly what was missing or why, and ask the next one. Mix question types, start with the topics listed under "Questions still getting wrong" or "Still learning" in the Study status, keep a running score and give a short summary after 10 questions. Write no block while quizzing. ' +
   'Never put these blocks inside <<edit>> or <<append>>. After the blocks, write one short sentence saying what you made.';
 const SITE_SYSTEM = 'The user is in oneSite, a website builder. A site is a list of pages and each page is a stack of sections. You can change the site directly. The open page is shown to you as JSON in exactly the shape you answer with (title, theme, settings, header, footer, page). To change anything, reply with ONE block: <<site>> a JSON object <</site>>. ' +
   'The object may hold any of these keys, and you include ONLY the keys you change: "page" (the COMPLETE new list of sections for the open page, in order; keep the "id" of every section you keep and leave "id" out for new ones; a section you leave out is deleted), "addPages" (a list of {"name","sections"} for new pages), "theme" ({"palette","font","radius","accent"}), "settings" ({"description","favicon"}), "header" and "footer" ({"v","data"}), "title" (the site name). ' +
@@ -371,7 +374,7 @@ function build() {
 
   };
   ui.chips.innerHTML = ACTIONS.map((a, i) => `<button class="oai-chip" type="button" data-i="${i}" hidden>${esc(a.label)}</button>`).join('');
-  ui.chips.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b && !ui.send.disabled) run(ACTIONS[b.dataset.i].instr); });
+  ui.chips.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b && !ui.send.disabled) { const a = ACTIONS[b.dataset.i]; if (a.deep) runDeep(a.instr); else run(a.instr); } });
   $('#oaiClose').onclick = closePanel;
   $('#oaiNew').onclick = () => { if (busy) { busy.abort(); busy = null; } hist = []; saveHist(); renderHistory(); refresh(); ui.prompt.focus(); };
   $('#oaiClip').onclick = () => ui.fileIn.click();
@@ -380,7 +383,7 @@ function build() {
   panel.addEventListener('dragover', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); panel.classList.add('drop'); } });
   panel.addEventListener('dragleave', e => { if (!panel.contains(e.relatedTarget)) panel.classList.remove('drop'); });
   panel.addEventListener('drop', e => { panel.classList.remove('drop'); const f = e.dataTransfer && e.dataTransfer.files[0]; if (!f) return; e.preventDefault(); attachFile(f); });
-  ui.send.onclick = () => { const q = ui.prompt.value.trim(); if (q && !ui.send.disabled) { ui.prompt.value = ''; run(q); } };
+  ui.send.onclick = () => { const q = ui.prompt.value.trim(); if (q && !ui.send.disabled) { ui.prompt.value = ''; if (wantsDeepNotes(q)) runDeep(q); else run(q); } };
   ui.prompt.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ui.send.click(); } });
   ui.replace.onclick = () => applyToDocument('replace', lastAnswer);
   ui.insert.onclick = () => applyToDocument('insert', lastAnswer);
@@ -420,10 +423,10 @@ async function attachFile(file) {
 
 const TAG_RE = /<<\/?(?:edit|append)>>/g;
 // map / notes blocks are built into the app, so they are not shown as chat text
-const MAKE_RE = /<<(map|mapedit|notes|site|cards|quiz|highlight|cells|sheetedit|slides|slideedit)(?:\s[^>]*)?>>[\s\S]*?(?:<<\/\1>>|$)/g;
+const MAKE_RE = /<<(map|mapedit|notes|site|cards|quiz|highlight|cells|sheetedit|slides|slideedit|mcq)(?:\s[^>]*)?>>[\s\S]*?(?:<<\/\1>>|$)/g;
 const shown = t => String(t || '').replace(MAKE_RE, '').replace(TAG_RE, '');
 function parseMakes(reply) {
-  const out = [], re = /<<(map|mapedit|notes|site|cards|quiz|highlight|cells|sheetedit|slides|slideedit)((?:\s[^>]*)?)>>([\s\S]*?)(<<\/\1>>|$)/g;
+  const out = [], re = /<<(map|mapedit|notes|site|cards|quiz|highlight|cells|sheetedit|slides|slideedit|mcq)((?:\s[^>]*)?)>>([\s\S]*?)(<<\/\1>>|$)/g;
   let m;
   while ((m = re.exec(reply || ''))) {
     const text = m[3].replace(/^\n+|\n+$/g, ''); if (!text.trim()) continue;
@@ -448,7 +451,7 @@ function parseEdit(reply) {
 const saved = t => {
   const e = parseEdit(t), mk = parseMakes(t), said = shown(t).replace(/\s+/g, ' ').trim();
   if (e) return e.said || (e.kind === 'append' ? 'Added to the document.' : 'Edited the document.');
-  if (mk.length) return said || (mk[0].kind === 'cells' || mk[0].kind === 'sheetedit' ? 'Updated the spreadsheet.' : mk[0].kind === 'slides' || mk[0].kind === 'slideedit' ? 'Updated the presentation.' : mk[0].kind === 'site' ? 'Updated the site.' : mk[0].kind === 'cards' ? 'Made flashcards.' : mk[0].kind === 'quiz' ? 'Made a quiz.' : mk[0].kind === 'highlight' ? 'Highlighted key terms.' : 'Made ' + mk.map(b => b.kind === 'notes' ? 'a notes page' : 'a mind map').join(' and ') + '.');
+  if (mk.length) return said || (mk[0].kind === 'mcq' ? 'Made a multiple choice quiz.' : mk[0].kind === 'cells' || mk[0].kind === 'sheetedit' ? 'Updated the spreadsheet.' : mk[0].kind === 'slides' || mk[0].kind === 'slideedit' ? 'Updated the presentation.' : mk[0].kind === 'site' ? 'Updated the site.' : mk[0].kind === 'cards' ? 'Made flashcards.' : mk[0].kind === 'quiz' ? 'Made a quiz.' : mk[0].kind === 'highlight' ? 'Highlighted key terms.' : 'Made ' + mk.map(b => b.kind === 'notes' ? 'a notes page' : 'a mind map').join(' and ') + '.');
   return said;
 };
 
@@ -496,7 +499,7 @@ async function run(instruction) {
   // The server refuses any single earlier message over 4000 characters, and an answer holding a whole notes page + map is longer than that.
   // So earlier turns go back shortened: built blocks and edits become a one-line note, and everything is capped.
   const forModel = m => m.r === 'u' ? m.t.slice(0, 3800)
-    : m.t.replace(MAKE_RE, (_, k) => k === 'cells' || k === 'sheetedit' ? '[the spreadsheet was changed]' : k === 'slides' || k === 'slideedit' ? '[the presentation was changed]' : k === 'site' ? '[the site was changed]' : k === 'cards' ? '[flashcards were made]' : k === 'quiz' ? '[a quiz was made]' : k === 'highlight' ? '[key terms were highlighted]' : k === 'notes' ? '[a notes page was made]' : k === 'mapedit' ? '[the mind map was updated]' : '[a mind map was made]')
+    : m.t.replace(MAKE_RE, (_, k) => k === 'mcq' ? '[a multiple choice quiz was made]' : k === 'cells' || k === 'sheetedit' ? '[the spreadsheet was changed]' : k === 'slides' || k === 'slideedit' ? '[the presentation was changed]' : k === 'site' ? '[the site was changed]' : k === 'cards' ? '[flashcards were made]' : k === 'quiz' ? '[a quiz was made]' : k === 'highlight' ? '[key terms were highlighted]' : k === 'notes' ? '[a notes page was made]' : k === 'mapedit' ? '[the mind map was updated]' : '[a mind map was made]')
       .replace(/<<(edit|append)>>[\s\S]*?(?:<<\/\1>>|$)/g, (_, k) => k === 'edit' ? '[the text was edited]' : '[text was added]').slice(0, 3800);
   const prior = hist.slice(-12).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: forModel(m) })).filter(m => m.content.trim());
   hist.push({ r: 'u', t: instruction, x: tag }); saveHist();
@@ -517,7 +520,7 @@ async function run(instruction) {
       onStatus: st => { if (!answering) th.status(st); },
       onText: t => {
         if (!answering && t) { answering = true; th.answered(sawThought, Math.max(1, Math.round((Date.now() - t0) / 1000))); }
-        am.b.textContent = shown(t) || (/<<(map|mapedit)/.test(t) ? 'Building the mind map...' : /<<notes/.test(t) ? 'Writing the notes...' : /<<site/.test(t) ? 'Updating your site...' : /<<(cells|sheetedit)/.test(t) ? 'Updating the spreadsheet...' : /<<(slides|slideedit)/.test(t) ? 'Building the slides...' : /<<cards/.test(t) ? 'Writing the flashcards...' : /<<quiz/.test(t) ? 'Writing the quiz...' : ''); scrollLog();
+        am.b.textContent = shown(t) || (/<<(map|mapedit)/.test(t) ? 'Building the mind map...' : /<<notes/.test(t) ? 'Writing the notes...' : /<<site/.test(t) ? 'Updating your site...' : /<<(cells|sheetedit)/.test(t) ? 'Updating the spreadsheet...' : /<<(slides|slideedit)/.test(t) ? 'Building the slides...' : /<<mcq/.test(t) ? 'Writing the quiz questions...' : /<<cards/.test(t) ? 'Writing the flashcards...' : /<<quiz/.test(t) ? 'Writing the quiz...' : ''); scrollLog();
       },
     };
     let reply = await askAI(msgs, opts);
@@ -570,6 +573,7 @@ async function run(instruction) {
         else if (blk.kind === 'notes') { u = OI.newNotes(blk.text, blk.title, o); w = 'Made a notes page.'; }
         else if (blk.kind === 'cards') u = OI.newCards(blk.text, blk.title, o);
         else if (blk.kind === 'quiz') u = OI.newQuiz(blk.text, blk.title, o);
+        else if (blk.kind === 'mcq') u = OI.newMcq(blk.text);
         else if (blk.kind === 'highlight') u = OI.highlight(blk.text);
         else { u = OI.newMap(blk.text, blk.title); w = 'Made a mind map.'; }
       } catch (err) { console.error(err); }
@@ -612,6 +616,101 @@ async function run(instruction) {
     if (!sawThought && ok) th.box.hidden = true;
     scrollLog();
     refresh();
+  }
+}
+
+// A thorough set of notes is far too long for one reply. So it is done in steps: plan the sections, then write each section as its
+// own notes page (two at a time), then add a mind map of the plan. Pages appear one by one, in order, while it works.
+const DEEP_RE = /\b(full|complete|detailed|thorough|comprehensive|in[- ]depth|extensive)\b[^.?!]{0,40}\b(notes|study guide)\b|\b(notes|study guide)\b[^.?!]{0,40}\b(full|complete|detailed|thorough|comprehensive|in[- ]depth|extensive)\b/i;
+const sameTitle = (a, b) => String(a || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim() === String(b || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+function wantsDeepNotes(q) { if (!DEEP_RE.test(q)) return false; try { const fr = activeFrame(); return !!(fr && fr.contentWindow.OIAI); } catch { return false; } }
+// The model stream sometimes ends before it has written anything (a dropped connection, or the reply budget spent on thinking): ask again.
+async function askRetry(msgs, opts, tries = 2) {
+  let reply = '';
+  for (let k = 0; k < tries && !reply.trim(); k++) { if (opts.signal && opts.signal.aborted) break; reply = await askAI(msgs, opts); }
+  return reply;
+}
+async function runDeep(instruction) {
+  let OI = null, frameWin = null;
+  try { const fr = activeFrame(); frameWin = fr && fr.contentWindow; OI = frameWin && frameWin.OIAI; } catch {}
+  if (!OI) return run(instruction);
+  if (busy) busy.abort();
+  const c = readContext(true);
+  instruction = instruction.slice(0, 1500);
+  const src = attach ? attach.text.slice(0, 38000) : c.source !== 'none' ? c.text : '';
+  const srcLabel = (attach ? attach.title : c.source === 'selection' ? 'selection' : 'page (outline)').replace(/[<>\n]/g, ' ');
+  const withSrc = text => src ? `${text}\n\n<<one:${srcLabel}>>\n${src}\n<</one>>` : text;
+  const tag = attach ? attach.title : src ? 'document' : '';
+  hist.push({ r: 'u', t: instruction, x: tag }); saveHist();
+  addMsg('user', instruction, tag ? 'with ' + tag : '');
+  lastAnswer = ''; ui.acts.style.display = 'none'; ui.send.disabled = true;
+  const am = addMsg('ai', ''), th = makeThink(am.d, am.b);
+  busy = new AbortController(); const mine = busy;
+  const undos = [], titles = []; let stored = false;
+  const sys = SYSTEM + ' ' + IDEA_SYSTEM;
+  try {
+    th.status('Planning the notes...'); am.b.textContent = 'Planning the notes...';
+    const planReply = await askRetry([{ role: 'system', content: sys }, { role: 'user', content: withSrc(`${instruction}\n\nFirst plan the notes. Reply with ONLY JSON and no other text: {"title":"short title for the whole set","sections":[{"title":"short section title","covers":"one sentence saying exactly what this section must cover"}]}. Use 5 to 8 sections that together cover EVERYTHING${src ? ' in the material' : ' a student needs on this topic'}, in a sensible teaching order.`) }], { signal: mine.signal });
+    let plan = null;
+    try { const i = planReply.indexOf('{'), z = planReply.lastIndexOf('}'); plan = JSON.parse(planReply.slice(i, z + 1)); } catch {}
+    const sections = plan && Array.isArray(plan.sections) ? plan.sections.map(x => ({ title: String(x && x.title || '').trim().slice(0, 80), covers: String(x && x.covers || '').trim().slice(0, 300) })).filter(x => x.title).slice(0, 8) : [];
+    if (sections.length < 2) throw new Error('could not plan the notes. Please try again.');
+    const setTitle = String(plan.title || 'Notes').trim().slice(0, 80), n = sections.length;
+    const outline = sections.map((x, i) => `${i + 1}. ${x.title}`).join('; ');
+    const results = new Array(n).fill(null); let nextJob = 0, applied = 0, finished = 0;
+    const apply = () => {
+      while (applied < n && results[applied] !== null) {
+        const sec = sections[applied], text = results[applied]; applied++;
+        if (!text) continue;
+        let u = null;
+        try { OI.lastError = ''; u = OI.newNotes(text, sec.title, { inline: mdInline }); } catch (err) { console.error(err); }
+        if (u) { undos.push(u); titles.push(sec.title); }
+      }
+    };
+    const status = () => { const msg = `Writing the notes: ${finished} of ${n} sections done`; th.status(msg); am.b.textContent = msg + (titles.length ? '. Pages so far: ' + titles.join(', ') : '') + '.'; scrollLog(); };
+    status();
+    const groups = []; for (let i = 0; i < n; i += 2) groups.push([i, Math.min(n, i + 2)]);
+    const worker = async () => {
+      while (nextJob < groups.length && !mine.signal.aborted) {
+        const [from, to] = groups[nextJob++], part = [];
+        for (let i = from; i < to; i++) part.push(`part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}`);
+        const ask = `${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY ${to - from > 1 ? 'these ' + (to - from) + ' parts' : 'this part'}: ${part.join('; ')}. Write each part as its own <<notes title="the part title">> block, thorough (at least 500 words each) and following the study notes rules, with no other blocks. The other parts are written separately, so do not repeat them.`;
+        const reply = await askRetry([{ role: 'system', content: sys }, { role: 'user', content: withSrc(ask) }], { signal: mine.signal });
+        const blocks = parseMakes(reply).filter(b => b.kind === 'notes');
+        for (let i = from; i < to; i++) {
+          const byTitle = blocks.find(b => sameTitle(b.title, sections[i].title)), mk = byTitle || blocks[i - from];
+          results[i] = ((mk ? mk.text : (blocks.length ? '' : shown(reply))) || '').trim();
+          finished++;
+        }
+        apply(); status();
+      }
+    };
+    await Promise.all([worker(), worker()]);
+    if (mine.signal.aborted) throw Object.assign(new Error('stopped'), { name: 'AbortError' });
+    apply();
+    // a mind map of the plan, so the whole set can be seen at a glance
+    try { const out = `- ${setTitle}\n` + sections.map(x => `  - ${x.title}\n    > ${x.covers}`).join('\n'); const u = OI.newMap(out, setTitle); if (u) undos.push(u); } catch (err) { console.error(err); }
+    th.box.hidden = true;
+    const summary = `Wrote ${titles.length} pages of notes: ${titles.join(', ')}.`;
+    am.b.textContent = titles.length ? summary + ' I also added a mind map of the whole set.' : 'Nothing could be written. Please try again.';
+    hist.push({ r: 'a', t: summary }); saveHist(); stored = true;
+    if (undos.length) {
+      const bar = document.createElement('div'); bar.className = 'oai-applied';
+      bar.innerHTML = '<span class="ms" aria-hidden="true">check_circle</span><span>' + esc(`Added ${titles.length} notes pages and a mind map.`) + '</span>';
+      const extra = [];
+      const u = document.createElement('button'); u.type = 'button'; u.textContent = 'Undo all';
+      u.onclick = () => { try { undos.slice().reverse().forEach(f => f()); u.disabled = true; u.textContent = 'Undone'; extra.forEach(x => { x.disabled = true; }); toast('Undone.'); } catch { toast('Use Ctrl+Z in the document to undo.'); } };
+      bar.append(u);
+      [['Flashcards', () => frameWin.ST.open('section')], ['Take a quiz', () => frameWin.QZ.open({ scope: 'section' })]].forEach(([label, fn]) => { const x = document.createElement('button'); x.type = 'button'; x.textContent = label; x.onclick = () => { try { fn(); } catch (err) { console.error(err); } }; extra.push(x); bar.append(x); });
+      am.d.append(bar);
+    }
+  } catch (err) {
+    if (!stored) { hist.pop(); saveHist(); }
+    if (err.name === 'AbortError') { am.d.remove(); }
+    else { am.d.classList.add('err'); th.box.hidden = true; am.b.textContent = (titles.length ? `Stopped after ${titles.length} pages: ` : 'Couldn\'t write the notes: ') + err.message; }
+  } finally {
+    if (busy === mine) busy = null;
+    ui.send.disabled = false; scrollLog(); refresh();
   }
 }
 

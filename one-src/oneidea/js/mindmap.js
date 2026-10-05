@@ -847,11 +847,35 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
   const studyStatus = () => {
     if (!window.ST) return '';
     let cards; try { P.syncAll(); cards = window.ST.cardsFrom(N.nb.sections.flatMap(sc => sc.pages)); } catch { return ''; }
-    if (!cards.length) return '';
-    const prog = (N.nb.study && N.nb.study.cards) || {}, now = Date.now();
-    const due = cards.filter(c => !prog[c.id] || prog[c.id].due <= now).length, strong = cards.filter(c => prog[c.id] && prog[c.id].box >= 4).length;
-    const weak = cards.filter(c => prog[c.id] && prog[c.id].seen > 0 && prog[c.id].box <= 1).slice(0, 12).map(c => c.front);
-    return `\n\n# Study status (flashcards in this whole notebook)\n- ${cards.length} cards, ${due} due now, ${strong} well learned` + (weak.length ? `\n- Still learning: ${weak.join('; ')}` : '');
+    const qs = window.QZ ? window.QZ.stats() : null, weakQ = window.QZ ? window.QZ.weakTopics() : [];
+    if (!cards.length && !(qs && qs.attempts)) return '';
+    let out = '\n\n# Study status (this whole notebook)';
+    if (cards.length) {
+      const prog = (N.nb.study && N.nb.study.cards) || {}, now = Date.now();
+      const due = cards.filter(c => !prog[c.id] || prog[c.id].due <= now).length, strong = cards.filter(c => prog[c.id] && prog[c.id].box >= 4).length;
+      const weak = cards.filter(c => prog[c.id] && prog[c.id].seen > 0 && prog[c.id].box <= 1).slice(0, 12).map(c => c.front);
+      out += `\n- Flashcards: ${cards.length} cards, ${due} due now, ${strong} well learned` + (weak.length ? `\n- Still learning: ${weak.join('; ')}` : '');
+    }
+    if (qs && qs.attempts) out += `\n- Quizzes taken: ${qs.attempts}, recent scores: ${qs.recent.map(h => Math.round(h.correct / h.total * 100) + '%').join(', ')}` + (weakQ.length ? `\n- Questions still getting wrong: ${weakQ.join('; ')}` : '');
+    return out;
+  };
+
+  // Multiple choice questions written by the AI (JSON): kept in the notebook's quiz bank and mixed into quizzes.
+  const newMcq = text => {
+    OIAI.lastError = '';
+    let j;
+    try {
+      const t = String(text).trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+      const a = Math.min(...['[', '{'].map(c => { const i = t.indexOf(c); return i < 0 ? Infinity : i; })), z = Math.max(t.lastIndexOf(']'), t.lastIndexOf('}'));
+      j = JSON.parse(t.slice(a, z + 1));
+    } catch { return fail('The questions were not valid JSON.'); }
+    const list = Array.isArray(j) ? j : Array.isArray(j.questions) ? j.questions : [];
+    const p = N.page(), added = window.QZ ? window.QZ.addBank(list, p && p.id) : [];
+    if (!added.length) return fail('No usable multiple choice questions were found.');
+    const undo = () => window.QZ.removeBank(added.map(x => x.id));
+    undo.note = 'Added ' + added.length + ' multiple choice questions to your quiz.';
+    undo.actions = [{ label:'Take the quiz', run:() => window.QZ.open({ scope:'notebook', mode:'practice', count:Math.min(20, added.length) }) }];
+    return undo;
   };
 
   const OIAI = window.OIAI = {
@@ -863,7 +887,7 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
       if (p.kind === 'map') return { kind:'map', title:p.title, text:outlineText(p) + study };
       return { kind:'page', title:p.title, text:pageOutline(p) + study };
     },
-    newMap, setMap, newNotes, newCards, newQuiz, highlight,
+    newMap, setMap, newNotes, newCards, newQuiz, newMcq, highlight,
   };
 }
 })();

@@ -97,7 +97,7 @@ QZ.removeBank = ids => { const d = data(); d.bank = d.bank.filter(b => !ids.incl
 
 /* ---------- progress ---------- */
 function record(q, ok) {
-  const d = data(), m = d.missed;
+  const d = data(), m = d.missed; if (window.HUB && !q.card) HUB.tick();
   if (q.card && ST.rate) ST.rate({ id:q.card }, ok);
   if (ok) { const x = m[q.id]; if (x) { x.streak = (x.streak || 0) + 1; if (x.streak >= 2) delete m[q.id]; } }
   else { const x = m[q.id] = m[q.id] || { q:Object.assign({}, q), n:0 }; x.n++; x.streak = 0; x.q = Object.assign({}, q); x.last = Date.now(); }
@@ -220,7 +220,7 @@ QZ.open = (opts = {}) => {
     while (s.answers.length < s.list.length) s.answers.push({ q:s.list[s.answers.length], given:'', ok:false, skipped:true });
     if (s.mode === 'exam') s.answers.forEach(a => record(a.q, a.ok));
     const correct = s.answers.filter(a => a.ok).length, total = s.list.length, secs = (Date.now() - s.t0) / 1000;
-    data().history.push({ t:Date.now(), scope, mode:s.mode, mistakes:!!s.mistakes, total, correct, secs:Math.round(secs) }); if (data().history.length > 60) data().history.shift(); N.dirty();
+    data().history.push({ t:Date.now(), scope, sec:scope === 'section' ? N.section().id : null, mode:s.mode, mistakes:!!s.mistakes, total, correct, secs:Math.round(secs) }); if (data().history.length > 60) data().history.shift(); N.dirty();
     const pct = Math.round(correct / total * 100), wrong = s.answers.filter(a => !a.ok);
     body.innerHTML = '';
     body.append(el('div', { class:'fc-empty' }, el('div', { class:'qz-score', style:{ '--p':pct } }, el('b', { text:pct + '%' })), el('h2', { text:pct >= 90 ? 'Excellent' : pct >= 70 ? 'Good work' : pct >= 50 ? 'Getting there' : 'Keep going' }),
