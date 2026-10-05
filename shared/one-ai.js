@@ -30,6 +30,14 @@ const ACTIONS = [
   { label: 'Make flashcards', instr: 'Make flashcards from this.', only: 'idea' },
   { label: 'Make a quiz', instr: 'Make a quiz from this, with the answers in bold so Recall mode can hide them.', only: 'idea' },
   { label: 'Highlight key terms', instr: 'Highlight the key terms on this page so I can test myself in Recall mode.', only: 'page' },
+  { label: 'Add totals', instr: 'Add totals and any other useful summary formulas for this data (keep the existing cells).', only: 'sheet' },
+  { label: 'Format it nicely', instr: 'Format this sheet professionally: a bold header row with a fill colour, sensible number formats, column widths that fit, borders where they help, and a frozen header row.', only: 'sheet' },
+  { label: 'Add a chart', instr: 'Add the most useful chart for this data.', only: 'sheet' },
+  { label: 'Check for problems', instr: 'Check this sheet for mistakes: wrong or inconsistent formulas, numbers stored as text, duplicates, empty cells that should be filled. Fix what is clearly wrong and list anything you are unsure about.', only: 'sheet' },
+  { label: 'Improve this deck', instr: 'Improve this deck: sharper titles, tighter bullets, a clear story from start to end. Change only what needs it.', only: 'slide' },
+  { label: 'Add speaker notes', instr: 'Write speaker notes for every slide that has none (2 to 4 sentences each).', only: 'slide' },
+  { label: 'Add a summary slide', instr: 'Add a closing summary slide with the key takeaways, after the last slide.', only: 'slide' },
+  { label: 'Add a chart slide', instr: 'Add a slide with a chart that supports the story of this deck (use realistic example numbers and say they are examples in the notes).', only: 'slide' },
   { label: 'Improve this map', instr: 'Improve this mind map: balance the branches, tighten the wording and add any important sub-topics that are missing. Return the complete updated map.', only: 'map' },
   { label: 'Improve the copy', instr: 'Rewrite the text on this page to be clearer, friendlier and more convincing. Keep the same sections and layout.', only: 'site' },
   { label: 'Add a section', instr: 'Add one more useful section to this page that fits the rest of it.', only: 'site' },
@@ -51,7 +59,7 @@ const SITE_SYSTEM = 'The user is in oneSite, a website builder. A site is a list
   'The object may hold any of these keys, and you include ONLY the keys you change: "page" (the COMPLETE new list of sections for the open page, in order; keep the "id" of every section you keep and leave "id" out for new ones; a section you leave out is deleted), "addPages" (a list of {"name","sections"} for new pages), "theme" ({"palette","font","radius","accent"}), "settings" ({"description","favicon"}), "header" and "footer" ({"v","data"}), "title" (the site name). ' +
   'A section is {"id","type","v","bg","pad","data"} and data holds the fields listed below. A picture shown as "(picture kept)" must be copied back exactly. Never invent picture links: use a placeholder such as "ph:g1" or an https link the user gave you. ' +
   'Write real, specific copy for what the user described, never lorem ipsum, in plain text without markdown or HTML (a line break is \\n). Never use <<edit>>, <<append>>, <<map>> or <<notes>> here. When the user only asks a question or for advice, answer without a block. After a block, write one short sentence saying what you changed. ';
-const systemFor = c => SYSTEM + (c.kind === 'site' ? ' ' + SITE_SYSTEM + (c.schema || '') : c.build ? ' ' + IDEA_SYSTEM : '');
+const systemFor = c => SYSTEM + (c.kind === 'site' ? ' ' + SITE_SYSTEM + (c.schema || '') : (c.kind === 'sheet' || c.kind === 'slide') ? ' ' + (c.system || '') : c.build ? ' ' + IDEA_SYSTEM : '');
 
 let fab = null;
 let panel = null;
@@ -83,9 +91,9 @@ function readContext(forSend) {
   const c = readContextCore(), f = activeFrame();
   let w = null;
   try { w = f && f.contentWindow; } catch {}
-  const br = w && (w.OIAI ? w.OIAI : w.OSAI ? w.OSAI : null);
+  const br = w && (w.OIAI ? w.OIAI : w.OSAI ? w.OSAI : w.OXAI ? w.OXAI : null);
   c.build = !!br;
-  c.kind = w && w.OIAI ? 'idea' : w && w.OSAI ? 'site' : '';
+  c.kind = w && w.OIAI ? 'idea' : w && w.OSAI ? 'site' : w && w.OXAI ? w.OXAI.app : '';
   if (c.build && c.source !== 'selection') {
     // oneIdea / oneSite: show the AI the whole open page (an outline, or the site page as JSON), and never treat one box as "the document".
     try {
@@ -94,6 +102,7 @@ function readContext(forSend) {
         c.idea = o.kind; c.editable = null;
         if (o.text) { c.text = o.text.slice(0, BUILD_CONTEXT_CHARS); c.truncated = o.text.length > BUILD_CONTEXT_CHARS; c.source = 'document'; } else c.source = 'none';
         if (c.kind === 'site') c.schema = w.OSAI.schema();
+        if (c.kind === 'sheet' || c.kind === 'slide') c.system = w.OXAI.system();
       }
     } catch {}
   }
@@ -384,7 +393,7 @@ function refresh() {
   const c = readContext();
   ui.app.textContent = c.app;
   ui.ctx.textContent = c.source === 'selection' ? `Working on your selection (${c.text.length.toLocaleString()} characters).`
-    : c.source === 'document' && c.build ? (c.kind === 'site' ? 'Reading this page of your site.' : `Reading this ${c.idea === 'map' ? 'mind map' : 'page'}. Select some text to focus on part of it.`)
+    : c.source === 'document' && c.build ? (c.kind === 'site' ? 'Reading this page of your site.' : c.kind === 'sheet' ? 'Reading this workbook. Ask for formulas, formatting, charts or analysis.' : c.kind === 'slide' ? 'Reading this deck. Ask for new slides, edits, notes or a whole presentation from a topic.' : `Reading this ${c.idea === 'map' ? 'mind map' : 'page'}. Select some text to focus on part of it.`)
     : c.source === 'document' ? 'Working on the whole document — select some text to focus on part of it.'
     : 'No text to work on here — you can still ask epic AI anything.';
   if (attach) ui.ctx.textContent += ' The attached file is included too.';
@@ -393,7 +402,7 @@ function refresh() {
   const canEdit = !!c.editable;
   ui.chips.querySelectorAll('button').forEach(b => {
     const only = ACTIONS[b.dataset.i].only;
-    b.hidden = only === 'idea' ? c.kind !== 'idea' : only === 'page' ? !(c.kind === 'idea' && c.idea === 'page') : only === 'site' ? c.kind !== 'site' : only === 'map' ? c.idea !== 'map' : (c.build && c.source !== 'selection');
+    b.hidden = only === 'idea' ? c.kind !== 'idea' : only === 'page' ? !(c.kind === 'idea' && c.idea === 'page') : only === 'site' ? c.kind !== 'site' : only === 'sheet' ? c.kind !== 'sheet' : only === 'slide' ? c.kind !== 'slide' : only === 'map' ? c.idea !== 'map' : (c.build && c.source !== 'selection');
     b.disabled = c.source === 'none' && !attach;
   });
   ui.replace.disabled = !(canEdit && c.source === 'selection');
@@ -411,16 +420,17 @@ async function attachFile(file) {
 
 const TAG_RE = /<<\/?(?:edit|append)>>/g;
 // map / notes blocks are built into the app, so they are not shown as chat text
-const MAKE_RE = /<<(map|mapedit|notes|site|cards|quiz|highlight)(?:\s[^>]*)?>>[\s\S]*?(?:<<\/\1>>|$)/g;
+const MAKE_RE = /<<(map|mapedit|notes|site|cards|quiz|highlight|cells|sheetedit|slides|slideedit)(?:\s[^>]*)?>>[\s\S]*?(?:<<\/\1>>|$)/g;
 const shown = t => String(t || '').replace(MAKE_RE, '').replace(TAG_RE, '');
 function parseMakes(reply) {
-  const out = [], re = /<<(map|mapedit|notes|site|cards|quiz|highlight)((?:\s[^>]*)?)>>([\s\S]*?)(<<\/\1>>|$)/g;
+  const out = [], re = /<<(map|mapedit|notes|site|cards|quiz|highlight|cells|sheetedit|slides|slideedit)((?:\s[^>]*)?)>>([\s\S]*?)(<<\/\1>>|$)/g;
   let m;
   while ((m = re.exec(reply || ''))) {
     const text = m[3].replace(/^\n+|\n+$/g, ''); if (!text.trim()) continue;
     const t = /title\s*=\s*"([^"]*)"/.exec(m[2]);
     const lay = /layout\s*=\s*"([^"]*)"/.exec(m[2]);
-    out.push({ kind: m[1], title: t ? t[1] : '', layout: lay ? lay[1] : '', text, closed: !!m[4] });
+    const attrs = {}; m[2].replace(/(\w+)\s*=\s*"([^"]*)"/g, (_, k, v) => { attrs[k.toLowerCase()] = v; return ''; });
+    out.push({ kind: m[1], title: t ? t[1] : '', layout: lay ? lay[1] : '', attrs, text, closed: !!m[4] });
   }
   return out;
 }
@@ -438,7 +448,7 @@ function parseEdit(reply) {
 const saved = t => {
   const e = parseEdit(t), mk = parseMakes(t), said = shown(t).replace(/\s+/g, ' ').trim();
   if (e) return e.said || (e.kind === 'append' ? 'Added to the document.' : 'Edited the document.');
-  if (mk.length) return said || (mk[0].kind === 'site' ? 'Updated the site.' : mk[0].kind === 'cards' ? 'Made flashcards.' : mk[0].kind === 'quiz' ? 'Made a quiz.' : mk[0].kind === 'highlight' ? 'Highlighted key terms.' : 'Made ' + mk.map(b => b.kind === 'notes' ? 'a notes page' : 'a mind map').join(' and ') + '.');
+  if (mk.length) return said || (mk[0].kind === 'cells' || mk[0].kind === 'sheetedit' ? 'Updated the spreadsheet.' : mk[0].kind === 'slides' || mk[0].kind === 'slideedit' ? 'Updated the presentation.' : mk[0].kind === 'site' ? 'Updated the site.' : mk[0].kind === 'cards' ? 'Made flashcards.' : mk[0].kind === 'quiz' ? 'Made a quiz.' : mk[0].kind === 'highlight' ? 'Highlighted key terms.' : 'Made ' + mk.map(b => b.kind === 'notes' ? 'a notes page' : 'a mind map').join(' and ') + '.');
   return said;
 };
 
@@ -477,7 +487,7 @@ async function run(instruction) {
   if (busy) busy.abort();
   const c = readContext(true);
   const wantsCtx = c.source !== 'none';
-  const appLabel = c.build ? c.app + (c.source === 'selection' ? ' selection' : c.idea === 'map' ? ' mind map (outline)' : c.kind === 'site' ? ' site page (JSON)' : ' page (outline)') : c.app;
+  const appLabel = c.build ? c.app + (c.source === 'selection' ? ' selection' : c.idea === 'map' ? ' mind map (outline)' : c.kind === 'site' ? ' site page (JSON)' : c.kind === 'sheet' ? ' workbook (grid)' : c.kind === 'slide' ? ' presentation (outline)' : ' page (outline)') : c.app;
   instruction = instruction.slice(0, 3800);
   let userMsg = wantsCtx ? `${instruction}\n\n<<one:${appLabel.replace(/[<>\n]/g, ' ')}>>\n${c.text}\n<</one>>` : instruction;
   if (attach) userMsg += `\n\n<<one:${attach.title.replace(/[<>\n]/g, ' ')}>>\n${attach.text.slice(0, Math.max(0, 38000 - userMsg.length))}\n<</one>>`;
@@ -486,7 +496,7 @@ async function run(instruction) {
   // The server refuses any single earlier message over 4000 characters, and an answer holding a whole notes page + map is longer than that.
   // So earlier turns go back shortened: built blocks and edits become a one-line note, and everything is capped.
   const forModel = m => m.r === 'u' ? m.t.slice(0, 3800)
-    : m.t.replace(MAKE_RE, (_, k) => k === 'site' ? '[the site was changed]' : k === 'cards' ? '[flashcards were made]' : k === 'quiz' ? '[a quiz was made]' : k === 'highlight' ? '[key terms were highlighted]' : k === 'notes' ? '[a notes page was made]' : k === 'mapedit' ? '[the mind map was updated]' : '[a mind map was made]')
+    : m.t.replace(MAKE_RE, (_, k) => k === 'cells' || k === 'sheetedit' ? '[the spreadsheet was changed]' : k === 'slides' || k === 'slideedit' ? '[the presentation was changed]' : k === 'site' ? '[the site was changed]' : k === 'cards' ? '[flashcards were made]' : k === 'quiz' ? '[a quiz was made]' : k === 'highlight' ? '[key terms were highlighted]' : k === 'notes' ? '[a notes page was made]' : k === 'mapedit' ? '[the mind map was updated]' : '[a mind map was made]')
       .replace(/<<(edit|append)>>[\s\S]*?(?:<<\/\1>>|$)/g, (_, k) => k === 'edit' ? '[the text was edited]' : '[text was added]').slice(0, 3800);
   const prior = hist.slice(-12).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: forModel(m) })).filter(m => m.content.trim());
   hist.push({ r: 'u', t: instruction, x: tag }); saveHist();
@@ -507,7 +517,7 @@ async function run(instruction) {
       onStatus: st => { if (!answering) th.status(st); },
       onText: t => {
         if (!answering && t) { answering = true; th.answered(sawThought, Math.max(1, Math.round((Date.now() - t0) / 1000))); }
-        am.b.textContent = shown(t) || (/<<(map|mapedit)/.test(t) ? 'Building the mind map...' : /<<notes/.test(t) ? 'Writing the notes...' : /<<site/.test(t) ? 'Updating your site...' : /<<cards/.test(t) ? 'Writing the flashcards...' : /<<quiz/.test(t) ? 'Writing the quiz...' : ''); scrollLog();
+        am.b.textContent = shown(t) || (/<<(map|mapedit)/.test(t) ? 'Building the mind map...' : /<<notes/.test(t) ? 'Writing the notes...' : /<<site/.test(t) ? 'Updating your site...' : /<<(cells|sheetedit)/.test(t) ? 'Updating the spreadsheet...' : /<<(slides|slideedit)/.test(t) ? 'Building the slides...' : /<<cards/.test(t) ? 'Writing the flashcards...' : /<<quiz/.test(t) ? 'Writing the quiz...' : ''); scrollLog();
       },
     };
     let reply = await askAI(msgs, opts);
@@ -533,6 +543,14 @@ async function run(instruction) {
       else { u = applyToDocument('replaceAll', ed.text, { quiet: true }); w = 'Changed your document.'; }
       if (u) { undos.push(u); notes.push(w); }
     }
+    // oneSheet / oneSlide: cells, formatting, charts, slides
+    let OX = null;
+    try { const fx = activeFrame(); OX = fx && fx.contentWindow.OXAI; } catch {}
+    if (OX) makes.filter(blk => OX.kinds.includes(blk.kind)).forEach(blk => {
+      let u = null;
+      try { u = OX.apply(blk); } catch (err) { console.error(err); }
+      if (u) { undos.push(u); notes.push(u.note || 'Updated the document.'); }
+    });
     // oneIdea: build real mind maps and notes pages
     let OI = null;
     try { const fr = activeFrame(); OI = fr && fr.contentWindow.OIAI; } catch {}
@@ -579,7 +597,7 @@ async function run(instruction) {
     } else {
       am.b.textContent = shown(final) || makesAll.map(blk => blk.text).join('\n\n');
       if (cutOff) { const n = document.createElement('small'); n.textContent = 'This answer was cut off, so nothing was changed. Ask again, or ask it to continue.'; am.d.append(n); }
-      if ((ed && canEdit) || makes.length) { const n = document.createElement('small'); n.textContent = makes.length ? (makes[0].kind === 'site' ? ((() => { try { return activeFrame().contentWindow.OSAI.lastError; } catch { return ''; } })() || 'Couldn\'t apply this to the site.') : ((() => { try { return activeFrame().contentWindow.OIAI.lastError; } catch { return ''; } })() || 'Couldn\'t build this here. You can copy it instead.')) : 'Couldn\'t apply this automatically. Use the buttons below.'; am.d.append(n); }
+      if ((ed && canEdit) || makes.length) { const n = document.createElement('small'); n.textContent = makes.length ? (OX && OX.kinds.includes(makes[0].kind) ? (OX.lastError || 'Couldn\'t apply this here.') : makes[0].kind === 'site' ? ((() => { try { return activeFrame().contentWindow.OSAI.lastError; } catch { return ''; } })() || 'Couldn\'t apply this to the site.') : ((() => { try { return activeFrame().contentWindow.OIAI.lastError; } catch { return ''; } })() || 'Couldn\'t build this here. You can copy it instead.')) : 'Couldn\'t apply this automatically. Use the buttons below.'; am.d.append(n); }
       lastAnswer = cutOff ? '' : ed ? ed.text : makes.length ? makes[0].text : reply;
     }
   } catch (err) {
