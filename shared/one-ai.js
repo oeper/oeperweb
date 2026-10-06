@@ -50,7 +50,7 @@ const ACTIONS = [
 const SYSTEM = 'You are epic AI, an assistant built into the one office suite, helping with the user\'s document. Do exactly what the instruction says. ' +
   'You can change the document directly. When the user asks you to rewrite, fix, shorten, expand, translate, reformat or otherwise change their text, put ONLY the new text between <<edit>> and <</edit>>. It replaces the selected text, or the whole document when nothing is selected, so include everything that should remain. ' +
   'When they ask you to continue or add more, put ONLY the new text between <<append>> and <</append>>. It is added after the selection, or at the end. Inside those tags use no quotation marks, no code fences, and simple markdown (# headings, - bullets, **bold**) only if the text already has that structure. Links are written [text](https://address) and a clickable button is [[Label]](https://address); only add them when the user asks or the text already has them. ' +
-  'You may add one short sentence before or after the tags, such as what you changed. When the user asks a question or wants an explanation or summary, answer it clearly and briefly WITHOUT any tags. This is an ongoing conversation, so use the earlier messages as context. Do not draft or deliberate at length in your thinking: think for at most a few short sentences, then write the answer straight away. Earlier assistant turns may contain a line in square brackets, such as [a notes page was made]: that is a note added by the app to record what was built. You never write such a line yourself. When asked to make or change something, always write the real block or text now, and never answer with only a bracketed line.';
+  'You may add one short sentence before or after the tags, such as what you changed. When the user asks a question or wants an explanation or summary, answer it clearly and briefly WITHOUT any tags. This is an ongoing conversation, so use the earlier messages as context. Earlier assistant turns may contain a line in square brackets, such as [a notes page was made]: that is a note added by the app to record what was built. You never write such a line yourself. When asked to make or change something, always write the real block or text now, and never answer with only a bracketed line.';
 
 const IDEA_SYSTEM = 'The user is in oneIdea, a note-taking app with real mind maps and free-form notes pages. You can build them directly, so do NOT dump a long plain list into a text answer when a map or structured notes would serve better. ' +
   'MIND MAP: put an indented outline between <<map title="Short title">> and <</map>>. Use "- " bullets with two spaces of indent per level. Aim for 3 to 7 main branches with 2 to 5 sub-topics each, going one or two levels deeper only where it helps. Keep every topic short (1 to 6 words, never a full sentence). A longer explanation goes on its own line directly under its topic, starting with "> " (it becomes that topic\'s note). Prefix a topic with [important], [question], [definition], [idea] or [ ] (a to-do) only when it really fits. ' +
@@ -446,6 +446,8 @@ const PH_SRC = '\\[(?:an?|the|some)\\s[^\\]\\n]{2,80}\\s(?:was|were)\\s(?:made|u
 const PH_RE = new RegExp(PH_SRC, 'gi'), PH_T = new RegExp(PH_SRC, 'i');
 const shown = t => String(t || '').replace(MAKE_RE, '').replace(TAG_RE, '').replace(PH_RE, '').replace(/\n{3,}/g, '\n\n').trim();
 // "[a notes page was made]": the model sometimes copies the status lines the app puts in its history instead of writing the real thing
+// background writers only: their replies are read as JSON or <<notes>> blocks, so any narration outside those is dropped
+const BRIEF = ' Keep your thinking very short, then write the answer. Never explain what you are about to do.';
 const isPlaceholder = t => /^\[[^\]\n]{3,90}\]$/.test(String(t || '').trim()) && /\b(was|were|made|updated|created|added|changed)\b/i.test(String(t));
 // an answer that says "I have expanded your notes" (or copies a status line) but holds no block, edit or text: nothing was built
 const ACTION_RE = /\b(make|made|update|expand|add|create|write|build|put|turn|edit|improve|fix|change|rewrite|redo|more|continue|extend|include|fill|complete)\b/i;
@@ -860,7 +862,7 @@ async function runDeep(instruction) {
   const am = addMsg('ai', ''), th = makeThink(am.d, am.b);
   busy = new AbortController(); const mine = busy;
   const undos = [], titles = [], extras = { maps: 0, diagrams: 0, questions: 0 }; let stored = false, anchor = null;
-  const sys = SYSTEM + ' ' + IDEA_SYSTEM;
+  const sys = SYSTEM + ' ' + IDEA_SYSTEM + BRIEF;
   const say = msg => { th.status(msg); am.b.textContent = msg + (titles.length ? '. Pages so far: ' + titles.join(', ') : '') + '.'; scrollLog(); };
   try {
     let source = full;
@@ -948,7 +950,7 @@ async function runBook(instruction, full, label, OI, frameWin) {
   busy = new AbortController(); const mine = busy;
   const handles = [], done = [], failed = []; let pages = 0, maps = 0, dgs = 0, qs = 0, stored = false;
   const stopRow = document.createElement('div'); stopRow.className = 'oai-applied'; const stopB = document.createElement('button'); stopB.type = 'button'; stopB.textContent = 'Stop'; stopB.onclick = () => mine.abort(); stopRow.append(stopB); am.d.append(stopRow);
-  const sys = SYSTEM + ' ' + IDEA_SYSTEM;
+  const sys = SYSTEM + ' ' + IDEA_SYSTEM + BRIEF;
   let where = '';
   const say = msg => { am.b.textContent = (where ? where + '\n' : '') + msg + (done.length ? `\nDone: ${done.join(', ')}` : ''); scrollLog(); };
   try {
