@@ -104,8 +104,11 @@ async function errorResponse(res, p) {
   return new Response(JSON.stringify({ error: (p ? p.model + ': ' : '') + msg }), { status: res.status, headers: { 'Content-Type': 'application/json' } });
 }
 
+// A local server that answers CORS with Access-Control-Allow-Headers: * (LM Studio does) still blocks the Authorization header, because browsers
+// never let a wildcard cover it. So a saved API key makes every request fail with a bare "Failed to fetch".
+const keyHint = what => { try { return /localhost|127\.0\.0\.1|\[::1\]/.test(String(what)) && readProviderSettings().apiKey ? ' You have an API key saved: browsers cannot send it to a local server whose CORS setting is just "*", so turn off "require authentication" in that server and clear the key field here.' : ''; } catch { return ''; } };
 const networkHelp = (err, what) => (err && err.name === 'AbortError') ? err : new Error(
-  `Couldn't reach ${what}. ${err && err.message ? '(' + err.message + ') ' : ''}Check the address, and that it allows requests from this site (CORS). Local servers like Ollama need OLLAMA_ORIGINS set to allow ${location.origin}.`);
+  `Couldn't reach ${what}. ${err && err.message ? '(' + err.message + ') ' : ''}Check the address, and that it allows requests from this site (CORS). Local servers like Ollama need OLLAMA_ORIGINS set to allow ${location.origin}.` + keyHint(what));
 
 // ── the model, in the two formats ──
 function textOf(content) {
