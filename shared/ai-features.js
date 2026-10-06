@@ -46,7 +46,7 @@ export async function askAI(messages, opts) {
     const more = await askOnce([...messages, { role: 'assistant', content: tail }, { role: 'user', content: 'Your last answer was cut off. Carry on from exactly where it stopped, starting with the very next word. Do not repeat anything, do not apologise or explain, and if you were inside a <<block>> keep writing its content and close it properly.' }],
       opts && opts.onText ? { ...opts, onText: t => opts.onText(text + t) } : opts);
     if (!more.text.trim()) break;
-    text += (/^\s/.test(more.text) || /\s$/.test(text) ? '' : ' ') + more.text;
+    text += (/^\s*([-*#>|]|\d+[.)]|<<)/.test(more.text) ? '\n' : /\s$/.test(text) ? '' : ' ') + more.text;
     r = more;
   }
   if (opts && opts.onText && text) opts.onText(text);
