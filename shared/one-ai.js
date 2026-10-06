@@ -50,7 +50,7 @@ const ACTIONS = [
 const SYSTEM = 'You are epic AI, an assistant built into the one office suite, helping with the user\'s document. Do exactly what the instruction says. ' +
   'You can change the document directly. When the user asks you to rewrite, fix, shorten, expand, translate, reformat or otherwise change their text, put ONLY the new text between <<edit>> and <</edit>>. It replaces the selected text, or the whole document when nothing is selected, so include everything that should remain. ' +
   'When they ask you to continue or add more, put ONLY the new text between <<append>> and <</append>>. It is added after the selection, or at the end. Inside those tags use no quotation marks, no code fences, and simple markdown (# headings, - bullets, **bold**) only if the text already has that structure. Links are written [text](https://address) and a clickable button is [[Label]](https://address); only add them when the user asks or the text already has them. ' +
-  'You may add one short sentence before or after the tags, such as what you changed. When the user asks a question or wants an explanation or summary, answer it clearly and briefly WITHOUT any tags. This is an ongoing conversation, so use the earlier messages as context.';
+  'You may add one short sentence before or after the tags, such as what you changed. When the user asks a question or wants an explanation or summary, answer it clearly and briefly WITHOUT any tags. This is an ongoing conversation, so use the earlier messages as context. Earlier assistant turns may contain a line in square brackets, such as [a notes page was made]: that is a note added by the app to record what was built. You never write such a line yourself. When asked to make or change something, always write the real block or text now, and never answer with only a bracketed line.';
 
 const IDEA_SYSTEM = 'The user is in oneIdea, a note-taking app with real mind maps and free-form notes pages. You can build them directly, so do NOT dump a long plain list into a text answer when a map or structured notes would serve better. ' +
   'MIND MAP: put an indented outline between <<map title="Short title">> and <</map>>. Use "- " bullets with two spaces of indent per level. Aim for 3 to 7 main branches with 2 to 5 sub-topics each, going one or two levels deeper only where it helps. Keep every topic short (1 to 6 words, never a full sentence). A longer explanation goes on its own line directly under its topic, starting with "> " (it becomes that topic\'s note). Prefix a topic with [important], [question], [definition], [idea] or [ ] (a to-do) only when it really fits. ' +
@@ -443,6 +443,8 @@ const TAG_RE = /<<\/?(?:edit|append)>>/g;
 // map / notes blocks are built into the app, so they are not shown as chat text
 const MAKE_RE = /<<(map|mapedit|notes|pageedit|pageadd|site|cards|quiz|highlight|cells|sheetedit|slides|slideedit|mcq)(?:\s[^>]*)?>>[\s\S]*?(?:<<\/\1>>|$)/g;
 const shown = t => String(t || '').replace(MAKE_RE, '').replace(TAG_RE, '');
+// "[a notes page was made]": the model sometimes copies the status lines the app puts in its history instead of writing the real thing
+const isPlaceholder = t => /^\[[^\]\n]{3,90}\]$/.test(String(t || '').trim()) && /\b(was|were|made|updated|created|added|changed)\b/i.test(String(t));
 function parseMakes(reply) {
   const out = [], re = /<<(map|mapedit|notes|pageedit|pageadd|site|cards|quiz|highlight|cells|sheetedit|slides|slideedit|mcq)((?:\s[^>]*)?)>>([\s\S]*?)(<<\/\1>>|$)/g;
   let m;
@@ -522,7 +524,7 @@ async function run(instruction) {
   const forModel = m => m.r === 'u' ? m.t.slice(0, 3800)
     : m.t.replace(MAKE_RE, (_, k) => k === 'mcq' ? '[a multiple choice quiz was made]' : k === 'cells' || k === 'sheetedit' ? '[the spreadsheet was changed]' : k === 'slides' || k === 'slideedit' ? '[the presentation was changed]' : k === 'site' ? '[the site was changed]' : k === 'cards' ? '[flashcards were made]' : k === 'quiz' ? '[a quiz was made]' : k === 'highlight' ? '[key terms were highlighted]' : k === 'notes' ? '[a notes page was made]' : k === 'pageedit' ? '[the page was updated]' : k === 'pageadd' ? '[sections were added to the page]' : k === 'mapedit' ? '[the mind map was updated]' : '[a mind map was made]')
       .replace(/<<(edit|append)>>[\s\S]*?(?:<<\/\1>>|$)/g, (_, k) => k === 'edit' ? '[the text was edited]' : '[text was added]').slice(0, 3800);
-  const prior = hist.slice(-12).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: forModel(m) })).filter(m => m.content.trim());
+  const prior = hist.slice(-12).filter(m => !(m.r === 'a' && isPlaceholder(m.t))).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: forModel(m) })).filter(m => m.content.trim());
   hist.push({ r: 'u', t: instruction, x: tag }); saveHist();
   addMsg('user', instruction, tag ? 'with ' + tag : '');
   lastAnswer = '';
@@ -548,6 +550,12 @@ async function run(instruction) {
     // The model stream sometimes ends before any answer text (a dropped connection): try once more before giving up.
     if (!reply.trim() && !mine.signal.aborted) { th.status('The connection dropped. Trying again...'); reply = await askAI(msgs, opts); }
     if (!reply.trim()) throw new Error('epic AI stopped before it answered. Please try again.');
+    if (isPlaceholder(shown(reply)) && !parseEdit(reply) && !parseMakes(reply).length && !mine.signal.aborted) {
+      th.status('That reply had no content. Asking again...');
+      const again = [...msgs.slice(0, -1), { role: 'user', content: userMsg + '\n\nIMPORTANT: do not answer with a bracketed status line. Write the actual result now, using the proper block (<<notes>>, <<pageedit>>, <<pageadd>>, <<mcq>>, <<map>> and so on) or the real text.' }];
+      reply = await askAI(again, opts);
+      if (!reply.trim() || (isPlaceholder(shown(reply)) && !parseEdit(reply) && !parseMakes(reply).length)) throw new Error('epic AI did not write anything that time. Please try again, or ask for it a little differently.');
+    }
     const final = reply;
     ok = true;
     if (!answering) th.answered(sawThought, Math.max(1, Math.round((Date.now() - t0) / 1000)));
@@ -765,7 +773,7 @@ async function deepWrite(o) {
       const blocks = parseMakes(reply).filter(b => b.kind === 'notes');
       for (let i = from; i < to; i++) {
         const byTitle = blocks.find(b => sameTitle(b.title, sections[i].title)), mk = byTitle || blocks[i - from];
-        results[i] = ((mk ? mk.text : (blocks.length ? '' : shown(reply))) || '').trim();
+        results[i] = ((mk ? mk.text : (blocks.length || isPlaceholder(shown(reply)) ? '' : shown(reply))) || '').trim();
         // a part that came back thin is written again on its own (once), keeping whichever version is longer
         if (results[i].split(/\s+/).length < Math.round(need * .6) && !signal.aborted) {
           try {
