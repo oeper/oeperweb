@@ -617,8 +617,10 @@ MM.outlineDialog = () => {
 };
 /* ---------- mind maps inside notes ---------- */
 const embSrc = p => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(MM.toSVG(p));
+const embDims = p => { const m = /width="(\d+)" height="(\d+)"/.exec(MM.toSVG(p).slice(0, 200)); return m ? ` width="${m[1]}" height="${m[2]}"` : ''; };
 const embCap = p => 'Mind map: ' + (p.title || 'Mind map');
-const embHTML = p => `<figure class="mmemb" contenteditable="false" data-map="${p.id}"><img src="${embSrc(p)}" alt="${esc(embCap(p))}"><figcaption><span class="mmemb-t">${esc(embCap(p))}</span><button type="button" class="mmemb-b" data-mm="open" title="Open map" aria-label="Open map"></button><button type="button" class="mmemb-b" data-mm="remove" title="Remove from note" aria-label="Remove from note"></button></figcaption></figure><p><br></p>`;
+MM.embHTML = p => embHTML(p);
+const embHTML = p => `<figure class="mmemb" contenteditable="false" data-map="${p.id}"><img src="${embSrc(p)}"${embDims(p)} alt="${esc(embCap(p))}"><figcaption><span class="mmemb-t">${esc(embCap(p))}</span><button type="button" class="mmemb-b" data-mm="open" title="Open map" aria-label="Open map"></button><button type="button" class="mmemb-b" data-mm="remove" title="Remove from note" aria-label="Remove from note"></button></figcaption></figure><p><br></p>`;
 const backBtn = el('button', { class:'mm-back', type:'button', hidden:true, html:icon('arrow_back') + '<span>Back to note</span>', onclick:() => { const b = MM.back, f = b && N.find(b.from); if (f) N.go(f.si, f.pi); else ONE.toast('That note was deleted.'); } });
 $('#mm').append(backBtn);
 const showBack = () => { const b = MM.back; backBtn.hidden = !(active && cur && b && b.to === cur.id && N.find(b.from)); };
@@ -693,10 +695,12 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
       return k;
     };
     const lines = [];
+    // "Term :: meaning" is how a definition box is written, so an AI edit gets it back the same way
+    const defLine = x => { const tb = x.querySelector(':scope > b.term'); if (!tb) return ''; const f = flat(tb.textContent); let seen = false; const rest = flat([...x.childNodes].filter(n => { if (n === tb) { seen = true; return false; } return seen; }).map(inline).join('')).replace(/^(?:—|–|-|::|:)\s*/, ''); return f && rest ? f + ' :: ' + rest : ''; };
     const list = (node, d) => [...node.children].forEach(li => {
       if (li.tagName !== 'LI') return;
-      const t = flat([...li.childNodes].map(inline).join('')); const ord = node.tagName === 'OL';
-      if (t) lines.push('  '.repeat(d) + (ord ? '1. ' : '- ') + tagOf(li) + t);
+      const dl = defLine(li), t = dl || flat([...li.childNodes].map(inline).join('')); const ord = node.tagName === 'OL';
+      if (t) lines.push('  '.repeat(d) + (ord ? '1. ' : '- ') + (dl ? '' : tagOf(li)) + t);
       [...li.children].filter(x => /^(UL|OL)$/.test(x.tagName)).forEach(x => list(x, d + 1));
     });
     const walk = node => [...node.children].forEach(c => {
@@ -707,9 +711,11 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
         const rows = [...c.rows].map(r => [...r.cells].map(x => flat(inline(x)).replace(/\|/g, '/')));
         rows.forEach((r, i) => { lines.push('| ' + r.join(' | ') + ' |'); if (i === 0) lines.push('|' + r.map(() => '---').join('|') + '|'); });
       }
+      else if (T === 'FIGURE' && c.classList.contains('dgm')) { const sp = c.getAttribute('data-spec'); if (sp) lines.push('[diagram] ' + sp.replace(/\s*\n\s*/g, ' ')); }
+      else if (T === 'FIGURE') { /* a picture or an embedded mind map: it stays on the page as it is */ }
       else if (/^(P|DIV|BLOCKQUOTE|PRE|FIGCAPTION)$/.test(T)) {
         if (c.querySelector('ul,ol,table,h1,h2,h3,h4,p,div')) walk(c);
-        else { const t = flat(inline(c)); if (t) lines.push((T === 'BLOCKQUOTE' ? '> ' : '') + tagOf(c) + t); }
+        else { const dl = defLine(c), t = dl || flat(inline(c)); if (t) lines.push((T === 'BLOCKQUOTE' ? '> ' : '') + (dl ? '' : tagOf(c)) + t); }
       }
       else { const t = flat(inline(c)); if (t) lines.push(t); }
     });
@@ -741,11 +747,13 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
     const at = N.find(backId); N.go(at ? at.si : g.si, at ? at.pi : Math.max(0, g.pi - 1));
   };
   const addPage = pg => { const here = N.page(), hid = here && here.id; P.syncAll(); insertAfterCurrent(pg); return () => removePage(pg.id, hid); };
+  const addAfter = (pg, anchorId) => { const here = N.page(), hid = here && here.id; P.syncAll(); const f = N.find(anchorId); if (!f) { insertAfterCurrent(pg); return () => removePage(pg.id, hid); } f.s.pages.splice(f.pi + 1, 0, pg); N.go(f.si, f.pi + 1); return () => removePage(pg.id, hid); };
   const levelBelow = () => { const cp = N.page(); return cp ? Math.min(2, (cp.level || 0) + 1) : 0; };
 
   const newMap = (text, title, o) => {
     const r = parseOutlineAI(text); if (!r || !r.out.length) return null;
-    return addPage(N.mapFromOutline(plain(title) || r.title || 'Mind map', r.out, o && o.flat ? 0 : levelBelow()));
+    const mp = N.mapFromOutline(plain(title) || r.title || 'Mind map', r.out, o && o.flat ? 0 : levelBelow());
+    return o && o.after && N.find(o.after) ? addAfter(mp, o.after) : addPage(mp);
   };
   const setMap = text => {
     if (!active || !cur || cur.kind !== 'map' || N.recall) return null;
@@ -774,12 +782,75 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
     while (stack.length) html += '</li></' + (stack.pop().ord ? 'ol' : 'ul') + '>';
     return html;
   };
+  /* ---------- diagrams: flow, cycle and timeline pictures drawn from a small JSON description ---------- */
+  const DG_COL = ['#6750a4', '#1a73e8', '#0b8043', '#e37400', '#c2185b', '#00838f', '#7b5cd6', '#d93025'];
+  const dgX = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+  const dgWrap = (t, max) => { const out = []; let cur = ''; String(t || '').split(/\s+/).filter(Boolean).forEach(w => { if (cur && (cur + ' ' + w).length > max) { out.push(cur); cur = w; } else cur = cur ? cur + ' ' + w : w; }); if (cur) out.push(cur); return out.length ? out : ['']; };
+  const dgText = (lines, x, y, size, weight, fill, lh, anchor) => lines.map((l, i) => `<text x="${x}" y="${y + i * lh}" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="${anchor || 'middle'}">${dgX(l)}</text>`).join('');
+  const dgStep = s => typeof s === 'string' ? { t:s, d:'' } : { t:String((s && (s.t || s.title || s.name || s.step)) || ''), d:String((s && (s.d || s.detail || s.text)) || '') };
+  const dgFrame = (W, H, title, body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="Roboto, 'Segoe UI', Arial, sans-serif"><defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#6b7280"/></marker></defs><rect width="${W}" height="${H}" rx="14" fill="#ffffff"/>${title ? dgText([title], W / 2, 28, 15, 700, '#1f1f1f', 18) : ''}${body}</svg>`;
+  const dgFlow = (title, steps) => {
+    const W = 440, top = title ? 46 : 18; let y = top, body = '';
+    steps.forEach((s, i) => {
+      const tl = dgWrap(s.t, 32), dl = s.d ? dgWrap(s.d, 40) : [], h = Math.max(46, 18 + tl.length * 19 + (dl.length ? 6 + dl.length * 16 : 0)), c = DG_COL[i % DG_COL.length];
+      body += `<rect x="30" y="${y}" width="380" height="${h}" rx="12" fill="${c}" fill-opacity=".12" stroke="${c}" stroke-width="2"/><circle cx="56" cy="${y + h / 2}" r="13" fill="${c}"/>${dgText([String(i + 1)], 56, y + h / 2 + 5, 13, 700, '#fff', 0)}${dgText(tl, 238, y + 12 + 15, 15, 600, '#1f1f1f', 19)}${dl.length ? dgText(dl, 238, y + 12 + tl.length * 19 + 8, 12.5, 400, '#4b5563', 16) : ''}`;
+      y += h;
+      if (i < steps.length - 1) { body += `<path d="M220 ${y + 2} L220 ${y + 26}" stroke="#6b7280" stroke-width="2.5" fill="none" marker-end="url(#ah)"/>`; y += 30; }
+    });
+    return { svg:dgFrame(W, y + 18, title, body), w:W, h:y + 18 };
+  };
+  const dgCycle = (title, steps) => {
+    const W = 440, R = 128, cx = 220, top = title ? 40 : 10, cy = top + R + 52, H = cy + R + 56, n = steps.length; let body = '';
+    const pt = (a, r) => [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    const ang = i => -Math.PI / 2 + i * 2 * Math.PI / n, d = 0.5 * 2 * Math.PI / n * 0.62;
+    steps.forEach((s, i) => {
+      const a = ang(i), b = ang(i + 1), x1 = pt(a + d, R), x2 = pt(b - d, R);
+      body += `<path d="M${x1[0].toFixed(1)} ${x1[1].toFixed(1)} A${R} ${R} 0 0 1 ${x2[0].toFixed(1)} ${x2[1].toFixed(1)}" stroke="#6b7280" stroke-width="2.5" fill="none" marker-end="url(#ah)"/>`;
+    });
+    steps.forEach((s, i) => {
+      const [x, y] = pt(ang(i), R), tl = dgWrap(s.t, 15), h = 22 + tl.length * 16, c = DG_COL[i % DG_COL.length];
+      body += `<rect x="${(x - 62).toFixed(1)}" y="${(y - h / 2).toFixed(1)}" width="124" height="${h}" rx="11" fill="${c}" fill-opacity=".14" stroke="${c}" stroke-width="2"/>${dgText(tl, +x.toFixed(1), +(y - h / 2 + 20).toFixed(1), 13, 600, '#1f1f1f', 16)}`;
+    });
+    return { svg:dgFrame(W, H, title, body), w:W, h:H };
+  };
+  const dgTimeline = (title, events) => {
+    const W = 440, top = title ? 46 : 18; let y = top, body = '';
+    const rows = events.map(e => ({ when:dgWrap(e.when, 9), what:dgWrap(e.what, 42) }));
+    rows.forEach((r, i) => {
+      const h = Math.max(r.when.length * 17, r.what.length * 18) + 20, c = DG_COL[i % DG_COL.length];
+      body += `<circle cx="86" cy="${y + 12}" r="8" fill="${c}"/>${dgText(r.when, 70, y + 16, 13, 700, c, 17, 'end')}${dgText(r.what, 104, y + 16, 13.5, 400, '#1f1f1f', 18, 'start')}`;
+      y += h;
+    });
+    body = `<path d="M86 ${top + 12} L86 ${y - 18}" stroke="#9ca3af" stroke-width="3" stroke-linecap="round"/>` + body;
+    return { svg:dgFrame(W, y + 6, title, body), w:W, h:y + 6 };
+  };
+  // spec: { type:'flow'|'cycle'|'timeline', title, steps:[...] | events:[{when, what}] } -> { html, h } or null
+  const diagramFig = text => {
+    let spec; try { spec = JSON.parse(text); } catch { return null; }
+    if (!spec || typeof spec !== 'object') return null;
+    const type = String(spec.type || 'flow').toLowerCase(), title = String(spec.title || '').slice(0, 60);
+    let r = null;
+    if (type === 'timeline') {
+      const ev = (spec.events || spec.steps || []).map(e => typeof e === 'string' ? { when:'', what:e } : { when:String(e.when || e.date || e.year || e.t || ''), what:String(e.what || e.text || e.event || e.d || '') }).filter(e => e.what || e.when).slice(0, 10);
+      if (ev.length >= 2) r = dgTimeline(title, ev);
+    } else {
+      const st = (spec.steps || spec.items || []).map(dgStep).filter(s => s.t).slice(0, 10);
+      if (st.length >= 2) r = type === 'cycle' && st.length <= 6 ? dgCycle(title, st) : dgFlow(title, st);
+    }
+    if (!r) return null;
+    const alt = (title || type) + ': ' + (spec.steps || spec.events || []).map(s => typeof s === 'string' ? s : (s.t || s.title || s.what || s.name || '')).join(' -> ');
+    const html = `<figure class="dgm" contenteditable="false" data-spec="${dgX(JSON.stringify(spec))}"><img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(r.svg)}" width="${r.w}" height="${r.h}" alt="${dgX(alt.slice(0, 300))}"><figcaption>${dgX(title ? 'Diagram: ' + title : 'Diagram')}</figcaption></figure>`;
+    return { html, h:Math.round(r.h * .9) + 44 };
+  };
+  const defHTML = t => { const i = t.indexOf(' :: '); return i > 0 ? `<b class="term">${inl(t.slice(0, i))}</b> — ${inl(t.slice(i + 4))}` : inl(t); };
+
   const sectionHTML = (head, lines) => {
     let html = head ? `<h3>${inl(head)}</h3>` : '', h = head ? 44 : 0, i = 0, m;
     const est = t => 10 + 24 * Math.max(1, Math.ceil(t.length / 50));
     while (i < lines.length) {
       const raw = lines[i];
       if (!raw.trim()) { i++; continue; }
+      if ((m = /^\s*\[diagram\]\s*(\{.*\})\s*$/i.exec(raw))) { i++; const dg = diagramFig(m[1]); if (dg) { html += dg.html; h += dg.h; } continue; }
       if (/^\s*\|/.test(raw)) {
         const rows = []; while (i < lines.length && /^\s*\|/.test(lines[i])) { if (!/^[\s|:\-]+$/.test(lines[i])) rows.push(lines[i].trim().replace(/^\||\|$/g, '').split('|').map(c => inl(flat(c)))); i++; }
         if (rows.length) { html += '<table>' + rows.map((r, k) => '<tr>' + r.map(c => k ? `<td>${c}</td>` : `<th>${c}</th>`).join('') + '</tr>').join('') + '</table>'; h += rows.length * 38 + 12; }
@@ -788,7 +859,7 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
       if (/^\s*([-*+•]|\d+[.)])\s+/.test(raw)) {
         const items = [];
         while (i < lines.length && (m = /^(\s*)([-*+•]|\d+[.)])\s+(.*)$/.exec(lines[i]))) {
-          const l = lead(flat(m[3])); if (!l.tag && l.text.includes(' :: ')) l.tag = 'definition'; items.push({ ind:m[1].replace(/\t/g, '  ').length, ord:/\d/.test(m[2]), open:`<li${tattr(l)}>${inl(l.text)}` }); h += est(l.text) - 8; i++;
+          const l = lead(flat(m[3])); if (!l.tag && l.text.includes(' :: ')) l.tag = 'definition'; items.push({ ind:m[1].replace(/\t/g, '  ').length, ord:/\d/.test(m[2]), open:`<li${tattr(l)}>${l.tag === 'definition' && l.text.includes(' :: ') ? defHTML(l.text) : inl(l.text)}` }); h += est(l.text) - 8; i++;
         }
         html += listHTML(items); h += 10; continue;
       }
@@ -796,8 +867,8 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
       const t = flat(raw);
       if ((m = /^#{4,6}\s+(.*)$/.exec(t))) { html += `<h4>${inl(m[1])}</h4>`; h += 34; }
       else if ((m = /^>\s?(.*)$/.exec(t))) { html += `<blockquote>${inl(m[1])}</blockquote>`; h += est(m[1]); }
-      else if (/^\[(x| |[a-z]+)\]\s/i.test(t) && lead(t).tag) { const l = lead(t); html += `<p${tattr(l)}>${inl(l.text)}</p>`; h += est(l.text); }
-      else if (t.includes(' :: ')) { html += `<p data-tag="definition" data-tid="${ONE.uid()}">${inl(t)}</p>`; h += est(t); }
+      else if (/^\[(x| |[a-z]+)\]\s/i.test(t) && lead(t).tag) { const l = lead(t); html += `<p${tattr(l)}>${l.tag === 'definition' && l.text.includes(' :: ') ? defHTML(l.text) : inl(l.text)}</p>`; h += est(l.text); }
+      else if (t.includes(' :: ')) { html += `<p data-tag="definition" data-tid="${ONE.uid()}">${defHTML(t)}</p>`; h += est(t); }
       else { html += `<p>${inl(t)}</p>`; h += est(t); }
     }
     return { html: html || '<p><br></p>', h: Math.max(h, 70) };
@@ -815,21 +886,47 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
       if (!cursec) { cursec = { head:'', lines:[] }; secs.push(cursec); }
       cursec.lines.push(raw);
     });
-    let built; try { built = secs.map(sc => sectionHTML(sc.head, sc.lines)).filter(b => b.html !== '<p><br></p>' || b.h > 70); } finally { inl = inlLocal; }
+    let built; try { built = secs.map(sc => Object.assign(sectionHTML(sc.head, sc.lines), { head:sc.head })).filter(b => b.html !== '<p><br></p>' || b.h > 70); } finally { inl = inlLocal; }
     if (!built.length) return null;
-    const items = [];
+    const items = [], accent = (N.section() && N.section().color) || '#6750a4', cards = !(o && o.layout === 'cornell');
+    const kindOf = head => /^(at a glance|key (points|takeaways|ideas)|overview)\b/i.test(head) ? 'glance' : /^(check yourself|practice|self.?test|quiz|test yourself)/i.test(head) ? 'check' : /^summary\b/i.test(head) ? 'sum' : '';
     if (o && o.layout === 'cornell' && built.length >= 2) {
       // Cornell notes: narrow cues on the left, wide notes on the right, summary underneath
       items.push(N.item(48, 130, 250, built[0].html), N.item(330, 130, 670, built[1].html));
       let yy = 130 + Math.max(built[0].h, built[1].h) + 28;
       built.slice(2).forEach(b => { items.push(N.item(48, yy, 952, b.html)); yy += b.h + 28; });
     } else if (built.length === 1) items.push(N.item(48, 130, 760, built[0].html));
-    else { const y = [130, 130]; built.forEach(b => { const c = y[0] <= y[1] ? 0 : 1; items.push(N.item(c ? 520 : 48, y[c], 440, b.html)); y[c] += b.h + 28; }); }
+    else { const y = [130, 130]; built.forEach(b => { const c = y[0] <= y[1] ? 0 : 1; items.push(N.item(c ? 520 : 48, y[c], 440, b.html)); y[c] += b.h + 40; }); }
+    if (cards) items.forEach((it, i) => { it.card = accent; it.pk = 'c'; const k = kindOf((built[i] || {}).head || ''); if (k) it.kind = k; });
     return { title:pageTitle, items };
+  };
+  // measured heights decide where the cards sit: a full width picture first, then two columns, each card under the shorter one
+  const pack = (pg, again = 2) => {
+    if (N.page() !== pg) return;
+    const el = it => document.querySelector(`.nc[data-id="${it.id}"]`), mine = pg.items.filter(it => it.pk && el(it));
+    if (mine.length < 2) return;
+    let y = 130; const place = (it, x, yy) => { it.x = x; it.y = yy; const e = el(it); if (e) { e.style.left = x + 'px'; e.style.top = yy + 'px'; } };
+    mine.filter(it => it.pk === 'f').forEach(it => { place(it, 48, y); y += el(it).offsetHeight + 28; });
+    const col = [y, y];
+    mine.filter(it => it.pk === 'c').forEach(it => { const c = col[0] <= col[1] ? 0 : 1; place(it, c ? 520 : 48, col[c]); col[c] += el(it).offsetHeight + 28; });
+    P.layoutSize && P.layoutSize(); N.dirty();
+    if (again > 0) setTimeout(() => pack(pg, again - 1), 350);
+  };
+  const mapOf = pg => {
+    const rows = MM.outlineFromPage(pg).filter(r => r.depth <= 3).slice(0, 70); if (rows.length < 5) return null;
+    return N.mapFromOutline(pg.title || 'Mind map', rows, Math.min(2, (pg.level || 0) + 1));
   };
   const newNotes = (md, title, o) => {
     const b = buildNotes(md, title, o); if (!b) return null;
-    return addPage(N.newPage(b.title || 'Notes', b.items, o && o.flat ? 0 : levelBelow()));
+    const pg = N.newPage(b.title || 'Notes', b.items, o && o.flat ? 0 : levelBelow());
+    let mp = null; if (o && o.map) { try { mp = mapOf(pg); } catch (err) { console.error(err); } }
+    if (mp) { const it = N.item(48, 130, 912, MM.embHTML(mp)); it.pk = 'f'; it.card = (N.section() && N.section().color) || '#6750a4'; it.kind = 'map'; pg.items.unshift(it); }
+    const undoPage = o && o.after && N.find(o.after) ? addAfter(pg, o.after) : addPage(pg);
+    if (mp) { const f = N.find(pg.id); if (f) f.s.pages.splice(f.pi + 1, 0, mp); }
+    if (b.items.some(i => i.pk)) pack(pg);
+    const undo = () => { if (mp) { const g = N.find(mp.id), cur = N.page(); if (g && g.s.pages.length > 1 && cur) removePage(mp.id, cur.id); } undoPage(); };
+    undo.lastId = mp ? mp.id : pg.id; undo.maps = mp ? 1 : 0; undo.diagrams = (b.items.map(i => i.html).join('').match(/class="dgm"/g) || []).length;
+    return undo;
   };
   /* editing the notes page that is open (instead of making another page) */
   const RICH = /<(img|iframe|video|audio|canvas|svg|embed|object|figure)\b/i;
@@ -965,6 +1062,7 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
       undo: () => { const i = N.nb.sections.findIndex(x => x.id === sec.id); if (i < 0 || N.nb.sections.length < 2) return; P.syncAll(); const j = i > 0 ? i - 1 : 1; N.nb.cur = { s:j, p:0 }; N.nb.sections.splice(i, 1); N.go(j > i ? j - 1 : j, 0); N.dirty(); },
     };
   };
+  MM.pack = pack;
   const OIAI = window.OIAI = {
     lastError: '',
     // what the panel shows the AI when nothing is selected

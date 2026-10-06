@@ -341,6 +341,33 @@ button.side-item:hover{background:var(--surface-high);transform:translateX(2px)}
 .qz-r{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:16px;background:var(--surface-low);text-align:left}
 .qz-r.ok .ms{color:#2e7d32}.qz-r.no .ms{color:var(--error)}
 .qz-r small{display:block}
+/* study cards: what the AI writes is laid out as cards with a coloured edge, tinted call-outs and bold key terms */
+.nc.card{background:var(--surface-low);border-radius:16px;border-left:5px solid var(--accent,var(--primary));box-shadow:0 1px 3px rgba(0,0,0,.18);padding:6px 4px 8px}
+.nc.card .nc-body{padding:8px 12px;line-height:1.55}
+.nc.card .nc-body h3{color:var(--accent,var(--primary));font-size:1.2em;margin:.1em 0 .45em;padding-bottom:.25em;border-bottom:1px solid color-mix(in srgb,var(--accent,var(--primary)) 35%,transparent)}
+.nc.card .nc-body b,.nc.card .nc-body strong{color:color-mix(in srgb,var(--accent,var(--primary)) 70%,var(--on-surface,#fff))}
+.nc.card .nc-body b.term{background:color-mix(in srgb,var(--accent,var(--primary)) 18%,transparent);padding:0 6px;border-radius:6px}
+.nc.card .nc-body li{margin:.18em 0}
+.nc.card .nc-body li::marker{color:var(--accent,var(--primary))}
+.nc.card .nc-body [data-tag]{margin:.3em 0;padding:5px 8px 5px 32px;border-radius:10px}
+.nc.card .nc-body [data-tag]::before{left:6px;top:5px}
+.nc.card .nc-body [data-tag="important"]{background:color-mix(in srgb,#F4B400 16%,transparent)}
+.nc.card .nc-body [data-tag="question"]{background:color-mix(in srgb,#7B5CD6 16%,transparent)}
+.nc.card .nc-body [data-tag="definition"]{background:color-mix(in srgb,#2E8B57 14%,transparent)}
+.nc.card .nc-body [data-tag="idea"]{background:color-mix(in srgb,#F9A825 14%,transparent)}
+.nc.card .nc-body [data-tag="critical"]{background:color-mix(in srgb,#D93025 16%,transparent)}
+.nc.card .nc-body [data-tag="remember"]{background:color-mix(in srgb,#FFE14D 30%,transparent)}
+.nc.card .nc-body table{width:100%}
+.nc.card .nc-body th{background:color-mix(in srgb,var(--accent,var(--primary)) 22%,transparent)}
+.nc.card.k-glance{background:color-mix(in srgb,var(--accent,var(--primary)) 14%,var(--surface-low))}
+.nc.card.k-check{background:color-mix(in srgb,#7B5CD6 12%,var(--surface-low));border-left-color:#7B5CD6}
+.nc.card.k-check .nc-body h3{color:#9a82ea;border-bottom-color:rgba(123,92,214,.35)}
+.nc.card.k-sum{background:var(--surface-high)}
+.nc.card.k-map{padding:6px}
+.nc.card.k-map .nc-body{padding:0}
+.nc-body figure.dgm{margin:.6em 0;padding:0;border:1px solid rgba(128,128,128,.3);border-radius:12px;overflow:hidden;background:#fff;user-select:none;-webkit-user-select:none}
+.nc-body figure.dgm img{display:block;width:100%;height:auto;margin:0 auto;border-radius:0;background:#fff}
+.nc-body figure.dgm figcaption{padding:5px 12px;font-size:12px;font-weight:500;color:#444;background:#f3f1f6;border-top:1px solid rgba(0,0,0,.08)}
 .qz-note{margin-top:4px;color:var(--on-surface-variant);font-size:13px;line-height:1.4}
 textarea.qz-input{width:100%;box-sizing:border-box;min-height:96px;resize:vertical}
 

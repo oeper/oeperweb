@@ -54,7 +54,8 @@ P.render = (anim = true) => {
   changed = false;
 };
 P.container = (it, i = -1) => {
-  const n = el('div', { class:'nc' + (i >= 0 ? ' in' : ''), 'data-id':it.id, style:{ left:it.x + 'px', top:it.y + 'px', width:it.w + 'px', animationDelay:i >= 0 ? i * 40 + 'ms' : null } });
+  const n = el('div', { class:'nc' + (i >= 0 ? ' in' : '') + (it.card ? ' card' : '') + (it.kind ? ' k-' + it.kind : ''), 'data-id':it.id, style:{ left:it.x + 'px', top:it.y + 'px', width:it.w + 'px', animationDelay:i >= 0 ? i * 40 + 'ms' : null } });
+  if (it.card) n.style.setProperty('--accent', it.card);
   const body = el('div', { class:'nc-body', contenteditable:'true', spellcheck:document.body.classList.contains('nospell') ? 'false' : 'true', html:it.html });
   n.append(el('div', { class:'nc-bar', title:'Drag to move', html:icon('drag_indicator') }), body, el('div', { class:'nc-rsz', title:'Drag to resize' }));
   return n;

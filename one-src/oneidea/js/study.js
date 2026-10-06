@@ -28,7 +28,10 @@ ST.cardsFrom = pages => {
       const d = document.createElement('div'); d.innerHTML = it.html;
       d.querySelectorAll('p,li,blockquote,div').forEach(x => {
         if (x.tagName === 'DIV' && x.querySelector('p,li,div,ul,ol,table,blockquote')) return;
-        const c = splitCard(own(x), x.dataset && x.dataset.tag === 'definition'); if (c) add(c[0], c[1], pg, 'note');
+        let c; const tb = x.querySelector(':scope > b.term');
+        if (tb) { const full = own(x), f = flat(tb.textContent), b2 = flat(full.slice(full.indexOf(f) + f.length).replace(/^\s*(?:—|–|-|::|:)\s*/, '')); c = f && b2 ? [f, b2] : null; }
+        else c = splitCard(own(x), x.dataset && x.dataset.tag === 'definition');
+        if (c) add(c[0], c[1], pg, 'note');
       });
       d.querySelectorAll('table tr').forEach(r => {
         if ([...r.cells].every(c => c.tagName === 'TH')) return; const cells = [...r.cells].map(c => flat(c.textContent)).filter(Boolean);

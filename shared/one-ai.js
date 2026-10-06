@@ -56,7 +56,7 @@ const IDEA_SYSTEM = 'The user is in oneIdea, a note-taking app with real mind ma
   'MIND MAP: put an indented outline between <<map title="Short title">> and <</map>>. Use "- " bullets with two spaces of indent per level. Aim for 3 to 7 main branches with 2 to 5 sub-topics each, going one or two levels deeper only where it helps. Keep every topic short (1 to 6 words, never a full sentence). A longer explanation goes on its own line directly under its topic, starting with "> " (it becomes that topic\'s note). Prefix a topic with [important], [question], [definition], [idea] or [ ] (a to-do) only when it really fits. ' +
   'The page that is open is shown to you in this same format (a mind map as an outline, a notes page as markdown). If it is a mind map and the user wants it changed, expanded or reorganized, put the COMPLETE updated outline between <<mapedit>> and <</mapedit>> instead. ' +
   'EDITING THE OPEN NOTES PAGE (very important): when a notes page is open and the user wants it changed (improve, fix, correct, expand, add more detail, shorten, rewrite, reorganize, translate, make it better, add examples or questions, "my notes", "this page", "this") do NOT make a new page. Use <<pageedit>> and put the COMPLETE updated markdown of the page between <<pageedit>> and <</pageedit>>: keep everything that should stay (every heading, bullet, table, "Term :: meaning" line and tag line) and change or add only what was asked, in the same markdown format the page is shown in. When they only want something ADDED (more sections, a summary, practice questions, an extra topic), use <<pageadd>> with ONLY the new markdown between <<pageadd>> and <</pageadd>>, which is placed underneath the existing notes. Never copy a "Study status" section into an edit. Use <<notes>> only for a brand new separate page (the user says new page, or there is no notes page to change). ' +
-  'STUDY NOTES: put markdown between <<notes title="Short title">> and <</notes>>. Make them THOROUGH, like the complete notes of a top student, never a thin summary. Unless the user asks for brief notes, use 8 to 12 headings for a whole topic or document (every "## Heading" becomes its own box on the page) and under each heading 4 to 10 bullets with indented sub-points, so notes on a chapter or topic run to roughly 800 to 1500 words. Cover EVERYTHING in the source or topic: definitions, how and why things work, formulas with what each symbol means, a worked example for each formula or method, examples, causes and effects, comparisons in a table, common mistakes and exam tips. Use "Term :: meaning" lines for every definition (they become flashcards), "[important] ..." lines for what must be remembered, "[question] ..." lines for open questions and "[ ] task" lines for to-dos, and finish with a Summary and a few practice questions. When the material is too big for one page, write several <<notes>> blocks (one per chapter or sub-topic) in the same reply. Never write one huge block of bullets and never stop early: finish every section. ' +
+  'STUDY NOTES: put markdown between <<notes title="Short title">> and <</notes>>. Make them THOROUGH, like the complete notes of a top student, never a thin summary. Unless the user asks for brief notes, use 8 to 12 headings for a whole topic or document (every "## Heading" becomes its own box on the page) and under each heading 4 to 10 bullets with indented sub-points, so notes on a chapter or topic run to roughly 800 to 1500 words. Cover EVERYTHING in the source or topic: definitions, how and why things work, formulas with what each symbol means, a worked example for each formula or method, examples, causes and effects, comparisons in a table, common mistakes and exam tips. Use "Term :: meaning" lines for every definition (they become flashcards), "[important] ..." lines for what must be remembered, "[question] ..." lines for open questions and "[ ] task" lines for to-dos, Start every notes block with an "## At a glance" section of 3 to 5 one-line key takeaways, and finish with "## Summary" (2 or 3 sentences) and "## Check yourself" (4 to 6 [question] lines, each followed by an indented bullet holding the answer in **bold**). DIAGRAMS: wherever the material has a process, a cycle, a sequence of steps or a timeline, draw it: put ONE line inside the notes that starts with [diagram] followed by JSON on that same single line, for example [diagram] {"type":"flow","title":"Short title","steps":[{"t":"Step name","d":"short detail"},{"t":"Next step","d":""}]} or [diagram] {"type":"cycle","title":"Short title","steps":["Stage 1","Stage 2","Stage 3"]} or [diagram] {"type":"timeline","title":"Short title","events":[{"when":"1914","what":"War begins"}]}. Use 3 to 6 steps or events, keep every text under 8 words, and only draw things that are really in the material.  When the material is too big for one page, write several <<notes>> blocks (one per chapter or sub-topic) in the same reply. Never write one huge block of bullets and never stop early: finish every section. ' +
   'CHOOSING: requests for a mind map, map, overview, brainstorm or how things connect get <<map>>. Requests for notes, a study guide, a summary in notes form or to organize something get <<notes>>. Write only the kind of block that was asked for, except that a request to make notes from a text, PDF or topic gets BOTH a <<notes>> block and a <<map>> block in the same reply. Use plain text only inside blocks: no LaTeX (write -> for arrows) and no em dashes. STUDY TOOLS (all of these are real features of oneIdea): (a) FLASHCARDS: <<cards title="Topic">> then one card per line written as Term :: short meaning. Use "## Heading" lines to group several topics. Make 10 to 30 cards unless told otherwise, and every card line must contain " :: ". The user can then open the Flashcards screen, which reviews them with spaced repetition. (b) QUIZ: <<quiz title="Topic">> with, for each question, a line "[question] The question?" followed by a line holding the answer in **bold**. Recall mode hides bold text, so the user can test themselves. Mix recall, why/how and application questions. (c) KEY TERMS: <<highlight>> with one key term per line, copied exactly as written on the open page (at most 25), to highlight them on the page. (d) CORNELL NOTES: <<notes title="Cornell: Topic" layout="cornell">> with exactly three headings: "## Cues and questions" (lines starting [question]), "## Notes" (bullets) and "## Summary" (2 or 3 sentences). (e) REVISION SHEET: <<notes title="Revision: Topic">> with the headings Must remember ([remember] lines), Formulas and facts, Key terms (Term :: meaning lines) and Practice questions ([question] lines). The page can end with a "Study status" section listing how many flashcards are due and which ones the user is still learning: use it when they ask what to study or for a quiz on their weak spots, and put those exact terms first. (f) QUIZ SCREEN: <<mcq>> followed by a JSON array then <</mcq>>. Each item is either a multiple choice question {"q":"The question?","options":["A","B","C","D"],"answer":0,"why":"one sentence explaining the right answer"} (exactly 4 options, one right, "answer" is the 0 based index, plausible wrong options from the same topic, no "all of the above") or a written answer question {"q":"Explain why ...?","type":"short","answer":"the model answer in one to three sentences","why":"what a full answer must include"}. Make 12 to 20 questions, about 60 percent multiple choice and 40 percent written answer, mixing recall, understanding and application. They open in the Quiz screen (ribbon: Study, Quiz) where the student answers every question and the AI marks the written answers; there is also an exam mode, a mistakes notebook and scores. QUIZZING: when the user asks to be quizzed (quiz me, test me, ask me questions, examine me), do NOT chat the answers or ask them to rate themselves: write a <<mcq>> block so the quiz screen opens, starting with the topics listed under "Questions still getting wrong" or "Still learning" in the Study status. Only when they say "in the chat" ask exactly ONE question, wait for their typed answer, then mark it yourself (right, partly right or wrong, with the correct answer and a short explanation) before the next one, keeping a running score. ' +
   'Never put these blocks inside <<edit>> or <<append>>. After the blocks, write one short sentence saying what you made.';
 const SITE_SYSTEM = 'The user is in oneSite, a website builder. A site is a list of pages and each page is a stack of sections. You can change the site directly. The open page is shown to you as JSON in exactly the shape you answer with (title, theme, settings, header, footer, page). To change anything, reply with ONE block: <<site>> a JSON object <</site>>. ' +
@@ -728,11 +728,11 @@ async function deepWrite(o) {
   const plan = plans.find(Boolean), setTitle = String((plan && plan.title) || o.title || 'Notes').trim().slice(0, 80), n = sections.length;
   const outline = sections.map((x, i) => `${i + 1}. ${x.title}`).join('; ');
   const need = chunks.length ? Math.max(500, Math.min(900, Math.round(CHUNK / 6 / per * .6))) : 600;
-  const results = new Array(n).fill(null); let nextJob = 0, applied = 0, finished = 0;
+  const results = new Array(n).fill(null), texts = []; let nextJob = 0, applied = 0, finished = 0;
   const apply = () => {
     while (applied < n && results[applied] !== null) {
       const sec = sections[applied], text = results[applied]; applied++;
-      if (text) { try { o.onPage(text, sec.title); } catch (err) { console.error(err); } }
+      if (text) { texts.push(text); try { o.onPage(text, sec.title); } catch (err) { console.error(err); } }
     }
   };
   const progress = () => { if (o.progress) o.progress(finished, n); };
@@ -743,7 +743,7 @@ async function deepWrite(o) {
       const [from, to] = groups[nextJob++], part = [];
       for (let i = from; i < to; i++) part.push(`part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}`);
       const body = chunks[sections[from].ch] || '';
-      const reply = await ask(wrap(`${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY ${to - from > 1 ? 'these ' + (to - from) + ' parts' : 'this part'}: ${part.join('; ')}. Write each part as its own <<notes title="the part title">> block, very thorough (at least ${need} words each, never a short summary) and following the study notes rules, with no other blocks. Include every definition, fact, formula, date, name and example from the material that belongs to the part, explained properly. The other parts are written separately, so do not repeat them.`, body));
+      const reply = await ask(wrap(`${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY ${to - from > 1 ? 'these ' + (to - from) + ' parts' : 'this part'}: ${part.join('; ')}. Write each part as its own <<notes title="the part title">> block, very thorough (at least ${need} words each, never a short summary) and following the study notes rules, with no other blocks. Include every definition, fact, formula, date, name and example from the material that belongs to the part, explained properly, and draw a [diagram] line for any process, cycle or timeline in it. The other parts are written separately, so do not repeat them.`, body));
       const blocks = parseMakes(reply).filter(b => b.kind === 'notes');
       for (let i = from; i < to; i++) {
         const byTitle = blocks.find(b => sameTitle(b.title, sections[i].title)), mk = byTitle || blocks[i - from];
@@ -764,7 +764,7 @@ async function deepWrite(o) {
   await Promise.all([worker(), worker()]);
   if (signal.aborted) throw Object.assign(new Error('stopped'), { name: 'AbortError' });
   apply();
-  return { setTitle, sections };
+  return { setTitle, sections, texts };
 }
 // Background research for notes that have little to start from: a few short searches, then the plain text of the best Wikipedia articles.
 // Only the short search words leave the browser, never the notes themselves.
@@ -794,6 +794,14 @@ async function researchText(instruction, hint, sample, signal, say) {
   }
   return out.join('\n\n');
 }
+// One more request after the notes: a quiz written from them (multiple choice and written answers), saved in the notebook.
+async function quizFromNotes(OI, texts, label, signal, wait, sys) {
+  const blob = (texts || []).join('\n\n').slice(0, 30000); if (blob.length < 800) return null;
+  const reply = await askPatient([{ role: 'system', content: sys }, { role: 'user', content: `Write a quiz of 14 questions from these notes, about 60 percent multiple choice and 40 percent written answer questions, covering every section. Reply with ONLY one <<mcq>> block.\n\n<<one:${label}>>\n${blob}\n<</one>>` }], { signal }, 1, wait);
+  const mk = parseMakes(reply).filter(b => b.kind === 'mcq')[0]; if (!mk) return null;
+  const u = OI.newMcq(mk.text); if (!u) return null;
+  u.count = (/Added (\d+)/.exec(u.note || '') || [])[1] | 0; return u;
+}
 const planMap = (setTitle, sections) => `- ${setTitle}\n` + sections.map(x => `  - ${x.title}\n    > ${x.covers}`).join('\n');
 
 // the text to write notes from: an attached file, the selection, or the whole open page
@@ -819,7 +827,7 @@ async function runDeep(instruction) {
   lastAnswer = ''; ui.acts.style.display = 'none'; ui.send.disabled = true;
   const am = addMsg('ai', ''), th = makeThink(am.d, am.b);
   busy = new AbortController(); const mine = busy;
-  const undos = [], titles = []; let stored = false;
+  const undos = [], titles = [], extras = { maps: 0, diagrams: 0, questions: 0 }; let stored = false, anchor = null;
   const sys = SYSTEM + ' ' + IDEA_SYSTEM;
   const say = msg => { th.status(msg); am.b.textContent = msg + (titles.length ? '. Pages so far: ' + titles.join(', ') : '') + '.'; scrollLog(); };
   try {
@@ -836,15 +844,19 @@ async function runDeep(instruction) {
       instruction, chunks, sys, signal: mine.signal, label, wantSecs, title: 'Notes',
       wait: s => say(`The AI's request limit was reached. Continuing in ${s}s`),
       progress: (f, n) => say(`Writing the notes: ${f} of ${n} sections done`),
-      onPage: (text, title) => { let u = null; try { OI.lastError = ''; u = OI.newNotes(text, title, { inline: mdInline, flat: true }); } catch (err) { console.error(err); } if (u) { undos.push(u); titles.push(title); } },
+      onPage: (text, title) => { let u = null; try { OI.lastError = ''; u = OI.newNotes(text, title, { inline: mdInline, flat: true, map: true, after: anchor }); } catch (err) { console.error(err); } if (u) { anchor = u.lastId || anchor; undos.push(u); titles.push(title); extras.maps += u.maps || 0; extras.diagrams += u.diagrams || 0; } },
     });
     // a mind map of the plan, so the whole set can be seen at a glance
-    try { const u = OI.newMap(planMap(r.setTitle, r.sections), r.setTitle, { flat: true }); if (u) undos.push(u); } catch (err) { console.error(err); }
+    try { const u = OI.newMap(planMap(r.setTitle, r.sections), r.setTitle, { flat: true, after: anchor }); if (u) undos.push(u); } catch (err) { console.error(err); }
+    // and a quiz written from these notes (marked written answers included)
+    say('Writing a quiz from the notes...');
+    try { const u = await quizFromNotes(OI, r.texts, label, mine.signal, s => say(`The AI's request limit was reached. Continuing in ${s}s`), sys); if (u) { undos.push(u); extras.questions += u.count || 0; } } catch (err) { if (err && err.name === 'AbortError') throw err; }
     th.box.hidden = true;
-    const summary = `Wrote ${titles.length} pages of notes: ${titles.join(', ')}.`;
+    const bits = [`${titles.length} notes pages`, extras.maps ? `${extras.maps} mind maps` : '', extras.diagrams ? `${extras.diagrams} diagrams` : '', extras.questions ? `a ${extras.questions} question quiz` : ''].filter(Boolean);
+    const summary = `Wrote ${bits.join(', ')}: ${titles.join(', ')}.`;
     am.b.textContent = titles.length ? summary + ' I also added a mind map of the whole set.' : 'Nothing could be written. Please try again.';
     hist.push({ r: 'a', t: summary }); saveHist(); stored = true;
-    if (undos.length) doneBar(am, undos, `Added ${titles.length} notes pages and a mind map.`, frameWin, 'section');
+    if (undos.length) doneBar(am, undos, `Added ${bits.join(', ')}.`, frameWin, 'section');
   } catch (err) {
     if (!stored) { hist.pop(); saveHist(); }
     if (err.name === 'AbortError') { am.d.remove(); }
@@ -900,7 +912,7 @@ async function runBook(instruction, full, label, OI, frameWin) {
   // 2. write them
   if (busy) busy.abort();
   busy = new AbortController(); const mine = busy;
-  const handles = [], done = [], failed = []; let pages = 0, stored = false;
+  const handles = [], done = [], failed = []; let pages = 0, maps = 0, dgs = 0, qs = 0, stored = false;
   const stopRow = document.createElement('div'); stopRow.className = 'oai-applied'; const stopB = document.createElement('button'); stopB.type = 'button'; stopB.textContent = 'Stop'; stopB.onclick = () => mine.abort(); stopRow.append(stopB); am.d.append(stopRow);
   const sys = SYSTEM + ' ' + IDEA_SYSTEM;
   let where = '';
@@ -910,16 +922,17 @@ async function runBook(instruction, full, label, OI, frameWin) {
       const x = picked[ci]; where = `Chapter ${ci + 1} of ${picked.length}: ${x.ch.name}`;
       say('Planning...');
       const h = OI.newSection(x.ch.name); if (!h) throw new Error('could not add a section to the notebook.');
-      handles.push(h); let n = 0;
+      handles.push(h); let n = 0, anchor = null;
       try {
         const words = x.words, r = await deepWrite({
           instruction, chunks: x.chunks, sys, signal: mine.signal, label: x.ch.name, title: x.ch.name, maxPer: 6, maxSections: 30,
           wantSecs: Math.max(5, Math.min(24, Math.round(words / 600))),
           wait: s => say(`The AI's request limit was reached. Continuing in ${s}s`),
           progress: (f, tot) => say(`Writing: ${f} of ${tot} sections`),
-          onPage: (t, title) => { let u = null; try { OI.lastError = ''; u = OI.newNotes(t, title, { inline: mdInline, flat: true }); } catch (err) { console.error(err); } if (u) { n++; pages++; } },
+          onPage: (t, title) => { let u = null; try { OI.lastError = ''; u = OI.newNotes(t, title, { inline: mdInline, flat: true, map: true, after: anchor }); } catch (err) { console.error(err); } if (u) { anchor = u.lastId || anchor; n++; pages++; maps += u.maps || 0; dgs += u.diagrams || 0; } },
         });
-        try { OI.newMap(planMap(x.ch.name, r.sections), x.ch.name + ' map', { flat: true }); } catch (err) { console.error(err); }
+        try { OI.newMap(planMap(x.ch.name, r.sections), x.ch.name + ' map', { flat: true, after: anchor }); } catch (err) { console.error(err); }
+        try { say('Writing a quiz for the chapter...'); const q = await quizFromNotes(OI, r.texts, x.ch.name, mine.signal, s => say(`The AI's request limit was reached. Continuing in ${s}s`), sys); if (q) qs += q.count || 0; } catch (err) { if (err && err.name === 'AbortError') throw err; }
         h.finish(); done.push(x.ch.name);
       } catch (err) {
         h.finish();
@@ -928,9 +941,9 @@ async function runBook(instruction, full, label, OI, frameWin) {
         if (failed.length >= 3 && !done.length) throw new Error(failed[failed.length - 1]);
       }
     }
-    const summary = `Wrote ${pages} pages of notes in ${done.length} chapter${done.length === 1 ? '' : 's'}.` + (failed.length ? ` Not finished: ${failed.join('; ')}. Ask again to redo those.` : '');
+    const summary = `Wrote ${pages} pages of notes${maps ? ', ' + maps + ' mind maps' : ''}${dgs ? ', ' + dgs + ' diagrams' : ''}${qs ? ' and ' + qs + ' quiz questions' : ''} in ${done.length} chapter${done.length === 1 ? '' : 's'}.` + (failed.length ? ` Not finished: ${failed.join('; ')}. Ask again to redo those.` : '');
     am.b.textContent = summary; hist.push({ r: 'a', t: summary }); saveHist(); stored = true;
-    if (handles.length) doneBar(am, handles.map(h => h.undo), `Added ${done.length} chapters (${pages} pages).`, frameWin, 'notebook');
+    if (handles.length) doneBar(am, handles.map(h => h.undo), `Added ${done.length} chapters (${pages} pages, ${maps} mind maps, ${qs} quiz questions).`, frameWin, 'notebook');
   } catch (err) {
     if (!stored) { hist.pop(); saveHist(); }
     am.d.classList.toggle('err', !(err && err.name === 'AbortError'));
