@@ -46,6 +46,17 @@ export async function askAI(messages, opts) {
   let buf = '';
   let text = '';
   let thinking = '';
+  // The callbacks redo work on the WHOLE text so far (stripping tags, parsing, drawing), so running them for every token made long
+  // answers quadratic and froze the page. They run at most every 120 ms with the latest text, and once more at the end.
+  const paced = fn => {
+    if (!fn) return null;
+    let last = 0, timer = null, latest;
+    const fire = () => { timer = null; last = Date.now(); fn(latest()); };
+    const f = get => { latest = get; const wait = 120 - (Date.now() - last); if (wait <= 0) fire(); else if (!timer) timer = setTimeout(fire, wait); };
+    f.stop = () => { if (timer) { clearTimeout(timer); timer = null; } };
+    return f;
+  };
+  const textOut = paced(opts && opts.onText), thinkOut = paced(opts && opts.onThinking);
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -62,15 +73,19 @@ export async function askAI(messages, opts) {
         if (evt.status && opts && opts.onStatus) { opts.onStatus(String(evt.status)); continue; }
         const delta = (evt.choices || [{}])[0].delta || {};
         const thought = delta.reasoning_content || delta.reasoning;
-        if (thought) { thinking += thought; if (opts && opts.onThinking) opts.onThinking(thinking); }
+        if (thought) { thinking += thought; if (thinkOut) thinkOut(() => thinking); }
         if (delta.content) {
           text += delta.content;
-          if (opts && opts.onText) opts.onText(stripThinking(text));
+          if (textOut) textOut(() => stripThinking(text));
         }
       } catch {}
     }
   }
-  return stripThinking(text).trim();
+  if (textOut) textOut.stop();
+  if (thinkOut) thinkOut.stop();
+  const out = stripThinking(text).trim();
+  if (opts && opts.onText && out) opts.onText(out);
+  return out;
 }
 export function stripThinking(s) {
   return String(s).replace(/<think>[\s\S]*?<\/think>/g, '').replace(/^[\s\S]*?<\/think>/, '').replace(/<think>[\s\S]*$/, '').trimStart();

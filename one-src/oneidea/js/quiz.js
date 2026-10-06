@@ -24,6 +24,24 @@ QZ.matches = (given, answer) => {
   return a.length >= 5 && lev(g, a) <= Math.max(1, Math.floor(a.length * .12));
 };
 
+// A written answer is right when it carries most of the model answer's key words (any wording, any order).
+const STOP = new Set('the and for with from into than then such can may will would could should not yes also but their there they them his her our your you are was were been its this that these those which who whom what when where why how'.split(' '));
+const keys = s => norm(s).split(' ').filter(w => w.length > 2 && !STOP.has(w));
+const stem = w => w.replace(/(ing|ed|es|s)$/, '');
+QZ.looseMatch = (given, answer) => {
+  const g = [...new Set(keys(given).map(stem))], a = [...new Set(keys(answer).map(stem))];
+  if (!g.length || !a.length) return false;
+  const hit = a.filter(w => g.includes(w) || g.some(x => x.length > 4 && w.length > 4 && lev(x, w) <= 1)).length;
+  return hit / a.length >= (a.length <= 3 ? .99 : .55);
+};
+// Marks a written answer: with the epic AI panel's marker when there is one (it reads the meaning), otherwise by key words.
+QZ.grade = async (q, given) => {
+  const local = QZ.looseMatch(given, q.text) || QZ.matches(given, q.text);
+  let g = null; try { g = window.parent && window.parent !== window ? window.parent.oneAIGrade : null; } catch {}
+  if (g) { try { const r = await g(q.prompt, q.text, given); if (r && typeof r.ok === 'boolean') return r; } catch {} }
+  return { ok:local, feedback:'' };
+};
+
 /* ---------- building questions from the notes ---------- */
 const own = x => { const c = x.cloneNode(true); c.querySelectorAll('ul,ol').forEach(y => y.remove()); return flat(c.textContent); };
 function distractors(correct, pool, n = 3) {
@@ -85,6 +103,12 @@ QZ.addBank = (items, pageId) => {
   const d = data(), added = [];
   (Array.isArray(items) ? items : []).forEach(it => {
     const q = flat(it.q || it.question || ''), opts = (it.options || it.choices || []).map(o => flat(o)).filter(Boolean);
+    // a written-answer question: the AI gives a model answer, and the student's own answer is marked against it
+    if (it.type === 'short' || it.type === 'written' || (!opts.length && typeof it.answer === 'string' && it.answer.length > 1)) {
+      const ans = flat(typeof it.answer === 'string' ? it.answer : (it.model || it.a || '')), wid = 'w' + hash(q);
+      if (!q || ans.length < 2 || d.bank.some(b => b.id === wid)) return;
+      const w = { id:wid, type:'self', prompt:q, text:ans, explain:flat(it.why || it.explain || it.explanation || ''), page:pageId || null, ai:true }; d.bank.push(w); added.push(w); return;
+    }
     let a = typeof it.answer === 'number' ? it.answer : opts.findIndex(o => sameText(o, it.answer)); if (typeof it.answer === 'string' && /^[A-Da-d]$/.test(it.answer.trim())) a = it.answer.trim().toUpperCase().charCodeAt(0) - 65;
     if (!q || opts.length < 2 || opts.length > 6 || !(a >= 0 && a < opts.length)) return;
     const id = 'b' + hash(q); if (d.bank.some(b => b.id === id)) return;
@@ -167,7 +191,7 @@ QZ.open = (opts = {}) => {
     if (!q) return finish(false);
     const n = session.list.length, last = session.i === n - 1, exam = session.mode === 'exam';
     body.append(el('div', { class:'fc-prog' }, el('i', { style:{ width:(session.i / n * 100) + '%' } })), el('small', { class:'fc-count', text:`Question ${session.i + 1} of ${n}` }));
-    const card = el('div', { class:'qz-card' }, el('small', { class:'fc-side', text:{ mc:'Multiple choice', type:'Type the answer', tf:'True or false', self:'Self-check' }[q.type] || '' }), el('div', { class:'fc-text', text:q.prompt }));
+    const card = el('div', { class:'qz-card' }, el('small', { class:'fc-side', text:{ mc:'Multiple choice', type:'Type the answer', tf:'True or false', self:'Written answer' }[q.type] || '' }), el('div', { class:'fc-text', text:q.prompt }));
     const area = el('div', { class:'qz-area' }), foot = el('div', { class:'fc-actions' });
     body.append(card, area, foot);
     let locked = false;
@@ -195,19 +219,26 @@ QZ.open = (opts = {}) => {
       });
     } else if (q.type === 'tf') {
       [true, false].forEach((v, k) => { const b = el('button', { class:'qz-opt', 'data-k':k }, el('kbd', { text:String(k + 1) }), el('span', { text:v ? 'True' : 'False' })); b.onclick = () => { if (locked) return; const ok = v === q.answer; if (!exam) $$('.qz-opt', area).forEach((x, j) => { x.disabled = true; x.classList.toggle('right', (j === 0) === q.answer); if (j === k && !ok) x.classList.add('wrong'); }); else b.classList.add('picked'); submit(v ? 'True' : 'False', ok); }; area.append(b); });
-    } else if (q.type === 'type') {
+    } else if (q.type === 'type' && q.text.length <= 40) {
       const inp = el('input', { class:'tf qz-input', type:'text', placeholder:'Type your answer', autocomplete:'off', spellcheck:'false', 'aria-label':'Your answer' });
       const go = el('button', { class:'btn filled', text:exam ? (last ? 'Finish' : 'Next') : 'Check', onclick:() => { if (locked) return; const g = inp.value; const ok = QZ.matches(g, q.text); inp.disabled = true; submit(g, ok); } });
       inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); go.click(); } };
       area.append(inp); foot.append(go); setTimeout(() => inp.focus(), 30);
     } else {
-      const inp = el('textarea', { class:'tf qz-input', rows:3, placeholder:'Write your answer here, or just think it through', 'aria-label':'Your answer' });
-      const show1 = el('button', { class:'btn filled', html:`Show answer`, onclick:() => {
-        if (locked) return; inp.disabled = true; foot.innerHTML = '';
-        area.append(el('div', { class:'qz-model' }, el('small', { text:'Model answer' }), el('div', { text:q.text })));
-        foot.append(el('button', { class:'btn outlined', html:`${icon('replay')}I missed it`, onclick:() => { if (locked) return; locked = true; session.answers.push({ q, given:inp.value, ok:false }); record(q, false); exam ? advance() : (feedback(false), card.classList.remove('wrong')); } }), el('button', { class:'btn filled', html:`${icon('check')}I knew it`, onclick:() => { if (locked) return; locked = true; session.answers.push({ q, given:inp.value, ok:true }); record(q, true); exam ? advance() : (feedback(true)); } }));
+      // a written answer: the student writes it, and it is marked (by the AI when the panel is there, otherwise by key words)
+      const inp = el('textarea', { class:'tf qz-input', rows:4, placeholder:'Write your answer in your own words', 'aria-label':'Your answer' });
+      const check = el('button', { class:'btn filled', text:exam ? (last ? 'Finish' : 'Next') : 'Check my answer', onclick:async () => {
+        if (locked) return; const g = inp.value.trim();
+        if (!g) return ONE.toast('Write an answer first. If you do not know it, press I do not know.');
+        if (exam) { locked = true; inp.disabled = true; const ok = QZ.looseMatch(g, q.text) || QZ.matches(g, q.text); session.answers.push({ q, given:g, ok }); return advance(); }
+        locked = true; inp.disabled = true; check.disabled = true; check.textContent = 'Marking...';
+        const r = await QZ.grade(q, g);
+        locked = false; submit(g, r.ok);
+        // submit() showed the right / not quite box: add the marker's comment inside it
+        const fb = area.querySelector('.qz-fb > div'); if (fb && r.feedback) fb.append(el('div', { class:'qz-note', text:r.feedback }));
       } });
-      area.append(inp); foot.append(show1);
+      const idk = el('button', { class:'btn text', text:'I do not know', onclick:() => { if (locked) return; locked = true; inp.disabled = true; session.answers.push({ q, given:'', ok:false }); record(q, false); exam ? advance() : feedback(false); } });
+      area.append(inp); foot.append(check, idk); setTimeout(() => inp.focus(), 30);
     }
     if (exam) foot.append(el('button', { class:'btn text', text:'Skip', onclick:() => { if (locked) return; locked = true; session.answers.push({ q, given:'', ok:false, skipped:true }); advance(); } }));
     ov._q = { q, submit, locked:() => locked, advance, exam };
@@ -244,5 +275,7 @@ QZ.open = (opts = {}) => {
   };
   document.addEventListener('keydown', key, true);
   document.body.append(ov); start(); ov.focus();
+  // opened straight from the AI: begin with exactly the questions it just wrote
+  if (opts.ids) { const list = data().bank.filter(b => opts.ids.includes(b.id)).map(b => Object.assign({}, b)); if (list.length) run(shuffle(list), false); }
 };
 })();

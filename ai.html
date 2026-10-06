@@ -512,7 +512,7 @@ import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.j
 import { codeBlockHtml, copyToClipboard, injectCodeBlockStyles } from './shared/code-block.js?v=3';
 import { readFileForAI, FILE_ACCEPT, isImage } from './shared/ai-files.js?v=1';
 import { chatFetch, providerLabel } from './shared/ai-provider.js?v=2';
-import { aiFeaturesEnabled, onAiFeaturesChange, listOneDocs, readOneDocText, sanitizeForOne, createWordDoc, oneDocUrl } from './shared/ai-features.js?v=4';
+import { aiFeaturesEnabled, onAiFeaturesChange, listOneDocs, readOneDocText, sanitizeForOne, createWordDoc, oneDocUrl } from './shared/ai-features.js?v=5';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 injectCodeBlockStyles();
@@ -577,14 +577,21 @@ function expandShortcodes(text) {
 // itself is malformed (throwOnError: false already covers the latter, but
 // katex.renderToString can still throw for a few edge cases it doesn't
 // consider "parse errors").
+const mathCache = new Map(); // a streamed answer is re-rendered over and over, so each expression is typeset once
 function renderMathOrFallback(expr, display) {
   const raw = display ? `$$${expr}$$` : `$${expr}$`;
   if (typeof katex === 'undefined') return escHtml(raw);
+  const key = (display ? 'd' : 'i') + expr;
+  if (mathCache.has(key)) return mathCache.get(key);
+  let html;
   try {
-    return katex.renderToString(expr.trim(), { throwOnError: false, displayMode: display, output: 'htmlAndMathml' });
+    html = katex.renderToString(expr.trim(), { throwOnError: false, displayMode: display, output: 'htmlAndMathml', maxSize: 20, maxExpand: 500 });
   } catch {
-    return escHtml(raw);
+    html = escHtml(raw);
   }
+  if (mathCache.size > 300) mathCache.clear();
+  mathCache.set(key, html);
+  return html;
 }
 
 // Inline formatting: bold/italic (incl. combined ***bold italic***),
@@ -593,6 +600,8 @@ function renderMathOrFallback(expr, display) {
 // stashed placeholders only) coming out of a single block's content, so
 // none of this ever sees raw < > & from the model's own output.
 function parseInline(text) {
+  // a single enormous line (30,000 "[" for example) makes every emphasis and link pattern rescan the rest of the line: for those only the cheap rules run
+  if (text.length > 8000) return text.replace(/(?<!["'>])(https?:\/\/[^\s<]{1,2000}[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
   return text
     .replace(/&lt;(https?:\/\/[^\s<>&]+)&gt;/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
@@ -701,7 +710,9 @@ function parseBlocks(src) {
       continue;
     }
 
-    const tableMatch = lines.slice(i).join('\n').match(/^(\|.+\|)\n(\|[ \t]*:?-{2,}:?[ \t]*(?:\|[ \t]*:?-{2,}:?[ \t]*)*\|?)\n((?:\|.*\|\n?)*)/);
+    // only lines that start with "|" can be a table, so only those are joined (joining the whole rest of the reply for every line made long answers quadratic)
+    let tj = i; while (tj < lines.length && lines[tj].charAt(0) === '|') tj++;
+    const tableMatch = line.charAt(0) !== '|' ? null : lines.slice(i, tj + 1).join('\n').match(/^(\|.+\|)\n(\|[ \t]*:?-{2,}:?[ \t]*(?:\|[ \t]*:?-{2,}:?[ \t]*)*\|?)\n((?:\|.*\|\n?)*)/);
     if (tableMatch && tableMatch.index === 0) {
       const [full, headerLine, , bodyLines] = tableMatch;
       const splitRow = row => row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
@@ -766,7 +777,8 @@ function parseAiMarkdown(text) {
   // $ must hug its content (no space right inside) so ordinary prose like
   // "$5 and $10" is never misread as the start of a math span.
   src = src.replace(/\$\$([\s\S]+?)\$\$/g, (m, expr) => hold(`<div class="math-block">${renderMathOrFallback(expr, true)}</div>`));
-  src = src.replace(/\$(?!\s)((?:\\\$|[^$\n])+?)(?<!\s)\$/g, (m, expr) => hold(`<span class="math-inline">${renderMathOrFallback(expr, false)}</span>`));
+  // the two alternatives cannot match the same character (a backslash pair, or anything that is not $, \ or a newline), so a stray run of $ and \ cannot backtrack for ever
+  src = src.replace(/\$(?!\s)((?:\\[^\n]|[^$\\\n])+?)(?<!\s)\$/g, (m, expr) => hold(`<span class="math-inline">${renderMathOrFallback(expr, false)}</span>`));
 
   src = src.replace(/`([^`\n]+)`/g, (m, code) => hold(`<code>${escHtml(code)}</code>`));
 
@@ -1872,6 +1884,13 @@ async function sendToModel(chat) {
   const INACTIVITY_TIMEOUT_MS = 45000;
   let lastActivity = Date.now();
   let timedOut = false;
+  let lastPaint = 0, paintTimer = null;
+  const paintNow = () => {
+    paintTimer = null; lastPaint = Date.now();
+    const stick = isNearBottom();
+    renderAssistantContent(bubble, reasoningBuf, contentBuf);
+    if (stick) scheduleScroll(bubble);
+  };
   const watchdog = setInterval(() => {
     if (Date.now() - lastActivity > INACTIVITY_TIMEOUT_MS) {
       timedOut = true;
@@ -1919,16 +1938,20 @@ async function sendToModel(chat) {
           if (delta.content) contentBuf += delta.content;
           if (delta.reasoning_content || delta.content) {
             if (first) { bubble.classList.remove('thinking'); first = false; }
-            const stick = isNearBottom();
-            renderAssistantContent(bubble, reasoningBuf, contentBuf);
-            if (stick) scheduleScroll(bubble);
+            // Re-parsing the whole answer for every token is what froze the page on long replies, so a render happens at most every
+            // 100 ms (a bit less often as the answer grows); the final render below always runs.
+            const gap = Math.min(600, 100 + Math.floor((reasoningBuf.length + contentBuf.length) / 150));
+            const wait = gap - (Date.now() - lastPaint);
+            if (wait <= 0) paintNow(); else if (!paintTimer) paintTimer = setTimeout(paintNow, wait);
           }
         } catch {}
       }
     }
+    if (paintTimer) { clearTimeout(paintTimer); paintTimer = null; }
     if (!reasoningBuf && !contentBuf) bubble.classList.remove('thinking');
     else renderAssistantContent(bubble, reasoningBuf, contentBuf, true);
   } catch (err) {
+    if (paintTimer) { clearTimeout(paintTimer); paintTimer = null; }
     bubble.classList.remove('thinking');
     if (timedOut) {
       bubble.textContent = contentBuf || 'The connection stalled and never responded — try again.';

@@ -13,7 +13,7 @@
 // behavior change needs its `?v=N` bumped where one-src/bundle.py adds the script
 // tag (and in the published one/index.html).
 
-import { aiFeaturesEnabled, onAiFeaturesChange, askAI } from '/shared/ai-features.js?v=4';
+import { aiFeaturesEnabled, onAiFeaturesChange, askAI } from '/shared/ai-features.js?v=5';
 import { readFileForAI, isImage } from '/shared/ai-files.js?v=2';
 
 const MAX_CONTEXT_CHARS = 12000;
@@ -30,7 +30,7 @@ const ACTIONS = [
   { label: 'Improve this page', instr: 'Improve the notes on this page: correct mistakes, fill in missing detail, definitions, examples and key points, and make them clearer. Change this page itself, do not make a new page.', only: 'idea' },
   { label: 'Make flashcards', instr: 'Make flashcards from this.', only: 'idea' },
   { label: 'Make a quiz', instr: 'Make a multiple choice quiz from this with 15 questions.', only: 'idea' },
-  { label: 'Quiz me in chat', instr: 'Quiz me on this in the chat, one question at a time. Ask the first question now.', only: 'idea' },
+  { label: 'Quiz me', instr: 'Quiz me on this. Write a quiz of 15 questions, a mix of multiple choice and written answer questions, so it opens in the quiz screen and my written answers are marked.', only: 'idea' },
   { label: 'Quiz page (self-test)', instr: 'Make a quiz page from this, with the answers in bold so Recall mode can hide them.', only: 'idea' },
   { label: 'Highlight key terms', instr: 'Highlight the key terms on this page so I can test myself in Recall mode.', only: 'page' },
   { label: 'Add totals', instr: 'Add totals and any other useful summary formulas for this data (keep the existing cells).', only: 'sheet' },
@@ -57,7 +57,7 @@ const IDEA_SYSTEM = 'The user is in oneIdea, a note-taking app with real mind ma
   'The page that is open is shown to you in this same format (a mind map as an outline, a notes page as markdown). If it is a mind map and the user wants it changed, expanded or reorganized, put the COMPLETE updated outline between <<mapedit>> and <</mapedit>> instead. ' +
   'EDITING THE OPEN NOTES PAGE (very important): when a notes page is open and the user wants it changed (improve, fix, correct, expand, add more detail, shorten, rewrite, reorganize, translate, make it better, add examples or questions, "my notes", "this page", "this") do NOT make a new page. Use <<pageedit>> and put the COMPLETE updated markdown of the page between <<pageedit>> and <</pageedit>>: keep everything that should stay (every heading, bullet, table, "Term :: meaning" line and tag line) and change or add only what was asked, in the same markdown format the page is shown in. When they only want something ADDED (more sections, a summary, practice questions, an extra topic), use <<pageadd>> with ONLY the new markdown between <<pageadd>> and <</pageadd>>, which is placed underneath the existing notes. Never copy a "Study status" section into an edit. Use <<notes>> only for a brand new separate page (the user says new page, or there is no notes page to change). ' +
   'STUDY NOTES: put markdown between <<notes title="Short title">> and <</notes>>. Make them THOROUGH, like the complete notes of a top student, never a thin summary. Unless the user asks for brief notes, use 8 to 12 headings for a whole topic or document (every "## Heading" becomes its own box on the page) and under each heading 4 to 10 bullets with indented sub-points, so notes on a chapter or topic run to roughly 800 to 1500 words. Cover EVERYTHING in the source or topic: definitions, how and why things work, formulas with what each symbol means, a worked example for each formula or method, examples, causes and effects, comparisons in a table, common mistakes and exam tips. Use "Term :: meaning" lines for every definition (they become flashcards), "[important] ..." lines for what must be remembered, "[question] ..." lines for open questions and "[ ] task" lines for to-dos, and finish with a Summary and a few practice questions. When the material is too big for one page, write several <<notes>> blocks (one per chapter or sub-topic) in the same reply. Never write one huge block of bullets and never stop early: finish every section. ' +
-  'CHOOSING: requests for a mind map, map, overview, brainstorm or how things connect get <<map>>. Requests for notes, a study guide, a summary in notes form or to organize something get <<notes>>. Write only the kind of block that was asked for, except that a request to make notes from a text, PDF or topic gets BOTH a <<notes>> block and a <<map>> block in the same reply. Use plain text only inside blocks: no LaTeX (write -> for arrows) and no em dashes. STUDY TOOLS (all of these are real features of oneIdea): (a) FLASHCARDS: <<cards title="Topic">> then one card per line written as Term :: short meaning. Use "## Heading" lines to group several topics. Make 10 to 30 cards unless told otherwise, and every card line must contain " :: ". The user can then open the Flashcards screen, which reviews them with spaced repetition. (b) QUIZ: <<quiz title="Topic">> with, for each question, a line "[question] The question?" followed by a line holding the answer in **bold**. Recall mode hides bold text, so the user can test themselves. Mix recall, why/how and application questions. (c) KEY TERMS: <<highlight>> with one key term per line, copied exactly as written on the open page (at most 25), to highlight them on the page. (d) CORNELL NOTES: <<notes title="Cornell: Topic" layout="cornell">> with exactly three headings: "## Cues and questions" (lines starting [question]), "## Notes" (bullets) and "## Summary" (2 or 3 sentences). (e) REVISION SHEET: <<notes title="Revision: Topic">> with the headings Must remember ([remember] lines), Formulas and facts, Key terms (Term :: meaning lines) and Practice questions ([question] lines). The page can end with a "Study status" section listing how many flashcards are due and which ones the user is still learning: use it when they ask what to study or for a quiz on their weak spots, and put those exact terms first. (f) MULTIPLE CHOICE QUIZ: <<mcq>> followed by a JSON array like [{"q":"The question?","options":["A","B","C","D"],"answer":0,"why":"one sentence explaining the right answer"}] then <</mcq>>. Give each question 4 options with exactly one right ("answer" is the 0 based index of the right option), plausible wrong options from the same topic, no "all of the above", and 10 to 20 questions that mix recall, understanding and application. They are added to the Quiz screen (ribbon: Study, Quiz) which has practice mode, a timed exam mode, a mistakes notebook and scores. CHAT QUIZ: when the user wants to be quizzed in the chat (for example "quiz me"), ask exactly ONE question, wait for the answer, then say whether it was right, explain briefly what was missing or why, and ask the next one. Mix question types, start with the topics listed under "Questions still getting wrong" or "Still learning" in the Study status, keep a running score and give a short summary after 10 questions. Write no block while quizzing. ' +
+  'CHOOSING: requests for a mind map, map, overview, brainstorm or how things connect get <<map>>. Requests for notes, a study guide, a summary in notes form or to organize something get <<notes>>. Write only the kind of block that was asked for, except that a request to make notes from a text, PDF or topic gets BOTH a <<notes>> block and a <<map>> block in the same reply. Use plain text only inside blocks: no LaTeX (write -> for arrows) and no em dashes. STUDY TOOLS (all of these are real features of oneIdea): (a) FLASHCARDS: <<cards title="Topic">> then one card per line written as Term :: short meaning. Use "## Heading" lines to group several topics. Make 10 to 30 cards unless told otherwise, and every card line must contain " :: ". The user can then open the Flashcards screen, which reviews them with spaced repetition. (b) QUIZ: <<quiz title="Topic">> with, for each question, a line "[question] The question?" followed by a line holding the answer in **bold**. Recall mode hides bold text, so the user can test themselves. Mix recall, why/how and application questions. (c) KEY TERMS: <<highlight>> with one key term per line, copied exactly as written on the open page (at most 25), to highlight them on the page. (d) CORNELL NOTES: <<notes title="Cornell: Topic" layout="cornell">> with exactly three headings: "## Cues and questions" (lines starting [question]), "## Notes" (bullets) and "## Summary" (2 or 3 sentences). (e) REVISION SHEET: <<notes title="Revision: Topic">> with the headings Must remember ([remember] lines), Formulas and facts, Key terms (Term :: meaning lines) and Practice questions ([question] lines). The page can end with a "Study status" section listing how many flashcards are due and which ones the user is still learning: use it when they ask what to study or for a quiz on their weak spots, and put those exact terms first. (f) QUIZ SCREEN: <<mcq>> followed by a JSON array then <</mcq>>. Each item is either a multiple choice question {"q":"The question?","options":["A","B","C","D"],"answer":0,"why":"one sentence explaining the right answer"} (exactly 4 options, one right, "answer" is the 0 based index, plausible wrong options from the same topic, no "all of the above") or a written answer question {"q":"Explain why ...?","type":"short","answer":"the model answer in one to three sentences","why":"what a full answer must include"}. Make 12 to 20 questions, about 60 percent multiple choice and 40 percent written answer, mixing recall, understanding and application. They open in the Quiz screen (ribbon: Study, Quiz) where the student answers every question and the AI marks the written answers; there is also an exam mode, a mistakes notebook and scores. QUIZZING: when the user asks to be quizzed (quiz me, test me, ask me questions, examine me), do NOT chat the answers or ask them to rate themselves: write a <<mcq>> block so the quiz screen opens, starting with the topics listed under "Questions still getting wrong" or "Still learning" in the Study status. Only when they say "in the chat" ask exactly ONE question, wait for their typed answer, then mark it yourself (right, partly right or wrong, with the correct answer and a short explanation) before the next one, keeping a running score. ' +
   'Never put these blocks inside <<edit>> or <<append>>. After the blocks, write one short sentence saying what you made.';
 const SITE_SYSTEM = 'The user is in oneSite, a website builder. A site is a list of pages and each page is a stack of sections. You can change the site directly. The open page is shown to you as JSON in exactly the shape you answer with (title, theme, settings, header, footer, page). To change anything, reply with ONE block: <<site>> a JSON object <</site>>. ' +
   'The object may hold any of these keys, and you include ONLY the keys you change: "page" (the COMPLETE new list of sections for the open page, in order; keep the "id" of every section you keep and leave "id" out for new ones; a section you leave out is deleted), "addPages" (a list of {"name","sections"} for new pages), "theme" ({"palette","font","radius","accent"}), "settings" ({"description","favicon"}), "header" and "footer" ({"v","data"}), "title" (the site name). ' +
@@ -101,7 +101,7 @@ function readContext(forSend) {
   if (c.build && c.source !== 'selection') {
     // oneIdea / oneSite: show the AI the whole open page (an outline, or the site page as JSON), and never treat one box as "the document".
     try {
-      const o = br.context({ send: !!forSend });
+      const o = br.context({ send: !!forSend, peek: !forSend });
       if (o) {
         c.idea = o.kind; c.editable = null;
         if (o.text) { c.text = o.text.slice(0, BUILD_CONTEXT_CHARS); c.truncated = o.text.length > BUILD_CONTEXT_CHARS; c.source = 'document'; } else c.source = 'none';
@@ -141,6 +141,8 @@ const BTN_STYLE = 'display:inline-block;padding:8px 18px;border-radius:8px;backg
 const texPlain = x => x.replace(/\\(?:rightarrow|to|longrightarrow)\b/g, '→').replace(/\\leftarrow\b/g, '←').replace(/\\times\b/g, '×').replace(/\\approx\b/g, '≈').replace(/\\(?:cdot|bullet)\b/g, '·').replace(/\\(?:text|mathrm|mathbf)\{([^}]*)\}/g, '$1')
   .replace(/_\{([^}]*)\}|_(\w)/g, (_, a, b) => '<sub>' + (a || b) + '</sub>').replace(/\^\{([^}]*)\}|\^(\w)/g, (_, a, b) => '<sup>' + (a || b) + '</sup>').replace(/\\([a-zA-Z]+)/g, '$1');
 function mdInline(text) {
+  // one enormous line (30,000 "[" for example) makes every link and emphasis pattern below rescan the rest of it: show it as plain text
+  if (String(text).length > 6000) return esc(String(text).replace(/\u0000/g, ''));
   const hold = [], keep = h => '\u0000' + (hold.push(h) - 1) + '\u0000';
   const link = (u, label, extra) => `<a href="${esc(u).replace(/"/g, '%22')}" target="_blank" rel="noopener"${extra || ''}>${label}</a>`;
   let x = String(text).replace(/\u0000/g, ''); // a stray NUL in the model's text must not be able to point at a placeholder
@@ -565,6 +567,7 @@ async function run(instruction) {
       try { u = OS.apply(blk.text, { truncated: c.truncated }); } catch (err) { console.error(err); }
       if (u) { undos.push(u); notes.push('Updated your site.'); }
     });
+    let openQuiz = null;
     if (OI) makes.filter(blk => blk.kind !== 'site').forEach(blk => {
       let u = null, w = '';
       OI.lastError = '';
@@ -576,12 +579,13 @@ async function run(instruction) {
         else if (blk.kind === 'notes' || blk.kind === 'pageedit' || blk.kind === 'pageadd') { u = OI.newNotes(blk.text, blk.title, o); w = 'Made a notes page.'; }
         else if (blk.kind === 'cards') u = OI.newCards(blk.text, blk.title, o);
         else if (blk.kind === 'quiz') u = OI.newQuiz(blk.text, blk.title, o);
-        else if (blk.kind === 'mcq') u = OI.newMcq(blk.text);
+        else if (blk.kind === 'mcq') { u = OI.newMcq(blk.text); if (u && u.actions && u.actions[0] && /\b(quiz|test|examine|question)/i.test(instruction)) openQuiz = u.actions[0]; }
         else if (blk.kind === 'highlight') u = OI.highlight(blk.text);
         else { u = OI.newMap(blk.text, blk.title); w = 'Made a mind map.'; }
       } catch (err) { console.error(err); }
       if (u) { undos.push(u); notes.push(u.note || w); }
     });
+    if (openQuiz) setTimeout(() => { try { openQuiz.run(); } catch (err) { console.error(err); } }, 600);
     // oneIdea has no single text to edit, so a plain rewrite becomes a new notes page and the original stays as it is
     if (OI && ed && !canEdit && !undos.length) {
       let u = null;
@@ -635,6 +639,14 @@ async function askRetry(msgs, opts, tries = 2) {
   let reply = '';
   for (let k = 0; k < tries && !reply.trim(); k++) { if (opts.signal && opts.signal.aborted) break; reply = await askAI(msgs, opts); }
   return reply;
+}
+// Marks a written quiz answer for the quiz screen in oneIdea: it reads the meaning, so any wording that says the same thing counts.
+async function gradeAnswer(question, expected, given) {
+  const reply = await askRetry([{ role: 'system', content: 'You are a fair, encouraging exam marker. Compare the student answer with the model answer. Accept different wording, order and examples when the meaning matches; be strict about wrong facts and about missing key points. Reply with ONLY JSON, no other text: {"verdict":"correct" or "partial" or "wrong","feedback":"one or two plain sentences: what was right, what was missing or wrong, and the key point to remember"}' }, { role: 'user', content: `Question: ${String(question).slice(0, 600)}\nModel answer: ${String(expected).slice(0, 900)}\nStudent answer: ${String(given).slice(0, 1200)}` }], {}, 1);
+  let j = null; try { j = JSON.parse(reply.slice(reply.indexOf('{'), reply.lastIndexOf('}') + 1)); } catch {}
+  if (!j || !j.verdict) throw new Error('no verdict');
+  const v = String(j.verdict).toLowerCase(), fb = String(j.feedback || '').trim().slice(0, 400);
+  return { ok: v === 'correct', feedback: v === 'partial' ? ('Partly right. ' + fb) : fb };
 }
 const sleep = (ms, signal) => new Promise((res, rej) => {
   if (signal && signal.aborted) return rej(Object.assign(new Error('stopped'), { name: 'AbortError' }));
@@ -754,6 +766,34 @@ async function deepWrite(o) {
   apply();
   return { setTitle, sections };
 }
+// Background research for notes that have little to start from: a few short searches, then the plain text of the best Wikipedia articles.
+// Only the short search words leave the browser, never the notes themselves.
+async function researchText(instruction, hint, sample, signal, say) {
+  let queries = [];
+  try {
+    const r = await askRetry([{ role: 'system', content: 'You help a student research a topic. Reply with ONLY JSON, no other text.' }, { role: 'user', content: `The student asked: "${instruction.slice(0, 300)}"\nTopic hint: ${hint.slice(0, 120)}\nStart of their notes: ${sample.slice(0, 1200)}\n\nGive 4 short, specific search queries (2 to 5 words each) that would find encyclopedia articles covering this topic and its main sub-topics. Reply as {"queries":["...","..."]}` }], { signal }, 1);
+    const j = JSON.parse(r.slice(r.indexOf('{'), r.lastIndexOf('}') + 1));
+    queries = (j.queries || []).map(q => String(q).trim()).filter(Boolean);
+  } catch (err) { if (err && err.name === 'AbortError') throw err; }
+  if (!queries.length && hint) queries = [hint];
+  const out = [], seen = new Set(); let total = 0;
+  const api = 'https://en.wikipedia.org/w/api.php?format=json&origin=*&action=query&';
+  for (const q of queries.slice(0, 4)) {
+    if (signal.aborted || total > 50000) break;
+    if (say) say(`Looking up "${q}" on Wikipedia...`);
+    let hits = [];
+    try { hits = (((await (await fetch(api + 'list=search&srlimit=2&srsearch=' + encodeURIComponent(q), { signal })).json()).query || {}).search) || []; } catch (err) { if (signal.aborted) throw Object.assign(new Error('stopped'), { name: 'AbortError' }); continue; }
+    for (const h of hits) {
+      if (seen.has(h.pageid) || total > 50000) continue; seen.add(h.pageid);
+      try {
+        const pg = Object.values((((await (await fetch(api + 'prop=extracts&explaintext=1&exsectionformat=plain&pageids=' + h.pageid, { signal })).json()).query || {}).pages) || {})[0];
+        const t = ((pg && pg.extract) || '').replace(/\n{3,}/g, '\n\n').trim();
+        if (t.length > 500) { const piece = `# ${pg.title} (Wikipedia)\n${t.slice(0, 14000)}`; out.push(piece); total += piece.length; }
+      } catch (err) { if (signal.aborted) throw Object.assign(new Error('stopped'), { name: 'AbortError' }); }
+    }
+  }
+  return out.join('\n\n');
+}
 const planMap = (setTitle, sections) => `- ${setTitle}\n` + sections.map(x => `  - ${x.title}\n    > ${x.covers}`).join('\n');
 
 // the text to write notes from: an attached file, the selection, or the whole open page
@@ -772,7 +812,7 @@ async function runDeep(instruction) {
   instruction = instruction.slice(0, 1500);
   const { full, label } = notesSource(OI, c);
   if (full.length >= BOOK_MIN) return runBook(instruction, full, label, OI, frameWin);
-  const chunks = chunkOf(stripPages(full)), srcWords = Math.round(full.length / 6), wantSecs = Math.max(5, Math.min(14, Math.round(srcWords / 600)));
+  let chunks = chunkOf(stripPages(full)), wantSecs = 5;
   const tag = attach ? attach.title : full ? 'document' : '';
   hist.push({ r: 'u', t: instruction, x: tag }); saveHist();
   addMsg('user', instruction, tag ? 'with ' + tag : '');
@@ -783,6 +823,14 @@ async function runDeep(instruction) {
   const sys = SYSTEM + ' ' + IDEA_SYSTEM;
   const say = msg => { th.status(msg); am.b.textContent = msg + (titles.length ? '. Pages so far: ' + titles.join(', ') : '') + '.'; scrollLog(); };
   try {
+    let source = full;
+    if (full.length < 20000) {
+      say('Looking for more information...');
+      let hint = ''; try { hint = (frameWin.N.page() || {}).title || ''; } catch {}
+      let found = ''; try { found = await researchText(instruction, hint, full, mine.signal, say); } catch (err) { if (err && err.name === 'AbortError') throw err; }
+      if (found) source = full + (full ? '\n\n' : '') + '=== Background from Wikipedia: use it to add accurate detail, definitions, examples and facts ===\n' + found;
+    }
+    chunks = chunkOf(stripPages(source)); wantSecs = Math.max(5, Math.min(14, Math.round(source.length / 6 / 600)));
     say('Planning the notes...');
     const r = await deepWrite({
       instruction, chunks, sys, signal: mine.signal, label, wantSecs, title: 'Notes',
@@ -927,6 +975,7 @@ function syncFab() {
   if (!open && panel && !panel.hidden) closePanel();
 }
 function enable() {
+  window.oneAIGrade = gradeAnswer;
   if (fab) return syncFab();
   build();
   const frames = $('#frames');
@@ -934,6 +983,7 @@ function enable() {
   syncFab();
 }
 function disable() {
+  try { delete window.oneAIGrade; } catch {}
   if (panel && !panel.hidden) closePanel();
   if (fab) fab.hidden = true;
 }

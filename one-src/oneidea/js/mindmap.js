@@ -946,10 +946,10 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
     } catch { return fail('The questions were not valid JSON.'); }
     const list = Array.isArray(j) ? j : Array.isArray(j.questions) ? j.questions : [];
     const p = N.page(), added = window.QZ ? window.QZ.addBank(list, p && p.id) : [];
-    if (!added.length) return fail('No usable multiple choice questions were found.');
+    if (!added.length) return fail('No usable questions were found.');
     const undo = () => window.QZ.removeBank(added.map(x => x.id));
-    undo.note = 'Added ' + added.length + ' multiple choice questions to your quiz.';
-    undo.actions = [{ label:'Take the quiz', run:() => window.QZ.open({ scope:'notebook', mode:'practice', count:Math.min(20, added.length) }) }];
+    undo.note = 'Added ' + added.length + ' questions to your quiz (' + added.filter(x => x.type === 'self').length + ' written answer).';
+    undo.actions = [{ label:'Take the quiz', run:() => window.QZ.open({ scope:'notebook', mode:'practice', count:Math.min(20, added.length), ids:added.map(x => x.id) }) }];
     return undo;
   };
 
@@ -970,6 +970,8 @@ const renderWithEmbeds = P.render; P.render = (anim = true) => { renderWithEmbed
     // what the panel shows the AI when nothing is selected
     context(o) {
       const p = N.page(); if (!p) return null;
+      // the panel only wants to know whether there is anything on the page (it asks on every selection change), so skip the conversion
+      if (o && o.peek) return { kind:p.kind === 'map' ? 'map' : 'page', title:p.title, text:p.kind === 'map' ? (p.map && p.map.nodes.length ? 'x' : '') : (p.items.some(i => String(i.html).replace(/<[^>]*>/g, '').trim()) ? 'x' : '') };
       const study = o && o.send ? studyStatus() : ''; // the flashcard tally is only worked out when a question is actually sent
       if (p.kind === 'map') return { kind:'map', title:p.title, text:outlineText(p) + study };
       return { kind:'page', title:p.title, text:`# ${p.title || 'Untitled page'}\n` + pageMarkdown(p) + study, md:true };
