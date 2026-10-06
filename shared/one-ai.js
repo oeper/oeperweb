@@ -751,6 +751,25 @@ function splitChapters(raw) {
   return out;
 }
 
+/* Coverage: the notes are checked against the source on this computer, not by asking the model whether it forgot anything. Every sentence of the source
+   is reduced to its distinctive words (names, dates, numbers, rare terms); a sentence counts as covered when most of them appear in the notes.
+   What is not covered is sent back to the model to be added, and the check is repeated, so nothing quietly gets lost. */
+const wordsOf = t => String(t || '').toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+const stemKey = w => /\d/.test(w) ? w : w.slice(0, 6);
+function coverageOf(src, notesTexts) {
+  const sents = String(src || '').replace(/\[Page \d+\]/g, '').split(/(?<=[.!?;:])\s+|\n+/).map(x => x.trim()).filter(x => x.length >= 35);
+  const df = new Map(); wordsOf(src).forEach(w => df.set(w, (df.get(w) || 0) + 1));
+  const have = new Set(wordsOf((notesTexts || []).join(' ')).map(stemKey));
+  const missing = []; let total = 0, hit = 0;
+  for (const sn of sents) {
+    const keys = [...new Set(wordsOf(sn).filter(w => (w.length >= 5 || /\d/.test(w)) && df.get(w) <= 4))].slice(0, 10);
+    if (keys.length < 2) continue;
+    total++;
+    if (keys.filter(w => have.has(stemKey(w))).length / keys.length >= .55) hit++; else missing.push(sn);
+  }
+  return { pct: total ? Math.round(hit / total * 100) : 100, missing, total };
+}
+
 /* The writing engine: plan the sections of every chunk of the source, write them (two per request, two requests at a time), and hand each
    finished section to o.onPage in order. Used for one chapter or topic (runDeep) and once per chapter of a textbook (runBook). */
 async function deepWrite(o) {
@@ -823,7 +842,30 @@ async function deepWrite(o) {
       } catch (err) { if (err && err.name === 'AbortError') throw err; }
     }
   }
-  return { setTitle, sections, texts };
+  // after everything is written: check the notes against the source and write whatever is still missing (up to 3 rounds)
+  const fillGaps = async () => {
+    const src = o.coverSource != null ? o.coverSource : chunks.join('\n');
+    if (!src || src.length < 1500) return null;
+    let cov = coverageOf(src, texts);
+    for (let round = 0; round < 3 && cov.pct < 96 && cov.missing.length && !signal.aborted; round++) {
+      if (o.say) o.say(`Checking the notes against your source: ${cov.pct}% of the details are in. Adding the ${cov.missing.length} that are missing...`);
+      const batches = []; let cur = '';
+      for (const sn of cov.missing) { if (cur && (cur + sn).length > 7000) { batches.push(cur); cur = ''; } cur += sn + '\n'; }
+      if (cur) batches.push(cur);
+      for (const b of batches.slice(0, 8)) {
+        if (signal.aborted) break;
+        try {
+          const reply = await ask(`${instruction}\n\nThe notes so far are about: ${outline}. These details from the source are missing from them. Add ALL of them, nothing left out and every name, date, number and example kept exactly. Write them as notes in the same style (Term :: meaning lines and short bullets), grouped under clear headings, as one or more <<notes title="short title">> blocks and no other blocks.\n\n<<one:${label}>>\n${b}\n<</one>>`, 2);
+          parseMakes(reply).filter(x => x.kind === 'notes').forEach(blk => { const t = (blk.text || '').trim(); if (t) { texts.push(t); try { o.onPage(t, blk.title || 'More details'); } catch (err) { console.error(err); } } });
+        } catch (err) { if (err && err.name === 'AbortError') throw err; }
+      }
+      cov = coverageOf(src, texts);
+    }
+    return cov;
+  };
+  const coverage = await fillGaps();
+  if (signal.aborted) throw Object.assign(new Error('stopped'), { name: 'AbortError' });
+  return { setTitle, sections, texts, coverage };
 }
 // Background research for notes that have little to start from: a few short searches, then the plain text of the best Wikipedia articles.
 // Only the short search words leave the browser, never the notes themselves.
@@ -900,7 +942,7 @@ async function runDeep(instruction) {
     chunks = chunkOf(stripPages(source)); wantSecs = Math.max(5, Math.min(14, Math.round(source.length / 6 / 600)));
     say('Planning the notes...');
     const r = await deepWrite({
-      instruction, chunks, sys, signal: mine.signal, label, wantSecs, title: 'Notes',
+      instruction, chunks, sys, signal: mine.signal, label, wantSecs, title: 'Notes', coverSource: full, say,
       wait: s => say(`The AI's request limit was reached. Continuing in ${s}s`),
       progress: (f, n) => say(`Writing the notes: ${f} of ${n} sections done`),
       onPage: (text, title) => { let u = null; try { OI.lastError = ''; u = OI.newNotes(text, title, { inline: mdInline, flat: true, map: true, after: anchor }); } catch (err) { console.error(err); } if (u) { anchor = u.lastId || anchor; undos.push(u); titles.push(title); extras.maps += u.maps || 0; extras.diagrams += u.diagrams || 0; } },
@@ -912,7 +954,7 @@ async function runDeep(instruction) {
     try { const u = await quizFromNotes(OI, r.texts, label, mine.signal, s => say(`The AI's request limit was reached. Continuing in ${s}s`), sys); if (u) { undos.push(u); extras.questions += u.count || 0; } } catch (err) { if (err && err.name === 'AbortError') throw err; }
     th.box.hidden = true;
     const bits = [`${titles.length} notes pages`, extras.maps ? `${extras.maps} mind maps` : '', extras.diagrams ? `${extras.diagrams} diagrams` : '', extras.questions ? `a ${extras.questions} question quiz` : ''].filter(Boolean);
-    const summary = `Wrote ${bits.join(', ')}: ${titles.join(', ')}.`;
+    const summary = `Wrote ${bits.join(', ')}: ${titles.join(', ')}.` + (r.coverage ? ` Checked against your text: ${r.coverage.pct}% of its key details are in the notes${r.coverage.pct < 96 ? ' (ask me to "add any missing details" to close the rest)' : ''}.` : '');
     const missing = r.sections.length - titles.length;
     const warn = missing > 0 ? ` ${missing} of the ${r.sections.length} planned sections could not be written because the AI connection dropped. Run "Make study notes" again to try the rest.` : '';
     am.b.textContent = titles.length ? summary + ' I also added a mind map of the whole set.' + warn : 'Nothing could be written. Please try again.';
@@ -986,7 +1028,7 @@ async function runBook(instruction, full, label, OI, frameWin) {
       handles.push(h); let n = 0, anchor = null;
       try {
         const words = x.words, r = await deepWrite({
-          instruction, chunks: x.chunks, sys, signal: mine.signal, label: x.ch.name, title: x.ch.name, maxPer: 6, maxSections: 30,
+          instruction, chunks: x.chunks, sys, signal: mine.signal, label: x.ch.name, title: x.ch.name, maxPer: 6, maxSections: 30, coverSource: x.ch.text, say,
           wantSecs: Math.max(5, Math.min(24, Math.round(words / 600))),
           wait: s => say(`The AI's request limit was reached. Continuing in ${s}s`),
           progress: (f, tot) => say(`Writing: ${f} of ${tot} sections`),
