@@ -317,6 +317,21 @@ function injectStyles() {
   .oai-msg{max-width:94%;display:flex;flex-direction:column;gap:4px;min-width:0}
   .oai-msg small{font-size:11px;color:var(--on-surface-variant)}
   .oai-msg .oai-mt{white-space:pre-wrap;line-height:1.55;overflow-wrap:anywhere}
+  .oai-msg.ai .oai-mt{white-space:normal}
+  .oai-msg.ai .oai-mt>:first-child{margin-top:0}.oai-msg.ai .oai-mt>:last-child{margin-bottom:0}
+  .oai-msg.ai .oai-mt p{margin:0 0 .6em}
+  .oai-msg.ai .oai-mt h1,.oai-msg.ai .oai-mt h2,.oai-msg.ai .oai-mt h3,.oai-msg.ai .oai-mt h4{margin:.8em 0 .35em;line-height:1.25;font-weight:600}
+  .oai-msg.ai .oai-mt h1{font-size:1.3em}.oai-msg.ai .oai-mt h2{font-size:1.18em}.oai-msg.ai .oai-mt h3,.oai-msg.ai .oai-mt h4{font-size:1.05em}
+  .oai-msg.ai .oai-mt ul,.oai-msg.ai .oai-mt ol{margin:.2em 0 .7em;padding-left:1.4em}
+  .oai-msg.ai .oai-mt li{margin:.15em 0}
+  .oai-msg.ai .oai-mt code{font:12.5px/1.4 "Roboto Mono",ui-monospace,monospace;background:var(--surface-high,#e7e8ee);padding:1px 5px;border-radius:5px}
+  .oai-msg.ai .oai-mt pre{background:var(--surface-high,#e7e8ee);padding:8px 10px;border-radius:10px;overflow:auto;margin:.4em 0 .7em}
+  .oai-msg.ai .oai-mt pre code{background:none;padding:0}
+  .oai-msg.ai .oai-mt blockquote{margin:.4em 0 .7em;padding:.1em 0 .1em 12px;border-left:3px solid var(--primary)}
+  .oai-msg.ai .oai-mt table{border-collapse:collapse;margin:.4em 0 .7em;font-size:.95em;display:block;overflow-x:auto}
+  .oai-msg.ai .oai-mt th,.oai-msg.ai .oai-mt td{border:1px solid var(--outline-variant,rgba(128,128,128,.4));padding:4px 8px;text-align:left}
+  .oai-msg.ai .oai-mt th{background:var(--surface-high,#e7e8ee)}
+  .oai-msg.ai .oai-mt a{color:var(--primary)}
   .oai-msg.user{align-self:flex-end;align-items:flex-end}
   .oai-msg.user .oai-mt{background:var(--primary);color:var(--on-primary);border-radius:16px 16px 4px 16px;padding:8px 12px}
   .oai-msg.ai{align-self:flex-start}
@@ -462,7 +477,10 @@ function scrollLog() { ui.result.scrollTop = ui.result.scrollHeight; }
 function addMsg(role, text, tag) {
   const d = document.createElement('div'); d.className = 'oai-msg ' + role;
   if (tag) { const g = document.createElement('small'); g.textContent = tag; d.append(g); }
-  const b = document.createElement('div'); b.className = 'oai-mt'; b.textContent = text; d.append(b);
+  const b = document.createElement('div'); b.className = 'oai-mt';
+  // the AI's answers are markdown (bold, lists, headings, tables): every write to its text is shown formatted
+  if (role === 'ai') Object.defineProperty(b, 'textContent', { configurable: true, get() { return this.innerText; }, set(v) { v = v == null ? '' : String(v); this.innerHTML = v.trim() ? mdToHtml(v) : ''; } });
+  b.textContent = text; d.append(b);
   ui.result.append(d); scrollLog();
   return { d, b };
 }
