@@ -33,7 +33,26 @@ export function onAiFeaturesChange(cb) {
 // ── Talking to the model without a chat UI (the one suite's assistant) ──
 // Streams /api/chat and returns the final answer text. Reasoning goes through
 // its own delta field (ignored here); any inline <think> block is stripped.
+// An answer that stops part-way (the connection dropped, the model ran out of room) is continued automatically: the end of what arrived is sent back
+// with "carry on", up to twice, and the pieces are joined. The server refuses any earlier message over 4000 characters, so only the tail goes back.
+const BLOCK_KINDS = ['map', 'mapedit', 'notes', 'pageedit', 'pageadd', 'cards', 'quiz', 'highlight', 'mcq', 'site', 'cells', 'sheetedit', 'slides', 'slideedit', 'edit', 'append'];
+const hasOpenBlock = t => BLOCK_KINDS.some(k => { const o = t.lastIndexOf('<<' + k), c = t.lastIndexOf('<</' + k); return o > -1 && /^<<[a-z]+[\s>]/.test(t.slice(o, o + 20)) && c < o; });
 export async function askAI(messages, opts) {
+  let r = await askOnce(messages, opts);
+  let text = r.text;
+  for (let n = 0; n < 2 && text.trim() && (r.truncated || hasOpenBlock(text)) && !(opts && opts.signal && opts.signal.aborted); n++) {
+    if (opts && opts.onStatus) opts.onStatus('The answer stopped early. Continuing...');
+    const tail = text.slice(-3600);
+    const more = await askOnce([...messages, { role: 'assistant', content: tail }, { role: 'user', content: 'Your last answer was cut off. Carry on from exactly where it stopped, starting with the very next word. Do not repeat anything, do not apologise or explain, and if you were inside a <<block>> keep writing its content and close it properly.' }],
+      opts && opts.onText ? { ...opts, onText: t => opts.onText(text + t) } : opts);
+    if (!more.text.trim()) break;
+    text += (/^\s/.test(more.text) || /\s$/.test(text) ? '' : ' ') + more.text;
+    r = more;
+  }
+  if (opts && opts.onText && text) opts.onText(text);
+  return text;
+}
+async function askOnce(messages, opts) {
   // the oeper.dev model, or the person's own provider when they set one up in settings (see ai-provider.js)
   const res = await chatFetch(AI_ENDPOINT, { messages, quiet: (opts && opts.onThinking) ? undefined : true }, opts && opts.signal);
   if (!res.ok || !res.body) {
@@ -46,6 +65,7 @@ export async function askAI(messages, opts) {
   let buf = '';
   let text = '';
   let thinking = '';
+  let sawDone = false, meta = null;
   // The callbacks redo work on the WHOLE text so far (stripping tags, parsing, drawing), so running them for every token made long
   // answers quadratic and froze the page. They run at most every 120 ms with the latest text, and once more at the end.
   const paced = fn => {
@@ -67,9 +87,11 @@ export async function askAI(messages, opts) {
       const t = line.trim();
       if (!t.startsWith('data:')) continue;
       const payload = t.slice(5).trim();
-      if (!payload || payload === '[DONE]') continue;
+      if (payload === '[DONE]') { sawDone = true; continue; }
+      if (!payload) continue;
       try {
         const evt = JSON.parse(payload);
+        if (evt.meta) { meta = evt.meta; continue; }
         if (evt.status && opts && opts.onStatus) { opts.onStatus(String(evt.status)); continue; }
         const delta = (evt.choices || [{}])[0].delta || {};
         const thought = delta.reasoning_content || delta.reasoning;
@@ -85,7 +107,9 @@ export async function askAI(messages, opts) {
   if (thinkOut) thinkOut.stop();
   const out = stripThinking(text).trim();
   if (opts && opts.onText && out) opts.onText(out);
-  return out;
+  // the oeper.dev worker ends every normal answer with a meta line and [DONE]; a stream that just stops was cut off
+  const truncated = !!(meta ? (meta.finish === 'length' || meta.stalled) : !sawDone);
+  return { text: out, truncated };
 }
 export function stripThinking(s) {
   return String(s).replace(/<think>[\s\S]*?<\/think>/g, '').replace(/^[\s\S]*?<\/think>/, '').replace(/<think>[\s\S]*$/, '').trimStart();
