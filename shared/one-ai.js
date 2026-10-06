@@ -749,12 +749,13 @@ async function deepWrite(o) {
   const wrap = (text, body) => body ? `${text}\n\n<<one:${label}>>\n${body}\n<</one>>` : text;
   const ask = (text, tries) => askPatient([{ role: 'system', content: sys }, { role: 'user', content: text }], { signal }, tries, o.wait);
   const nCh = Math.max(1, chunks.length), per = chunks.length ? Math.max(3, Math.min(o.maxPer || 8, Math.ceil(o.wantSecs / nCh))) : 7;
-  const planOne = async k => {
+  const planOnce = async k => {
     const part = nCh > 1 ? ` This is part ${k + 1} of ${nCh} of the material, so plan only what is in this part.` : '';
     const reply = await ask(wrap(`${instruction}\n\nFirst plan the notes.${part} Reply with ONLY JSON and no other text: {"title":"short title for the whole set","sections":[{"title":"short section title","covers":"one or two sentences listing exactly which topics, terms, facts and examples this section must cover"}]}. Use ${chunks.length ? per : '6 to 8'} sections that together cover EVERYTHING${chunks.length ? ' in the material, leaving nothing out' : ' a student needs on this topic'}, in a sensible teaching order.`, chunks[k] || ''));
     let pl = null; try { const i = reply.indexOf('{'), z = reply.lastIndexOf('}'); pl = JSON.parse(reply.slice(i, z + 1)); } catch {}
     return pl;
   };
+  const planOne = async k => { for (let t = 0; t < 4 && !signal.aborted; t++) { let pl = null; try { pl = await planOnce(k); } catch (err) { if (err && err.name === 'AbortError') throw err; } if (pl && Array.isArray(pl.sections) && pl.sections.length) return pl; } return null; };
   const plans = []; for (let k = 0; k < nCh; k += 2) { const got = await Promise.all([planOne(k), k + 1 < nCh ? planOne(k + 1) : null]); plans.push(...got.filter((_, j) => k + j < nCh)); }
   const sections = [], cap = o.maxSections || 16;
   plans.forEach((pl, k) => { if (pl && Array.isArray(pl.sections)) pl.sections.forEach(x => { const t = String(x && x.title || '').trim().slice(0, 80); if (t && sections.length < cap) sections.push({ title: t, covers: String(x.covers || '').trim().slice(0, 300), ch: k }); }); });
@@ -777,15 +778,19 @@ async function deepWrite(o) {
       const [from, to] = groups[nextJob++], part = [];
       for (let i = from; i < to; i++) part.push(`part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}`);
       const body = chunks[sections[from].ch] || '';
-      const reply = await ask(wrap(`${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY ${to - from > 1 ? 'these ' + (to - from) + ' parts' : 'this part'}: ${part.join('; ')}. Write each part as its own <<notes title="the part title">> block, very thorough (at least ${need} words each, never a short summary) and following the study notes rules, with no other blocks. Include every definition, fact, formula, date, name and example from the material that belongs to the part, explained properly, and draw a [diagram] line for any process, cycle or timeline in it. The other parts are written separately, so do not repeat them.`, body));
+      let reply = '';
+      try { reply = await ask(wrap(`${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY ${to - from > 1 ? 'these ' + (to - from) + ' parts' : 'this part'}: ${part.join('; ')}. Write each part as its own <<notes title="the part title">> block, very thorough (at least ${need} words each, never a short summary) and following the study notes rules, with no other blocks. Include every definition, fact, formula, date, name and example from the material that belongs to the part, explained properly, and draw a [diagram] line for any process, cycle or timeline in it. The other parts are written separately, so do not repeat them.`, body)); } catch (err) { if (err && err.name === 'AbortError') throw err; }
       const blocks = parseMakes(reply).filter(b => b.kind === 'notes');
       for (let i = from; i < to; i++) {
         const byTitle = blocks.find(b => sameTitle(b.title, sections[i].title)), mk = byTitle || blocks[i - from];
         results[i] = ((mk ? mk.text : (blocks.length || PH_T.test(reply) ? '' : shown(reply))) || '').trim();
-        // a part that came back thin is written again on its own (once), keeping whichever version is longer
-        if (results[i].split(/\s+/).length < Math.round(need * .6) && !signal.aborted) {
+        // a part that came back empty or thin is written again on its own, up to 6 times, keeping the longest version. Each retry is given a smaller
+        // piece of the source (around where that part sits in it), and the last one only the plan, because small requests are the ones that get through
+        const sib = sections.filter(x => x.ch === sections[i].ch), pos = (sib.indexOf(sections[i]) + .5) / sib.length;
+        const win = frac => { const L = Math.round(body.length * frac); const a0 = Math.max(0, Math.min(body.length - L, Math.round(pos * body.length - L / 2))); return body.slice(a0, a0 + L); };
+        for (let t = 0; t < 6 && results[i].split(/\s+/).length < Math.round(need * .6) && !signal.aborted; t++) {
           try {
-            const one = await ask(wrap(`${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}. This part must be long and detailed: at least ${need} words, covering every point of the material for it, with definitions, examples and key terms, in one <<notes title="${sections[i].title}">> block and no other blocks.`, body), 1);
+            const one = await ask(wrap(`${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}. This part must be long and detailed: at least ${need} words, covering every point of the material for it, with definitions, examples and key terms, in one <<notes title="${sections[i].title}">> block and no other blocks.`, t === 0 ? body : t === 1 ? win(.6) : t < 4 ? win(.3) : ''), 1);
             const b2 = parseMakes(one).filter(b => b.kind === 'notes')[0], t2 = ((b2 ? b2.text : '') || '').trim();
             if (t2.split(/\s+/).length > results[i].split(/\s+/).length) results[i] = t2;
           } catch (err) { if (err && err.name === 'AbortError') throw err; }
@@ -798,6 +803,17 @@ async function deepWrite(o) {
   await Promise.all([worker(), worker()]);
   if (signal.aborted) throw Object.assign(new Error('stopped'), { name: 'AbortError' });
   apply();
+  for (let i = 0; i < n && !signal.aborted; i++) {
+    if (results[i]) continue;
+    for (let t = 0; t < 4 && !results[i] && !signal.aborted; t++) {
+      try {
+        const body = chunks[sections[i].ch] || '', L = t < 2 ? Math.min(body.length, 9000) : 0, a0 = Math.max(0, Math.round(((sections.filter(x => x.ch === sections[i].ch).indexOf(sections[i]) + .5) / Math.max(1, sections.filter(x => x.ch === sections[i].ch).length)) * body.length - L / 2));
+        const one = await ask(wrap(`${instruction}\n\nYou are writing a set of notes called "${setTitle}". The parts are: ${outline}. Write ONLY part ${i + 1}, "${sections[i].title}", which must cover: ${sections[i].covers || sections[i].title}. This part must be long and detailed: at least ${need} words, covering every point of the material for it, with definitions, examples and key terms, in one <<notes title="${sections[i].title}">> block and no other blocks.`, L ? body.slice(a0, a0 + L) : ''), 1);
+        const b2 = parseMakes(one).filter(b => b.kind === 'notes')[0], t2 = ((b2 ? b2.text : '') || '').trim();
+        if (t2.split(/\s+/).length >= 80) { results[i] = t2; texts.push(t2); finished++; try { o.onPage(t2, sections[i].title); } catch (err) { console.error(err); } progress(); }
+      } catch (err) { if (err && err.name === 'AbortError') throw err; }
+    }
+  }
   return { setTitle, sections, texts };
 }
 // Background research for notes that have little to start from: a few short searches, then the plain text of the best Wikipedia articles.
