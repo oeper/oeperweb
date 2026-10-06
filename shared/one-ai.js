@@ -442,7 +442,7 @@ async function attachFile(file) {
 const TAG_RE = /<<\/?(?:edit|append)>>/g;
 // map / notes blocks are built into the app, so they are not shown as chat text
 const MAKE_RE = /<<(map|mapedit|notes|pageedit|pageadd|site|cards|quiz|highlight|cells|sheetedit|slides|slideedit|mcq)(?:\s[^>]*)?>>[\s\S]*?(?:<<\/\1>>|$)/g;
-const PH_SRC = '\\[(?:an?|the|some)\\s[^\\]\\n]{2,80}\\s(?:was|were)\\s(?:made|updated|created|added|changed|edited|highlighted|built)\\]';
+const PH_SRC = '\\[[^\\]\\n]{2,80}\\s(?:was|were)\\s(?:made|updated|created|added|changed|edited|highlighted|built)\\]';
 const PH_RE = new RegExp(PH_SRC, 'gi'), PH_T = new RegExp(PH_SRC, 'i');
 const shown = t => String(t || '').replace(MAKE_RE, '').replace(TAG_RE, '').replace(PH_RE, '').replace(/\n{3,}/g, '\n\n').trim();
 // "[a notes page was made]": the model sometimes copies the status lines the app puts in its history instead of writing the real thing
@@ -626,7 +626,16 @@ async function run(instruction) {
       try { u = OI.newNotes(ed.text, '', { inline: mdInline }); } catch (err) { console.error(err); }
       if (u) { undos.push(u); notes.push('Made a new notes page. Your original is unchanged.'); }
     }
-    const said = (ed && ed.said) || shown(reply).replace(/\s+/g, ' ').trim();
+    // a long answer written as plain notes (no block) to a "make / continue / add" request goes onto a notes page instead of staying in the chat
+    if (OI && !ed && !makes.length && !undos.length && /\b(notes?|continue|expand|write|make|create|add|put|more)\b/i.test(instruction)) {
+      const txt = shown(reply).replace(/^(\s*)[*•]\s+/gm, '$1- ').trim();
+      if (txt.length > 300 && (txt.match(/^\s*(- |#)/gm) || []).length >= 3) {
+        let u = null;
+        try { u = OI.newNotes(txt, '', { inline: mdInline }); } catch (err) { console.error(err); }
+        if (u) { undos.push(u); notes.push('Made a notes page from this answer.'); }
+      }
+    }
+    const said =(ed && ed.said) || shown(reply).replace(/\s+/g, ' ').trim();
     if (undos.length) {
       const where = notes.join(' ');
       am.b.textContent = said || where;
