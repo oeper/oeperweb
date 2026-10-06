@@ -442,9 +442,15 @@ async function attachFile(file) {
 const TAG_RE = /<<\/?(?:edit|append)>>/g;
 // map / notes blocks are built into the app, so they are not shown as chat text
 const MAKE_RE = /<<(map|mapedit|notes|pageedit|pageadd|site|cards|quiz|highlight|cells|sheetedit|slides|slideedit|mcq)(?:\s[^>]*)?>>[\s\S]*?(?:<<\/\1>>|$)/g;
-const shown = t => String(t || '').replace(MAKE_RE, '').replace(TAG_RE, '');
+const PH_SRC = '\\[(?:an?|the|some)\\s[^\\]\\n]{2,80}\\s(?:was|were)\\s(?:made|updated|created|added|changed|edited|highlighted|built)\\]';
+const PH_RE = new RegExp(PH_SRC, 'gi'), PH_T = new RegExp(PH_SRC, 'i');
+const shown = t => String(t || '').replace(MAKE_RE, '').replace(TAG_RE, '').replace(PH_RE, '').replace(/\n{3,}/g, '\n\n').trim();
 // "[a notes page was made]": the model sometimes copies the status lines the app puts in its history instead of writing the real thing
 const isPlaceholder = t => /^\[[^\]\n]{3,90}\]$/.test(String(t || '').trim()) && /\b(was|were|made|updated|created|added|changed)\b/i.test(String(t));
+// an answer that says "I have expanded your notes" (or copies a status line) but holds no block, edit or text: nothing was built
+const ACTION_RE = /\b(make|made|update|expand|add|create|write|build|put|turn|edit|improve|fix|change|rewrite|redo|more|continue|extend|include|fill|complete)\b/i;
+const CLAIM_RE = /\b(I have|I've|I just|I now)\s+(now\s+|also\s+)?(expanded|updated|added|created|made|written|built|rewritten|extended|included|put)\b|\bYou can now (view|see|find|open|read)\b/i;
+const fakeBuild = (reply, instr) => !parseEdit(reply) && !parseMakes(reply).length && ACTION_RE.test(String(instr || '')) && (PH_T.test(reply) || CLAIM_RE.test(shown(reply)) || !shown(reply));
 function parseMakes(reply) {
   const out = [], re = /<<(map|mapedit|notes|pageedit|pageadd|site|cards|quiz|highlight|cells|sheetedit|slides|slideedit|mcq)((?:\s[^>]*)?)>>([\s\S]*?)(<<\/\1>>|$)/g;
   let m;
@@ -550,11 +556,11 @@ async function run(instruction) {
     // The model stream sometimes ends before any answer text (a dropped connection): try once more before giving up.
     if (!reply.trim() && !mine.signal.aborted) { th.status('The connection dropped. Trying again...'); reply = await askAI(msgs, opts); }
     if (!reply.trim()) throw new Error('epic AI stopped before it answered. Please try again.');
-    if (isPlaceholder(shown(reply)) && !parseEdit(reply) && !parseMakes(reply).length && !mine.signal.aborted) {
-      th.status('That reply had no content. Asking again...');
-      const again = [...msgs.slice(0, -1), { role: 'user', content: userMsg + '\n\nIMPORTANT: do not answer with a bracketed status line. Write the actual result now, using the proper block (<<notes>>, <<pageedit>>, <<pageadd>>, <<mcq>>, <<map>> and so on) or the real text.' }];
+    if (c.build && fakeBuild(reply, instruction) && !mine.signal.aborted) {
+      th.status('That reply did not build anything. Asking again...');
+      const again = [...msgs.slice(0, -1), { role: 'user', content: userMsg + '\n\nIMPORTANT: your last answer did not actually build or change anything. Do not describe the result and do not write a bracketed status line. Write the real content now, inside the proper block (<<notes>>, <<pageedit>>, <<pageadd>>, <<mcq>>, <<map>> and so on).' }];
       reply = await askAI(again, opts);
-      if (!reply.trim() || (isPlaceholder(shown(reply)) && !parseEdit(reply) && !parseMakes(reply).length)) throw new Error('epic AI did not write anything that time. Please try again, or ask for it a little differently.');
+      if (!reply.trim() || fakeBuild(reply, instruction)) throw new Error('epic AI did not build anything that time. Please try again, or ask for it a little differently (for example "add these chapters as new notes").');
     }
     const final = reply;
     ok = true;
@@ -773,7 +779,7 @@ async function deepWrite(o) {
       const blocks = parseMakes(reply).filter(b => b.kind === 'notes');
       for (let i = from; i < to; i++) {
         const byTitle = blocks.find(b => sameTitle(b.title, sections[i].title)), mk = byTitle || blocks[i - from];
-        results[i] = ((mk ? mk.text : (blocks.length || isPlaceholder(shown(reply)) ? '' : shown(reply))) || '').trim();
+        results[i] = ((mk ? mk.text : (blocks.length || PH_T.test(reply) ? '' : shown(reply))) || '').trim();
         // a part that came back thin is written again on its own (once), keeping whichever version is longer
         if (results[i].split(/\s+/).length < Math.round(need * .6) && !signal.aborted) {
           try {
