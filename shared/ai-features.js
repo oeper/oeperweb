@@ -35,7 +35,7 @@ export function onAiFeaturesChange(cb) {
 // its own delta field (ignored here); any inline <think> block is stripped.
 export async function askAI(messages, opts) {
   // the oeper.dev model, or the person's own provider when they set one up in settings (see ai-provider.js)
-  const res = await chatFetch(AI_ENDPOINT, { messages }, opts && opts.signal);
+  const res = await chatFetch(AI_ENDPOINT, { messages, quiet: (opts && opts.onThinking) ? undefined : true }, opts && opts.signal);
   if (!res.ok || !res.body) {
     let msg = `Server error (${res.status})`;
     try { msg = (await res.json()).error || msg; } catch {}

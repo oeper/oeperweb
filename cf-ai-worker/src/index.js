@@ -184,7 +184,7 @@ function normalizeToolCalls(acc) {
 // round's stream ends, so the caller can decide whether to execute tools
 // and start another round, or stop (the round already streamed its full
 // answer to the client if it didn't call any tools).
-async function streamOneRound(upstream, send) {
+async function streamOneRound(upstream, send, quiet) {
   const reader = upstream.getReader();
   const decoder = new TextDecoder();
   let buf = '';
@@ -213,6 +213,9 @@ async function streamOneRound(upstream, send) {
       if (!trimmed.startsWith('data:')) continue;
       const payload = trimmed.slice(5).trim();
       if (!payload || payload === '[DONE]') continue;
+      // `quiet` callers (the one suite's assistant) never show the model's reasoning, so it is dropped before it is even parsed: a long
+      // reasoning stream used to burn the Worker's whole CPU budget ("Worker exceeded CPU time limit") and cut the answer off mid-sentence
+      if (quiet && payload.includes('"reasoning') && !payload.includes('"content"') && !payload.includes('tool_calls') && !payload.includes('finish_reason":"')) continue;
       let evt;
       try { evt = JSON.parse(payload); } catch { continue; }
       const choice = evt.choices && evt.choices[0];
@@ -290,7 +293,7 @@ async function streamOneRound(upstream, send) {
 // to the client, and between rounds — invisibly to the client — executes
 // any tool calls the model made and feeds the results back in, up to
 // MAX_TOOL_ROUNDS.
-function streamToolLoop(env, initialMessages, tools) {
+function streamToolLoop(env, initialMessages, tools, quiet) {
   const encoder = new TextEncoder();
   return new ReadableStream({
     async start(controller) {
@@ -306,7 +309,7 @@ function streamToolLoop(env, initialMessages, tools) {
           const upstream = await env.AI.run(MODEL, lastRound
             ? { messages: workingMessages, stream: true, max_tokens: MAX_TOKENS }
             : { messages: workingMessages, tools: tools || TOOLS, stream: true, max_tokens: MAX_TOKENS });
-          const { finishedWithToolCalls, toolCalls, assistantContent } = await streamOneRound(upstream, send);
+          const { finishedWithToolCalls, toolCalls, assistantContent } = await streamOneRound(upstream, send, quiet);
           if (!finishedWithToolCalls || round === MAX_TOOL_ROUNDS) break;
 
           workingMessages = [...workingMessages, { role: 'assistant', content: assistantContent, tool_calls: toolCalls }];
@@ -607,7 +610,7 @@ async function handleChat(request, env) {
     return json({ error: 'Too many requests — please slow down and try again in a few minutes.' }, 429, request);
   }
 
-  const stream = streamToolLoop(env, messages, body.oneTools === true ? [...TOOLS, ...ONE_TOOLS] : TOOLS);
+  const stream = streamToolLoop(env, messages, body.oneTools === true ? [...TOOLS, ...ONE_TOOLS] : TOOLS, body.quiet === true);
 
   return new Response(stream, {
     status: 200,

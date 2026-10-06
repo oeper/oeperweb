@@ -43,7 +43,7 @@ tb = (D.parent / 'shared' / 'theme-boot.js').read_text(encoding='utf-8')
 themes = {m.group(1): {'dark': m.group(3) == 'true', 'swatch': m.group(2)} for m in re.finditer(r"'([a-z-]+)': \{\s*name: '[^']*',\s*swatch: '(#[0-9a-fA-F]{6})',\s*dark: (true|false)", tb)}
 assert len(themes) > 10 and 'material-dark' in themes, 'could not read the site themes from theme-boot.js'
 themes_js = '<script>window.ONE_SITE_THEMES = ' + json.dumps(themes) + ';</script>\n'
-site = shell.replace('<head>', '<head>' + themes_js, 1).replace('<!--CLOUD-->', '<script type="module">\n' + cloud.replace('</script', '<\\/script') + '\n</script>\n<script type="module" src="/shared/one-ai.js?v=38"></script>\n<script type="module">import "/shared/settings-sync.js?v=2";</script>')
+site = shell.replace('<head>', '<head>' + themes_js, 1).replace('<!--CLOUD-->', '<script type="module">\n' + cloud.replace('</script', '<\\/script') + '\n</script>\n<script type="module" src="/shared/one-ai.js?v=40"></script>\n<script type="module">import "/shared/settings-sync.js?v=2";</script>')
 (OUT / 'one-oeper.html').write_text(site, encoding='utf-8')
 # published copy: oeper.dev/one
 (D.parent / 'one' / 'index.html').write_text(site, encoding='utf-8')

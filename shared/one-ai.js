@@ -13,7 +13,7 @@
 // behavior change needs its `?v=N` bumped where one-src/bundle.py adds the script
 // tag (and in the published one/index.html).
 
-import { aiFeaturesEnabled, onAiFeaturesChange, askAI } from '/shared/ai-features.js?v=6';
+import { aiFeaturesEnabled, onAiFeaturesChange, askAI } from '/shared/ai-features.js?v=7';
 import { readFileForAI, isImage } from '/shared/ai-files.js?v=2';
 
 const MAX_CONTEXT_CHARS = 12000;
@@ -50,7 +50,7 @@ const ACTIONS = [
 const SYSTEM = 'You are epic AI, an assistant built into the one office suite, helping with the user\'s document. Do exactly what the instruction says. ' +
   'You can change the document directly. When the user asks you to rewrite, fix, shorten, expand, translate, reformat or otherwise change their text, put ONLY the new text between <<edit>> and <</edit>>. It replaces the selected text, or the whole document when nothing is selected, so include everything that should remain. ' +
   'When they ask you to continue or add more, put ONLY the new text between <<append>> and <</append>>. It is added after the selection, or at the end. Inside those tags use no quotation marks, no code fences, and simple markdown (# headings, - bullets, **bold**) only if the text already has that structure. Links are written [text](https://address) and a clickable button is [[Label]](https://address); only add them when the user asks or the text already has them. ' +
-  'You may add one short sentence before or after the tags, such as what you changed. When the user asks a question or wants an explanation or summary, answer it clearly and briefly WITHOUT any tags. This is an ongoing conversation, so use the earlier messages as context. Earlier assistant turns may contain a line in square brackets, such as [a notes page was made]: that is a note added by the app to record what was built. You never write such a line yourself. When asked to make or change something, always write the real block or text now, and never answer with only a bracketed line.';
+  'You may add one short sentence before or after the tags, such as what you changed. When the user asks a question or wants an explanation or summary, answer it clearly and briefly WITHOUT any tags. This is an ongoing conversation, so use the earlier messages as context. Do not draft or deliberate at length in your thinking: think for at most a few short sentences, then write the answer straight away. Earlier assistant turns may contain a line in square brackets, such as [a notes page was made]: that is a note added by the app to record what was built. You never write such a line yourself. When asked to make or change something, always write the real block or text now, and never answer with only a bracketed line.';
 
 const IDEA_SYSTEM = 'The user is in oneIdea, a note-taking app with real mind maps and free-form notes pages. You can build them directly, so do NOT dump a long plain list into a text answer when a map or structured notes would serve better. ' +
   'MIND MAP: put an indented outline between <<map title="Short title">> and <</map>>. Use "- " bullets with two spaces of indent per level. Aim for 3 to 7 main branches with 2 to 5 sub-topics each, going one or two levels deeper only where it helps. Keep every topic short (1 to 6 words, never a full sentence). A longer explanation goes on its own line directly under its topic, starting with "> " (it becomes that topic\'s note). Prefix a topic with [important], [question], [definition], [idea] or [ ] (a to-do) only when it really fits. ' +
@@ -667,7 +667,7 @@ const NOTES_ASK = /\b(notes?|study guide|study sheet|summar(y|ies|ise|ize))\b/i;
 const NOT_DEEP = /\b(brief|briefly|short|quick|quickly|few|tl;?dr|concise|one page|one-page|a paragraph|one paragraph|cornell|revision sheet|flash ?cards?|quiz|improve|fix|correct|expand|edit|rewrite|shorten|translate|reformat|continue|add (to|more|a|an|some)|tidy|clean up)\b/i;
 function wantsDeepNotes(q) { if (!DEEP_RE.test(q) && !(NOTES_ASK.test(q) && !NOT_DEEP.test(q))) return false; try { const fr = activeFrame(); return !!(fr && fr.contentWindow.OIAI); } catch { return false; } }
 // The model stream sometimes ends before it has written anything (a dropped connection, or the reply budget spent on thinking): ask again.
-async function askRetry(msgs, opts, tries = 2) {
+async function askRetry(msgs, opts, tries = 3) {
   let reply = '';
   for (let k = 0; k < tries && !reply.trim(); k++) { if (opts.signal && opts.signal.aborted) break; reply = await askAI(msgs, opts); }
   return reply;
@@ -886,9 +886,11 @@ async function runDeep(instruction) {
     th.box.hidden = true;
     const bits = [`${titles.length} notes pages`, extras.maps ? `${extras.maps} mind maps` : '', extras.diagrams ? `${extras.diagrams} diagrams` : '', extras.questions ? `a ${extras.questions} question quiz` : ''].filter(Boolean);
     const summary = `Wrote ${bits.join(', ')}: ${titles.join(', ')}.`;
-    am.b.textContent = titles.length ? summary + ' I also added a mind map of the whole set.' : 'Nothing could be written. Please try again.';
-    hist.push({ r: 'a', t: summary }); saveHist(); stored = true;
-    if (undos.length) doneBar(am, undos, `Added ${bits.join(', ')}.`, frameWin, 'section');
+    const missing = r.sections.length - titles.length;
+    const warn = missing > 0 ? ` ${missing} of the ${r.sections.length} planned sections could not be written because the AI connection dropped. Run "Make study notes" again to try the rest.` : '';
+    am.b.textContent = titles.length ? summary + ' I also added a mind map of the whole set.' + warn : 'Nothing could be written. Please try again.';
+    hist.push({ r: 'a', t: summary + warn }); saveHist(); stored = true;
+    if (undos.length) doneBar(am, undos, `Added ${bits.join(', ')}.` + (missing > 0 ? ` (${missing} sections missing)` : ''), frameWin, 'section');
   } catch (err) {
     if (!stored) { hist.pop(); saveHist(); }
     if (err.name === 'AbortError') { am.d.remove(); }
