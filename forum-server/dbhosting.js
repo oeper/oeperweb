@@ -760,6 +760,16 @@ module.exports = function setupDbHosting(app, ctx) {
     });
   });
 
+  // Public (no sign-in) so /status can show whether bot hosting is up. Aggregate counts only: no bot names, owners or ids.
+  // Registered before the router, which would otherwise ask for a sign-in.
+  app.get('/dbhosting/api/status', (req, res) => {
+    const st = loadState();
+    let running = 0, slots = 0;
+    for (const id of Object.keys(st)) if (rt(id).child) { running++; slots += slotsOf(st[id]); }
+    res.set('Cache-Control', 'no-store');
+    res.json({ ok: true, bots: Object.keys(st).length, running, slots, maxSlots: MAX_SLOTS });
+  });
+
   app.use('/dbhosting/api', router);
 
   // ── metering ─────────────────────────────────────────────────────

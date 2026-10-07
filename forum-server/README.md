@@ -110,6 +110,8 @@ running uploaded code on the phone. Non-owners only ever see their own bots.
   its own presence in code can override it. Python/other bots get `BOT_STATUS`,
   `BOT_ACTIVITY_TYPE`, `BOT_ACTIVITY_TEXT`, `BOT_ACTIVITIES` (JSON) as env vars at start.
   Routes: `GET`/`PUT /dbhosting/api/bots/:id/settings`.
+- **Public status.** `GET /dbhosting/api/status` needs no sign-in and returns only counts
+  (`bots`, `running`, `slots`, `maxSlots`, no names or owners); `status.html` shows it as "discord bot hosting".
 - **Credits & quota.** Bots are billed per minute while running: size (1, 2 or 4
   slots of `DBHOSTING_NODE_MEMORY_MB`, default 192 MB) × `DBHOSTING_CREDITS_PER_SLOT_DAY`
   (default 10 credits/day per slot). An account's quota is `added - used` in

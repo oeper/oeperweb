@@ -109,7 +109,7 @@
     <button class="btn" id="refreshBtn"><span class="material-symbols-rounded" style="font-size:16px;">refresh</span> check again</button>
   </div>
 
-  <p class="note">auto-rechecks every 30 seconds while this tab is open. a "down" file server means uploads, downloads, chat attachments, and the feed's images/videos will fail to load. a "down" AI server just means the AI chat page won't respond.</p>
+  <p class="note">auto-rechecks every 30 seconds while this tab is open. a "down" file server means uploads, downloads, chat attachments, and the feed's images/videos will fail to load. a "down" AI server just means the AI chat page won't respond. "discord bot hosting" runs on the file server, so if that one is down, hosted bots are offline too.</p>
 </div>
 
 <script type="module" data-cfasync="false">
@@ -123,6 +123,9 @@ const AI_ENDPOINT = 'https://oeper-ai.oeper.workers.dev';
 const SERVICES = [
   { name: 'file server', desc: 'uploads, downloads, chat attachments', url: SERVER_ENDPOINT + '/' },
   { name: 'AI server', desc: 'the chat model behind /ai', url: AI_ENDPOINT + '/' },
+  // the same phone server, but this also proves the bot manager inside it is loaded and shows how busy it is
+  { name: 'discord bot hosting', desc: 'runs hosted discord bots (/dbhosting)', url: SERVER_ENDPOINT + '/dbhosting/api/status',
+    extra: j => `${j.running} of ${j.bots} bot${j.bots === 1 ? '' : 's'} running · ${j.slots}/${j.maxSlots} slots in use` },
 ];
 
 const listEl = document.getElementById('statusList');
@@ -158,7 +161,9 @@ async function checkService(s, i) {
       dot.className = 'status-dot up';
       badge.className = 'status-badge up';
       badge.textContent = 'online';
-      detail.textContent = `${s.desc} · ${ms}ms`;
+      let more = '';
+      if (s.extra) { try { more = s.extra(await res.json()); } catch { more = ''; } }
+      detail.textContent = `${more || s.desc} · ${ms}ms`;
     } else {
       dot.className = 'status-dot down';
       badge.className = 'status-badge down';
