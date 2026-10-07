@@ -33,4 +33,5 @@ No build step for the site: plain HTML/CSS/JS, one `.html` per page.
 ## User preferences
 - Fix every problem mentioned in a message; pay attention to detail.
 - In chat, only say what I want them to do or what I know; keep it short.
+- Always push changes directly to `main` (standing permission); PR tools are unavailable in this repo's sessions.
 - Keep this file updated so the repo doesn't need re-reading.
