@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bot Hosting — oeper.dev</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
+<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./shared/fonts.css?v=1">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offset: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-success: #a6d9a8;
+    --md-sys-color-warning: #f3d27a;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    background-image: var(--oe-bg-image, none);
+    color: var(--md-sys-color-on-surface);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { position: relative; max-width: 720px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 24px; }
+  .header h1 {
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2rem, 5vw, 2.75rem); font-weight: 400;
+    margin-bottom: 10px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px;
+  }
+  .header h1 .material-symbols-rounded { font-size: 0.8em; color: var(--md-sys-color-primary); }
+  .subtitle { font-size: 14px; color: var(--md-sys-color-on-surface-variant); line-height: 1.6; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; padding: 8px 16px;
+    border-radius: 100px; border: none; background: var(--md-sys-color-surface-variant);
+    color: var(--md-sys-color-on-surface); cursor: pointer; font-family: inherit;
+  }
+  .btn:hover { background-color: var(--md-sys-state-hover, #3a4049); }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .btn .material-symbols-rounded { font-size: 18px; }
+  .btn.primary { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .btn.danger { color: var(--md-sys-color-error); }
+  .btn.small { padding: 6px 12px; font-size: 13px; }
+
+  .input {
+    flex: 1; min-width: 0; background: var(--md-sys-color-surface-variant); border: none; border-radius: 100px;
+    padding: 10px 18px; color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit;
+  }
+  .input:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
+
+  .message { background: var(--md-sys-color-surface); border-radius: 20px; padding: 28px 24px; text-align: center; font-size: 14px; line-height: 1.6; color: var(--md-sys-color-on-surface-variant); }
+  .message .material-symbols-rounded { display: block; font-size: 40px; color: var(--md-sys-color-primary); margin-bottom: 10px; }
+  .message .btn { margin-top: 16px; }
+
+  .system { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin: 0 0 16px; }
+  .new-row { display: flex; gap: 10px; margin-bottom: 20px; }
+
+  .bot-list { display: flex; flex-direction: column; gap: 12px; }
+  .bot { background: var(--md-sys-color-surface); border-radius: 20px; padding: 18px 22px; }
+  .bot-head { display: flex; align-items: center; gap: 14px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; background: var(--md-sys-color-outline-variant); }
+  .dot.running { background: var(--md-sys-color-success); box-shadow: 0 0 8px var(--md-sys-color-success); }
+  .dot.crashed { background: var(--md-sys-color-error); box-shadow: 0 0 8px var(--md-sys-color-error); }
+  .dot.installing, .dot.restarting { background: var(--md-sys-color-warning); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+  .bot-main { flex: 1; min-width: 0; }
+  .bot-name { font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
+  .bot-detail { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; overflow-wrap: anywhere; }
+  .badge { font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 100px; flex-shrink: 0; background: var(--md-sys-color-surface-variant); }
+  .badge.running { background: rgba(166,217,168,0.16); color: var(--md-sys-color-success); }
+  .badge.crashed { background: rgba(255,180,171,0.16); color: var(--md-sys-color-error); }
+  .badge.installing, .badge.restarting { background: rgba(243,210,122,0.16); color: var(--md-sys-color-warning); }
+  .bot-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .bot-actions .spacer { flex: 1; }
+
+  .panel { margin-top: 16px; border-top: 1px solid var(--md-sys-color-outline); padding-top: 14px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .tab { background: none; border: none; color: var(--md-sys-color-on-surface-variant); font: inherit; font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 100px; cursor: pointer; }
+  .tab.active { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); }
+  pre.log {
+    background: var(--md-sys-color-background); border-radius: 12px; padding: 12px; font-size: 12px; line-height: 1.5;
+    max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  }
+  .row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; }
+  .row .name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: ui-monospace, Menlo, monospace; }
+  .row .meta { color: var(--md-sys-color-on-surface-variant); font-size: 12px; }
+  .icon-btn { background: none; border: none; color: var(--md-sys-color-on-surface-variant); cursor: pointer; padding: 4px; border-radius: 50%; display: inline-flex; }
+  .icon-btn:hover { background: var(--md-sys-color-surface-variant); }
+  .icon-btn .material-symbols-rounded { font-size: 20px; }
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .env-add { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .env-add .input { border-radius: 12px; padding: 8px 12px; font-size: 13px; }
+  textarea.editor {
+    width: 100%; min-height: 240px; background: var(--md-sys-color-background); border: none; border-radius: 12px; padding: 12px;
+    color: var(--md-sys-color-on-surface); font-size: 12px; line-height: 1.5; resize: vertical; margin: 8px 0;
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  }
+  .hint { font-size: 12px; color: var(--md-sys-color-on-surface-variant); line-height: 1.5; margin-top: 8px; }
+  .note { font-size: 13px; color: var(--md-sys-color-on-surface-variant); line-height: 1.6; margin-top: 28px; }
+  .note code, .hint code { background: var(--md-sys-color-surface-variant); padding: 1px 6px; border-radius: 6px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <h1><span class="material-symbols-rounded">smart_toy</span>bot hosting</h1>
+    <p class="subtitle">run discord bots (node.js or python) on the oeper.dev server. upload your bot, add its token, press start — it restarts itself if it crashes and comes back after a server restart.</p>
+  </header>
+
+  <div id="view"></div>
+
+  <p class="note">
+    put your bot token in the <b>env</b> tab (e.g. <code>DISCORD_TOKEN</code>) and read it from the environment in your code — never paste it into a file. bots only see their own variables, never the server's. a bot's entry file is found automatically: <code>package.json</code> start script, then <code>index.js</code> / <code>bot.js</code> / <code>main.js</code>, then <code>main.py</code> / <code>bot.py</code>. zip uploads are extracted for you; press <b>install</b> to fetch <code>package.json</code> / <code>requirements.txt</code> dependencies.
+  </p>
+</div>
+
+<script type="module" data-cfasync="false">
+import { SERVER_ENDPOINT, getCurrentUser, onAccountChange, signIn } from './shared/account.js?v=37';
+import { mountTopNav } from './shared/topnav.js?v=41';
+import { mountFooter } from './shared/footer.js?v=6';
+import { oeConfirm, oePrompt, oeAlert } from './shared/dialog.js?v=4';
+import { revealStatic } from './shared/motion.js?v=3';
+mountTopNav();
+mountFooter();
+revealStatic(document.querySelector('.page'));
+
+const API = SERVER_ENDPOINT + '/dbhosting/api';
+const view = document.getElementById('view');
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+let bots = [];
+let system = null;
+let maxBots = 0;
+// Which bot's panel is open and on which tab, plus unsaved editor/log state —
+// kept outside the DOM so the periodic refresh doesn't wipe what's being typed.
+let openId = null;
+let openTab = 'logs';
+let editing = null; // { id, path }
+let pollTimer = null;
+let logTimer = null;
+let state = 'loading'; // loading | signedout | forbidden | offline | ready
+
+async function api(path, { method = 'GET', body, headers, raw } = {}) {
+  const user = getCurrentUser();
+  if (!user) throw Object.assign(new Error('sign in first'), { status: 401 });
+  const idToken = await user.getIdToken();
+  const res = await fetch(API + path, {
+    method,
+    headers: { Authorization: 'Bearer ' + idToken, ...(body && !raw ? { 'Content-Type': 'application/json' } : {}), ...(headers || {}) },
+    body: raw ? body : body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { msg = (await res.json()).error || msg; } catch {}
+    throw Object.assign(new Error(msg), { status: res.status });
+  }
+  return res.json();
+}
+
+function fmtUptime(ms) {
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return s + 's';
+  if (s < 3600) return Math.floor(s / 60) + 'm';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ' + Math.floor((s % 3600) / 60) + 'm';
+  return Math.floor(s / 86400) + 'd ' + Math.floor((s % 86400) / 3600) + 'h';
+}
+function fmtSize(n) { return n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' B'; }
+
+function showMessage(icon, html, btn) {
+  view.innerHTML = `<div class="message"><span class="material-symbols-rounded">${icon}</span>${html}${btn ? `<br><button class="btn primary" id="msgBtn">${btn.label}</button>` : ''}</div>`;
+  if (btn) document.getElementById('msgBtn').addEventListener('click', btn.onClick);
+}
+
+function stopTimers() { clearInterval(pollTimer); clearInterval(logTimer); pollTimer = logTimer = null; }
+
+async function refresh() {
+  try {
+    const data = await api('/bots');
+    bots = data.bots; system = data.system; maxBots = data.maxBots;
+    state = 'ready';
+    render();
+  } catch (e) {
+    if (e.status === 401) state = 'signedout';
+    else if (e.status === 403) state = 'forbidden';
+    else state = 'offline';
+    stopTimers();
+    renderState(e);
+  }
+}
+
+function renderState(e) {
+  if (state === 'signedout') showMessage('login', 'sign in to manage your bots.', { label: 'sign in', onClick: () => signIn() });
+  else if (state === 'forbidden') showMessage('lock', 'bot hosting is limited to approved accounts. ask an owner to add your email.');
+  else if (state === 'offline') showMessage('cloud_off', `couldn't reach the server (${esc(e && e.message || 'offline')}). it may be down — check the <a href="/status" style="color:var(--md-sys-color-primary)">status page</a>.`, { label: 'try again', onClick: refresh });
+}
+
+function detailText(b) {
+  const up = b.status === 'running' && b.startedAt ? ' · up ' + fmtUptime(Date.now() - b.startedAt) : '';
+  return [b.entry ? esc(b.entry) : 'no entry file yet', b.restarts ? b.restarts + ' restart' + (b.restarts > 1 ? 's' : '') : ''].filter(Boolean).join(' · ') + up;
+}
+
+function botCard(b) {
+  const busy = b.status === 'installing';
+  const detail = detailText(b);
+  const isOpen = openId === b.id;
+  return `
+  <div class="bot" data-id="${esc(b.id)}">
+    <div class="bot-head">
+      <div class="dot ${b.status}"></div>
+      <div class="bot-main"><div class="bot-name">${esc(b.name)}</div><div class="bot-detail">${detail}</div></div>
+      <div class="badge ${b.status}">${b.status}</div>
+    </div>
+    <div class="bot-actions">
+      ${b.status === 'running' || b.status === 'restarting'
+        ? `<button class="btn small" data-act="restart" ${busy ? 'disabled' : ''}><span class="material-symbols-rounded">restart_alt</span>restart</button>
+           <button class="btn small" data-act="stop"><span class="material-symbols-rounded">stop</span>stop</button>`
+        : `<button class="btn small primary" data-act="start" ${busy ? 'disabled' : ''}><span class="material-symbols-rounded">play_arrow</span>start</button>`}
+      <button class="btn small" data-act="install" ${busy ? 'disabled' : ''}><span class="material-symbols-rounded">download</span>install</button>
+      <button class="btn small" data-act="manage"><span class="material-symbols-rounded">${isOpen ? 'expand_less' : 'tune'}</span>${isOpen ? 'close' : 'manage'}</button>
+      <span class="spacer"></span>
+      <button class="btn small danger" data-act="delete"><span class="material-symbols-rounded">delete</span></button>
+    </div>
+    ${isOpen ? `<div class="panel" id="panel"></div>` : ''}
+  </div>`;
+}
+
+let lastSig = '';
+function render(force) {
+  if (state !== 'ready') return;
+  // Don't rebuild the list under an open editor — it would eat unsaved text.
+  if (editing && document.getElementById('editorBox')) return;
+  // Nothing but uptime changed: patch the text in place so the open log/file
+  // panel isn't torn down (and its scroll position lost) every few seconds.
+  const sig = JSON.stringify(bots) + openId + openTab;
+  if (!force && sig === lastSig && document.querySelector('.bot-list')) {
+    bots.forEach(b => { const el = view.querySelector(`.bot[data-id="${b.id}"] .bot-detail`); if (el) el.innerHTML = detailText(b); });
+    return;
+  }
+  lastSig = sig;
+  const sys = system ? `server up ${fmtUptime(system.uptime * 1000)} · ${(system.freeMem / 1073741824).toFixed(1)} GB free memory · load ${system.load.toFixed(2)} · ${bots.length}/${maxBots} bots` : '';
+  view.innerHTML = `
+    <p class="system">${sys}</p>
+    <div class="new-row">
+      <input class="input" id="newName" maxlength="40" placeholder="new bot name" autocomplete="off">
+      <button class="btn primary" id="newBtn"><span class="material-symbols-rounded">add</span>create</button>
+    </div>
+    <div class="bot-list">${bots.length ? bots.map(botCard).join('') : '<div class="message">no bots yet — create one above.</div>'}</div>`;
+  document.getElementById('newBtn').addEventListener('click', createBot);
+  document.getElementById('newName').addEventListener('keydown', e => { if (e.key === 'Enter') createBot(); });
+  if (openId) renderPanel();
+}
+
+async function createBot() {
+  const input = document.getElementById('newName');
+  const name = input.value.trim();
+  if (!name) { input.focus(); return; }
+  try {
+    const b = await api('/bots', { method: 'POST', body: { name } });
+    openId = b.id; openTab = 'files';
+    await refresh();
+  } catch (e) { oeAlert(e.message); }
+}
+
+view.addEventListener('click', async e => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const card = btn.closest('.bot');
+  const id = card && card.dataset.id;
+  const act = btn.dataset.act;
+  if (!id) return;
+  try {
+    if (act === 'manage') {
+      openId = openId === id ? null : id; openTab = 'logs'; editing = null;
+      render(true);
+      return;
+    }
+    if (act === 'delete') {
+      if (!await oeConfirm('delete this bot and all of its files? this can\'t be undone.', { okLabel: 'delete', danger: true })) return;
+      await api('/bots/' + id, { method: 'DELETE' });
+      if (openId === id) openId = null;
+    } else {
+      btn.disabled = true;
+      await api(`/bots/${id}/${act}`, { method: 'POST' });
+      if (act === 'install') { openId = id; openTab = 'logs'; }
+    }
+    await refresh();
+  } catch (err) { oeAlert(err.message); await refresh(); }
+});
+
+// ── manage panel ─────────────────────────────────────────────────
+function renderPanel() {
+  const panel = document.getElementById('panel');
+  if (!panel) return;
+  panel.innerHTML = `
+    <div class="tabs">
+      ${['logs', 'files', 'env'].map(t => `<button class="tab ${t === openTab ? 'active' : ''}" data-tab="${t}">${t}</button>`).join('')}
+    </div>
+    <div id="tabBody"></div>`;
+  panel.querySelectorAll('[data-tab]').forEach(t => t.addEventListener('click', () => { openTab = t.dataset.tab; editing = null; renderPanel(); }));
+  clearInterval(logTimer); logTimer = null;
+  if (openTab === 'logs') renderLogs();
+  else if (openTab === 'files') renderFiles();
+  else renderEnv();
+}
+
+async function renderLogs() {
+  const body = document.getElementById('tabBody');
+  body.innerHTML = `<div class="tools"><button class="btn small" id="clearLog"><span class="material-symbols-rounded">delete_sweep</span>clear</button></div><pre class="log" id="logBox">loading…</pre>`;
+  const box = document.getElementById('logBox');
+  const id = openId;
+  const load = async () => {
+    try {
+      const { text } = await api(`/bots/${id}/logs`);
+      if (openId !== id || openTab !== 'logs' || !document.getElementById('logBox')) return;
+      const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+      box.textContent = text || 'no output yet.';
+      if (atBottom) box.scrollTop = box.scrollHeight;
+    } catch {}
+  };
+  await load();
+  box.scrollTop = box.scrollHeight;
+  logTimer = setInterval(load, 3000);
+  document.getElementById('clearLog').addEventListener('click', async () => { await api(`/bots/${id}/logs`, { method: 'DELETE' }); load(); });
+}
+
+async function renderFiles() {
+  const body = document.getElementById('tabBody');
+  const id = openId;
+  if (editing) return renderEditor(body);
+  body.innerHTML = 'loading…';
+  let files = [];
+  try { files = (await api(`/bots/${id}/files`)).files; } catch (e) { body.textContent = e.message; return; }
+  body.innerHTML = `
+    <div class="tools">
+      <label class="btn small" style="cursor:pointer"><span class="material-symbols-rounded">upload</span>upload<input type="file" id="fileInput" multiple hidden></label>
+      <button class="btn small" id="newFile"><span class="material-symbols-rounded">note_add</span>new file</button>
+    </div>
+    ${files.length ? files.map(f => `
+      <div class="row" data-path="${esc(f.path)}">
+        <span class="name">${esc(f.path)}</span><span class="meta">${fmtSize(f.size)}</span>
+        <button class="icon-btn" data-edit title="edit"><span class="material-symbols-rounded">edit</span></button>
+        <button class="icon-btn" data-del title="delete"><span class="material-symbols-rounded">close</span></button>
+      </div>`).join('') : '<p class="hint">no files yet. upload your bot\'s files (or a .zip), or create one here.</p>'}
+    <p class="hint" id="uploadNote"></p>`;
+  const note = document.getElementById('uploadNote');
+  document.getElementById('fileInput').addEventListener('change', async e => {
+    const picked = [...e.target.files];
+    if (!picked.length) return;
+    const form = new FormData();
+    picked.forEach(f => form.append('files', f));
+    note.textContent = 'uploading…';
+    try {
+      const out = await api(`/bots/${id}/upload`, { method: 'POST', body: form, raw: true });
+      if (out.notes && out.notes.length) await oeAlert(out.notes.join('\n'));
+      await refresh();
+      renderFiles();
+    } catch (err) { note.textContent = err.message; }
+  });
+  document.getElementById('newFile').addEventListener('click', async () => {
+    const p = await oePrompt('file name (e.g. index.js or commands/ping.js)');
+    if (!p || !p.trim()) return;
+    editing = { id, path: p.trim().replace(/^\/+/, ''), content: '' };
+    renderFiles();
+  });
+  body.querySelectorAll('.row').forEach(row => {
+    const p = row.dataset.path;
+    row.querySelector('[data-edit]').addEventListener('click', async () => {
+      try {
+        const { content } = await api(`/bots/${id}/file?path=${encodeURIComponent(p)}`);
+        editing = { id, path: p, content };
+        renderFiles();
+      } catch (e) { oeAlert(e.message); }
+    });
+    row.querySelector('[data-del]').addEventListener('click', async () => {
+      if (!await oeConfirm(`delete ${p}?`, { okLabel: 'delete', danger: true })) return;
+      await api(`/bots/${id}/file?path=${encodeURIComponent(p)}`, { method: 'DELETE' });
+      renderFiles();
+    });
+  });
+}
+
+function renderEditor(body) {
+  const { id, path, content } = editing;
+  body.innerHTML = `
+    <div class="row"><span class="name">${esc(path)}</span></div>
+    <div id="editorBox"><textarea class="editor" id="editorText" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea></div>
+    <div class="tools"><button class="btn small primary" id="saveFile"><span class="material-symbols-rounded">save</span>save</button><button class="btn small" id="cancelFile">close</button></div>
+    <p class="hint">saved changes take effect the next time the bot starts — press restart.</p>`;
+  const ta = document.getElementById('editorText');
+  ta.value = content;
+  document.getElementById('cancelFile').addEventListener('click', () => { editing = null; renderFiles(); });
+  document.getElementById('saveFile').addEventListener('click', async () => {
+    try {
+      await api(`/bots/${id}/file?path=${encodeURIComponent(path)}`, { method: 'PUT', body: ta.value, raw: true, headers: { 'Content-Type': 'text/plain' } });
+      editing = null;
+      await refresh();
+      renderFiles();
+    } catch (e) { oeAlert(e.message); }
+  });
+}
+
+async function renderEnv() {
+  const body = document.getElementById('tabBody');
+  const id = openId;
+  body.innerHTML = 'loading…';
+  let keys = [];
+  try { keys = (await api(`/bots/${id}/env`)).keys; } catch (e) { body.textContent = e.message; return; }
+  body.innerHTML = `
+    ${keys.length ? keys.map(k => `
+      <div class="row" data-key="${esc(k)}"><span class="name">${esc(k)}</span><span class="meta">set</span>
+        <button class="icon-btn" data-del title="remove"><span class="material-symbols-rounded">close</span></button></div>`).join('') : '<p class="hint">no variables yet. add your bot token below.</p>'}
+    <div class="env-add">
+      <input class="input" id="envKey" placeholder="DISCORD_TOKEN" autocomplete="off" autocapitalize="characters" style="flex:1 1 140px">
+      <input class="input" id="envVal" type="password" placeholder="value" autocomplete="new-password" style="flex:2 1 200px">
+      <button class="btn small primary" id="envSave"><span class="material-symbols-rounded">save</span>save</button>
+    </div>
+    <p class="hint">values are write-only — once saved they can't be viewed again, only replaced or removed. restart the bot to apply changes.</p>`;
+  document.getElementById('envSave').addEventListener('click', async () => {
+    const k = document.getElementById('envKey').value.trim();
+    const v = document.getElementById('envVal').value;
+    if (!k || !v) return;
+    try {
+      await api(`/bots/${id}/env`, { method: 'PUT', body: { set: { [k]: v } } });
+      await refresh();
+    } catch (e) { oeAlert(e.message); }
+  });
+  body.querySelectorAll('.row').forEach(row => row.querySelector('[data-del]').addEventListener('click', async () => {
+    if (!await oeConfirm(`remove ${row.dataset.key}?`, { okLabel: 'remove', danger: true })) return;
+    await api(`/bots/${id}/env`, { method: 'PUT', body: { remove: [row.dataset.key] } });
+    await refresh();
+  }));
+}
+
+onAccountChange(user => {
+  stopTimers();
+  if (!user) { state = 'signedout'; renderState(); return; }
+  refresh();
+  // Light refresh so status/uptime stay current; skipped while typing in an
+  // editor or env field so nothing gets wiped mid-edit.
+  pollTimer = setInterval(() => {
+    if (document.hidden || editing) return;
+    const a = document.activeElement;
+    if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
+    refresh();
+  }, 5000);
+});
+showMessage('hourglass_empty', 'loading…');
+</script>
+</body>
+</html>

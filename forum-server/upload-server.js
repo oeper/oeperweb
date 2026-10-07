@@ -309,6 +309,12 @@ const oneSync = require('./one-sync')(app, {
   publicBaseUrl: PUBLIC_BASE_URL,
 });
 
+// Discord bot hosting for oeper.dev/dbhosting — see dbhosting.js.
+const dbhosting = require('./dbhosting')(app, {
+  verifyFirebaseToken, isOwner, loadJson, saveJson,
+  dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname,
+});
+
 // The exact same bytes uploaded twice (a feed image also sent as a chat
 // attachment, the same voice note in two conversations, ...) only takes up
 // disk space once, where the filesystem allows it — see dedupe.js.
@@ -779,6 +785,7 @@ app.listen(PORT, () => console.log(
   `  projects           -> ${path.resolve(PROJECT_DIR)}\n` +
   `  chat attachments   -> ${path.resolve(MESSAGE_DIR)}\n` +
   `  trash              -> ${storage.trashDir}\n` +
+  `  bot hosting        -> ${dbhosting.botsDir} (${dbhosting.restored} bot(s) restored)\n` +
   `  AI moderation      -> ${storage.moderationConfigured ? 'configured (mode: ' + storage.moderationMode() + ')' : 'not configured — set MODERATION_URL and MODERATION_KEY in .env to enable'}\n` +
   (DISCORD_REPORT_WEBHOOK
     ? '  reporting          -> Discord webhook configured'

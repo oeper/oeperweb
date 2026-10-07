@@ -82,6 +82,23 @@ everyone's for moderation) and the forum:
   (default `/storage/emulated/0/Download/messages`), capped by
   `MAX_MESSAGE_BYTES` (default 20MB).
 
+## Discord bot hosting (`/dbhosting`)
+
+`dbhosting.js` runs Discord bots (Node.js or Python) as child processes of this
+server, managed from the **oeper.dev/dbhosting** page. It only accepts the
+owner accounts (plus any emails in `DBHOSTING_ALLOWED_EMAILS`, comma-separated)
+because hosting a bot means running uploaded code on the phone.
+
+- Bots live in `dbhosting-bots/<id>/` (gitignored); each gets its own `.env`
+  (write-only from the page) and sees only that, never this server's env.
+- The entry file is detected: `package.json` start script, then `index.js` /
+  `bot.js` / `main.js`, then `main.py` / `bot.py`. Zip uploads are extracted
+  (needs `pkg install unzip`); "install" runs `npm install` / `pip install -r`.
+- Crashed bots restart with backoff (gives up after 8 quick crashes). Bots that
+  were running when the server stopped are started again on boot.
+- Limits: `DBHOSTING_MAX_BOTS` (10), `DBHOSTING_NODE_MEMORY_MB` (192 per Node bot),
+  `DBHOSTING_DIR` to move the bots folder.
+
 ## Storage console, quotas, trash & AI moderation
 
 Everything below lives in `storage-admin.js` and is managed from the
