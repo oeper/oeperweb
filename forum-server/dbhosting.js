@@ -20,7 +20,15 @@ const { spawn, spawnSync } = require('child_process');
 const multer = require('multer');
 const express = require('express');
 
-const MAX_BOTS = Number(process.env.DBHOSTING_MAX_BOTS) || 10;
+const MAX_BOTS = Number(process.env.DBHOSTING_MAX_BOTS) || 15;
+const MAX_BOTS_PER_USER = Number(process.env.DBHOSTING_MAX_BOTS_PER_USER) || 3;
+// A "slot" is one bot-sized chunk of the phone's RAM (NODE_MEMORY_MB below).
+// MAX_SLOTS is how many can run at once across everyone; SLOT_CREDITS_PER_DAY
+// is the price of one running slot. Bot size is 1, 2 or 4 slots.
+const MAX_SLOTS = Number(process.env.DBHOSTING_MAX_SLOTS) || 20;
+const SLOT_CREDITS_PER_DAY = Number(process.env.DBHOSTING_CREDITS_PER_SLOT_DAY) || 10;
+const SIZES = [1, 2, 4];
+const TICK_MS = Number(process.env.DBHOSTING_TICK_MS) || 60 * 1000;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const MAX_EDIT_BYTES = 1024 * 1024;
 const MAX_LOG_BYTES = 2 * 1024 * 1024;
@@ -33,10 +41,36 @@ const NODE_ENTRIES = ['index.js', 'bot.js', 'main.js', 'app.js', 'src/index.js',
 const PY_ENTRIES = ['main.py', 'bot.py', 'index.py', 'app.py', 'src/main.py', 'src/bot.py'];
 
 module.exports = function setupDbHosting(app, ctx) {
-  const { verifyFirebaseToken, isOwner, loadJson, saveJson, dataDir } = ctx;
+  const { verifyFirebaseToken, isOwner, loadJson, saveJson, dataDir, billingEmail, firebaseProjectId } = ctx;
   const allowed = (process.env.DBHOSTING_ALLOWED_EMAILS || '')
     .split(',').map(s => s.trim()).filter(Boolean);
-  const canHost = email => !!email && (isOwner(email) || allowed.includes(email));
+
+  // Hosting credits are tracked here, not in Firestore: this server has no
+  // Firebase admin access, so it can't spend a user's oeper.dev balance. A
+  // user "tops up" by sending oeper.dev credits to billingEmail; /credits/claim
+  // verifies that transfer and adds it to their ledger entry. Owners can also
+  // allocate credits directly. `added - used` is the account's remaining
+  // quota — when it runs out their bots are stopped.
+  //   { [email]: { approved, added, used, lastClaimKey, history: [...] } }
+  const ledgerFile = path.join(dataDir, 'dbhosting-credits.json');
+  const loadLedger = () => loadJson(ledgerFile);
+  const saveLedger = l => saveJson(ledgerFile, l);
+  const round4 = n => Math.round(n * 10000) / 10000;
+  const acctOf = (led, email) => led[email] || (led[email] = { approved: false, added: 0, used: 0, lastClaimKey: null, history: [] });
+  const remainingOf = a => round4(((a && a.added) || 0) - ((a && a.used) || 0));
+  const slotsOf = st => (st && SIZES.includes(st.slots) ? st.slots : 1);
+  const perDayOf = st => slotsOf(st) * SLOT_CREDITS_PER_DAY;
+  // Owner-created bots (and any from before billing existed) are free.
+  const isFree = st => !st || !st.owner || isOwner(st.owner);
+  function pushHistory(a, entry) {
+    a.history = (a.history || []).concat({ at: Date.now(), ...entry }).slice(-50);
+  }
+  const canHost = email => {
+    if (!email) return false;
+    if (isOwner(email) || allowed.includes(email)) return true;
+    const a = loadLedger()[email];
+    return !!(a && a.approved);
+  };
 
   const botsDir = process.env.DBHOSTING_DIR ? path.resolve(process.env.DBHOSTING_DIR) : path.join(dataDir, 'dbhosting-bots');
   const stateFile = path.join(dataDir, 'dbhosting-state.json');
@@ -107,7 +141,7 @@ module.exports = function setupDbHosting(app, ctx) {
   function botEnv(id) {
     const base = {};
     for (const k of ['PATH', 'HOME', 'TMPDIR', 'PREFIX', 'LANG', 'TERM', 'TZ', 'SSL_CERT_FILE']) if (process.env[k]) base[k] = process.env[k];
-    return { ...base, NODE_OPTIONS: `--max-old-space-size=${NODE_MEMORY_MB}`, PYTHONUNBUFFERED: '1', ...readEnv(id) };
+    return { ...base, NODE_OPTIONS: `--max-old-space-size=${NODE_MEMORY_MB * slotsOf(loadState()[id])}`, PYTHONUNBUFFERED: '1', ...readEnv(id) };
   }
 
   function isAlive(pid) { try { process.kill(pid, 0); return true; } catch { return false; } }
@@ -118,6 +152,21 @@ module.exports = function setupDbHosting(app, ctx) {
     if (r.installing) return { ok: false, error: 'Dependencies are still installing' };
     const entry = detectEntry(id);
     if (!entry) return { ok: false, error: 'No entry file found. Upload an index.js / bot.js / main.py, or a package.json with a start script.' };
+
+    const botState = loadState()[id] || {};
+    if (!isFree(botState)) {
+      const need = perDayOf(botState) / 24; // at least one hour must be affordable
+      if (remainingOf(loadLedger()[botState.owner]) < need) {
+        // Remember it, so topping up starts it again without a click.
+        const st = loadState();
+        if (st[id]) { st[id].desired = false; st[id].autoResume = true; delete st[id].pid; saveState(st); }
+        appendLog(id, `[host] ${new Date().toISOString()} not started: out of hosting credits\n`);
+        return { ok: false, error: 'Not enough hosting credits. Top up and it will start automatically.' };
+      }
+    }
+    let slotsRunning = 0;
+    for (const [oid, orr] of runtime) if (orr.child && oid !== id) slotsRunning += slotsOf(loadState()[oid]);
+    if (slotsRunning + slotsOf(botState) > MAX_SLOTS) return { ok: false, error: 'The server is full right now — try again later.' };
 
     clearTimeout(r.timer);
     r.stopping = false;
@@ -139,7 +188,7 @@ module.exports = function setupDbHosting(app, ctx) {
     r.startedAt = Date.now();
 
     const state = loadState();
-    if (state[id]) { state[id].desired = true; state[id].pid = child.pid; saveState(state); }
+    if (state[id]) { state[id].desired = true; delete state[id].autoResume; state[id].pid = child.pid; saveState(state); }
 
     child.on('error', err => appendLog(id, `[host] failed to launch ${entry.cmd}: ${err.message} (is it installed? pkg install nodejs python)\n`));
     child.on('exit', (code, signal) => {
@@ -172,7 +221,7 @@ module.exports = function setupDbHosting(app, ctx) {
     const r = rt(id);
     clearTimeout(r.timer);
     const st = loadState();
-    if (st[id]) { st[id].desired = false; delete st[id].pid; saveState(st); }
+    if (st[id]) { st[id].desired = false; delete st[id].autoResume; delete st[id].pid; saveState(st); }
     r.quickCrashes = 0;
     r.crashed = false;
     const child = r.child;
@@ -199,6 +248,8 @@ module.exports = function setupDbHosting(app, ctx) {
     if (r.installing) return 'installing';
     if (r.child) return 'running';
     if (r.timer && loadState()[id] && loadState()[id].desired) return 'restarting';
+    const s0 = loadState()[id];
+    if (s0 && s0.autoResume) return 'nocredits';
     if (r.crashed) return 'crashed';
     return 'stopped';
   }
@@ -245,7 +296,10 @@ module.exports = function setupDbHosting(app, ctx) {
   };
   const withBot = (req, res, next) => {
     const id = req.params.id;
-    if (!ID_PATTERN.test(id) || !loadState()[id]) return res.status(404).json({ error: 'No such bot' });
+    const st = loadState()[id];
+    // Owners can manage every bot; everyone else only their own (404, not
+    // 403, so other people's bot ids aren't confirmable).
+    if (!ID_PATTERN.test(id) || !st || (!isOwner(req.user.email) && st.owner !== req.user.email)) return res.status(404).json({ error: 'No such bot' });
     req.botId = id;
     next();
   };
@@ -259,6 +313,7 @@ module.exports = function setupDbHosting(app, ctx) {
     return {
       id,
       name: st.name,
+      owner: st.owner || null,
       status: status(id),
       pid: r.child ? r.child.pid : null,
       startedAt: r.startedAt,
@@ -266,31 +321,171 @@ module.exports = function setupDbHosting(app, ctx) {
       entry: entry ? entry.label : null,
       envKeys: Object.keys(readEnv(id)),
       createdAt: st.createdAt,
+      slots: slotsOf(st),
+      perDay: isFree(st) ? 0 : perDayOf(st),
+      free: isFree(st),
+    };
+  }
+
+  // What this account is spending right now: only its running (or about to
+  // be restarted) bots count, and free bots cost nothing.
+  function accountInfo(email) {
+    const st = loadState();
+    const a = loadLedger()[email];
+    const exempt = isOwner(email);
+    let burn = 0;
+    for (const [id, s] of Object.entries(st)) {
+      if (s.owner !== email || isFree(s)) continue;
+      if (rt(id).child || s.desired) burn += perDayOf(s);
+    }
+    const remaining = remainingOf(a);
+    return {
+      email,
+      exempt,
+      remaining,
+      added: round4((a && a.added) || 0),
+      used: round4((a && a.used) || 0),
+      perDay: burn,
+      hoursLeft: !exempt && burn > 0 ? Math.max(0, remaining / (burn / 24)) : null,
+      history: ((a && a.history) || []).slice(-5).reverse(),
     };
   }
 
   router.get('/bots', (req, res) => {
+    const email = req.user.email;
+    const all = isOwner(email);
     const st = loadState();
     const os = require('os');
+    let usedSlots = 0;
+    for (const [id, s] of Object.entries(st)) if (rt(id).child) usedSlots += slotsOf(s);
     res.json({
-      bots: Object.keys(st).map(id => describe(id, st[id])),
-      maxBots: MAX_BOTS,
+      bots: Object.keys(st).filter(id => all || st[id].owner === email).map(id => describe(id, st[id])),
+      maxBots: all ? MAX_BOTS : MAX_BOTS_PER_USER,
+      maxSlots: MAX_SLOTS,
+      usedSlots,
+      account: accountInfo(email),
+      isOwner: all,
+      billingEmail: billingEmail || null,
+      rates: { slotPerDay: SLOT_CREDITS_PER_DAY, slotMemoryMB: NODE_MEMORY_MB, sizes: SIZES },
       system: { uptime: Math.round(os.uptime()), freeMem: os.freemem(), totalMem: os.totalmem(), load: os.loadavg()[0] },
     });
   });
 
   router.post('/bots', (req, res) => {
+    const email = req.user.email;
     const name = String((req.body && req.body.name) || '').trim();
     if (!name || name.length > 40) return res.status(400).json({ error: 'Give the bot a name (1–40 characters).' });
+    const slots = req.body && req.body.slots != null ? Number(req.body.slots) : 1;
+    if (!SIZES.includes(slots)) return res.status(400).json({ error: 'Pick a size: small, medium or large.' });
     const st = loadState();
-    if (Object.keys(st).length >= MAX_BOTS) return res.status(400).json({ error: `Limit of ${MAX_BOTS} bots reached.` });
+    if (Object.keys(st).length >= MAX_BOTS) return res.status(400).json({ error: `The server's limit of ${MAX_BOTS} bots is reached.` });
+    if (!isOwner(email) && Object.values(st).filter(s => s.owner === email).length >= MAX_BOTS_PER_USER) {
+      return res.status(400).json({ error: `Limit of ${MAX_BOTS_PER_USER} bots per account reached.` });
+    }
     let base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'bot';
     let id = base;
     for (let n = 2; st[id]; n++) id = `${base}-${n}`;
     fs.mkdirSync(botDir(id), { recursive: true });
-    st[id] = { name, createdAt: Date.now(), desired: false };
+    st[id] = { name, owner: email, slots, createdAt: Date.now(), desired: false };
     saveState(st);
     res.json(describe(id, st[id]));
+  });
+
+  // Changing size changes the price and (for Node bots) the memory cap, both
+  // from the next start.
+  router.post('/bots/:id/size', withBot, (req, res) => {
+    const slots = Number(req.body && req.body.slots);
+    if (!SIZES.includes(slots)) return res.status(400).json({ error: 'Pick a size: small, medium or large.' });
+    const st = loadState();
+    st[req.botId].slots = slots;
+    saveState(st);
+    res.json({ ok: true, restartNeeded: !!rt(req.botId).child });
+  });
+
+  // ── hosting credits ──────────────────────────────────────────────
+  // Verifies the caller's latest oeper.dev credit transfer to billingEmail and
+  // adds it to their hosting balance. Trust comes from firestore.rules: the
+  // sender's users/{email} doc can only gain lastTransfer* fields in the same
+  // atomic write that actually moves the credits, so (unlike the
+  // creditTransfers log) they can't be forged. Only the latest transfer is
+  // visible there, so the page claims right after every top-up.
+  router.post('/credits/claim', async (req, res) => {
+    const email = req.user.email;
+    if (!billingEmail) return res.status(503).json({ error: 'Top-ups are not configured on this server.' });
+    let doc;
+    try {
+      const r = await fetch(
+        `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${encodeURIComponent(email)}`,
+        { headers: { Authorization: req.headers.authorization }, signal: AbortSignal.timeout(10000) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      doc = await r.json();
+    } catch (e) {
+      return res.status(502).json({ error: "Couldn't check your transfers: " + e.message });
+    }
+    const f = doc.fields || {};
+    const num = v => (v ? Number(v.integerValue != null ? v.integerValue : v.doubleValue) : NaN);
+    const to = f.lastTransferTo && f.lastTransferTo.stringValue;
+    const net = num(f.lastTransferNet);
+    const at = f.lastTransferAt && f.lastTransferAt.timestampValue;
+    // Everything from here to the save is synchronous, so two claims for the
+    // same transfer can't both pass the key check.
+    const led = loadLedger();
+    const a = acctOf(led, email);
+    let added = 0;
+    if (to === billingEmail && Number.isFinite(net) && net > 0 && at) {
+      const key = `${at}|${net}`;
+      if (a.lastClaimKey !== key) {
+        a.lastClaimKey = key;
+        a.added = round4((a.added || 0) + net);
+        pushHistory(a, { type: 'top-up', amount: net });
+        saveLedger(led);
+        added = net;
+      }
+    }
+    res.json({ added, remaining: remainingOf(a) });
+    if (added) resumeCredited(email);
+  });
+
+  // Owner-only: allocate (or take back) hosting credits and approve accounts.
+  const ownerOnly = (req, res, next) => (isOwner(req.user.email) ? next() : res.status(403).json({ error: 'Owners only.' }));
+  const EMAIL_PATTERN = /^[^\s@]{1,64}@[^\s@]{1,255}$/;
+
+  router.get('/admin/accounts', ownerOnly, (req, res) => {
+    const led = loadLedger();
+    const st = loadState();
+    res.json({
+      accounts: Object.entries(led).map(([email, a]) => ({
+        email,
+        approved: !!a.approved,
+        added: round4(a.added || 0),
+        used: round4(a.used || 0),
+        remaining: remainingOf(a),
+        bots: Object.values(st).filter(s => s.owner === email).length,
+      })),
+    });
+  });
+  router.post('/admin/allocate', ownerOnly, (req, res) => {
+    const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+    const amount = Number(req.body && req.body.amount);
+    if (!EMAIL_PATTERN.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
+    if (!Number.isFinite(amount) || Math.abs(amount) > 1e6) return res.status(400).json({ error: 'Enter a number of credits (negative takes credits back).' });
+    const led = loadLedger();
+    const a = acctOf(led, email);
+    a.approved = true;
+    a.added = Math.max(0, round4((a.added || 0) + amount));
+    if (amount) pushHistory(a, { type: 'allocation', amount, by: req.user.email });
+    saveLedger(led);
+    if (remainingOf(a) <= 0) stopForCredits(email); else if (amount > 0) resumeCredited(email);
+    res.json({ email, approved: true, remaining: remainingOf(a) });
+  });
+  router.post('/admin/revoke', ownerOnly, (req, res) => {
+    const email = String((req.body && req.body.email) || '').trim().toLowerCase();
+    const led = loadLedger();
+    if (!led[email]) return res.status(404).json({ error: 'No such account.' });
+    led[email].approved = false;
+    saveLedger(led);
+    for (const [id, s] of Object.entries(loadState())) if (s.owner === email) stopBot(id);
+    res.json({ ok: true });
   });
 
   router.delete('/bots/:id', withBot, (req, res) => {
@@ -462,6 +657,50 @@ module.exports = function setupDbHosting(app, ctx) {
 
   app.use('/dbhosting/api', router);
 
+  // ── metering ─────────────────────────────────────────────────────
+  // Once a minute, bill every non-free bot that has been running: slots ×
+  // price per day, pro-rated by the time actually run since the last tick
+  // (never before it started). An account that hits zero has all its bots
+  // stopped; they restart on their own once credits are added.
+  let lastTick = Date.now();
+  function stopForCredits(email) {
+    for (const [id, s] of Object.entries(loadState())) {
+      if (s.owner !== email || isFree(s)) continue;
+      if (!rt(id).child && !s.desired) continue;
+      appendLog(id, `[host] ${new Date().toISOString()} out of hosting credits — stopping. Add credits and it starts again by itself.\n`);
+      stopBot(id, () => {
+        const st = loadState();
+        if (st[id]) { st[id].autoResume = true; saveState(st); }
+      });
+    }
+  }
+  function resumeCredited(email) {
+    for (const [id, s] of Object.entries(loadState())) {
+      if (s.owner !== email || !s.autoResume || rt(id).child) continue;
+      if (remainingOf(loadLedger()[email]) < perDayOf(s) / 24) continue;
+      startBot(id);
+    }
+  }
+  function tick() {
+    const now = Date.now();
+    const st = loadState();
+    const led = loadLedger();
+    const billed = new Set();
+    for (const [id, r] of runtime) {
+      const s = st[id];
+      if (!r.child || !s || isFree(s)) continue;
+      const hours = Math.max(0, now - Math.max(lastTick, r.startedAt || now)) / 3600000;
+      const a = acctOf(led, s.owner);
+      a.used = round4((a.used || 0) + hours * perDayOf(s) / 24);
+      billed.add(s.owner);
+    }
+    lastTick = now;
+    if (!billed.size) return;
+    saveLedger(led);
+    for (const email of billed) if (remainingOf(led[email]) <= 0) stopForCredits(email);
+  }
+  setInterval(tick, TICK_MS).unref();
+
   // ── lifecycle ────────────────────────────────────────────────────
   // Bring back every bot that was running when the server last went down.
   const initial = loadState();
@@ -475,6 +714,7 @@ module.exports = function setupDbHosting(app, ctx) {
   }
 
   function shutdown() {
+    try { tick(); } catch {} // bill the partial minute before everything stops
     for (const [id, r] of runtime) {
       clearTimeout(r.timer);
       if (r.child) { r.stopping = true; try { r.child.kill('SIGTERM'); } catch {} }

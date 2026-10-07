@@ -14,3 +14,4 @@ server.log
 cloudflared.log
 dbhosting-bots/
 dbhosting-state.json
+dbhosting-credits.json

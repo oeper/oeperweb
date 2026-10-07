@@ -15,6 +15,10 @@ No build step for the site: plain HTML/CSS/JS, one `.html` per page.
   `shortcuts/start-oeper-server.sh` (Termux:Widget one-tap start). Local JSON "databases" are gitignored (hold user emails).
 - `forum-server/dbhosting.js` — Discord bot hosting, mounted by `upload-server.js` under `/dbhosting/api/*` (owner / `DBHOSTING_ALLOWED_EMAILS` only).
   Bots run as child processes (own env, crash backoff, restored on server boot); data in gitignored `dbhosting-bots/` + `dbhosting-state.json`.
+  Billing: prepaid hosting credits in gitignored `dbhosting-credits.json` (`added - used` = quota; 0 stops the account's bots, top-up resumes them).
+  Metered per minute: slots (1/2/4 × 192 MB) × `DBHOSTING_CREDITS_PER_SLOT_DAY` (10). Owners' bots are free. Users top up by sending oeper.dev credits
+  to `DBHOSTING_BILLING_EMAIL` (default first owner); `/credits/claim` verifies via the sender's `users/{email}.lastTransfer*` (rule-validated, unlike the forgeable
+  `creditTransfers` log). Owners allocate/approve/revoke accounts from the page (`/admin/*`). Non-owners only see their own bots.
   UI is `dbhosting.html` (oeper.dev/dbhosting). Add any new `/dbhosting/api` route to the router in `dbhosting.js`, not `upload-server.js`.
 - `cf-ai-worker/` — Cloudflare Worker replacing `ai-proxy.js` (Workers AI); deploy with `npx wrangler deploy`.
 - `one/`, `one-src/` — "One" office suite (`bundle.py` builds `one/index.html` from `one-src/*`). Edit `one-src`, then rebundle.

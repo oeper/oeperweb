@@ -122,6 +122,17 @@
     font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
   }
   .hint { font-size: 12px; color: var(--md-sys-color-on-surface-variant); line-height: 1.5; margin-top: 8px; }
+  .credits { background: var(--md-sys-color-surface); border-radius: 20px; padding: 16px 22px; margin-bottom: 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .credits .line { flex: 1; min-width: 200px; font-size: 14px; line-height: 1.5; }
+  .credits.low .line { color: var(--md-sys-color-warning); }
+  .credits.out .line { color: var(--md-sys-color-error); }
+  .credits .hint { flex-basis: 100%; margin: 0; }
+  .new-row { flex-wrap: wrap; }
+  select.input { flex: 0 1 auto; cursor: pointer; }
+  select.input.size { flex: none; padding: 6px 12px; font-size: 13px; }
+  .sec { font-size: 16px; font-weight: 500; margin: 32px 0 8px; }
+  .dot.nocredits, .badge.nocredits { background: rgba(255,180,171,0.16); color: var(--md-sys-color-error); }
+  .dot.nocredits { background: var(--md-sys-color-error); box-shadow: 0 0 8px var(--md-sys-color-error); }
   .note { font-size: 13px; color: var(--md-sys-color-on-surface-variant); line-height: 1.6; margin-top: 28px; }
   .note code, .hint code { background: var(--md-sys-color-surface-variant); padding: 1px 6px; border-radius: 6px; font-size: 12px; }
 </style>
@@ -131,18 +142,18 @@
 <div class="page">
   <header class="header">
     <h1><span class="material-symbols-rounded">smart_toy</span>bot hosting</h1>
-    <p class="subtitle">run discord bots (node.js or python) on the oeper.dev server. upload your bot, add its token, press start — it restarts itself if it crashes and comes back after a server restart.</p>
+    <p class="subtitle">run discord bots (node.js or python) on the oeper.dev server. upload your bot, add its token, press start — it restarts itself if it crashes and comes back after a server restart. hosting is paid for with oeper.dev credits, only while a bot is running.</p>
   </header>
 
   <div id="view"></div>
 
   <p class="note">
-    put your bot token in the <b>env</b> tab (e.g. <code>DISCORD_TOKEN</code>) and read it from the environment in your code — never paste it into a file. bots only see their own variables, never the server's. a bot's entry file is found automatically: <code>package.json</code> start script, then <code>index.js</code> / <code>bot.js</code> / <code>main.js</code>, then <code>main.py</code> / <code>bot.py</code>. zip uploads are extracted for you; press <b>install</b> to fetch <code>package.json</code> / <code>requirements.txt</code> dependencies.
+    put your bot token in the <b>env</b> tab (e.g. <code>DISCORD_TOKEN</code>) and read it from the environment in your code — never paste it into a file. bots only see their own variables, never the server's. a bot's entry file is found automatically: <code>package.json</code> start script, then <code>index.js</code> / <code>bot.js</code> / <code>main.js</code>, then <code>main.py</code> / <code>bot.py</code>. zip uploads are extracted for you; press <b>install</b> to fetch <code>package.json</code> / <code>requirements.txt</code> dependencies. node bots are capped at their size's memory; a bot that needs more should be moved to a bigger size.
   </p>
 </div>
 
 <script type="module" data-cfasync="false">
-import { SERVER_ENDPOINT, getCurrentUser, onAccountChange, signIn } from './shared/account.js?v=37';
+import { SERVER_ENDPOINT, getCurrentUser, onAccountChange, signIn, transferCredits, creditTransferNet, getCredits } from './shared/account.js?v=37';
 import { mountTopNav } from './shared/topnav.js?v=41';
 import { mountFooter } from './shared/footer.js?v=6';
 import { oeConfirm, oePrompt, oeAlert } from './shared/dialog.js?v=4';
@@ -158,6 +169,12 @@ const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(
 let bots = [];
 let system = null;
 let maxBots = 0;
+let account = null;      // this account's hosting-credit balance and burn rate
+let rates = null;        // { slotPerDay, slotMemoryMB, sizes }
+let billingEmail = null; // where top-up transfers go
+let isOwnerUser = false;
+let usedSlots = 0, maxSlots = 0;
+let adminAccounts = [];  // owners only
 // Which bot's panel is open and on which tab, plus unsaved editor/log state —
 // kept outside the DOM so the periodic refresh doesn't wipe what's being typed.
 let openId = null;
@@ -204,6 +221,9 @@ async function refresh() {
   try {
     const data = await api('/bots');
     bots = data.bots; system = data.system; maxBots = data.maxBots;
+    account = data.account; rates = data.rates; billingEmail = data.billingEmail;
+    isOwnerUser = data.isOwner; usedSlots = data.usedSlots; maxSlots = data.maxSlots;
+    adminAccounts = isOwnerUser ? (await api('/admin/accounts')).accounts : [];
     state = 'ready';
     render();
   } catch (e) {
@@ -221,9 +241,46 @@ function renderState(e) {
   else if (state === 'offline') showMessage('cloud_off', `couldn't reach the server (${esc(e && e.message || 'offline')}). it may be down — check the <a href="/status" style="color:var(--md-sys-color-primary)">status page</a>.`, { label: 'try again', onClick: refresh });
 }
 
+const STATUS_LABEL = { nocredits: 'out of credits' };
+const SIZE_NAMES = { 1: 'small', 2: 'medium', 4: 'large' };
+const fmtCredits = n => (Math.abs(n) >= 100 ? Math.round(n) : Math.round(n * 10) / 10).toLocaleString();
+function fmtHours(h) {
+  if (h < 1) return Math.max(1, Math.round(h * 60)) + ' min';
+  if (h < 48) return Math.round(h) + ' h';
+  return Math.round(h / 24) + ' days';
+}
+function sizeLabel(n, short) {
+  const price = account && account.exempt ? 'free' : fmtCredits(n * rates.slotPerDay) + (short ? '/day' : ' credits/day');
+  return short ? `${SIZE_NAMES[n]} · ${price}` : `${SIZE_NAMES[n]} — ${n * rates.slotMemoryMB} MB · ${price}`;
+}
+
 function detailText(b) {
   const up = b.status === 'running' && b.startedAt ? ' · up ' + fmtUptime(Date.now() - b.startedAt) : '';
-  return [b.entry ? esc(b.entry) : 'no entry file yet', b.restarts ? b.restarts + ' restart' + (b.restarts > 1 ? 's' : '') : ''].filter(Boolean).join(' · ') + up;
+  const cost = b.free ? 'free' : fmtCredits(b.perDay) + ' credits/day';
+  return [b.entry ? esc(b.entry) : 'no entry file yet', SIZE_NAMES[b.slots] + ' · ' + cost, b.restarts ? b.restarts + ' restart' + (b.restarts > 1 ? 's' : '') : ''].filter(Boolean).join(' · ') + up;
+}
+
+function creditsLine() {
+  if (!account) return '';
+  if (account.exempt) return 'owner account — your bots run free.';
+  const parts = [`<b>${fmtCredits(account.remaining)}</b> hosting credits left`];
+  if (account.perDay) parts.push(`using ${fmtCredits(account.perDay)}/day`);
+  if (account.hoursLeft != null) parts.push(`about ${fmtHours(account.hoursLeft)} left`);
+  return parts.join(' · ');
+}
+function creditsClass() {
+  if (!account || account.exempt) return 'credits';
+  if (account.remaining <= 0) return 'credits out';
+  if (account.hoursLeft != null && account.hoursLeft < 24) return 'credits low';
+  return 'credits';
+}
+function adminListHtml() {
+  if (!adminAccounts.length) return '<p class="hint">no accounts yet. allocate credits to an email to approve it.</p>';
+  return adminAccounts.map(a => `
+    <div class="row"><span class="name">${esc(a.email)}</span>
+      <span class="meta">${a.approved ? '' : 'revoked · '}${fmtCredits(a.remaining)} left · ${fmtCredits(a.used)} used · ${a.bots} bot${a.bots === 1 ? '' : 's'}</span>
+      ${a.approved ? `<button class="icon-btn" data-revoke="${esc(a.email)}" title="revoke access"><span class="material-symbols-rounded">block</span></button>` : ''}
+    </div>`).join('');
 }
 
 function botCard(b) {
@@ -235,7 +292,7 @@ function botCard(b) {
     <div class="bot-head">
       <div class="dot ${b.status}"></div>
       <div class="bot-main"><div class="bot-name">${esc(b.name)}</div><div class="bot-detail">${detail}</div></div>
-      <div class="badge ${b.status}">${b.status}</div>
+      <div class="badge ${b.status}">${STATUS_LABEL[b.status] || b.status}</div>
     </div>
     <div class="bot-actions">
       ${b.status === 'running' || b.status === 'restarting'
@@ -244,6 +301,7 @@ function botCard(b) {
         : `<button class="btn small primary" data-act="start" ${busy ? 'disabled' : ''}><span class="material-symbols-rounded">play_arrow</span>start</button>`}
       <button class="btn small" data-act="install" ${busy ? 'disabled' : ''}><span class="material-symbols-rounded">download</span>install</button>
       <button class="btn small" data-act="manage"><span class="material-symbols-rounded">${isOpen ? 'expand_less' : 'tune'}</span>${isOpen ? 'close' : 'manage'}</button>
+      <select class="input size" data-size title="size">${rates.sizes.map(n => `<option value="${n}" ${n === b.slots ? 'selected' : ''}>${sizeLabel(n, true)}</option>`).join('')}</select>
       <span class="spacer"></span>
       <button class="btn small danger" data-act="delete"><span class="material-symbols-rounded">delete</span></button>
     </div>
@@ -258,21 +316,47 @@ function render(force) {
   if (editing && document.getElementById('editorBox')) return;
   // Nothing but uptime changed: patch the text in place so the open log/file
   // panel isn't torn down (and its scroll position lost) every few seconds.
-  const sig = JSON.stringify(bots) + openId + openTab;
+  const sig = JSON.stringify(bots) + openId + openTab + adminAccounts.map(a => a.email + a.approved + a.bots).join() + !!(account && account.exempt);
+  const sys = system ? `server up ${fmtUptime(system.uptime * 1000)} · ${(system.freeMem / 1073741824).toFixed(1)} GB free memory · load ${system.load.toFixed(2)} · ${bots.length}/${maxBots} bots · ${usedSlots}/${maxSlots} slots running` : '';
   if (!force && sig === lastSig && document.querySelector('.bot-list')) {
     bots.forEach(b => { const el = view.querySelector(`.bot[data-id="${b.id}"] .bot-detail`); if (el) el.innerHTML = detailText(b); });
+    const box = document.getElementById('creditsBox');
+    if (box) { box.className = creditsClass(); document.getElementById('creditsLine').innerHTML = creditsLine(); }
+    const list = document.getElementById('adminList');
+    if (list) list.innerHTML = adminListHtml();
+    const sysEl = view.querySelector('.system');
+    if (sysEl) sysEl.textContent = sys;
     return;
   }
   lastSig = sig;
-  const sys = system ? `server up ${fmtUptime(system.uptime * 1000)} · ${(system.freeMem / 1073741824).toFixed(1)} GB free memory · load ${system.load.toFixed(2)} · ${bots.length}/${maxBots} bots` : '';
+  const perDay = rates.slotPerDay;
   view.innerHTML = `
     <p class="system">${sys}</p>
+    <div class="${creditsClass()}" id="creditsBox">
+      <div class="line" id="creditsLine">${creditsLine()}</div>
+      ${account.exempt ? '' : '<button class="btn small primary" id="topupBtn"><span class="material-symbols-rounded">add_card</span>top up</button>'}
+      ${account.exempt ? '' : `<p class="hint">a small bot costs ${fmtCredits(perDay)} credits a day, only while it's running. when your credits hit zero your bots stop, and they start again by themselves after a top-up.</p>`}
+    </div>
     <div class="new-row">
       <input class="input" id="newName" maxlength="40" placeholder="new bot name" autocomplete="off">
+      <select class="input" id="newSize">${rates.sizes.map(n => `<option value="${n}">${sizeLabel(n)}</option>`).join('')}</select>
       <button class="btn primary" id="newBtn"><span class="material-symbols-rounded">add</span>create</button>
     </div>
-    <div class="bot-list">${bots.length ? bots.map(botCard).join('') : '<div class="message">no bots yet — create one above.</div>'}</div>`;
+    <div class="bot-list">${bots.length ? bots.map(botCard).join('') : '<div class="message">no bots yet — create one above.</div>'}</div>
+    ${isOwnerUser ? `
+    <h2 class="sec">accounts</h2>
+    <div id="adminList">${adminListHtml()}</div>
+    <div class="env-add">
+      <input class="input" id="allocEmail" type="email" placeholder="email" autocomplete="off" style="flex:2 1 180px">
+      <input class="input" id="allocAmount" type="number" step="any" placeholder="credits" style="flex:1 1 90px">
+      <button class="btn small primary" id="allocBtn"><span class="material-symbols-rounded">savings</span>allocate</button>
+    </div>
+    <p class="hint">allocating credits to an email also approves it for bot hosting. a negative amount takes credits back. revoking blocks the account and stops its bots.</p>` : ''}`;
   document.getElementById('newBtn').addEventListener('click', createBot);
+  const top = document.getElementById('topupBtn');
+  if (top) top.addEventListener('click', topUp);
+  const alloc = document.getElementById('allocBtn');
+  if (alloc) alloc.addEventListener('click', allocate);
   document.getElementById('newName').addEventListener('keydown', e => { if (e.key === 'Enter') createBot(); });
   if (openId) renderPanel();
 }
@@ -282,13 +366,75 @@ async function createBot() {
   const name = input.value.trim();
   if (!name) { input.focus(); return; }
   try {
-    const b = await api('/bots', { method: 'POST', body: { name } });
+    const slots = Number(document.getElementById('newSize').value);
+    const b = await api('/bots', { method: 'POST', body: { name, slots } });
     openId = b.id; openTab = 'files';
     await refresh();
   } catch (e) { oeAlert(e.message); }
 }
 
+// Top-up = send oeper.dev credits to the hosting account, then ask the server to
+// verify that transfer and credit it. The server only sees the latest
+// transfer, so any earlier unclaimed one is claimed first.
+async function claim() {
+  const out = await api('/credits/claim', { method: 'POST' });
+  return out.added || 0;
+}
+async function topUp() {
+  if (!billingEmail) { oeAlert('top-ups are not set up on this server.'); return; }
+  const have = Math.floor(getCredits());
+  if (have < 2) { oeAlert("you need at least 2 oeper.dev credits to top up. you have " + have + '.'); return; }
+  const raw = await oePrompt(`how many oeper.dev credits to spend? you have ${have}. a 5% transfer tax applies, so you'll receive about 95% as hosting credits.`, { defaultValue: String(Math.min(have, 100)), placeholder: 'credits' });
+  if (raw == null) return;
+  const amt = Math.floor(Number(raw));
+  if (!Number.isFinite(amt) || amt < 2) { oeAlert('enter a whole number of credits, at least 2.'); return; }
+  if (amt > have) { oeAlert("you don't have that many credits."); return; }
+  const btn = document.getElementById('topupBtn');
+  if (btn) btn.disabled = true;
+  try {
+    await claim(); // flush any earlier transfer before it gets overwritten
+    await transferCredits(billingEmail, amt, 'dbhosting top-up');
+    let added = 0, lastErr = null;
+    for (let i = 0; i < 3 && !added; i++) {
+      try { added = await claim(); } catch (e) { lastErr = e; await new Promise(r => setTimeout(r, 1500)); }
+    }
+    if (added) await oeAlert(`added ${fmtCredits(added)} hosting credits.`);
+    else await oeAlert("your credits were sent, but the server couldn't confirm them yet (" + (lastErr ? lastErr.message : 'try again') + "). reload this page in a minute — it picks them up automatically.");
+  } catch (e) { oeAlert(e.message); }
+  await refresh();
+}
+
+async function allocate() {
+  const email = document.getElementById('allocEmail').value.trim();
+  const amount = Number(document.getElementById('allocAmount').value || 0);
+  if (!email) { document.getElementById('allocEmail').focus(); return; }
+  try {
+    await api('/admin/allocate', { method: 'POST', body: { email, amount } });
+    document.getElementById('allocEmail').value = '';
+    document.getElementById('allocAmount').value = '';
+    await refresh();
+  } catch (e) { oeAlert(e.message); }
+}
+
+view.addEventListener('change', async e => {
+  const sel = e.target.closest('[data-size]');
+  if (!sel) return;
+  const id = sel.closest('.bot').dataset.id;
+  try {
+    const out = await api(`/bots/${id}/size`, { method: 'POST', body: { slots: Number(sel.value) } });
+    if (out.restartNeeded) await oeAlert('size changed — restart the bot to apply the new memory limit. the new price counts from now.');
+  } catch (err) { oeAlert(err.message); }
+  await refresh();
+});
+
 view.addEventListener('click', async e => {
+  const rev = e.target.closest('[data-revoke]');
+  if (rev) {
+    if (!await oeConfirm(`revoke ${rev.dataset.revoke}? their bots stop and they lose access.`, { okLabel: 'revoke', danger: true })) return;
+    try { await api('/admin/revoke', { method: 'POST', body: { email: rev.dataset.revoke } }); } catch (err) { oeAlert(err.message); }
+    await refresh();
+    return;
+  }
   const btn = e.target.closest('[data-act]');
   if (!btn) return;
   const card = btn.closest('.bot');
@@ -461,7 +607,11 @@ async function renderEnv() {
 onAccountChange(user => {
   stopTimers();
   if (!user) { state = 'signedout'; renderState(); return; }
-  refresh();
+  refresh().then(async () => {
+    // Recovers a top-up whose confirmation was interrupted (page closed, server briefly down).
+    if (state !== 'ready' || (account && account.exempt) || !billingEmail) return;
+    try { if (await claim()) refresh(); } catch {}
+  });
   // Light refresh so status/uptime stay current; skipped while typing in an
   // editor or env field so nothing gets wiped mid-edit.
   pollTimer = setInterval(() => {
