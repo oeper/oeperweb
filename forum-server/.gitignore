@@ -12,3 +12,6 @@ audit-log.jsonl*
 content-hashes.json
 server.log
 cloudflared.log
+dbhosting-bots/
+dbhosting-state.json
+dbhosting-credits.json

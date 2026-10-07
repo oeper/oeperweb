@@ -82,6 +82,35 @@ everyone's for moderation) and the forum:
   (default `/storage/emulated/0/Download/messages`), capped by
   `MAX_MESSAGE_BYTES` (default 20MB).
 
+## Discord bot hosting (`/dbhosting`)
+
+`dbhosting.js` runs Discord bots (Node.js or Python) as child processes of this
+server, managed from the **oeper.dev/dbhosting** page. It only accepts the
+owner accounts, emails an owner has allocated credits to, and any in
+`DBHOSTING_ALLOWED_EMAILS` (comma-separated), because hosting a bot means
+running uploaded code on the phone. Non-owners only ever see their own bots.
+
+- Bots live in `dbhosting-bots/<id>/` (gitignored); each gets its own `.env`
+  (write-only from the page) and sees only that, never this server's env.
+- The entry file is detected: `package.json` start script, then `index.js` /
+  `bot.js` / `main.js`, then `main.py` / `bot.py`. Zip uploads are extracted
+  (needs `pkg install unzip`); "install" runs `npm install` / `pip install -r`.
+- Crashed bots restart with backoff (gives up after 8 quick crashes). Bots that
+  were running when the server stopped are started again on boot.
+- **Credits & quota.** Bots are billed per minute while running: size (1, 2 or 4
+  slots of `DBHOSTING_NODE_MEMORY_MB`, default 192 MB) × `DBHOSTING_CREDITS_PER_SLOT_DAY`
+  (default 10 credits/day per slot). An account's quota is `added - used` in
+  `dbhosting-credits.json` (gitignored); at zero its bots are stopped and start
+  again automatically after a top-up. Owner accounts' bots are free. Credits are
+  added by an owner allocating them (this also approves the email) or by the user
+  sending oeper.dev credits to `DBHOSTING_BILLING_EMAIL` (default: first owner) and
+  pressing top up — the server verifies the transfer from the sender's
+  `users/{email}` doc, which Firestore rules only let change alongside a real
+  transfer. Only the latest transfer is visible there, so the page claims right
+  after each top-up and again on load.
+- Limits: `DBHOSTING_MAX_BOTS` (15 total), `DBHOSTING_MAX_BOTS_PER_USER` (3),
+  `DBHOSTING_MAX_SLOTS` (20 running at once), `DBHOSTING_DIR` to move the bots folder.
+
 ## Storage console, quotas, trash & AI moderation
 
 Everything below lives in `storage-admin.js` and is managed from the
