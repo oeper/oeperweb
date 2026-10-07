@@ -19,6 +19,8 @@ No build step for the site: plain HTML/CSS/JS, one `.html` per page.
   Metered per minute: slots (1/2/4 × 192 MB) × `DBHOSTING_CREDITS_PER_SLOT_DAY` (10). Owners' bots are free. Users top up by sending oeper.dev credits
   to `DBHOSTING_BILLING_EMAIL` (default first owner); `/credits/claim` verifies via the sender's `users/{email}.lastTransfer*` (rule-validated, unlike the forgeable
   `creditTransfers` log). Owners allocate/approve/revoke accounts from the page (`/admin/*`). Non-owners only see their own bots.
+  Per-bot settings (name, auto-restart, Discord status/rotating activities) live in `state[id].settings`; `dbhosting-presence.js` is preloaded into Node bots
+  and applies the status to discord.js via a watched `<id>.presence.json` (see README "Settings tab").
   UI is `dbhosting.html` (oeper.dev/dbhosting). Add any new `/dbhosting/api` route to the router in `dbhosting.js`, not `upload-server.js`.
 - `cf-ai-worker/` — Cloudflare Worker replacing `ai-proxy.js` (Workers AI); deploy with `npx wrangler deploy`.
 - `one/`, `one-src/` — "One" office suite (`bundle.py` builds `one/index.html` from `one-src/*`). Edit `one-src`, then rebundle.

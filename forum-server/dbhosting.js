@@ -37,6 +37,13 @@ const NODE_MEMORY_MB = Number(process.env.DBHOSTING_NODE_MEMORY_MB) || 192;
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,29}$/;
 const ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
 
+// Per-bot settings (state[id].settings). `presence` is applied by dbhosting-presence.js, which is preloaded into Node bots.
+// forward slashes: backslashes inside NODE_OPTIONS are read as escapes (a Windows path would break)
+const PRESENCE_SHIM = path.join(__dirname, 'dbhosting-presence.js').replace(/\\/g, '/');
+const PRESENCE_STATUSES = ['online', 'idle', 'dnd', 'invisible'];
+const ACTIVITY_TYPES = ['playing', 'watching', 'listening', 'competing', 'streaming', 'custom'];
+const MAX_ACTIVITIES = 10;
+
 const NODE_ENTRIES = ['index.js', 'bot.js', 'main.js', 'app.js', 'src/index.js', 'src/bot.js', 'src/main.js'];
 const PY_ENTRIES = ['main.py', 'bot.py', 'index.py', 'app.py', 'src/main.py', 'src/bot.py'];
 
@@ -136,12 +143,77 @@ module.exports = function setupDbHosting(app, ctx) {
     return null;
   }
 
+  // ── per-bot settings ─────────────────────────────────────────────
+  const presenceFile = id => path.join(botsDir, id + '.presence.json');
+  function settingsOf(st) {
+    const s = (st && st.settings) || {};
+    const p = s.presence || {};
+    return {
+      autoRestart: s.autoRestart !== false,
+      presence: {
+        enabled: !!p.enabled,
+        status: PRESENCE_STATUSES.includes(p.status) ? p.status : 'online',
+        intervalSec: Math.min(3600, Math.max(20, Number(p.intervalSec) || 60)),
+        activities: Array.isArray(p.activities) ? p.activities.slice(0, MAX_ACTIVITIES) : [],
+      },
+    };
+  }
+  // Returns { settings } or { error } for an untrusted request body.
+  function parseSettings(body) {
+    const b = body || {};
+    const out = { autoRestart: b.autoRestart !== false, presence: {} };
+    const p = b.presence || {};
+    if (!PRESENCE_STATUSES.includes(p.status || 'online')) return { error: 'Pick a status: online, idle, do not disturb or invisible.' };
+    const acts = Array.isArray(p.activities) ? p.activities : [];
+    if (acts.length > MAX_ACTIVITIES) return { error: `At most ${MAX_ACTIVITIES} statuses.` };
+    const activities = [];
+    for (const a of acts) {
+      const text = String((a && a.text) || '').trim();
+      if (!text) continue;
+      if (!ACTIVITY_TYPES.includes(a.type)) return { error: 'Unknown activity type: ' + a.type };
+      if (text.length > 128) return { error: 'A status can be at most 128 characters.' };
+      const item = { type: a.type, text };
+      if (a.type === 'streaming') {
+        const url = String(a.url || '').trim();
+        if (!/^https?:\/\/[^\s]{3,190}$/i.test(url)) return { error: 'A "streaming" status needs a Twitch or YouTube link (https://…).' };
+        item.url = url;
+      }
+      activities.push(item);
+    }
+    out.presence = {
+      enabled: !!p.enabled,
+      status: p.status || 'online',
+      intervalSec: Math.min(3600, Math.max(20, Number(p.intervalSec) || 60)),
+      activities,
+    };
+    return { settings: out };
+  }
+  function writePresence(id) {
+    try { fs.writeFileSync(presenceFile(id), JSON.stringify(settingsOf(loadState()[id]).presence), { mode: 0o600 }); } catch {}
+  }
+  function appliedPresence(id) {
+    try { return JSON.parse(fs.readFileSync(presenceFile(id) + '.applied', 'utf8')); } catch { return null; }
+  }
+
   // The bot only gets what it needs plus its own .env — never the server's
   // environment, which holds the tunnel token, webhook URL and API keys.
-  function botEnv(id) {
+  // `forRun` is false for dependency installs, which shouldn't load the presence helper.
+  function botEnv(id, forRun) {
     const base = {};
     for (const k of ['PATH', 'HOME', 'TMPDIR', 'PREFIX', 'LANG', 'TERM', 'TZ', 'SSL_CERT_FILE']) if (process.env[k]) base[k] = process.env[k];
-    return { ...base, NODE_OPTIONS: `--max-old-space-size=${NODE_MEMORY_MB * slotsOf(loadState()[id])}`, PYTHONUNBUFFERED: '1', ...readEnv(id) };
+    const settings = settingsOf(loadState()[id]);
+    const pr = settings.presence;
+    const first = pr.activities[0];
+    // Every bot (any language) can read these; Node/discord.js bots also get the status applied for them.
+    const presenceVars = {
+      DBHOSTING_PRESENCE_FILE: presenceFile(id),
+      BOT_STATUS: pr.status,
+      BOT_ACTIVITY_TYPE: first ? first.type : '',
+      BOT_ACTIVITY_TEXT: first ? first.text : '',
+      BOT_ACTIVITIES: JSON.stringify(pr.activities),
+    };
+    const memory = `--max-old-space-size=${NODE_MEMORY_MB * slotsOf(loadState()[id])}`;
+    return { ...base, NODE_OPTIONS: forRun ? `${memory} --require "${PRESENCE_SHIM}"` : memory, PYTHONUNBUFFERED: '1', ...(forRun ? presenceVars : {}), ...readEnv(id) };
   }
 
   function isAlive(pid) { try { process.kill(pid, 0); return true; } catch { return false; } }
@@ -177,8 +249,9 @@ module.exports = function setupDbHosting(app, ctx) {
     appendLog(id, `[host] ${new Date().toISOString()} starting: ${entry.label}\n`);
 
     let child;
+    writePresence(id);
     try {
-      child = spawn(entry.cmd, entry.args, { cwd: botDir(id), env: botEnv(id), stdio: ['ignore', fd, fd] });
+      child = spawn(entry.cmd, entry.args, { cwd: botDir(id), env: botEnv(id, true), stdio: ['ignore', fd, fd] });
     } catch (e) {
       fs.closeSync(fd);
       return { ok: false, error: 'Could not start: ' + e.message };
@@ -198,6 +271,14 @@ module.exports = function setupDbHosting(app, ctx) {
       appendLog(id, `[host] ${new Date().toISOString()} exited (${signal ? 'signal ' + signal : 'code ' + code})\n`);
       const st = loadState();
       if (r.stopping || !st[id] || !st[id].desired) { r.stopping = false; return; }
+      if (!settingsOf(st[id]).autoRestart) {
+        st[id].desired = false;
+        delete st[id].pid;
+        saveState(st);
+        r.crashed = true;
+        appendLog(id, '[host] exited and auto-restart is off in this bot\'s settings — not restarting.\n');
+        return;
+      }
       // Crashed on its own: restart with backoff, give up after a streak of
       // quick crashes so a broken bot can't spin forever eating battery.
       r.quickCrashes = ranFor > 60000 ? 0 : r.quickCrashes + 1;
@@ -402,6 +483,29 @@ module.exports = function setupDbHosting(app, ctx) {
     res.json({ ok: true, restartNeeded: !!rt(req.botId).child });
   });
 
+  // ── settings: name, auto-restart, and the bot's Discord status ────
+  // A changed status reaches a running discord.js bot within a few seconds (the helper watches the file); anything
+  // else reads the BOT_* variables the next time it starts.
+  router.get('/bots/:id/settings', withBot, (req, res) => {
+    const st = loadState()[req.botId];
+    res.json({ name: st.name, settings: settingsOf(st), applied: appliedPresence(req.botId), running: !!rt(req.botId).child });
+  });
+  router.put('/bots/:id/settings', withBot, (req, res) => {
+    const parsed = parseSettings(req.body);
+    if (parsed.error) return res.status(400).json({ error: parsed.error });
+    const st = loadState();
+    const entry = st[req.botId];
+    if (req.body && typeof req.body.name === 'string') {
+      const name = req.body.name.trim();
+      if (!name || name.length > 40) return res.status(400).json({ error: 'Give the bot a name (1–40 characters).' });
+      entry.name = name;
+    }
+    entry.settings = parsed.settings;
+    saveState(st);
+    writePresence(req.botId);
+    res.json({ name: entry.name, settings: settingsOf(entry), applied: appliedPresence(req.botId), running: !!rt(req.botId).child });
+  });
+
   // ── hosting credits ──────────────────────────────────────────────
   // Verifies the caller's latest oeper.dev credit transfer to billingEmail and
   // adds it to their hosting balance. Trust comes from firestore.rules: the
@@ -497,6 +601,7 @@ module.exports = function setupDbHosting(app, ctx) {
       runtime.delete(id);
       try { fs.rmSync(botDir(id), { recursive: true, force: true }); } catch {}
       try { fs.rmSync(logFile(id), { force: true }); fs.rmSync(logFile(id) + '.old', { force: true }); } catch {}
+      try { fs.unwatchFile(presenceFile(id)); fs.rmSync(presenceFile(id), { force: true }); fs.rmSync(presenceFile(id) + '.applied', { force: true }); } catch {}
       res.json({ ok: true });
     });
   });

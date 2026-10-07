@@ -97,6 +97,19 @@ running uploaded code on the phone. Non-owners only ever see their own bots.
   (needs `pkg install unzip`); "install" runs `npm install` / `pip install -r`.
 - Crashed bots restart with backoff (gives up after 8 quick crashes). Bots that
   were running when the server stopped are started again on boot.
+- **Settings tab** (per bot, stored in `dbhosting-state.json` under `settings`): rename, an
+  auto-restart-on-crash switch, and the bot's **Discord status**: presence (online / idle /
+  do not disturb / invisible) plus up to 10 activities (playing, watching, listening,
+  competing, streaming + link, custom), rotated every N seconds (min 20, Discord's limit).
+  Discord presence is sent over the bot's own gateway connection, so `dbhosting-presence.js`
+  is preloaded into every Node bot (`NODE_OPTIONS=--require`), patches discord.js's
+  `Client#login` (works for `require` and `import`), and applies `dbhosting-bots/<id>.presence.json`
+  once the client is ready, watching the file so a saved change reaches a running bot in
+  ~3 s. It writes `<id>.presence.json.applied` so the page can show what was applied. It
+  does nothing unless "set the bot's status from here" is on, skips npm/npx, and a bot that sets
+  its own presence in code can override it. Python/other bots get `BOT_STATUS`,
+  `BOT_ACTIVITY_TYPE`, `BOT_ACTIVITY_TEXT`, `BOT_ACTIVITIES` (JSON) as env vars at start.
+  Routes: `GET`/`PUT /dbhosting/api/bots/:id/settings`.
 - **Credits & quota.** Bots are billed per minute while running: size (1, 2 or 4
   slots of `DBHOSTING_NODE_MEMORY_MB`, default 192 MB) × `DBHOSTING_CREDITS_PER_SLOT_DAY`
   (default 10 credits/day per slot). An account's quota is `added - used` in

@@ -133,6 +133,20 @@
   .sec { font-size: 16px; font-weight: 500; margin: 32px 0 8px; }
   .dot.nocredits, .badge.nocredits { background: rgba(255,180,171,0.16); color: var(--md-sys-color-error); }
   .dot.nocredits { background: var(--md-sys-color-error); box-shadow: 0 0 8px var(--md-sys-color-error); }
+  .field { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; }
+  .field > label, .sub { font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); letter-spacing: 0.3px; }
+  .sub { margin: 20px 0 8px; font-size: 13px; }
+  .field .input, .act-row .input { border-radius: 12px; padding: 9px 12px; font-size: 13px; flex: none; width: 100%; }
+  .check { display: flex; align-items: center; gap: 10px; font-size: 14px; margin: 8px 0; cursor: pointer; }
+  .check input { width: 18px; height: 18px; accent-color: var(--md-sys-color-primary); }
+  .act-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; }
+  .act-row select.input { flex: 0 0 150px; width: auto; }
+  .act-row .input.text { flex: 1 1 110px; width: auto; }
+  .act-row .input.url { flex: 1 1 100%; width: auto; }
+  .every { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 6px 0 10px; }
+  .every .input { width: 80px; flex: none; }
+  .applied { font-size: 12px; margin: 10px 0 14px; color: var(--md-sys-color-on-surface-variant); }
+  .applied.ok { color: var(--md-sys-color-success); }
   .note { font-size: 13px; color: var(--md-sys-color-on-surface-variant); line-height: 1.6; margin-top: 28px; }
   .note code, .hint code { background: var(--md-sys-color-surface-variant); padding: 1px 6px; border-radius: 6px; font-size: 12px; }
 </style>
@@ -466,13 +480,14 @@ function renderPanel() {
   if (!panel) return;
   panel.innerHTML = `
     <div class="tabs">
-      ${['logs', 'files', 'env'].map(t => `<button class="tab ${t === openTab ? 'active' : ''}" data-tab="${t}">${t}</button>`).join('')}
+      ${['logs', 'files', 'env', 'settings'].map(t => `<button class="tab ${t === openTab ? 'active' : ''}" data-tab="${t}">${t}</button>`).join('')}
     </div>
     <div id="tabBody"></div>`;
   panel.querySelectorAll('[data-tab]').forEach(t => t.addEventListener('click', () => { openTab = t.dataset.tab; editing = null; renderPanel(); }));
   clearInterval(logTimer); logTimer = null;
   if (openTab === 'logs') renderLogs();
   else if (openTab === 'files') renderFiles();
+  else if (openTab === 'settings') renderSettings();
   else renderEnv();
 }
 
@@ -604,6 +619,102 @@ async function renderEnv() {
   }));
 }
 
+// ── settings tab: name, auto-restart and the bot's Discord status ─
+const PRESENCE_LABEL = { online: 'online', idle: 'idle', dnd: 'do not disturb', invisible: 'invisible' };
+const ACTIVITY_LABEL = { playing: 'Playing', watching: 'Watching', listening: 'Listening to', competing: 'Competing in', streaming: 'Streaming', custom: 'Custom status' };
+const ACTIVITY_PLACEHOLDER = { playing: 'a game', watching: 'something', listening: 'something', competing: 'something', streaming: 'stream title', custom: 'your status text' };
+
+async function renderSettings() {
+  const body = document.getElementById('tabBody');
+  const id = openId;
+  body.innerHTML = 'loading…';
+  let data;
+  try { data = await api(`/bots/${id}/settings`); } catch (e) { body.textContent = e.message; return; }
+  if (openId !== id || openTab !== 'settings') return;
+  const p = data.settings.presence;
+  let acts = p.activities.map(a => ({ ...a }));
+
+  const appliedLine = () => {
+    const a = data.applied;
+    if (a && p.enabled) {
+      const ago = Math.max(0, Math.round((Date.now() - a.at) / 1000));
+      const what = a.activity ? `${ACTIVITY_LABEL[a.activity.type]} ${a.activity.text}` : 'no activity';
+      return { ok: true, text: `applied ${ago < 10 ? 'just now' : fmtUptime(ago * 1000) + ' ago'}: ${PRESENCE_LABEL[a.status] || a.status} · ${esc(what)}` };
+    }
+    if (!p.enabled) return { ok: false, text: 'off — the bot sets its own status.' };
+    if (data.running) return { ok: false, text: 'not applied yet. the bot may still be connecting, or it is not a discord.js bot (see below).' };
+    return { ok: false, text: 'will be applied when the bot starts.' };
+  };
+
+  const actRow = (a, i) => `
+    <div class="act-row" data-i="${i}">
+      <select class="input" data-f="type">${Object.keys(ACTIVITY_LABEL).map(t => `<option value="${t}" ${t === a.type ? 'selected' : ''}>${ACTIVITY_LABEL[t]}</option>`).join('')}</select>
+      <input class="input text" data-f="text" maxlength="128" placeholder="${ACTIVITY_PLACEHOLDER[a.type]}" value="${esc(a.text || '')}" autocomplete="off">
+      <button class="icon-btn" data-rm title="remove"><span class="material-symbols-rounded">close</span></button>
+      ${a.type === 'streaming' ? `<input class="input url" data-f="url" placeholder="https://twitch.tv/yourchannel" value="${esc(a.url || '')}" autocomplete="off">` : ''}
+    </div>`;
+
+  const ap = appliedLine();
+  body.innerHTML = `
+    <div class="field"><label for="setName">name</label><input class="input" id="setName" maxlength="40" value="${esc(data.name)}" autocomplete="off"></div>
+    <label class="check"><input type="checkbox" id="setRestart" ${data.settings.autoRestart ? 'checked' : ''}>restart it automatically if it crashes</label>
+
+    <div class="sub">discord status</div>
+    <label class="check"><input type="checkbox" id="prEnabled" ${p.enabled ? 'checked' : ''}>set the bot's status from here</label>
+    <div id="prBox" ${p.enabled ? '' : 'style="opacity:.5"'}>
+      <div class="field"><label for="prStatus">presence</label>
+        <select class="input" id="prStatus">${Object.keys(PRESENCE_LABEL).map(s => `<option value="${s}" ${s === p.status ? 'selected' : ''}>${PRESENCE_LABEL[s]}</option>`).join('')}</select></div>
+      <div id="actList">${acts.map(actRow).join('')}</div>
+      <div class="tools"><button class="btn small" id="addAct" ${acts.length >= 10 ? 'disabled' : ''}><span class="material-symbols-rounded">add</span>add a status</button></div>
+      <div class="every" id="every" ${acts.length > 1 ? '' : 'hidden'}>change every <input class="input" id="prInt" type="number" min="20" max="3600" value="${p.intervalSec}"> seconds</div>
+    </div>
+    <p class="applied ${ap.ok ? 'ok' : ''}" id="appliedLine">${ap.text}</p>
+    <div class="tools"><button class="btn small primary" id="saveSet"><span class="material-symbols-rounded">save</span>save</button></div>
+    <p class="hint">for discord.js bots (node) this works with no code changes, and a saved status reaches a running bot within a few seconds. with more than one status the bot rotates through them (at most every 20 seconds, Discord's limit). a bot that sets its own status in code can override this. python and other bots can read <code>BOT_STATUS</code>, <code>BOT_ACTIVITY_TYPE</code>, <code>BOT_ACTIVITY_TEXT</code> and <code>BOT_ACTIVITIES</code> (JSON) when they start. a streaming status needs a twitch or youtube link.</p>`;
+
+  const list = document.getElementById('actList');
+  const readActs = () => [...list.querySelectorAll('.act-row')].map(row => {
+    const o = {};
+    row.querySelectorAll('[data-f]').forEach(el => { o[el.dataset.f] = el.value; });
+    return o;
+  });
+  const redraw = () => {
+    list.innerHTML = acts.map(actRow).join('');
+    document.getElementById('addAct').disabled = acts.length >= 10;
+    document.getElementById('every').hidden = acts.length < 2;
+  };
+  document.getElementById('prEnabled').addEventListener('change', e => { document.getElementById('prBox').style.opacity = e.target.checked ? '' : '.5'; });
+  document.getElementById('addAct').addEventListener('click', () => { acts = readActs(); acts.push({ type: 'playing', text: '' }); redraw(); list.querySelector('.act-row:last-child [data-f="text"]').focus(); });
+  list.addEventListener('click', e => {
+    const rm = e.target.closest('[data-rm]');
+    if (!rm) return;
+    acts = readActs(); acts.splice(Number(rm.closest('.act-row').dataset.i), 1); redraw();
+  });
+  list.addEventListener('change', e => { if (e.target.dataset.f === 'type') { acts = readActs(); redraw(); } });
+  document.getElementById('saveSet').addEventListener('click', async () => {
+    const btn = document.getElementById('saveSet');
+    btn.disabled = true;
+    try {
+      const out = await api(`/bots/${id}/settings`, { method: 'PUT', body: {
+        name: document.getElementById('setName').value,
+        autoRestart: document.getElementById('setRestart').checked,
+        presence: {
+          enabled: document.getElementById('prEnabled').checked,
+          status: document.getElementById('prStatus').value,
+          intervalSec: Number(document.getElementById('prInt').value) || 60,
+          activities: readActs(),
+        },
+      } });
+      data = out; p.enabled = out.settings.presence.enabled;
+      const line = document.getElementById('appliedLine');
+      line.textContent = out.running && out.settings.presence.enabled ? 'saved. a running discord.js bot picks it up within a few seconds.' : 'saved.';
+      line.className = 'applied ok';
+      refresh();
+    } catch (e) { oeAlert(e.message); }
+    btn.disabled = false;
+  });
+}
+
 onAccountChange(user => {
   stopTimers();
   if (!user) { state = 'signedout'; renderState(); return; }
@@ -617,7 +728,7 @@ onAccountChange(user => {
   pollTimer = setInterval(() => {
     if (document.hidden || editing) return;
     const a = document.activeElement;
-    if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
+    if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')) return;
     refresh();
   }, 5000);
 });
