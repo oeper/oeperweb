@@ -128,6 +128,7 @@ function toolStatus(name, args) {
     case 'search_web': return args && args.query ? `Searching the web for "${clip(args.query)}"` : 'Searching the web';
     case 'lookup_oeper_user': return args && args.handle ? `Looking up @${clip(String(args.handle).replace(/^@/, ''))}` : 'Looking up a profile';
     case 'create_document': return 'Writing a document';
+    case 'create_discord_bot': return args && args.name ? `Coding the Discord bot "${clip(args.name)}"` : 'Coding a Discord bot';
     case 'remember_fact': case 'update_memory': case 'forget_fact': return 'Updating memory';
     case 'set_follow': return 'Updating who you follow';
     default: return 'Working on it';
@@ -341,6 +342,9 @@ function streamToolLoop(env, initialMessages, tools, quiet) {
               send({ forget: String(args.fact).slice(0, 300) });
             } else if (call.function.name === 'create_document' && args.title && args.content) {
               send({ createDoc: { title: String(args.title).slice(0, 120), content: String(args.content).slice(0, 60000) } });
+            } else if (call.function.name === 'create_discord_bot') {
+              const spec = cleanBotSpec(args);
+              if (spec) send({ createBot: spec });
             } else if (call.function.name === 'set_follow' && args.handle && typeof args.follow === 'boolean') {
               send({ setFollow: { handle: String(args.handle).replace(/^@/, '').trim().slice(0, 50), follow: args.follow } });
             }
@@ -552,6 +556,51 @@ const ONE_TOOLS = [
     },
   },
 ];
+// Offered only with epic AI switched on (ai.html sends botTools: true). Like create_document, the bot is actually created
+// client-side: the page uploads these files to the user's own bot hosting under their signed-in account.
+const BOT_TOOLS = [
+  {
+    name: 'create_discord_bot',
+    description: "Create a Discord bot in the user's bot hosting (oeper.dev/dbhosting) from code you write. Only call this when they've clearly asked you to make/code/build a Discord bot. Write complete, working files: for Node use discord.js v14 with a package.json (name, version, main, scripts.start, dependencies) and index.js; for Python use discord.py with requirements.txt and main.py. The bot's token is NEVER in the code: read it from process.env.DISCORD_TOKEN (Python: os.environ['DISCORD_TOKEN']) because the user adds it in the bot's Env tab. Only request the intents the bot needs, and say in your reply which ones to switch on in the Discord developer portal (e.g. Message Content for reading messages). Prefer slash commands (registered on ready) for anything command-like. After calling it, tell the user briefly what the bot does and the steps left: add DISCORD_TOKEN in the Env tab, invite the bot, press start. They get an Open button automatically, so don't paste all the code into the chat.",
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Short bot name (max 40 characters)' },
+        files: {
+          type: 'array',
+          description: 'Every file of the bot, e.g. package.json and index.js',
+          items: {
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'Relative path such as index.js or commands/ping.js' },
+              content: { type: 'string', description: 'Full file contents' },
+            },
+            required: ['path', 'content'],
+          },
+        },
+      },
+      required: ['name', 'files'],
+    },
+  },
+];
+// Keeps only sane file paths/sizes before anything is streamed to the page (which is the one that actually writes them).
+function cleanBotSpec(args) {
+  const name = String((args && args.name) || '').trim().slice(0, 40);
+  if (!name || !Array.isArray(args.files)) return null;
+  const files = [];
+  for (const f of args.files.slice(0, 12)) {
+    const path = String((f && f.path) || '').replace(/[\\]/g, '/').replace(/^\.\//, '');
+    if (!path || path.length > 100 || path.startsWith('/') || path.split('/').includes('..') || !/^[A-Za-z0-9_\-./]+$/.test(path)) continue;
+    if (/(^|\/)(node_modules|\.env)(\/|$)/.test(path)) continue;
+    files.push({ path, content: String((f && f.content) || '').slice(0, 60000) });
+  }
+  return files.length ? { name, files } : null;
+}
+async function createDiscordBot(args) {
+  const spec = cleanBotSpec(args);
+  if (!spec) return JSON.stringify({ error: 'No valid files: give a name and a files array of {path, content}.' });
+  return JSON.stringify({ ok: true, note: "The files are being uploaded to the user's bot hosting. They still need to add DISCORD_TOKEN in the bot's Env tab and press start." });
+}
 async function createDocument() { return JSON.stringify({ ok: true, note: 'Saved to oneWord. The user sees an Open button under your message.' }); }
 // These four tools' actual persistence happens client-side (see the
 // streamToolLoop comment above) — these handlers exist only so the
@@ -568,6 +617,7 @@ const TOOL_FUNCTIONS = {
   forget_fact: forgetFact,
   set_follow: setFollow,
   create_document: createDocument,
+  create_discord_bot: createDiscordBot,
 };
 const MAX_TOOL_ROUNDS = 3;
 
@@ -610,7 +660,7 @@ async function handleChat(request, env) {
     return json({ error: 'Too many requests — please slow down and try again in a few minutes.' }, 429, request);
   }
 
-  const stream = streamToolLoop(env, messages, body.oneTools === true ? [...TOOLS, ...ONE_TOOLS] : TOOLS, body.quiet === true);
+  const stream = streamToolLoop(env, messages, [...TOOLS, ...(body.oneTools === true ? ONE_TOOLS : []), ...(body.botTools === true ? BOT_TOOLS : [])], body.quiet === true);
 
   return new Response(stream, {
     status: 200,

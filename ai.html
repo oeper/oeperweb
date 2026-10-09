@@ -1125,7 +1125,12 @@ function splitDocMarker(content) {
   const m = ONE_DOC_RE.exec(content || '');
   return m ? { text: String(content).replace(ONE_DOC_RE, '').trim(), title: m[1] } : { text: content, title: null };
 }
-function addMessageEl(role, content, imageUrl, index, docLinks) {
+// A chip under a reply for a Discord bot the model coded: opens bot hosting, or says why it couldn't be created.
+function botChipHtml(b) {
+  if (b.ok) return `<a class="doc-link-chip" href="/dbhosting" target="_blank" rel="noopener"><span class="material-symbols-rounded">smart_toy</span>Open “${escHtml(b.name)}” in bot hosting</a>`;
+  return `<span class="doc-link-chip" style="background:var(--md-sys-color-error-container,#8c1d18);color:var(--md-sys-color-on-error-container,#ffdad6);"><span class="material-symbols-rounded">error</span>Couldn’t create “${escHtml(b.name)}”: ${escHtml(b.error || 'failed')}</span>`;
+}
+function addMessageEl(role, content, imageUrl, index, docLinks, botLinks) {
   document.getElementById('chatEmpty')?.remove();
   const wrap = document.createElement('div');
   wrap.className = 'msg ' + role;
@@ -1138,6 +1143,7 @@ function addMessageEl(role, content, imageUrl, index, docLinks) {
       ${imageUrl ? `<img class="msg-attach-img" src="${escHtml(imageUrl)}" alt="">` : ''}
       <div class="msg-bubble"></div>
       ${docLinks && docLinks.length ? `<div class="doc-links">${docLinks.map(d => `<a class="doc-link-chip" href="${escHtml(oneDocUrl(d.id))}" target="_blank" rel="noopener"><span class="material-symbols-rounded">description</span>Open “${escHtml(d.title)}” in oneWord</a>`).join('')}</div>` : ''}
+      ${botLinks && botLinks.length ? `<div class="doc-links">${botLinks.map(botChipHtml).join('')}</div>` : ''}
       ${actionsHtml}
     </div>
   `;
@@ -1169,7 +1175,7 @@ function renderChatFromHistory() {
   if (!chat.messages.length) {
     messagesEl.innerHTML = `<div class="chat-empty" id="chatEmpty"><span class="material-symbols-rounded">auto_awesome</span><p>ask epic AI anything.</p></div>`;
   } else {
-    chat.messages.forEach((m, i) => addMessageEl(m.role, m.content, m.imageUrl, i, m.docLinks));
+    chat.messages.forEach((m, i) => addMessageEl(m.role, m.content, m.imageUrl, i, m.docLinks, m.botLinks));
   }
   requestAnimationFrame(() => { messagesEl.style.opacity = '1'; });
 }
@@ -1568,6 +1574,35 @@ oneDocMenu.addEventListener('click', e => {
 document.getElementById('docChipRemove').addEventListener('click', () => { pendingDoc = null; docChip.style.display = 'none'; });
 
 // Markdown -> a oneWord document (rendered through the same pipeline as chat bubbles, then reduced to tags oneWord understands).
+// Uploads the files the model wrote to the user's own bot hosting (dbhosting), under their signed-in account, then installs
+// dependencies. The token is never part of it: the user adds DISCORD_TOKEN in the bot's Env tab. Always resolves.
+async function aiCreateBot(spec) {
+  const name = String(spec.name || 'bot').slice(0, 40);
+  try {
+    const user = getCurrentUser();
+    if (!user) throw new Error('sign in to create it');
+    if (!SERVER_ENDPOINT) throw new Error('bot hosting is not set up');
+    const idToken = await user.getIdToken();
+    const base = SERVER_ENDPOINT + '/dbhosting/api';
+    const call = async (path, opts) => {
+      const res = await fetch(base + path, { ...opts, headers: { Authorization: 'Bearer ' + idToken, ...((opts && opts.headers) || {}) } });
+      if (!res.ok) { let msg = 'HTTP ' + res.status; try { msg = (await res.json()).error || msg; } catch {} throw new Error(msg); }
+      return res.json();
+    };
+    const bot = await call('/bots', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, slots: 1 }) });
+    const id = encodeURIComponent(bot.id);
+    for (const f of spec.files) {
+      await call('/bots/' + id + '/file?path=' + encodeURIComponent(f.path), { method: 'PUT', headers: { 'Content-Type': 'text/plain' }, body: f.content });
+    }
+    if (spec.files.some(f => f.path === 'package.json' || f.path === 'requirements.txt')) {
+      try { await call('/bots/' + id + '/install', { method: 'POST' }); } catch { /* the user can press install in bot hosting */ }
+    }
+    return { ok: true, id: bot.id, name };
+  } catch (err) {
+    return { ok: false, name, error: err.message || 'failed' };
+  }
+}
+
 function saveMarkdownAsWordDoc(title, markdown) {
   const tmp = document.createElement('div');
   renderAssistantContent(tmp, '', markdown, true);
@@ -1875,6 +1910,7 @@ async function sendToModel(chat) {
   let reasoningBuf = '';
   let contentBuf = '';
   const createdDocs = []; // documents the model wrote into oneWord this turn (create_document)
+  const createdBots = []; // promises for Discord bots the model coded this turn (create_discord_bot)
   // Nothing here ever times out on its own — a fetch/ReadableStream can
   // hang forever if the connection drops without a clean close (very
   // plausible over a home network + Cloudflare Tunnel), leaving `controller`
@@ -1900,7 +1936,7 @@ async function sendToModel(chat) {
   try {
     const wireMessages = await toWireMessages(chat.messages);
     // the oeper.dev model, or the person's own provider (settings > epic AI); ai-provider.js hands back the same stream either way
-    const res = await chatFetch(AI_ENDPOINT, { messages: wireMessages, model: modelDropdown.getValue() || undefined, oneTools: aiFeaturesEnabled() || undefined }, controller.signal);
+    const res = await chatFetch(AI_ENDPOINT, { messages: wireMessages, model: modelDropdown.getValue() || undefined, oneTools: aiFeaturesEnabled() || undefined, botTools: aiFeaturesEnabled() || undefined }, controller.signal);
     if (!res.ok || !res.body) {
       let msg = `Server error (${res.status})`;
       try { msg = (await res.json()).error || msg; } catch {}
@@ -1929,6 +1965,10 @@ async function sendToModel(chat) {
           if (json.updateMemory) { updateMemoryFact(json.updateMemory.old, json.updateMemory.new); continue; }
           if (json.forget) { forgetFact(json.forget); continue; }
           if (json.setFollow) { aiSetFollow(json.setFollow.handle, json.setFollow.follow); continue; }
+          if (json.createBot) {
+            if (aiFeaturesEnabled()) createdBots.push(aiCreateBot(json.createBot));
+            continue;
+          }
           if (json.createDoc) {
             if (aiFeaturesEnabled()) { try { createdDocs.push(saveMarkdownAsWordDoc(json.createDoc.title, json.createDoc.content)); } catch (err) { console.error('create_document failed', err); } }
             continue;
@@ -1974,8 +2014,13 @@ async function sendToModel(chat) {
     // falling back to the raw, un-stripped contentBuf here would re-persist
     // the literal <think> tag text into history.
     const { answer } = splitThinking(reasoningBuf, contentBuf, true);
-    if (answer || createdDocs.length) {
-      chat.messages.push(createdDocs.length ? { role: 'assistant', content: answer || '', docLinks: createdDocs } : { role: 'assistant', content: answer });
+    const botResults = createdBots.length ? await Promise.all(createdBots) : [];
+    if (botResults.length) bubble.insertAdjacentHTML('afterend', `<div class="doc-links">${botResults.map(botChipHtml).join('')}</div>`);
+    if (answer || createdDocs.length || botResults.length) {
+      const reply = { role: 'assistant', content: answer || '' };
+      if (createdDocs.length) reply.docLinks = createdDocs;
+      if (botResults.length) reply.botLinks = botResults;
+      chat.messages.push(reply);
       chat.updatedAt = Date.now();
       saveChats();
     }
