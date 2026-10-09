@@ -225,6 +225,8 @@ function folderAncestors(p) {
 
 const app = express();
 app.set('trust proxy', true); // needed so req.ip reflects the real visitor through the Cloudflare Tunnel, not the local tunnel connection
+// Searver app remote control (before the body parsers) — see remote-proxy.js.
+require('./remote-proxy')(app);
 app.use(cors({ origin: ALLOWED_ORIGINS }));
 app.use(express.json({ limit: '10kb' }));
 
