@@ -37,6 +37,14 @@ const NODE_MEMORY_MB = Number(process.env.DBHOSTING_NODE_MEMORY_MB) || 192;
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,29}$/;
 const ENV_KEY_PATTERN = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
 
+// Bot maker: no-code bots. A maker bot's folder holds only bot.config.json and a 1-line index.js; the shared engine in
+// bot-engine/ (discord.js is installed once, for all of them) does the rest. See bot-engine/logic.js for the config format.
+const maker = require('./bot-engine/logic');
+const MAKER_ENGINE = path.join(__dirname, 'bot-engine', 'index.js').replace(/\\/g, '/');
+const MAKER_STUB = '// This bot was made with the bot maker: this file only starts the shared engine, which reads bot.config.json.\n' +
+  '// Change the bot in the maker tab. To write your own code instead, replace this file (the engine lives in forum-server/bot-engine).\n' +
+  "require(process.env.DBHOSTING_ENGINE);\n";
+
 // Per-bot settings (state[id].settings). `presence` is applied by dbhosting-presence.js, which is preloaded into Node bots.
 // forward slashes: backslashes inside NODE_OPTIONS are read as escapes (a Windows path would break)
 const PRESENCE_SHIM = path.join(__dirname, 'dbhosting-presence.js').replace(/\\/g, '/');
@@ -213,7 +221,7 @@ module.exports = function setupDbHosting(app, ctx) {
       BOT_ACTIVITIES: JSON.stringify(pr.activities),
     };
     const memory = `--max-old-space-size=${NODE_MEMORY_MB * slotsOf(loadState()[id])}`;
-    return { ...base, NODE_OPTIONS: forRun ? `${memory} --require "${PRESENCE_SHIM}"` : memory, PYTHONUNBUFFERED: '1', ...(forRun ? presenceVars : {}), ...readEnv(id) };
+    return { ...base, NODE_OPTIONS: forRun ? `${memory} --require "${PRESENCE_SHIM}"` : memory, PYTHONUNBUFFERED: '1', ...(forRun ? { ...presenceVars, DBHOSTING_ENGINE: MAKER_ENGINE } : {}), ...readEnv(id) };
   }
 
   function isAlive(pid) { try { process.kill(pid, 0); return true; } catch { return false; } }
@@ -405,6 +413,7 @@ module.exports = function setupDbHosting(app, ctx) {
       slots: slotsOf(st),
       perDay: isFree(st) ? 0 : perDayOf(st),
       free: isFree(st),
+      kind: st.kind === 'maker' ? 'maker' : 'code',
     };
   }
 
@@ -466,10 +475,41 @@ module.exports = function setupDbHosting(app, ctx) {
     let base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'bot';
     let id = base;
     for (let n = 2; st[id]; n++) id = `${base}-${n}`;
+    const isMaker = !!(req.body && req.body.kind === 'maker');
     fs.mkdirSync(botDir(id), { recursive: true });
-    st[id] = { name, owner: email, slots, createdAt: Date.now(), desired: false };
+    st[id] = { name, owner: email, slots, createdAt: Date.now(), desired: false, ...(isMaker ? { kind: 'maker' } : {}) };
+    if (isMaker) {
+      const preset = req.body && maker.PRESETS[req.body.preset] ? req.body.preset : 'blank';
+      fs.writeFileSync(path.join(botDir(id), 'bot.config.json'), JSON.stringify(maker.presetConfig(preset), null, 2));
+      fs.writeFileSync(path.join(botDir(id), 'index.js'), MAKER_STUB);
+    }
     saveState(st);
     res.json(describe(id, st[id]));
+  });
+
+  // ── bot maker ────────────────────────────────────────────────────
+  router.get('/maker/presets', (req, res) => {
+    res.json({ presets: Object.entries(maker.PRESETS).map(([id, p]) => ({ id, label: p.label, text: p.text })), builtins: maker.BUILTINS, limits: maker.LIMITS });
+  });
+  const makerOnly = (req, res, next) => (loadState()[req.botId].kind === 'maker' ? next() : res.status(400).json({ error: 'This bot runs its own code, not the bot maker.' }));
+  const configFile = id => path.join(botDir(id), 'bot.config.json');
+  function readMaker(id) {
+    let raw = null;
+    try { raw = JSON.parse(fs.readFileSync(configFile(id), 'utf8')); } catch { /* missing or broken: fall back to a blank config */ }
+    const v = maker.validate(raw);
+    return { config: v.config || maker.defaults(), problem: v.error || (raw ? null : 'bot.config.json was missing or broken, so this is a blank config. Save to replace it.') };
+  }
+  router.get('/bots/:id/maker', withBot, makerOnly, (req, res) => {
+    const { config, problem } = readMaker(req.botId);
+    res.json({ config, problem, hasToken: Object.prototype.hasOwnProperty.call(readEnv(req.botId), 'DISCORD_TOKEN') });
+  });
+  router.put('/bots/:id/maker', withBot, makerOnly, (req, res) => {
+    const v = maker.validate(req.body && req.body.config);
+    if (v.error) return res.status(400).json({ error: v.error });
+    fs.writeFileSync(configFile(req.botId), JSON.stringify(v.config, null, 2));
+    // a maker bot's entry file must still be the stub (someone may have replaced it with their own code: leave that alone)
+    if (!fs.existsSync(path.join(botDir(req.botId), 'index.js'))) fs.writeFileSync(path.join(botDir(req.botId), 'index.js'), MAKER_STUB);
+    res.json({ config: v.config, running: !!rt(req.botId).child });
   });
 
   // Changing size changes the price and (for Node bots) the memory cap, both

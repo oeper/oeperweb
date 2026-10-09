@@ -21,6 +21,8 @@ No build step for the site: plain HTML/CSS/JS, one `.html` per page.
   `creditTransfers` log). Owners allocate/approve/revoke accounts from the page (`/admin/*`). Non-owners only see their own bots.
   Per-bot settings (name, auto-restart, Discord status/rotating activities) live in `state[id].settings`; `dbhosting-presence.js` is preloaded into Node bots
   and applies the status to discord.js via a watched `<id>.presence.json` (see README "Settings tab").
+  "Bot maker" bots (`kind:'maker'`) are no-code: `bot.config.json` + shared engine in `forum-server/bot-engine/` (`logic.js` validation/presets shared by server
+  and engine, `handlers.js` command logic, `index.js` runtime); discord.js installed once in `forum-server/node_modules`. UI = "maker" tab in `dbhosting.html`.
   `GET /dbhosting/api/status` is public (counts only) and feeds a row on `status.html`.
   UI is `dbhosting.html` (oeper.dev/dbhosting). Add any new `/dbhosting/api` route to the router in `dbhosting.js`, not `upload-server.js`.
 - `cf-ai-worker/` — Cloudflare Worker replacing `ai-proxy.js` (Workers AI); deploy with `npx wrangler deploy`.

@@ -97,6 +97,22 @@ running uploaded code on the phone. Non-owners only ever see their own bots.
   (needs `pkg install unzip`); "install" runs `npm install` / `pip install -r`.
 - Crashed bots restart with backoff (gives up after 8 quick crashes). Bots that
   were running when the server stopped are started again on boot.
+- **Bot maker** (no code): "create" on the page can make a *bot maker* bot instead of an upload slot (`kind: 'maker'`).
+  Its folder holds only `bot.config.json` (the config) and a two-line `index.js` that requires the shared engine
+  `bot-engine/index.js`, so discord.js is installed ONCE in `forum-server/node_modules` (`npm install` in this folder)
+  and no per-bot install is needed. Config: ready-made commands (ping, help, avatar, userinfo, serverinfo, coinflip,
+  roll, eightball, poll, say), up to 25 custom `/commands` with reply text, up to 50 auto-replies (contains / word /
+  exact / starts), welcome + goodbye messages, auto-role, moderation (/kick /ban /timeout /purge, permission-gated,
+  role-hierarchy checked, optional log channel). Reply text supports `{user} {username} {server} {channel} {count}`;
+  mentions are never parsed (`allowedMentions: {parse: []}`). Presets: blank, welcome, moderation, fun, support.
+  The engine only requests the intents the enabled features need (Message Content for auto-replies, Server Members for
+  welcome/auto-role) and explains in the log if Discord refuses or the token is bad. Shared validation lives in
+  `bot-engine/logic.js` (used by both the server routes and the engine), so a config that saves also runs.
+  The token is saved through the normal write-only `.env` (`DISCORD_TOKEN`). The Discord status helper
+  (`dbhosting-presence.js`) works for maker bots too (it resolves the shared discord.js via `DBHOSTING_ENGINE`).
+  Routes: `GET /dbhosting/api/maker/presets`, `GET`/`PUT /dbhosting/api/bots/:id/maker` (maker bots only; PUT validates
+  first and never overwrites a good file with a bad one). The page's "maker" tab also builds the invite link with only
+  the permissions the enabled features need. Power users can replace `index.js` in the files tab to turn it into a code bot.
 - **Settings tab** (per bot, stored in `dbhosting-state.json` under `settings`): rename, an
   auto-restart-on-crash switch, and the bot's **Discord status**: presence (online / idle /
   do not disturb / invisible) plus up to 10 activities (playing, watching, listening,

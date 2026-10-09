@@ -79,7 +79,8 @@
   .message .btn { margin-top: 16px; }
 
   .system { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin: 0 0 16px; }
-  .new-row { display: flex; gap: 10px; margin-bottom: 20px; }
+  .new-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .new-row #newName { flex: 1 1 160px; min-width: 140px; }
 
   .bot-list { display: flex; flex-direction: column; gap: 12px; }
   .bot { background: var(--md-sys-color-surface); border-radius: 20px; padding: 18px 22px; }
@@ -147,6 +148,26 @@
   .every .input { width: 80px; flex: none; }
   .applied { font-size: 12px; margin: 10px 0 14px; color: var(--md-sys-color-on-surface-variant); }
   .applied.ok { color: var(--md-sys-color-success); }
+  details.mk { background: var(--md-sys-color-background); border-radius: 14px; padding: 4px 14px; margin: 0 0 10px; }
+  details.mk > summary { cursor: pointer; font-size: 14px; font-weight: 500; padding: 10px 0; list-style: none; display: flex; align-items: center; gap: 8px; }
+  details.mk > summary::-webkit-details-marker { display: none; }
+  details.mk > summary::after { content: 'expand_more'; font-family: 'Material Symbols Rounded'; margin-left: auto; color: var(--md-sys-color-on-surface-variant); transition: transform .2s; }
+  details.mk[open] > summary::after { transform: rotate(180deg); }
+  details.mk > .mk-body { padding: 4px 0 12px; }
+  .mk-count { font-size: 12px; font-weight: 400; color: var(--md-sys-color-on-surface-variant); }
+  .mk-card { background: var(--md-sys-color-surface); border-radius: 12px; padding: 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .mk-card .line { display: flex; gap: 8px; align-items: center; }
+  .mk-card .input, .mk-card textarea { width: 100%; border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+  .mk-card textarea { background: var(--md-sys-color-surface-variant); border: none; color: var(--md-sys-color-on-surface); font-family: inherit; resize: vertical; min-height: 60px; }
+  .mk-card select.input { width: auto; flex: 0 0 auto; }
+  .mk-card .slash { color: var(--md-sys-color-on-surface-variant); font-weight: 500; }
+  .mk-check { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; cursor: pointer; font-size: 14px; }
+  .mk-check input { width: 18px; height: 18px; margin-top: 1px; accent-color: var(--md-sys-color-primary); flex: none; }
+  .mk-check small { display: block; font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 1px; }
+  .hint.warn { color: var(--md-sys-color-warning); }
+  ol.steps { padding-left: 18px; margin: 0 0 10px; }
+  ol.steps li { margin: 3px 0; }
+  .invite a { color: var(--md-sys-color-primary); word-break: break-all; }
   .note { font-size: 13px; color: var(--md-sys-color-on-surface-variant); line-height: 1.6; margin-top: 28px; }
   .note code, .hint code { background: var(--md-sys-color-surface-variant); padding: 1px 6px; border-radius: 6px; font-size: 12px; }
 </style>
@@ -156,7 +177,7 @@
 <div class="page">
   <header class="header">
     <h1><span class="material-symbols-rounded">smart_toy</span>bot hosting</h1>
-    <p class="subtitle">run discord bots (node.js or python) on the oeper.dev server. upload your bot, add its token, press start — it restarts itself if it crashes and comes back after a server restart. hosting is paid for with oeper.dev credits, only while a bot is running.</p>
+    <p class="subtitle">make a discord bot with no code, or upload your own (node.js or python), and host it on the oeper.dev server. pick a starting point, switch on what you want, paste your bot token and press start — it restarts itself if it crashes and comes back after a server restart. hosting is paid for with oeper.dev credits, only while a bot is running.</p>
   </header>
 
   <div id="view"></div>
@@ -197,6 +218,10 @@ let editing = null; // { id, path }
 let pollTimer = null;
 let logTimer = null;
 let state = 'loading'; // loading | signedout | forbidden | offline | ready
+let makerInfo = null;  // { presets, builtins, limits } from the server
+let mkNote = '';
+const mkSay = text => { mkNote = text; const el = document.getElementById('mkMsg'); if (el) { el.className = 'hint'; el.textContent = text; } }; // kept in mkNote too, so a redraw of the tab shows it
+let mk = null, mkId = null, mkDirty = false; // the open maker bot's config, edited live; kept across the 5 s refresh until saved
 
 async function api(path, { method = 'GET', body, headers, raw } = {}) {
   const user = getCurrentUser();
@@ -238,6 +263,7 @@ async function refresh() {
     account = data.account; rates = data.rates; billingEmail = data.billingEmail;
     isOwnerUser = data.isOwner; usedSlots = data.usedSlots; maxSlots = data.maxSlots;
     adminAccounts = isOwnerUser ? (await api('/admin/accounts')).accounts : [];
+    if (!makerInfo) { try { makerInfo = await api('/maker/presets'); } catch { /* an older server: the maker is simply not offered */ } }
     state = 'ready';
     render();
   } catch (e) {
@@ -271,7 +297,7 @@ function sizeLabel(n, short) {
 function detailText(b) {
   const up = b.status === 'running' && b.startedAt ? ' · up ' + fmtUptime(Date.now() - b.startedAt) : '';
   const cost = b.free ? 'free' : fmtCredits(b.perDay) + ' credits/day';
-  return [b.entry ? esc(b.entry) : 'no entry file yet', SIZE_NAMES[b.slots] + ' · ' + cost, b.restarts ? b.restarts + ' restart' + (b.restarts > 1 ? 's' : '') : ''].filter(Boolean).join(' · ') + up;
+  return [b.kind === 'maker' ? 'bot maker' : b.entry ? esc(b.entry) : 'no entry file yet', SIZE_NAMES[b.slots] + ' · ' + cost, b.restarts ? b.restarts + ' restart' + (b.restarts > 1 ? 's' : '') : ''].filter(Boolean).join(' · ') + up;
 }
 
 function creditsLine() {
@@ -313,7 +339,7 @@ function botCard(b) {
         ? `<button class="btn small" data-act="restart" ${busy ? 'disabled' : ''}><span class="material-symbols-rounded">restart_alt</span>restart</button>
            <button class="btn small" data-act="stop"><span class="material-symbols-rounded">stop</span>stop</button>`
         : `<button class="btn small primary" data-act="start" ${busy ? 'disabled' : ''}><span class="material-symbols-rounded">play_arrow</span>start</button>`}
-      <button class="btn small" data-act="install" ${busy ? 'disabled' : ''}><span class="material-symbols-rounded">download</span>install</button>
+      ${b.kind === 'maker' ? '' : `<button class="btn small" data-act="install" ${busy ? 'disabled' : ''}><span class="material-symbols-rounded">download</span>install</button>`}
       <button class="btn small" data-act="manage"><span class="material-symbols-rounded">${isOpen ? 'expand_less' : 'tune'}</span>${isOpen ? 'close' : 'manage'}</button>
       <select class="input size" data-size title="size">${rates.sizes.map(n => `<option value="${n}" ${n === b.slots ? 'selected' : ''}>${sizeLabel(n, true)}</option>`).join('')}</select>
       <span class="spacer"></span>
@@ -353,9 +379,12 @@ function render(force) {
     </div>
     <div class="new-row">
       <input class="input" id="newName" maxlength="40" placeholder="new bot name" autocomplete="off">
+      ${makerInfo ? `<select class="input" id="newKind" title="how to make it"><option value="maker">bot maker (no code)</option><option value="code">upload my own code</option></select>
+      <select class="input" id="newPreset" title="starting point">${makerInfo.presets.map(p => `<option value="${esc(p.id)}">${esc(p.label)}</option>`).join('')}</select>` : ''}
       <select class="input" id="newSize">${rates.sizes.map(n => `<option value="${n}">${sizeLabel(n)}</option>`).join('')}</select>
       <button class="btn primary" id="newBtn"><span class="material-symbols-rounded">add</span>create</button>
     </div>
+    ${makerInfo ? '<p class="hint" id="presetHint" style="margin:-8px 0 16px"></p>' : ''}
     <div class="bot-list">${bots.length ? bots.map(botCard).join('') : '<div class="message">no bots yet — create one above.</div>'}</div>
     ${isOwnerUser ? `
     <h2 class="sec">accounts</h2>
@@ -372,6 +401,17 @@ function render(force) {
   const alloc = document.getElementById('allocBtn');
   if (alloc) alloc.addEventListener('click', allocate);
   document.getElementById('newName').addEventListener('keydown', e => { if (e.key === 'Enter') createBot(); });
+  const kindSel = document.getElementById('newKind');
+  if (kindSel) {
+    const presetSel = document.getElementById('newPreset'), hint = document.getElementById('presetHint');
+    const sync = () => {
+      const maker = kindSel.value === 'maker';
+      presetSel.hidden = !maker;
+      const p = makerInfo.presets.find(x => x.id === presetSel.value);
+      hint.textContent = maker ? (p ? p.text + ' you set it up in the maker tab, no code needed.' : '') : 'upload your own node.js or python bot, then add its token in the env tab.';
+    };
+    kindSel.addEventListener('change', sync); presetSel.addEventListener('change', sync); sync();
+  }
   if (openId) renderPanel();
 }
 
@@ -381,8 +421,10 @@ async function createBot() {
   if (!name) { input.focus(); return; }
   try {
     const slots = Number(document.getElementById('newSize').value);
-    const b = await api('/bots', { method: 'POST', body: { name, slots } });
-    openId = b.id; openTab = 'files';
+    const kindSel = document.getElementById('newKind');
+    const kind = kindSel ? kindSel.value : 'code';
+    const b = await api('/bots', { method: 'POST', body: { name, slots, kind, preset: kind === 'maker' ? document.getElementById('newPreset').value : undefined } });
+    openId = b.id; openTab = b.kind === 'maker' ? 'maker' : 'files'; mk = null; mkDirty = false;
     await refresh();
   } catch (e) { oeAlert(e.message); }
 }
@@ -457,7 +499,7 @@ view.addEventListener('click', async e => {
   if (!id) return;
   try {
     if (act === 'manage') {
-      openId = openId === id ? null : id; openTab = 'logs'; editing = null;
+      openId = openId === id ? null : id; openTab = (bots.find(x => x.id === id) || {}).kind === 'maker' ? 'maker' : 'logs'; editing = null;
       render(true);
       return;
     }
@@ -480,12 +522,13 @@ function renderPanel() {
   if (!panel) return;
   panel.innerHTML = `
     <div class="tabs">
-      ${['logs', 'files', 'env', 'settings'].map(t => `<button class="tab ${t === openTab ? 'active' : ''}" data-tab="${t}">${t}</button>`).join('')}
+      ${((bots.find(x => x.id === openId) || {}).kind === 'maker' ? ['maker', 'logs', 'files', 'env', 'settings'] : ['logs', 'files', 'env', 'settings']).map(t => `<button class="tab ${t === openTab ? 'active' : ''}" data-tab="${t}">${t}</button>`).join('')}
     </div>
     <div id="tabBody"></div>`;
   panel.querySelectorAll('[data-tab]').forEach(t => t.addEventListener('click', () => { openTab = t.dataset.tab; editing = null; renderPanel(); }));
   clearInterval(logTimer); logTimer = null;
-  if (openTab === 'logs') renderLogs();
+  if (openTab === 'maker') renderMaker();
+  else if (openTab === 'logs') renderLogs();
   else if (openTab === 'files') renderFiles();
   else if (openTab === 'settings') renderSettings();
   else renderEnv();
@@ -617,6 +660,201 @@ async function renderEnv() {
     await api(`/bots/${id}/env`, { method: 'PUT', body: { remove: [row.dataset.key] } });
     await refresh();
   }));
+}
+
+// ── maker tab: build the bot without code ────────────────────────
+const PERMS = { base: 1024n | 2048n | 16384n | 65536n | 64n, kick: 2n, ban: 4n, timeout: 1099511627776n, manageMessages: 8192n, manageRoles: 268435456n };
+const idOk = v => /^\d{15,25}$/.test(String(v || '').trim());
+function setPath(obj, path, val) {
+  const keys = path.split('.');
+  let o = obj;
+  for (let i = 0; i < keys.length - 1; i++) o = o[keys[i]];
+  o[keys[keys.length - 1]] = val;
+}
+function inviteUrl() {
+  if (!idOk(mk.applicationId)) return '';
+  let p = PERMS.base;
+  if (mk.moderation.kick) p |= PERMS.kick;
+  if (mk.moderation.ban) p |= PERMS.ban;
+  if (mk.moderation.timeout) p |= PERMS.timeout;
+  if (mk.moderation.purge || mk.builtins.say) p |= PERMS.manageMessages;
+  if (mk.autoRole.enabled) p |= PERMS.manageRoles;
+  return `https://discord.com/oauth2/authorize?client_id=${mk.applicationId.trim()}&scope=bot%20applications.commands&permissions=${p}`;
+}
+function needsIntents() {
+  const out = [];
+  if (mk.autoReplies.length) out.push('<b>Message Content Intent</b> (for auto-replies)');
+  if (mk.welcome.enabled || mk.welcome.leaveEnabled || mk.autoRole.enabled) out.push('<b>Server Members Intent</b> (for welcome, goodbye and auto-role)');
+  return out;
+}
+function paintInvite() {
+  const box = document.getElementById('mkInvite');
+  if (!box) return;
+  const url = inviteUrl();
+  const intents = needsIntents();
+  box.innerHTML = (url
+    ? `<a href="${esc(url)}" target="_blank" rel="noopener">open the invite link to add the bot to your server</a> (it asks only for the permissions your features need)`
+    : 'paste the application ID above to get the invite link.')
+    + (intents.length ? `<br>turn these on for the bot in the developer portal (Bot page, "Privileged Gateway Intents"): ${intents.join(' and ')}.` : '');
+}
+
+function cmdRow(c, i) {
+  return `<div class="mk-card" data-i="${i}">
+    <div class="line"><span class="slash">/</span><input class="input" data-p="commands.${i}.name" maxlength="32" placeholder="command name, e.g. rules" value="${esc(c.name)}" autocomplete="off" autocapitalize="none">
+      <button class="icon-btn" data-rm-cmd="${i}" title="remove"><span class="material-symbols-rounded">close</span></button></div>
+    <input class="input" data-p="commands.${i}.description" maxlength="100" placeholder="short description (shown when typing /)" value="${esc(c.description === `Run /${c.name}` ? '' : c.description)}" autocomplete="off">
+    <textarea data-p="commands.${i}.reply" maxlength="1900" placeholder="what the bot replies. you can use {user} {username} {server} {channel} {count}">${esc(c.reply)}</textarea>
+    <label class="mk-check" style="padding:0"><input type="checkbox" data-p="commands.${i}.ephemeral" ${c.ephemeral ? 'checked' : ''}>only the person who used it sees the reply</label>
+  </div>`;
+}
+function ruleRow(r, i) {
+  return `<div class="mk-card" data-i="${i}">
+    <div class="line"><select class="input" data-p="autoReplies.${i}.match">${[['contains', 'message contains'], ['word', 'message has the word'], ['exact', 'message is exactly'], ['starts', 'message starts with']].map(([v, l]) => `<option value="${v}" ${v === r.match ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <input class="input" data-p="autoReplies.${i}.trigger" maxlength="100" placeholder="trigger, e.g. how do i join" value="${esc(r.trigger)}" autocomplete="off">
+      <button class="icon-btn" data-rm-rule="${i}" title="remove"><span class="material-symbols-rounded">close</span></button></div>
+    <textarea data-p="autoReplies.${i}.reply" maxlength="1900" placeholder="the reply. you can use {user} {username} {server} {channel} {count}">${esc(r.reply)}</textarea>
+    <label class="mk-check" style="padding:0"><input type="checkbox" data-p="autoReplies.${i}.caseSensitive" ${r.caseSensitive ? 'checked' : ''}>match capital letters exactly</label>
+  </div>`;
+}
+const check = (path, checked, title, sub) => `<label class="mk-check"><input type="checkbox" data-p="${path}" ${checked ? 'checked' : ''}><span>${title}${sub ? `<small>${sub}</small>` : ''}</span></label>`;
+
+async function renderMaker() {
+  const body = document.getElementById('tabBody');
+  const id = openId;
+  let data = { problem: null, hasToken: false };
+  if (!(mk && mkId === id && mkDirty)) {
+    body.innerHTML = 'loading…';
+    try { data = await api(`/bots/${id}/maker`); } catch (e) { body.textContent = e.message; return; }
+    if (openId !== id || openTab !== 'maker') return;
+    mk = data.config; mkId = id; mkDirty = false;
+  } else {
+    // unsaved edits survive the periodic refresh; only the token flag needs asking again
+    try { data.hasToken = (await api(`/bots/${id}/maker`)).hasToken; } catch { /* keep going */ }
+    if (openId !== id || openTab !== 'maker') return;
+  }
+  const bot = bots.find(b => b.id === id) || {};
+  const B = (makerInfo && makerInfo.builtins) || {};
+  body.innerHTML = `
+    ${data.problem ? `<p class="hint warn">${esc(data.problem)}</p>` : ''}
+    <details class="mk" open><summary>1 · connect it to discord</summary><div class="mk-body">
+      <ol class="hint steps">
+        <li>open the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener" style="color:var(--md-sys-color-primary)">discord developer portal</a> and press <b>New Application</b>.</li>
+        <li>copy the <b>Application ID</b> (General Information) into the box below.</li>
+        <li>on the <b>Bot</b> page press <b>Reset Token</b>, copy it and paste it below. it is saved write-only, like in the env tab.</li>
+        <li>open the invite link below to add the bot to your server, then press start.</li>
+      </ol>
+      <div class="field"><label>application id</label><input class="input" data-p="applicationId" placeholder="123456789012345678" value="${esc(mk.applicationId)}" autocomplete="off" inputmode="numeric"></div>
+      <div class="field"><label>bot token ${data.hasToken ? '· saved ✓ (paste a new one to replace it)' : '· not saved yet'}</label>
+        <div class="env-add" style="margin:0"><input class="input" id="mkToken" type="password" placeholder="paste the bot token" autocomplete="new-password" style="flex:1 1 200px"><button class="btn small primary" id="mkTokenSave"><span class="material-symbols-rounded">key</span>save token</button></div></div>
+      <p class="hint invite" id="mkInvite"></p>
+    </div></details>
+
+    <details class="mk" open><summary>2 · ready-made commands</summary><div class="mk-body">
+      ${Object.keys(B).map(k => check(`builtins.${k}`, mk.builtins[k], `/${esc(B[k].name)}`, esc(B[k].text))).join('')}
+    </div></details>
+
+    <details class="mk" open><summary>3 · your own commands <span class="mk-count" id="cmdCount"></span></summary><div class="mk-body">
+      <p class="hint" style="margin-top:0">a command anyone can type as <code>/name</code> that makes the bot reply with your text.</p>
+      <div id="cmdList"></div>
+      <div class="tools"><button class="btn small" id="addCmd"><span class="material-symbols-rounded">add</span>add a command</button></div>
+    </div></details>
+
+    <details class="mk"><summary>4 · auto-replies <span class="mk-count" id="ruleCount"></span></summary><div class="mk-body">
+      <p class="hint" style="margin-top:0">the bot watches chat and answers when a message matches. needs the Message Content Intent.</p>
+      <div id="ruleList"></div>
+      <div class="tools"><button class="btn small" id="addRule"><span class="material-symbols-rounded">add</span>add an auto-reply</button></div>
+    </div></details>
+
+    <details class="mk"><summary>5 · welcome, goodbye &amp; auto-role</summary><div class="mk-body">
+      ${check('welcome.enabled', mk.welcome.enabled, 'greet new members')}
+      <div class="field"><label>welcome message</label><div class="mk-card"><textarea data-p="welcome.message" maxlength="1900">${esc(mk.welcome.message)}</textarea></div></div>
+      ${check('welcome.leaveEnabled', mk.welcome.leaveEnabled, 'say goodbye when someone leaves')}
+      <div class="field"><label>goodbye message</label><div class="mk-card"><textarea data-p="welcome.leaveMessage" maxlength="1900">${esc(mk.welcome.leaveMessage)}</textarea></div></div>
+      <div class="field"><label>channel id for these messages (empty = the server's system channel)</label><input class="input" data-p="welcome.channelId" placeholder="right-click the channel, Copy Channel ID" value="${esc(mk.welcome.channelId)}" autocomplete="off" inputmode="numeric"></div>
+      ${check('autoRole.enabled', mk.autoRole.enabled, 'give new members a role', 'the bot role must be above that role in the role list')}
+      <div class="field"><label>role id</label><input class="input" data-p="autoRole.roleId" placeholder="Server Settings → Roles → right-click → Copy Role ID" value="${esc(mk.autoRole.roleId)}" autocomplete="off" inputmode="numeric"></div>
+      <p class="hint">needs the Server Members Intent. messages can use {user} {username} {server} {count}.</p>
+    </div></details>
+
+    <details class="mk"><summary>6 · moderation</summary><div class="mk-body">
+      ${check('moderation.kick', mk.moderation.kick, '/kick', 'only people with the Kick Members permission can use it')}
+      ${check('moderation.ban', mk.moderation.ban, '/ban', 'Ban Members permission; can also delete their recent messages')}
+      ${check('moderation.timeout', mk.moderation.timeout, '/timeout', 'Moderate Members permission')}
+      ${check('moderation.purge', mk.moderation.purge, '/purge', 'Manage Messages permission; deletes up to 100 recent messages')}
+      <div class="field"><label>log channel id (optional: where kicks, bans and purges get recorded)</label><input class="input" data-p="moderation.logChannelId" placeholder="Copy Channel ID" value="${esc(mk.moderation.logChannelId)}" autocomplete="off" inputmode="numeric"></div>
+      <p class="hint">the bot checks roles first, so nobody can use it on someone above them.</p>
+    </div></details>
+
+    <div class="tools" style="margin-top:14px">
+      <button class="btn small primary" id="mkSave"><span class="material-symbols-rounded">save</span>save</button>
+      <button class="btn small" id="mkSaveRun"><span class="material-symbols-rounded">${bot.status === 'running' || bot.status === 'restarting' ? 'restart_alt' : 'play_arrow'}</span>save &amp; ${bot.status === 'running' || bot.status === 'restarting' ? 'restart' : 'start'}</button>
+    </div>
+    <p class="hint" id="mkMsg">${esc(mkNote)}</p>
+    <p class="hint">changes apply when the bot (re)starts. the bot's status and activity (playing, watching…) are in the <b>settings</b> tab. want to write code instead? the files tab has <code>bot.config.json</code> and <code>index.js</code> you can replace.</p>`;
+
+  const cmdList = document.getElementById('cmdList'), ruleList = document.getElementById('ruleList');
+  const paintLists = () => {
+    cmdList.innerHTML = mk.commands.map(cmdRow).join('') || '<p class="hint">no commands yet.</p>';
+    ruleList.innerHTML = mk.autoReplies.map(ruleRow).join('') || '<p class="hint">no auto-replies yet.</p>';
+    document.getElementById('cmdCount').textContent = mk.commands.length ? `(${mk.commands.length})` : '';
+    document.getElementById('ruleCount').textContent = mk.autoReplies.length ? `(${mk.autoReplies.length})` : '';
+  };
+  paintLists(); paintInvite();
+
+  const onEdit = e => {
+    const el = e.target.closest('[data-p]');
+    if (!el) return;
+    setPath(mk, el.dataset.p, el.type === 'checkbox' ? el.checked : el.value);
+    mkDirty = true; mkNote = '';
+    paintInvite();
+  };
+  body.addEventListener('input', onEdit);
+  body.addEventListener('change', onEdit);
+  body.addEventListener('click', e => {
+    const c = e.target.closest('[data-rm-cmd]'), r = e.target.closest('[data-rm-rule]');
+    if (c) { mk.commands.splice(Number(c.dataset.rmCmd), 1); mkDirty = true; paintLists(); }
+    if (r) { mk.autoReplies.splice(Number(r.dataset.rmRule), 1); mkDirty = true; paintLists(); paintInvite(); }
+  });
+  document.getElementById('addCmd').addEventListener('click', () => {
+    if (mk.commands.length >= (makerInfo.limits.commands || 25)) return oeAlert(`at most ${makerInfo.limits.commands} commands.`);
+    mk.commands.push({ name: '', description: '', reply: '', ephemeral: false }); mkDirty = true; paintLists();
+    cmdList.querySelector('.mk-card:last-child input').focus();
+  });
+  document.getElementById('addRule').addEventListener('click', () => {
+    if (mk.autoReplies.length >= (makerInfo.limits.autoReplies || 50)) return oeAlert(`at most ${makerInfo.limits.autoReplies} auto-replies.`);
+    mk.autoReplies.push({ match: 'contains', trigger: '', reply: '', caseSensitive: false }); mkDirty = true; paintLists(); paintInvite();
+    ruleList.querySelector('.mk-card:last-child input').focus();
+  });
+  document.getElementById('mkTokenSave').addEventListener('click', async () => {
+    const input = document.getElementById('mkToken');
+    if (!input.value.trim()) { input.focus(); return; }
+    try {
+      await api(`/bots/${id}/env`, { method: 'PUT', body: { set: { DISCORD_TOKEN: input.value.trim() } } });
+      input.value = '';
+      await refresh();
+      mkSay('token saved. restart the bot to use it.');
+    } catch (e) { oeAlert(e.message); }
+  });
+  const save = async run => {
+    const msg = document.getElementById('mkMsg');
+    const btns = ['mkSave', 'mkSaveRun'].map(x => document.getElementById(x));
+    btns.forEach(b => { b.disabled = true; });
+    try {
+      const out = await api(`/bots/${id}/maker`, { method: 'PUT', body: { config: mk } });
+      mk = out.config; mkDirty = false;
+      if (run) {
+        const live = bot.status === 'running' || bot.status === 'restarting';
+        await api(`/bots/${id}/${live ? 'restart' : 'start'}`, { method: 'POST' });
+        openTab = 'logs'; await refresh(); // straight to the logs so the first connect (or what is wrong) is on screen
+        return;
+      }
+      await refresh();
+      mkSay(out.running ? 'saved. press restart (or "save & restart") to apply it to the running bot.' : 'saved.');
+    } catch (e) { msg.textContent = e.message; msg.className = 'hint warn'; oeAlert(e.message); }
+    btns.forEach(b => { if (b) b.disabled = false; });
+  };
+  document.getElementById('mkSave').addEventListener('click', () => save(false));
+  document.getElementById('mkSaveRun').addEventListener('click', () => save(true));
 }
 
 // ── settings tab: name, auto-restart and the bot's Discord status ─

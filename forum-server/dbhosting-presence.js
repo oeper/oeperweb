@@ -64,7 +64,13 @@ function startFor(client, djs) {
 
 if (file && !isNpm()) {
   try {
-    const djs = require(require.resolve('discord.js', { paths: [process.cwd()] }));
+    // the bot's own copy first, then the one next to the bot maker engine (maker bots share one install)
+    const engineDir = process.env.DBHOSTING_ENGINE ? require('path').dirname(process.env.DBHOSTING_ENGINE) : null;
+    // A maker bot (it has a bot.config.json) runs on the shared install, so look there FIRST: walking up from the bot's folder could find some
+    // other discord.js, and patching a copy the bot never loads would silently do nothing. Bots with their own code prefer their own copy.
+    const isMaker = !!engineDir && fs.existsSync(require('path').join(process.cwd(), 'bot.config.json'));
+    const where = isMaker ? [engineDir, process.cwd()] : [process.cwd(), ...(engineDir ? [engineDir] : [])];
+    const djs = require(require.resolve('discord.js', { paths: where }));
     const Client = djs && djs.Client;
     if (Client && !Client.prototype.__dbhostingPatched) {
       Client.prototype.__dbhostingPatched = true;
