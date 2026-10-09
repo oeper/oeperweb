@@ -25,6 +25,7 @@ No build step for the site: plain HTML/CSS/JS, one `.html` per page.
   and engine, `handlers.js` command logic, `index.js` runtime); discord.js installed once in `forum-server/node_modules`. UI = "maker" tab in `dbhosting.html`.
   `GET /dbhosting/api/status` is public (counts only) and feeds a row on `status.html`.
   UI is `dbhosting.html` (oeper.dev/dbhosting). Add any new `/dbhosting/api` route to the router in `dbhosting.js`, not `upload-server.js`.
+- `forum-server/app-release.js` — receives new Searver Android APKs from the dev PC (`PUT /app-release`, header `x-release-key` = `RELEASE_KEY` in .env, off when unset); saves to gitignored `app-releases/Searver.apk`, which the Searver app (same phone) reads for updates. `GET /app-release/info` is public (version only).
 - `cf-ai-worker/` — Cloudflare Worker replacing `ai-proxy.js` (Workers AI); deploy with `npx wrangler deploy`.
   Epic AI tools (offered only with the settings.html "epic AI" switch on): `create_document` (oneWord) and `create_discord_bot` (`botTools: true`) — the worker only streams a
   `createBot` SSE event; `ai.html` `aiCreateBot()` then creates the bot via `/dbhosting/api` (POST /bots, PUT /bots/:id/file, POST /install) as the signed-in user. Token never in code (DISCORD_TOKEN env).

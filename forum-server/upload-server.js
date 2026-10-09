@@ -318,6 +318,9 @@ const dbhosting = require('./dbhosting')(app, {
   firebaseProjectId: FIREBASE_PROJECT_ID,
 });
 
+// New Searver Android builds pushed from the developer's PC (needs RELEASE_KEY in .env) — see app-release.js.
+require('./app-release')(app, { dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname });
+
 // The exact same bytes uploaded twice (a feed image also sent as a chat
 // attachment, the same voice note in two conversations, ...) only takes up
 // disk space once, where the filesystem allows it — see dedupe.js.
