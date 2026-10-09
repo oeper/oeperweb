@@ -504,6 +504,7 @@ let folders = []; // { email, path }[]
 let usage = null; // { used, limit } for the signed-in account; limit null = unlimited (owners)
 let scope = 'mine'; // 'mine' | 'all' (owners only)
 let currentFolder = ''; // path within the space currently being browsed
+const ANON_OWNER = 'anonymous uploads'; // stand-in owner for files uploaded without signing in
 let currentOwnerEmail = null; // scope 'all' only: null = "pick a user" screen, else whose space we're in
 const selectedFiles = new Set(); // filenames — bulk-select, current folder view only
 
@@ -858,7 +859,9 @@ async function loadList() {
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    files = data.files || [];
+    // The server hands owners files nobody owns (anonymous uploads, or files it has no record of) with email null. The user list is built
+    // from emails, so those used to vanish: give them one shared "owner" so they show up.
+    files = (data.files || []).map(f => f.email ? f : { ...f, email: ANON_OWNER, anonymous: !f.untracked });
     folders = data.folders || [];
     usage = data.usage || null;
   } catch (err) {
@@ -1007,17 +1010,17 @@ function renderUserList() {
     const count = (files || []).filter(f => f.email === email).length;
     return { email, count };
   }).filter(r => !q || r.email.toLowerCase().includes(q));
-  rows.sort((a, b) => a.email.localeCompare(b.email));
+  rows.sort((a, b) => (b.email === ANON_OWNER) - (a.email === ANON_OWNER) || a.email.localeCompare(b.email));
 
   list.innerHTML = '';
   rows.forEach(r => {
     const card = document.createElement('div');
     card.className = 'folder-card';
     card.innerHTML = `
-      <div class="folder-icon-box"><span class="material-symbols-rounded">person</span></div>
+      <div class="folder-icon-box"><span class="material-symbols-rounded">${r.email === ANON_OWNER ? 'no_accounts' : 'person'}</span></div>
       <div class="folder-main">
         <div class="folder-name">${escHtml(r.email)}</div>
-        <div class="folder-meta">${r.count} file${r.count === 1 ? '' : 's'}</div>
+        <div class="folder-meta">${r.count} file${r.count === 1 ? '' : 's'}${r.email === ANON_OWNER ? ' · not signed in, or no record of the uploader' : ''}</div>
       </div>
     `;
     card.addEventListener('click', () => { currentOwnerEmail = r.email; currentFolder = ''; render(); });
@@ -1161,7 +1164,7 @@ function buildFileTile(f) {
   // mineOrOwner, matching the row view's permission model).
   const menuItems = [{ label: 'copy link', icon: 'link', onClick: () => copyToClipboard(f.url) }];
   if (mineOrOwner) menuItems.push({ label: 'rename', icon: 'edit', onClick: () => openRenameModal(f) });
-  if (mineOrOwner && !f.untracked) menuItems.push({ label: 'move to folder', icon: 'drive_file_move', onClick: () => openMoveModal(f) });
+  if (mineOrOwner && !f.untracked && f.email !== ANON_OWNER) menuItems.push({ label: 'move to folder', icon: 'drive_file_move', onClick: () => openMoveModal(f) });
   menuItems.push({ label: 'download', icon: 'download', onClick: () => {
     const a = document.createElement('a');
     // ?dl=1 makes the server send Content-Disposition: attachment — the
@@ -1197,7 +1200,7 @@ function buildCard(f) {
     ${thumbHtml}
     <div class="file-main">
       <div class="file-name">${escHtml(f.name)}</div>
-      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.untracked ? ' · unknown owner' : ''}${f.quarantined ? ' · <span class="temp-tag" title="an automatic check flagged this file, so it isn\'t publicly viewable until an owner reviews it">under review</span>' : ''}${f.expiresAt ?` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
+      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.untracked ? ' · unknown owner' : f.anonymous ? ' · uploaded without signing in' : ''}${f.quarantined ? ' · <span class="temp-tag" title="an automatic check flagged this file, so it isn\'t publicly viewable until an owner reviews it">under review</span>' : ''}${f.expiresAt ?` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
       ${isAudio(f.name) ? `<audio class="file-audio-player" controls preload="metadata" src="${f.url}"></audio>` : ''}
     </div>
     <div class="file-actions" draggable="false">
@@ -1238,7 +1241,7 @@ function buildCard(f) {
     const menuItems = [
       { label: 'rename', icon: 'edit', onClick: () => openRenameModal(f) },
     ];
-    if (!f.untracked) menuItems.push({ label: 'move to folder', icon: 'drive_file_move', onClick: () => openMoveModal(f) });
+    if (!f.untracked && f.email !== ANON_OWNER) menuItems.push({ label: 'move to folder', icon: 'drive_file_move', onClick: () => openMoveModal(f) });
     menuItems.push({ label: 'delete', icon: 'delete', dangerous: true, onClick: () => deleteFile(f.filename) });
     const kebab = buildKebabMenu(menuItems);
     card.querySelector('.file-actions').appendChild(kebab);
