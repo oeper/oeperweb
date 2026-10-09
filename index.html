@@ -1420,6 +1420,26 @@
       `;
     }
 
+    // flag button on every feed post / video, in the cards and in the open post; opens the shared report dialog
+    function reportBtnHtml(item, kind) {
+      return `
+        <button type="button" class="ig-vote-btn" data-report data-kind="${kind}" data-id="${item.id}" title="Report">
+          <span class="material-symbols-rounded">flag</span>
+        </button>
+      `;
+    }
+
+    function reportFeedItem(kind, id) {
+      const item = (kind === 'video' ? latestVideos : latestPosts).find(x => x.id === id);
+      if (!item) return;
+      const preview = [item.title, kind === 'video' ? item.description : item.body].filter(Boolean).join(' — ').slice(0, 200);
+      if (kind === 'video') {
+        reportContent({ type: 'video', subject: 'this video', itemId: item.id, url: `https://oeper.dev/videos?video=${item.id}`, contentAuthorEmail: item.authorEmail, contentPreview: preview });
+      } else {
+        reportContent({ type: 'post', subject: 'this post', postId: item.id, url: `https://oeper.dev/feed?post=${item.id}`, contentAuthorEmail: item.authorEmail, contentPreview: preview });
+      }
+    }
+
     function saveBtnHtml(item, kind) {
       const user = getCurrentUser();
       const saved = user && (item.savedBy || []).includes(user.uid);
@@ -1465,6 +1485,7 @@
             <span class="material-symbols-rounded">mode_comment</span>
           </button>
           ${saveBtnHtml(p, 'post')}
+          ${reportBtnHtml(p, 'post')}
         </div>
       `;
       // Short posts show in full rather than getting clamped/truncated
@@ -1529,6 +1550,7 @@
               <span class="material-symbols-rounded">mode_comment</span>
             </button>
             ${saveBtnHtml(v, 'video')}
+            ${reportBtnHtml(v, 'video')}
           </div>
           <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
           <div class="ig-caption"><strong>${authorNameHtml(v.authorEmail, profile)}</strong>${linkify(v.title)}</div>
@@ -1660,6 +1682,7 @@
             <span class="material-symbols-rounded">heart_broken</span>
           </button>
           ${saveBtnHtml(item, kind)}
+          ${reportBtnHtml(item, kind)}
         </div>
         <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
         <div class="ig-caption"><strong>${authorNameHtml(item.authorEmail, profile)}</strong>${linkify(item.title)}</div>
@@ -1788,6 +1811,8 @@
         });
         return;
       }
+      const reportBtn = e.target.closest('[data-report]');
+      if (reportBtn) { reportFeedItem(reportBtn.dataset.kind, reportBtn.dataset.id); return; }
       const upBtn = e.target.closest('[data-modal-vote-up]');
       const downBtn = e.target.closest('[data-modal-vote-down]');
       if (!upBtn && !downBtn) return;
@@ -1880,6 +1905,8 @@
       if (voteUpBtn) { toggleVote(voteUpBtn.dataset.kind, voteUpBtn.dataset.id, 'up'); return; }
       if (voteDownBtn) { toggleVote(voteDownBtn.dataset.kind, voteDownBtn.dataset.id, 'down'); return; }
       if (saveBtn) { toggleSave(saveBtn.dataset.kind, saveBtn.dataset.id); return; }
+      const reportBtn = e.target.closest('[data-report]');
+      if (reportBtn) { reportFeedItem(reportBtn.dataset.kind, reportBtn.dataset.id); return; }
       if (commentBtn) { openComments(commentBtn.dataset.kind, commentBtn.dataset.id); return; }
       const videoMedia = e.target.closest('[data-video-media]');
       if (videoMedia) {
