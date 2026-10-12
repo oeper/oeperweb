@@ -71,5 +71,54 @@ module.exports = function mountAppRelease(app, { dataDir }) {
     });
   });
 
+
+  // ── other apps (epic AI): /app-release/<app>/info (public), PUT /app-release/<app> (key), GET /app-release/<app>/download (public) ──
+  // Searver's APK is never served (it only ever installs on the phone that hosts the server); these apps install on other phones,
+  // so their download is public. A private debug build, so that's acceptable; the upload still needs the key.
+  const OTHER = { epic: { file: 'EpicAI.apk', info: 'latest-epic.json' } };
+  const other = req => OTHER[req.params.app];
+
+  app.get('/app-release/:app/info', (req, res) => {
+    const o = other(req); if (!o) return res.status(404).json({ error: 'unknown app' });
+    res.set('Cache-Control', 'no-store');
+    try { res.json(JSON.parse(fs.readFileSync(path.join(dir, o.info), 'utf8'))); } catch { res.status(404).json({ error: 'no build uploaded yet' }); }
+  });
+
+  app.get('/app-release/:app/download', (req, res) => {
+    const o = other(req); if (!o) return res.status(404).json({ error: 'unknown app' });
+    const f = path.join(dir, o.file);
+    if (!fs.existsSync(f)) return res.status(404).json({ error: 'no build uploaded yet' });
+    res.set({ 'Cache-Control': 'no-store', 'Content-Type': 'application/vnd.android.package-archive', 'Content-Length': fs.statSync(f).size });
+    fs.createReadStream(f).pipe(res);
+  });
+
+  app.put('/app-release/:app', (req, res) => {
+    const o = other(req); if (!o) return res.status(404).json({ error: 'unknown app' });
+    if (!process.env.RELEASE_KEY) return res.status(404).json({ error: 'not enabled' });
+    if (!keyOk(req.get('x-release-key'))) return res.status(403).json({ error: 'wrong key' });
+    const declared = Number(req.get('content-length'));
+    if (declared && declared > MAX_BYTES) return res.status(413).json({ error: 'too big' });
+    fs.mkdirSync(dir, { recursive: true });
+    const part = path.join(dir, o.file + '.part');
+    const out = fs.createWriteStream(part);
+    let size = 0, magic = Buffer.alloc(0), failed = false;
+    const fail = (code, msg) => { if (failed) return; failed = true; out.destroy(); fs.rm(part, { force: true }, () => {}); if (!res.headersSent) res.status(code).json({ error: msg }); };
+    req.on('data', chunk => { if (magic.length < 4) magic = Buffer.concat([magic, chunk.subarray(0, 4 - magic.length)]); size += chunk.length; if (size > MAX_BYTES) { req.destroy(); fail(413, 'too big'); } });
+    req.on('aborted', () => fail(400, 'upload interrupted'));
+    req.on('error', () => fail(400, 'upload interrupted'));
+    out.on('error', e => fail(500, e.message));
+    req.pipe(out);
+    out.on('finish', () => {
+      if (failed) return;
+      if (size < 1024 || magic.toString('latin1', 0, 2) !== 'PK') return fail(400, 'that is not an APK');
+      try {
+        fs.renameSync(part, path.join(dir, o.file));
+        const info = { versionCode: Number(req.get('x-version-code')) || null, versionName: String(req.get('x-version-name') || '').slice(0, 60) || null, size, at: Date.now() };
+        fs.writeFileSync(path.join(dir, o.info), JSON.stringify(info));
+        res.json({ ok: true, ...info });
+      } catch (e) { fail(500, e.message); }
+    });
+  });
+
   return { dir };
 };

@@ -312,6 +312,29 @@
     background: var(--md-sys-color-surface-variant); border: none;
     border-radius: 100px; padding: 8px 8px 8px 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
   }
+  /* one-time "get the app" card, Android only (see epicAppPrompt in the script) */
+  .app-prompt {
+    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 76px); left: 50%; z-index: 5000;
+    width: min(440px, calc(100vw - 24px)); box-sizing: border-box; padding: 14px 16px;
+    display: flex; gap: 14px; align-items: center;
+    background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface);
+    border: 1px solid var(--md-sys-color-outline-variant); border-radius: 22px; box-shadow: 0 10px 34px rgba(0, 0, 0, 0.28);
+    opacity: 0; transform: translate(-50%, -24px) scale(0.96); pointer-events: none;
+    transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .app-prompt.show { opacity: 1; transform: translate(-50%, 0) scale(1); pointer-events: all; }
+  .app-prompt > .material-symbols-rounded { font-size: 30px; color: var(--md-sys-color-primary); flex-shrink: 0; }
+  .app-prompt-text { flex: 1; min-width: 0; font-size: 13px; line-height: 1.4; color: var(--md-sys-color-on-surface-variant); }
+  .app-prompt-text b { display: block; font-size: 15px; font-weight: 500; color: var(--md-sys-color-on-surface); margin-bottom: 2px; }
+  .app-prompt-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .app-prompt-actions a, .app-prompt-actions button {
+    font: inherit; font-size: 13px; text-align: center; text-decoration: none; cursor: pointer; border: none; border-radius: 999px; padding: 7px 16px;
+    transition: transform 0.15s ease, background 0.2s ease;
+  }
+  .app-prompt-actions a { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .app-prompt-actions button { background: none; color: var(--md-sys-color-on-surface-variant); }
+  .app-prompt-actions a:active, .app-prompt-actions button:active { transform: scale(0.94); }
+
   .attach-btn {
     width: 38px; height: 38px; border-radius: 50%; border: none; flex-shrink: 0; background: transparent;
     color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -2049,6 +2072,29 @@ document.getElementById('clearBtn').addEventListener('click', () => {
   renderChatFromHistory();
   renderChatsList();
 });
+
+// One-time "get the epic AI app" card for Android visitors. It is shown a single time (remembered in localStorage whether or not it
+// was used); the same download stays available in /tools. The APK comes from the file server's /app-release/epic/download.
+(function epicAppPrompt() {
+  try {
+    if (!/Android/i.test(navigator.userAgent)) return;
+    if (localStorage.getItem('epicAppPromptSeen')) return;
+    setTimeout(() => {
+      const card = document.createElement('div');
+      card.className = 'app-prompt';
+      card.setAttribute('role', 'dialog');
+      card.innerHTML = '<span class="material-symbols-rounded">android</span>'
+        + '<div class="app-prompt-text"><b>get epic AI for android</b>a digital assistant that sees your screen, listens and does things for you. you can always find it later in tools.</div>'
+        + '<div class="app-prompt-actions"><a href="https://fs.oeper.dev/app-release/epic/download" download="EpicAI.apk">download</a><button type="button">later</button></div>';
+      document.body.appendChild(card);
+      const close = () => { card.classList.remove('show'); setTimeout(() => card.remove(), 500); };
+      card.querySelector('button').addEventListener('click', close);
+      card.querySelector('a').addEventListener('click', () => setTimeout(close, 400));
+      requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('show')));
+      localStorage.setItem('epicAppPromptSeen', '1');
+    }, 2500);
+  } catch { /* storage blocked: better never to show it than to show it every time */ }
+})();
 </script>
 </body>
 </html>
