@@ -8,6 +8,8 @@ const http = require('http');
 
 module.exports = function mountRemoteProxy(app) {
   const PORT = Number(process.env.SEARVER_REMOTE_PORT) || 8799;
+  // the web remote's page uses relative links, so it must be opened with the trailing slash
+  app.get('/searver-remote', (req, res) => res.redirect(301, '/searver-remote/'));
   app.use('/searver-remote', (req, res) => {
     const headers = { ...req.headers, host: `127.0.0.1:${PORT}` };
     delete headers['x-forwarded-for'];
