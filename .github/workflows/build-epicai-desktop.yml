@@ -1,0 +1,62 @@
+name: epic AI desktop
+
+# Builds the epic AI app for Windows and macOS (desktop/epicai) and publishes it to the release "epicai-desktop-latest".
+# Run it from the Actions tab (Run workflow) or push a tag like epicai-desktop-v1.0.1. macOS can only be built on a Mac runner, which is why this exists.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['epicai-desktop-v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: --win nsis portable
+          - os: macos-latest
+            args: --mac dmg zip --arm64 --x64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop/epicai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/epicai/package-lock.json
+      - run: npm ci
+      - run: npx electron-builder ${{ matrix.args }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: epic-AI-${{ matrix.os }}
+          path: |
+            desktop/epicai/dist/*.exe
+            desktop/epicai/dist/*.dmg
+            desktop/epicai/dist/*.zip
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - name: Publish to the epicai-desktop-latest release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ls -la out
+          gh release view epicai-desktop-latest >/dev/null 2>&1 || gh release create epicai-desktop-latest --title "epic AI for Windows and macOS" --notes "Latest desktop builds of epic AI." --latest=false
+          gh release upload epicai-desktop-latest out/* --clobber
