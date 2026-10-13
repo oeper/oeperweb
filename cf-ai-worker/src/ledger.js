@@ -21,7 +21,7 @@ const MAX_FAILS_PER_IP = 40; // per network address (many people can share one)
 export const DEFAULT_CONFIG = {
   // Tokens per person per day, input + output (guests are counted by network address). A typical epic AI turn is about 3,000 to 4,000 tokens,
   // because the whole chat is read again on every message, so 25,000 is roughly 7 turns.
-  limits: { guest: { tokens: 10000 }, free: { tokens: 50000 }, plus: { tokens: 240000 } },
+  limits: { guest: { tokens: 10000, messages: 5 }, free: { tokens: 50000 }, plus: { tokens: 240000 } },
   // Everyone together: how many neurons epic AI may spend per day (Cloudflare's free plan is 10,000 for the whole account, shared with the
   // One suite, study tools and moderation). The last reservePct of the pool is kept for Plus people.
   pool: { neurons: 7000, reservePct: 20 },
@@ -103,7 +103,7 @@ export class Ledger extends DurableObject {
   #subject(email, ip) { return email ? 'u:' + email : 'g:' + ip; }
 
   /** Before a message: may this person use epic AI right now? Nothing is counted yet; record() counts what was really used. */
-  async check(email, ip) {
+  async check(email, ip, countMessage = false) {
     const now = Date.now(), day = dayOf(now), cfg = await this.#config();
     await this.#rollDay(day);
     const user = email ? await this.#user(email) : null;
@@ -113,15 +113,21 @@ export class Ledger extends DurableObject {
     const bonus = user ? user.bonus || 0 : 0;
     const poolUsed = (await this.ctx.storage.get('pool:' + day)) || 0;
     const poolCap = cfg.pool.neurons * (plan === 'plus' ? 1 : (100 - cfg.pool.reservePct) / 100);
+    // people who are not signed in also get a small number of messages a day (steps of a phone task are not messages)
+    const msgLimit = plan === 'guest' ? (cfg.limits.guest && cfg.limits.guest.messages != null ? cfg.limits.guest.messages : 5) : 0;
+    const msgKey = 'msgs:' + day + ':' + this.#subject(email, ip);
+    const msgUsed = plan === 'guest' ? ((await this.ctx.storage.get(msgKey)) || 0) : 0;
     let reason = '';
     if (poolUsed >= poolCap) reason = 'pool';
+    else if (plan === 'guest' && countMessage && msgLimit > 0 && msgUsed >= msgLimit) reason = 'messages';
     else if (used >= limit && bonus <= 0) reason = 'person';
+    if (!reason && plan === 'guest' && countMessage) await this.ctx.storage.put(msgKey, msgUsed + 1);
     if (reason) {
       const stat = (await this.ctx.storage.get('stat:' + day)) || {};
       stat.denied = (stat.denied || 0) + 1;
       await this.ctx.storage.put('stat:' + day, stat);
     }
-    return { ok: !reason, reason, plan, used, limit, bonus, resetsAt: nextMidnight(now), plusUntil: user ? userView(user, now).plusUntil : 0 };
+    return { ok: !reason, reason, plan, used, limit, bonus, messageLimit: msgLimit, resetsAt: nextMidnight(now), plusUntil: user ? userView(user, now).plusUntil : 0 };
   }
 
   /** After a message: count the tokens it really used against the person's allowance (then their bonus tokens) and the shared pool. */
@@ -156,7 +162,10 @@ export class Ledger extends DurableObject {
     const used = (await this.ctx.storage.get('use:' + day + ':' + this.#subject(email, ip))) || 0;
     const v = user ? userView(user, now) : { plusUntil: 0, bonus: 0 };
     const poolUsed = (await this.ctx.storage.get('pool:' + day)) || 0;
+    const msgLimit = plan === 'guest' ? (cfg.limits.guest && cfg.limits.guest.messages != null ? cfg.limits.guest.messages : 5) : 0;
+    const msgUsed = plan === 'guest' ? ((await this.ctx.storage.get('msgs:' + day + ':' + this.#subject(email, ip))) || 0) : 0;
     return {
+      messageLimit: msgLimit, messagesUsed: msgUsed,
       plan, used, limit: (cfg.limits[plan] && cfg.limits[plan].tokens) || 0, bonus: v.bonus, plusUntil: v.plusUntil, resetsAt: nextMidnight(now), signedIn: !!email,
       poolPct: cfg.pool.neurons ? Math.min(100, Math.round(poolUsed / cfg.pool.neurons * 100)) : 100, history: user ? (user.history || []).slice(0, 10) : [],
     };
@@ -198,7 +207,7 @@ export class Ledger extends DurableObject {
   async adminGetConfig() { return this.#config(); }
   async adminSetConfig(patch) {
     const cfg = await this.#config();
-    if (patch.limits) for (const plan of ['guest', 'free', 'plus']) if (patch.limits[plan]) cfg.limits[plan] = { tokens: clampInt(patch.limits[plan].tokens, 0, 1_000_000_000) };
+    if (patch.limits) for (const plan of ['guest', 'free', 'plus']) if (patch.limits[plan]) cfg.limits[plan] = { tokens: clampInt(patch.limits[plan].tokens, 0, 1_000_000_000), ...(plan === 'guest' ? { messages: clampInt(patch.limits[plan].messages, 0, 100_000) } : {}) };
     if (patch.pool) cfg.pool = { neurons: clampInt(patch.pool.neurons, 0, 100_000_000), reservePct: clampInt(patch.pool.reservePct, 0, 100) };
     if (patch.rates) cfg.rates = { inPerM: clampInt(patch.rates.inPerM, 1, 10_000_000), outPerM: clampInt(patch.rates.outPerM, 1, 10_000_000) };
     if (patch.products) {

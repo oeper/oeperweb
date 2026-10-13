@@ -144,6 +144,7 @@
     <p class="sub">What the model reads plus writes (its thinking counts too), per person per day, resetting at midnight UTC. Guests are counted per network address. "Plus" is what a product key unlocks. Bonus tokens from codes are used after the daily allowance runs out. A typical turn is about 3,000 to 4,000 tokens because the whole chat is read again every message.</p>
     <div class="grid">
       <div class="field"><label>Guests (not signed in)</label><input type="number" id="limGuest" min="0" step="1000"></div>
+      <div class="field"><label>Guest messages a day</label><input type="number" id="limGuestMsgs" min="0" step="1"></div>
       <div class="field"><label>Free (signed in)</label><input type="number" id="limFree" min="0" step="1000"></div>
       <div class="field"><label>epic AI Plus</label><input type="number" id="limPlus" min="0" step="1000"></div>
     </div>
@@ -273,7 +274,7 @@ async function load() {
     [t.signedIn + ' / ' + t.guests, 'signed in / guest turns'], [t.denied, 'blocked by a limit'], [s.codes, 'codes & keys'], [s.redemptions, 'redemptions'],
   ].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
   const lim = data.config.limits;
-  $('limGuest').value = lim.guest.tokens; $('limFree').value = lim.free.tokens; $('limPlus').value = lim.plus.tokens;
+  $('limGuest').value = lim.guest.tokens; $('limGuestMsgs').value = lim.guest.messages != null ? lim.guest.messages : 5; $('limFree').value = lim.free.tokens; $('limPlus').value = lim.plus.tokens;
   const cfg = data.config;
   $('poolNeurons').value = cfg.pool.neurons; $('poolReserve').value = cfg.pool.reservePct; $('rateIn').value = cfg.rates.inPerM; $('rateOut').value = cfg.rates.outPerM;
   updatePoolHint();
@@ -340,7 +341,7 @@ $('rows').addEventListener('click', async e => {
 
 $('saveLimits').addEventListener('click', e => run(e.currentTarget, async () => {
   await call('PUT', '/api/admin/config', {
-    limits: { guest: { tokens: +$('limGuest').value }, free: { tokens: +$('limFree').value }, plus: { tokens: +$('limPlus').value } },
+    limits: { guest: { tokens: +$('limGuest').value, messages: +$('limGuestMsgs').value }, free: { tokens: +$('limFree').value }, plus: { tokens: +$('limPlus').value } },
     pool: { neurons: +$('poolNeurons').value, reservePct: +$('poolReserve').value }, rates: { inPerM: +$('rateIn').value, outPerM: +$('rateOut').value },
   });
   await load(); toast('Limits saved');

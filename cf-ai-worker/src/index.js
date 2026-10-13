@@ -313,12 +313,27 @@ async function streamOneRound(upstream, send, quiet, tally) {
 // to the client, and between rounds — invisibly to the client — executes
 // any tool calls the model made and feeds the results back in, up to
 // MAX_TOOL_ROUNDS.
-function streamToolLoop(env, initialMessages, tools, quiet, meter) {
+// Reasoning makes an answer much slower to start, so it is only switched on when the question looks like it needs it
+// (maths, code, step-by-step work, comparisons, long or technical messages). Greetings, facts, chat and the phone agent's steps answer straight away.
+const THINK_HINT = /(solve|prove|proof|calculate|derive|debug|algorithm|optimi[sz]e|step[- ]by[- ]step|compare|analy[sz]e|strategy|why|equation|integral|derivative|probability|complexity|refactor|architecture|trade-?offs?|puzzle|riddle|logic|work out|figure out|reasoning|pros and cons)/i;
+function wantsThinking(messages, quiet, force) {
+  if (force === true) return true;
+  if (force === false || quiet) return false;
+  const last = [...messages].reverse().find(m => m && m.role === 'user');
+  const c = last && last.content;
+  const t = typeof c === 'string' ? c : Array.isArray(c) ? c.map(p => (p && p.text) || '').join(' ') : '';
+  if (t.length > 600 || /```/.test(t) || /\d\s*[-+*/^=×÷]\s*\d/.test(t)) return true;
+  return THINK_HINT.test(t);
+}
+
+function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce) {
   const encoder = new TextEncoder();
   return new ReadableStream({
     async start(controller) {
       const send = obj => controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
       let workingMessages = initialMessages;
+      const think = wantsThinking(initialMessages, quiet, thinkForce);
+      const thinkParams = think ? {} : { chat_template_kwargs: { enable_thinking: false } };
       let tokensIn = 0, tokensOut = 0;
       try {
         for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
@@ -333,8 +348,8 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter) {
           let upstream, round_;
           try {
             upstream = await env.AI.run(MODEL, lastRound
-              ? { messages: workingMessages, stream: true, max_tokens: MAX_TOKENS }
-              : { messages: workingMessages, tools: roundTools, stream: true, max_tokens: MAX_TOKENS });
+              ? { messages: workingMessages, stream: true, max_tokens: MAX_TOKENS, ...thinkParams }
+              : { messages: workingMessages, tools: roundTools, stream: true, max_tokens: MAX_TOKENS, ...thinkParams });
             round_ = await streamOneRound(upstream, send, quiet, tally);
           } finally {
             // counted even when the viewer closes the page mid-answer: the model still did the work
@@ -703,15 +718,18 @@ async function handleChat(request, env) {
   if (body.app === 'epicai' && env.LEDGER) {
     try {
       const user = await userFromRequest(request, env);
-      const r = await ledgerOf(env).check(user ? user.email : null, ip);
-      if (!r.ok) return json({ error: limitMessage(r), limit: r }, 429, request);
-      meter = { email: user ? user.email : null, ip };
+      // the site's owners have no limit at all (and are not counted)
+      if (!isOwner(user)) {
+        const r = await ledgerOf(env).check(user ? user.email : null, ip, body.quiet !== true);
+        if (!r.ok) return json({ error: limitMessage(r), limit: r }, 429, request);
+        meter = { email: user ? user.email : null, ip };
+      }
     } catch (err) {
       console.log('ledger unavailable, letting the message through:', err && err.message);
     }
   }
 
-  const stream = streamToolLoop(env, messages, [...TOOLS, ...(body.oneTools === true ? ONE_TOOLS : []), ...(body.botTools === true ? BOT_TOOLS : [])], body.quiet === true, meter);
+  const stream = streamToolLoop(env, messages, [...TOOLS, ...(body.oneTools === true ? ONE_TOOLS : []), ...(body.botTools === true ? BOT_TOOLS : [])], body.quiet === true, meter, body.think === true ? true : body.think === false ? false : undefined);
 
   return new Response(stream, {
     status: 200,
@@ -733,6 +751,7 @@ function limitMessage(r) {
   if (r.reason === 'pool') return r.plan === 'plus'
     ? `epic AI has used all of today's capacity. ${when}`
     : `epic AI is busy: everyone together has used up most of today's capacity, and what is left is kept for Plus. ${when}`;
+  if (r.reason === 'messages') return `You've used today's ${r.messageLimit} free messages. Sign in to keep chatting. ${when}`;
   if (r.plan === 'guest') return `You've used today's ${tokensText(r.limit)} tokens for guests. Sign in for more. ${when}`;
   if (r.plan === 'plus') return `You've used today's ${tokensText(r.limit)} tokens. ${when}`;
   return `You've used today's ${tokensText(r.limit)} tokens. ${when}`;
@@ -744,7 +763,10 @@ const asError = (err, request, status = 400) => json({ error: (err && err.messag
 async function handleUsage(request, env) {
   const user = await userFromRequest(request, env);
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  return json(await ledgerOf(env).me(user ? user.email : null, ip), 200, request);
+  const me = await ledgerOf(env).me(user ? user.email : null, ip);
+  // owners are never limited: show them as unlimited Plus
+  if (isOwner(user)) Object.assign(me, { plan: 'plus', limit: 1_000_000_000, used: 0, unlimited: true });
+  return json(me, 200, request);
 }
 
 async function handleRedeem(request, env) {
