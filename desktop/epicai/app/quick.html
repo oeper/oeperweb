@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>epic AI quick entry</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="fonts.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { color-scheme: dark; --bg: #1c1f26; --text: #e8e8ec; --muted: #aeb2bb; --primary: #a8c7fa; --on-primary: #062e6f; --container: #33485d; --on-container: #d2e4ff; --chip: #2b3038; }
+  @media (prefers-color-scheme: light) { :root { color-scheme: light; --bg: #ffffff; --text: #1a1c22; --muted: #5b6070; --primary: #1a5fd0; --on-primary: #fff; --container: #d6e3ff; --on-container: #0a2a63; --chip: #eceef4; } }
+  html, body { height: 100%; background: transparent; overflow: hidden; font-family: 'Google Sans', 'Roboto Flex', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; }
+  .box { margin: 8px; background: var(--bg); border-radius: 26px; box-shadow: 0 10px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(127,127,127,0.25); padding: 12px 12px 10px 18px; animation: in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); -webkit-app-region: drag; }
+  @keyframes in { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: none; } }
+  .row { display: flex; align-items: flex-start; gap: 10px; -webkit-app-region: no-drag; }
+  .mark { width: 22px; height: 22px; color: var(--primary); margin-top: 8px; flex-shrink: 0; }
+  textarea { flex: 1; resize: none; background: none; border: none; outline: none; color: var(--text); font: inherit; font-size: 17px; line-height: 1.45; padding: 6px 0; height: 36px; max-height: 120px; overflow-y: auto; scrollbar-width: none; }
+  textarea::placeholder { color: var(--muted); }
+  .bar { display: flex; align-items: center; gap: 8px; margin-top: 4px; -webkit-app-region: no-drag; }
+  .ms { font-family: 'Material Symbols Rounded'; font-size: 20px; line-height: 1; font-feature-settings: 'liga'; display: inline-block; }
+  .tog { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 13px 0 9px; border-radius: 999px; border: none; background: var(--chip); color: var(--muted); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s, color 0.15s; }
+  .tog:hover { color: var(--text); }
+  .tog.on { background: var(--container); color: var(--on-container); }
+  .grow { flex: 1; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .go { width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.12s, opacity 0.15s; }
+  .go:active { transform: scale(0.92); } .go[disabled] { opacity: 0.35; pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="row">
+    <svg class="mark" viewBox="0 0 100 100"><g stroke="currentColor" stroke-width="17" stroke-linecap="round"><line x1="28" y1="12" x2="28" y2="58"/><line x1="72" y1="12" x2="72" y2="58"/><line x1="28" y1="86" x2="72" y2="86"/></g></svg>
+    <textarea id="t" rows="1" placeholder="Ask epic AI anything" autofocus spellcheck="true"></textarea>
+  </div>
+  <div class="bar">
+    <button class="tog" id="screen" title="Include a screenshot of your screen (Ctrl+Shift+S)"><span class="ms">screenshot_monitor</span>Show my screen</button>
+    <span class="grow"></span>
+    <span class="hint">Enter to ask · Esc to close</span>
+    <button class="go" id="go" disabled title="Ask"><span class="ms">arrow_upward</span></button>
+  </div>
+</div>
+<script>
+  const t = document.getElementById('t'), go = document.getElementById('go'), screen = document.getElementById('screen');
+  const isMac = window.epicQuick.platform === 'darwin';
+  screen.title = 'Include a screenshot of your screen (' + (isMac ? '⌘⇧S' : 'Ctrl+Shift+S') + ')';
+  const grow = () => { t.style.height = 'auto'; t.style.height = Math.min(120, t.scrollHeight) + 'px'; go.disabled = !t.value.trim() && !screen.classList.contains('on'); };
+  const submit = () => { if (go.disabled) return; window.epicQuick.submit(t.value.trim(), screen.classList.contains('on')); };
+  t.addEventListener('input', grow);
+  t.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } });
+  screen.addEventListener('click', () => { screen.classList.toggle('on'); grow(); t.focus(); });
+  go.addEventListener('click', submit);
+  addEventListener('keydown', e => {
+    if (e.key === 'Escape') window.epicQuick.close();
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); screen.click(); }
+  });
+  t.focus();
+</script>
+</body>
+</html>

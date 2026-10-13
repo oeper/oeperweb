@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>epic AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="side">
+    <div class="side-top">
+      <div class="brand"><svg class="epic-mark" viewBox="0 0 100 100" aria-hidden="true"><g stroke="currentColor" stroke-width="17" stroke-linecap="round"><line x1="28" y1="12" x2="28" y2="58"/><line x1="72" y1="12" x2="72" y2="58"/><line x1="28" y1="86" x2="72" y2="86"/></g></svg><span>epic AI</span></div>
+    </div>
+    <button id="newChat" class="new-chat"><span class="ms">edit_square</span>New chat</button>
+    <label class="search"><span class="ms">search</span><input id="search" type="search" placeholder="Search chats" autocomplete="off" spellcheck="false"></label>
+    <div id="chatList" class="chat-list"></div>
+    <div class="side-bottom">
+      <button id="acct" class="acct" title="Account and usage">
+        <span class="avatar" id="acctAvatar"><span class="ms">person</span></span>
+        <span class="acct-text"><span id="acctName">Guest</span><span id="acctPlan" class="acct-plan">Sign in for more</span></span>
+      </button>
+      <button id="settingsBtn" class="icon-btn" title="Settings (Ctrl+,)"><span class="ms">settings</span></button>
+    </div>
+  </aside>
+
+  <main id="main">
+    <header id="top">
+      <button id="sideToggle" class="icon-btn" title="Sidebar (Ctrl+B)"><span class="ms">left_panel_open</span></button>
+      <div id="title" class="title">New chat</div>
+      <div class="top-spacer"></div>
+      <button id="screenBtn" class="pill-btn" title="Show epic AI your screen"><span class="ms">screenshot_monitor</span><span class="label">Look at my screen</span></button>
+    </header>
+
+    <div id="scroll"><div id="messages" class="messages"></div></div>
+
+    <div id="dock">
+      <div id="attachRow" class="attach-row"></div>
+      <div id="composer" class="composer">
+        <button id="attachBtn" class="icon-btn" title="Attach an image, PDF or text file"><span class="ms">add</span></button>
+        <textarea id="input" rows="1" placeholder="Message epic AI" spellcheck="true"></textarea>
+        <button id="micBtn" class="icon-btn" title="Speak"><span class="ms">mic</span></button>
+        <button id="sendBtn" class="send-btn" title="Send"><span class="ms">arrow_upward</span></button>
+      </div>
+      <div class="hint" id="hint"></div>
+    </div>
+    <div id="dropZone" class="drop-zone"><span class="ms">upload_file</span>Drop to attach</div>
+  </main>
+</div>
+
+<input type="file" id="fileInput" hidden accept="image/*,application/pdf,.pdf,.txt,.md,.csv,.tsv,.json,.log">
+<div id="toast" class="toast"></div>
+<div id="overlay" class="overlay"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

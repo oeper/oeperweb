@@ -27,7 +27,9 @@
     "files": [
       "main.js",
       "preload.js",
-      "assets/**"
+      "quick-preload.js",
+      "assets/**",
+      "app/**"
     ],
     "protocols": [
       {
@@ -70,7 +72,11 @@
       ],
       "icon": "assets/icon.png",
       "category": "public.app-category.productivity",
-      "identity": "-"
+      "identity": "-",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "epic AI uses the microphone when you speak a message.",
+        "NSAudioCaptureUsageDescription": "epic AI uses the microphone when you speak a message."
+      }
     },
     "afterPack": "tools/after-pack.js",
     "portable": {

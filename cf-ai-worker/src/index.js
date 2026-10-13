@@ -55,7 +55,8 @@ export { Ledger };
 // needs its own provider API key, not just this Worker's env.AI binding.
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
-const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765', 'http://localhost:8080'];
+// epic://app is the epic AI desktop app (desktop/epicai), which serves its own bundled UI from that origin
+const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765', 'http://localhost:8080', 'epic://app'];
 
 const MAX_MESSAGES = 40;
 const MAX_MESSAGE_CHARS = 4000;
@@ -930,6 +931,30 @@ async function moderateImage(env, dataUrl) {
   };
 }
 
+// Voice input for the desktop app: a short recording in, text out (Workers AI Whisper). Signed-in people only, capped per hour.
+const transcribeHits = new Map(); // email -> timestamps
+async function handleTranscribe(request, env) {
+  const user = await userFromRequest(request, env);
+  if (!user) return json({ error: 'Sign in to use voice.' }, 401, request);
+  if (!isOwner(user)) {
+    const now = Date.now(), hits = (transcribeHits.get(user.email) || []).filter(t => now - t < 3600000);
+    if (hits.length >= 40) return json({ error: 'That is a lot of voice input for one hour. Try again later.' }, 429, request);
+    hits.push(now); transcribeHits.set(user.email, hits);
+  }
+  const buf = await request.arrayBuffer();
+  if (!buf.byteLength) return json({ error: 'No audio received.' }, 400, request);
+  if (buf.byteLength > 3 * 1024 * 1024) return json({ error: 'That recording is too long.' }, 413, request);
+  let bin = '';
+  const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  try {
+    const out = await env.AI.run('@cf/openai/whisper-large-v3-turbo', { audio: btoa(bin) });
+    return json({ text: String((out && out.text) || '').trim().slice(0, 2000) }, 200, request);
+  } catch (err) {
+    return json({ error: 'Could not understand that recording.' }, 502, request);
+  }
+}
+
 async function handleModerate(request, env) {
   if (!env.MODERATION_KEY) return json({ error: 'Moderation is not configured (MODERATION_KEY secret missing)' }, 503, request);
   if (request.headers.get('X-Moderation-Key') !== env.MODERATION_KEY) return json({ error: 'Forbidden' }, 403, request);
@@ -975,6 +1000,8 @@ export default {
     if (url.pathname === '/api/moderate' && request.method === 'POST') {
       return handleModerate(request, env);
     }
+
+    if (url.pathname === '/api/transcribe' && request.method === 'POST') return handleTranscribe(request, env);
 
     if (url.pathname === '/api/chat' && request.method === 'POST') {
       return handleChat(request, env);
