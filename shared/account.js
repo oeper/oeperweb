@@ -21,7 +21,7 @@ import { beginUpload, updateUpload, finishUpload } from './upload-queue.js?v=3';
 
 export const FIREBASE_CONFIG = {
   apiKey: "AIzaSyAs7SP8FaWUDuz7GVp9rG5uZw4oEIWmBUk",
-  authDomain: "oepernet-1683535959256.firebaseapp.com",
+  authDomain: "oeper.dev",
   projectId: "oepernet-1683535959256",
   storageBucket: "oepernet-1683535959256.firebasestorage.app",
   messagingSenderId: "882911814752",
