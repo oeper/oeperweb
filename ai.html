@@ -569,7 +569,7 @@ import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.j
 import { codeBlockHtml, copyToClipboard, injectCodeBlockStyles } from './shared/code-block.js?v=3';
 import { readFileForAI, FILE_ACCEPT, isImage } from './shared/ai-files.js?v=1';
 import { chatFetch, providerLabel } from './shared/ai-provider.js?v=4';
-import { aiFeaturesEnabled, onAiFeaturesChange, listOneDocs, readOneDocText, sanitizeForOne, createWordDoc, oneDocUrl } from './shared/ai-features.js?v=6';
+import { askAI, aiFeaturesEnabled, onAiFeaturesChange, listOneDocs, readOneDocText, sanitizeForOne, createWordDoc, oneDocUrl } from './shared/ai-features.js?v=6';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 injectCodeBlockStyles();
@@ -619,6 +619,8 @@ Here's what's on oeper.dev, so you can actually help people navigate or use it i
 - Profiles (/profile?u=handle) — a user's posts, a saved-items tab, follower/following counts, and badges (an OFFICIAL badge marks the site's owners; anyone can also be granted a custom badge by an owner).
 - Settings (/settings) — theme picker, profile editing, a signed-in-devices log, and badge management.
 Sign-in is Google-only, site-wide.
+
+About yourself: your name is epic AI, written exactly like that (lowercase "epic", capital "AI"), never "Epic AI" or "Gemini"). You are oeper's own AI assistant, made for oeper.dev, and you also exist as an Android app (the download is on the site's Tools page) where you can additionally read the phone screen, control the phone and talk by voice; the website version can't do those. You run on an open model (Gemma 4 26B) hosted on Cloudflare Workers AI. People who aren't signed in get 5 messages a day; signed-in people get a daily token allowance (shown on the Usage page, oeper.dev/usage), and a code can raise it. If someone asks what you are, who made you or what you can do, answer from this, and never claim abilities that aren't described here.
 
 Two scripted easter eggs, exact triggers only — don't force them into unrelated answers: if the user asks something equivalent to "what's the capital of France", reply with exactly: Oui oui oui, it is Paris. Merci! Only after that exact exchange has already happened earlier in this same conversation, if the user later asks something equivalent to "what does the cow say", reply with exactly: Oh moo moo moo, I speak that too. All day!`;
 
@@ -1891,7 +1893,32 @@ function setSending(sending) {
 // most recent messages are actually sent to the model; the full history
 // still lives in chat.messages for display/storage/exporting.
 const MAX_WIRE_HISTORY = 30;
-async function toWireMessages(msgs) {
+// The worker also refuses any ordinary message over 4000 characters, so one very long old answer would break the chat for good:
+// it keeps its start and end here and loses the middle (attached documents have their own, larger limit and are left alone).
+const shortenForWire = t => (typeof t !== 'string' || t.length <= 3900 || t.includes('<<one:')) ? t
+  : t.slice(0, 2340) + '\n[… the middle of this long message was left out …]\n' + t.slice(-1170);
+
+// Compresses a long chat the way a long coding session gets compacted: once more than 18 messages (or ~16k characters) are live,
+// everything but the last 8 is folded into a short summary written by the AI itself, kept on the chat (so it's done once) and handed to the
+// model as part of its instructions. The full history still lives in chat.messages for display/export.
+async function compactChat(chat) {
+  const all = chat.messages;
+  if ((chat.summarized || 0) > all.length - 4) { chat.summary = ''; chat.summarized = 0; }   // edited / regenerated under it
+  const live = all.slice(chat.summarized || 0);
+  if (live.length <= 18 && live.reduce((n, m) => n + (m.content || '').length, 0) <= 16000) return { msgs: live, summary: chat.summary || '' };
+  const cut = all.length - 8;
+  if (cut <= (chat.summarized || 0)) return { msgs: live, summary: chat.summary || '' };
+  const body = all.slice(chat.summarized || 0, cut).map(m => (m.role === 'user' ? 'User: ' : 'epic AI: ') + (m.content || '(image)').slice(0, 700)).join('\n').slice(-3200);
+  try {
+    const out = await askAI([
+      { role: 'system', content: 'You compress a chat so it can continue later. Write a faithful summary, under 1200 characters, of what the user wanted, facts about them, decisions made, results and anything still open. Keep names, numbers and code identifiers. Plain text, no preamble.' },
+      { role: 'user', content: ((chat.summary ? 'Summary so far:\n' + chat.summary + '\n\n' : '') + 'New messages:\n' + body).slice(-3800) },
+    ]);
+    if (out && out.trim()) { chat.summary = out.trim().slice(0, 1800); chat.summarized = cut; saveChats(); }
+  } catch {}   // summarising is best-effort: on failure the chat just keeps sending its recent messages
+  return { msgs: all.slice(chat.summarized || 0), summary: chat.summary || '' };
+}
+async function toWireMessages(msgs, summary) {
   const wire = await Promise.all(msgs.slice(-MAX_WIRE_HISTORY).map(async m => {
     if (m.imageUrl) {
       let dataUrl;
@@ -1901,13 +1928,14 @@ async function toWireMessages(msgs) {
         dataUrl = m.imageUrl; // fall back to the plain URL; upstream will just error on it
       }
       return { role: m.role, content: [
-        { type: 'text', text: m.content || '' },
+        { type: 'text', text: shortenForWire(m.content || '') },
         { type: 'image_url', image_url: { url: dataUrl } },
       ] };
     }
-    return { role: m.role, content: m.content };
+    return { role: m.role, content: shortenForWire(m.content) };
   }));
   let systemContent = SYSTEM_PROMPT;
+  if (summary) systemContent += `\n\nEarlier in this conversation (summarised, so you can carry on): ${summary}`;
   if (selfContext) systemContent += `\n\n${selfContext}`;
   if (memoryFacts.length) {
     // Capped at the most recent MAX_MEMORY_FACTS_IN_PROMPT (facts are
@@ -2042,7 +2070,8 @@ async function sendToModel(chat) {
     }
   }, 5000);
   try {
-    const wireMessages = await toWireMessages(chat.messages);
+    const compact = await compactChat(chat);
+    const wireMessages = await toWireMessages(compact.msgs, compact.summary);
     // the oeper.dev model, or the person's own provider (settings > epic AI); ai-provider.js hands back the same stream either way
     // app:"epicai" + the sign-in token let the worker count this against the person's daily tokens (their own provider is never counted)
     // (only when the worker knows about limits: an older worker would reject the Authorization header at the CORS check)
