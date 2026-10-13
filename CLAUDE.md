@@ -31,7 +31,7 @@ No build step for the site: plain HTML/CSS/JS, one `.html` per page.
   Epic AI tools (offered only with the settings.html "epic AI" switch on): `create_document` (oneWord) and `create_discord_bot` (`botTools: true`) — the worker only streams a
   `createBot` SSE event; `ai.html` `aiCreateBot()` then creates the bot via `/dbhosting/api` (POST /bots, PUT /bots/:id/file, POST /install) as the signed-in user. Token never in code (DISCORD_TOKEN env).
 - epic AI usage limits + codes (worker `cf-ai-worker/src/`): `ledger.js` = SQLite Durable Object `Ledger` (binding `LEDGER`, one instance "main"): per-person daily **tokens**
-  (guest 5k / free 25k / plus 120k, editable), a shared neuron pool (7,000/day of the 10k free Workers AI neurons, 20% reserved for Plus), promo codes vs product keys
+  (guest 10k / free 50k / plus 240k defaults, editable), a shared neuron pool (7,000/day of the 10k free Workers AI neurons, 20% reserved for Plus), promo codes vs product keys
   (keys: prefix + random, default 1 use; promos: chosen word, many uses, once per person; scope `epicai` = site+app, `site` = site only), brute-force lockouts. `auth.js` verifies
   the Firebase ID token (Google JWKS, WebCrypto); owners = `OWNER_EMAILS`. Only requests with `app:"epicai"` are counted; ledger errors fail open. Routes: `/api/usage`, `/api/redeem`, `/api/admin/*`.
   Pages: `usage.html` (plan + meter), `redeem.html` (enter a code, history), `promo-admin.html` (owners: codes, keys, limits, stats) — all via `shared/codes-api.js`.

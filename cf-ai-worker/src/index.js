@@ -733,9 +733,9 @@ function limitMessage(r) {
   if (r.reason === 'pool') return r.plan === 'plus'
     ? `epic AI has used all of today's capacity. ${when}`
     : `epic AI is busy: everyone together has used up most of today's capacity, and what is left is kept for Plus. ${when}`;
-  if (r.plan === 'guest') return `You've used today's ${tokensText(r.limit)} tokens for guests. Sign in for more, or redeem a key at oeper.dev/redeem. ${when}`;
+  if (r.plan === 'guest') return `You've used today's ${tokensText(r.limit)} tokens for guests. Sign in for more. ${when}`;
   if (r.plan === 'plus') return `You've used today's ${tokensText(r.limit)} tokens. ${when}`;
-  return `You've used today's ${tokensText(r.limit)} tokens. ${when} A product key or promo code from oeper.dev/redeem gives you more.`;
+  return `You've used today's ${tokensText(r.limit)} tokens. ${when}`;
 }
 
 async function readBody(request) { try { return await request.json(); } catch { return {}; } }
