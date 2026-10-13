@@ -264,7 +264,7 @@ async function run(button, fn) {
 }
 const dateToMs = v => v ? new Date(v + 'T23:59:59').getTime() : 0;
 const kfmt = n => n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + 'M' : n >= 1000 ? (n / 1000).toFixed(n % 1000 ? 1 : 0) + 'k' : String(n);
-const grantText = g => [g.plusDays === -1 ? 'Plus for life' : g.plusDays > 0 ? `${g.plusDays}d Plus` : '', g.bonusTokens ? `+${kfmt(g.bonusTokens)} tokens` : ''].filter(Boolean).join(' · ') || '—';
+const grantText = g => [g.plusDays === -1 ? 'Plus for life' : g.plusDays > 0 ? `${g.plusDays}d Plus` : '', g.bonusTokens ? `+${kfmt(g.bonusTokens)} tokens` : '', g.boostPercent ? `+${g.boostPercent}% usage ${g.boostDays}d` : ''].filter(Boolean).join(' · ') || '—';
 
 async function load() {
   data = await call('GET', '/api/admin/codes');

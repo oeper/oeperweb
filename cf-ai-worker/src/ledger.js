@@ -40,14 +40,18 @@ function cleanGrant(g) {
   g = g || {};
   const plusDays = g.plusDays === -1 ? -1 : clampInt(g.plusDays, 0, 3650);
   const bonusTokens = clampInt(g.bonusTokens, 0, 1_000_000_000);
-  return { plusDays, bonusTokens };
+  // boost: this many percent more daily tokens for boostDays days ("10% more usage for a month")
+  const boostPercent = clampInt(g.boostPercent, 0, 1000);
+  const boostDays = boostPercent > 0 ? clampInt(g.boostDays || 30, 1, 3650) : 0;
+  return { plusDays, bonusTokens, boostPercent, boostDays };
 }
-const grantEmpty = g => g.plusDays === 0 && g.bonusTokens === 0;
+const grantEmpty = g => g.plusDays === 0 && g.bonusTokens === 0 && !g.boostPercent;
 export function describeGrant(g) {
   const parts = [];
   if (g.plusDays === -1) parts.push('epic AI Plus for life');
   else if (g.plusDays > 0) parts.push(`${g.plusDays} day${g.plusDays === 1 ? '' : 's'} of epic AI Plus`);
   if (g.bonusTokens > 0) parts.push(`${g.bonusTokens.toLocaleString('en-US')} extra tokens`);
+  if (g.boostPercent > 0) parts.push(`${g.boostPercent}% more usage for ${g.boostDays % 30 === 0 ? (g.boostDays / 30) + ' month' + (g.boostDays === 30 ? '' : 's') : g.boostDays + ' days'}`);
   return parts.join(' + ') || 'nothing';
 }
 
@@ -58,6 +62,15 @@ function randomKey(prefix) {
 }
 const looksLikeKey = (code, config) => Object.values(config.products).some(p => code.startsWith(p.prefix + '-') && /^[A-Z0-9]{2,6}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code));
 
+// Promo codes that stay available for a limited time without anyone creating them in promo-admin: made on first use.
+const SEED_PROMOS = {
+  EAIRELEASE: { grant: { boostPercent: 10, boostDays: 30 }, expiresAt: Date.UTC(2026, 9, 31, 23, 59, 59, 999), note: 'epic AI release: 10% more usage for a month, until the end of October 2026' },
+};
+/** A person's daily token limit: the plan's, plus any active boost from a code. */
+function limitFor(cfg, plan, user, now) {
+  const base = (cfg.limits[plan] && cfg.limits[plan].tokens) || 0;
+  return user && user.boostUntil > now && user.boostPct > 0 ? Math.round(base * (1 + user.boostPct / 100)) : base;
+}
 function planOf(user, now = Date.now()) {
   return user && (user.plusUntil === -1 || user.plusUntil > now) ? 'plus' : 'free';
 }
@@ -84,6 +97,11 @@ export class Ledger extends DurableObject {
     if (grant.plusDays === -1) user.plusUntil = -1;
     else if (grant.plusDays > 0 && user.plusUntil !== -1) user.plusUntil = Math.max(now, user.plusUntil || 0) + grant.plusDays * DAY_MS;
     user.bonus = (user.bonus || 0) + grant.bonusTokens;
+    if (grant.boostPercent > 0) {
+      const live = user.boostUntil > now;
+      user.boostPct = live ? Math.max(user.boostPct || 0, grant.boostPercent) : grant.boostPercent;
+      user.boostUntil = (live ? user.boostUntil : now) + grant.boostDays * DAY_MS;
+    }
     user.history = [{ code: label, at: now, grant, source }, ...(user.history || [])].slice(0, 30);
     await this.ctx.storage.put('user:' + email, user);
     return user;
@@ -108,7 +126,7 @@ export class Ledger extends DurableObject {
     await this.#rollDay(day);
     const user = email ? await this.#user(email) : null;
     const plan = email ? planOf(user, now) : 'guest';
-    const limit = (cfg.limits[plan] && cfg.limits[plan].tokens) || 0;
+    const limit = limitFor(cfg, plan, user, now);
     const used = (await this.ctx.storage.get('use:' + day + ':' + this.#subject(email, ip))) || 0;
     const bonus = user ? user.bonus || 0 : 0;
     const poolUsed = (await this.ctx.storage.get('pool:' + day)) || 0;
@@ -139,7 +157,7 @@ export class Ledger extends DurableObject {
     await this.#rollDay(day);
     const user = email ? await this.#user(email) : null;
     const plan = email ? planOf(user, now) : 'guest';
-    const limit = (cfg.limits[plan] && cfg.limits[plan].tokens) || 0;
+    const limit = limitFor(cfg, plan, user, now);
     const key = 'use:' + day + ':' + this.#subject(email, ip);
     const used = (await this.ctx.storage.get(key)) || 0;
     const fromDaily = Math.min(total, Math.max(0, limit - used));
@@ -166,7 +184,8 @@ export class Ledger extends DurableObject {
     const msgUsed = plan === 'guest' ? ((await this.ctx.storage.get('msgs:' + day + ':' + this.#subject(email, ip))) || 0) : 0;
     return {
       messageLimit: msgLimit, messagesUsed: msgUsed,
-      plan, used, limit: (cfg.limits[plan] && cfg.limits[plan].tokens) || 0, bonus: v.bonus, plusUntil: v.plusUntil, resetsAt: nextMidnight(now), signedIn: !!email,
+      plan, used, limit: limitFor(cfg, plan, user, now), bonus: v.bonus,
+      boostPercent: user && user.boostUntil > now ? user.boostPct || 0 : 0, boostUntil: user && user.boostUntil > now ? user.boostUntil : 0, plusUntil: v.plusUntil, resetsAt: nextMidnight(now), signedIn: !!email,
       poolPct: cfg.pool.neurons ? Math.min(100, Math.round(poolUsed / cfg.pool.neurons * 100)) : 100, history: user ? (user.history || []).slice(0, 10) : [],
     };
   }
@@ -184,7 +203,12 @@ export class Ledger extends DurableObject {
     };
     const code = normalizeCode(rawCode);
     if (!code || code.length > 40) return bad('invalid', "That doesn't look like a code.");
-    const rec = await this.ctx.storage.get('code:' + code);
+    let rec = await this.ctx.storage.get('code:' + code);
+    if (!rec && SEED_PROMOS[code]) {
+      const seed = SEED_PROMOS[code];
+      rec = { code, kind: 'promo', scope: 'epicai', grant: cleanGrant(seed.grant), maxUses: 0, uses: 0, startsAt: 0, expiresAt: seed.expiresAt, disabled: false, note: seed.note, createdAt: now, createdBy: 'system' };
+      await this.ctx.storage.put('code:' + code, rec);
+    }
     if (!rec) return bad('invalid', "That code isn't valid. Check it and try again.");
     if (rec.disabled) return bad('inactive', 'That code is no longer active.');
     if (rec.startsAt && rec.startsAt > now) return bad('inactive', "That code isn't active yet.");
