@@ -1120,13 +1120,27 @@ function isNearBottom() {
 }
 let scrollRAF = null;
 let ownScrollUntil = 0;
+// Follows the growing answer by easing the page up to it every frame (so each new line slides into view)
+// instead of jumping. The target is whatever scrollIntoView would have picked, measured without painting.
+function followTarget(bubble) {
+  const y0 = window.scrollY;
+  bubble.scrollIntoView({ block: 'end', behavior: 'instant' });
+  const y1 = window.scrollY;
+  if (y1 !== y0) window.scrollTo({ top: y0, behavior: 'instant' });
+  return y1;
+}
 function scheduleScroll(bubble) {
   if (scrollRAF) return;
-  scrollRAF = requestAnimationFrame(() => {
+  const step = () => {
     scrollRAF = null;
+    if (readerIsScrolling() || !bubble.isConnected) return;   // the reader took over: let go
+    const target = followTarget(bubble), cur = window.scrollY, diff = target - cur;
     ownScrollUntil = Date.now() + 150;   // the scroll events this causes are ours, not the reader's
-    bubble.scrollIntoView({ block: 'end' });
-  });
+    if (Math.abs(diff) < 0.6) { if (diff) window.scrollTo({ top: target, behavior: 'instant' }); return; }
+    window.scrollTo({ top: cur + diff * 0.16 + Math.sign(diff) * 0.4, behavior: 'instant' });
+    scrollRAF = requestAnimationFrame(step);
+  };
+  scrollRAF = requestAnimationFrame(step);
 }
 
 // While the reader has a finger on the page or is still flinging it, the streamed answer is NOT re-rendered: replacing the
@@ -2017,7 +2031,7 @@ async function sendToModel(chat) {
     paintTimer = null;
     if (readerIsScrolling()) { paintTimer = setTimeout(paintNow, 120); return; }   // try again once they let go
     lastPaint = Date.now();
-    const stick = isNearBottom();
+    const stick = isNearBottom() || !!scrollRAF;
     renderAssistantContent(bubble, reasoningBuf, contentBuf);
     if (stick) scheduleScroll(bubble);
   };
