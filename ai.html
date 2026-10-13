@@ -2102,7 +2102,7 @@ document.getElementById('clearBtn').addEventListener('click', () => {
 });
 
 // One-time "get the epic AI app" card for Android visitors. It is shown a single time (remembered in localStorage whether or not it
-// was used); the same download stays available in /tools. The APK comes from the file server's /app-release/epic/download.
+// was used); the same download stays available in /tools. The APK comes from the newest GitHub release (oeper/releases, epicai-latest), which publishUpdate refreshes.
 (function epicAppPrompt() {
   try {
     if (!/Android/i.test(navigator.userAgent)) return;
@@ -2113,7 +2113,7 @@ document.getElementById('clearBtn').addEventListener('click', () => {
       card.setAttribute('role', 'dialog');
       card.innerHTML = '<span class="material-symbols-rounded">android</span>'
         + '<div class="app-prompt-text"><b>get epic AI for android</b>a digital assistant that sees your screen, listens and does things for you. you can always find it later in tools.</div>'
-        + '<div class="app-prompt-actions"><a href="https://fs.oeper.dev/app-release/epic/download" download="EpicAI.apk">download</a><button type="button">later</button></div>';
+        + '<div class="app-prompt-actions"><a href="https://github.com/oeper/releases/releases/download/epicai-latest/EpicAI.apk" download="EpicAI.apk">download</a><button type="button">later</button></div>';
       document.body.appendChild(card);
       const close = () => { card.classList.remove('show'); setTimeout(() => card.remove(), 500); };
       card.querySelector('button').addEventListener('click', close);
