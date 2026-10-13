@@ -20,7 +20,7 @@
   "build": {
     "appId": "dev.oeper.epicai.desktop",
     "productName": "epic AI",
-    "artifactName": "epic-AI-${version}-${os}-${arch}.${ext}",
+    "artifactName": "epic-AI-${os}-${arch}.${ext}",
     "directories": {
       "output": "dist"
     },
@@ -49,7 +49,7 @@
       "oneClick": true,
       "perMachine": false,
       "deleteAppDataOnUninstall": false,
-      "artifactName": "epic-AI-Setup-${version}.${ext}"
+      "artifactName": "epic-AI-Setup.${ext}"
     },
     "mac": {
       "target": [
@@ -74,7 +74,7 @@
     },
     "afterPack": "tools/after-pack.js",
     "portable": {
-      "artifactName": "epic-AI-Portable-${version}.${ext}"
+      "artifactName": "epic-AI-Portable.${ext}"
     }
   }
 }
