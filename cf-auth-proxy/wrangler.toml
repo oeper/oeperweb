@@ -2,8 +2,9 @@ name = "oeper-auth-proxy"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 
-# Only Firebase's sign-in paths on oeper.dev go through this Worker; the rest of the site is untouched.
+# Only Firebase's sign-in paths and /download/* on oeper.dev go through this Worker; the rest of the site is untouched.
 routes = [
   { pattern = "oeper.dev/__/auth/*", zone_name = "oeper.dev" },
   { pattern = "oeper.dev/__/firebase/*", zone_name = "oeper.dev" },
+  { pattern = "oeper.dev/download/*", zone_name = "oeper.dev" },
 ]

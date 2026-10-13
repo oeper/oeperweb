@@ -84,6 +84,19 @@
   .tool-card h3 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 20px; font-weight: 400; margin-bottom: 6px; }
   .tool-card p { font-size: 14px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant); }
 
+  .tool-stack { display: flex; flex-direction: column; gap: 10px; }
+  .tool-stack .tool-card { flex: 1; }
+  .tool-stack .tool-card:hover { transform: none; background-color: var(--md-sys-color-surface); }
+  .tool-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tool-dl {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; text-decoration: none;
+    background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-size: 14px; font-weight: 500;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); transition: opacity 0.2s, transform 0.2s;
+  }
+  .tool-dl:hover { opacity: 0.9; transform: translateY(-1px); }
+  .tool-dl:visited { color: var(--md-sys-color-on-primary); }
+  .tool-dl .material-symbols-rounded { font-size: 18px; }
+
   /* ── Wide desktop layout ── */
   @media (min-width: 1100px) {
     .page { max-width: 1240px; }
@@ -142,27 +155,38 @@
       </div>
     </a>
 
-    <a href="https://github.com/oeper/releases/releases/download/epicai-latest/EpicAI.apk" download="EpicAI.apk" class="tool-card" id="epicAppCard">
-      <div class="tool-card-header">
-        <div class="tool-icon-box"><span class="material-symbols-rounded">android</span></div>
-        <span class="material-symbols-rounded tool-arrow">download</span>
+    <div class="tool-stack" id="epicAppCard">
+      <div class="tool-card">
+        <div class="tool-card-header">
+          <div class="tool-icon-box"><span class="material-symbols-rounded">android</span></div>
+        </div>
+        <div>
+          <h3>epic AI for android</h3>
+          <p>the epic AI app: a digital assistant for your phone that can see your screen, take voice commands and do things in other apps for you. sign in with your oeper.dev account. android only — after downloading, open the file to install it.</p>
+        </div>
       </div>
-      <div>
-        <h3>epic AI for android</h3>
-        <p>the epic AI app: a digital assistant for your phone that can see your screen, take voice commands and do things in other apps for you. sign in with your oeper.dev account. android only — after downloading, open the file to install it.</p>
+      <div class="tool-actions">
+        <a class="tool-dl" href="/download/epic-ai-android.apk" download><span class="material-symbols-rounded">download</span>download apk</a>
       </div>
-    </a>
+    </div>
 
-    <a href="https://github.com/oeper/oeperweb/releases/tag/epicai-desktop-latest" class="tool-card" id="epicDesktopCard">
-      <div class="tool-card-header">
-        <div class="tool-icon-box"><span class="material-symbols-rounded">desktop_windows</span></div>
-        <span class="material-symbols-rounded tool-arrow">download</span>
+    <div class="tool-stack" id="epicDesktopCard">
+      <div class="tool-card">
+        <div class="tool-card-header">
+          <div class="tool-icon-box"><span class="material-symbols-rounded">desktop_windows</span></div>
+        </div>
+        <div>
+          <h3>epic AI for windows &amp; mac</h3>
+          <p>epic AI as a desktop app: its own window, a global shortcut (ctrl/cmd + shift + space) and a notification when an answer is ready. sign in with your oeper.dev account. the mac apps aren't signed, so the first time, open them with right-click → open.</p>
+        </div>
       </div>
-      <div>
-        <h3>epic AI for windows &amp; mac</h3>
-        <p>epic AI as a desktop app: its own window, a global shortcut (ctrl/cmd + shift + space) and a notification when an answer is ready. sign in with your oeper.dev account. pick the installer for your system on the page that opens — the mac apps aren't signed, so open them with right-click → open the first time.</p>
+      <div class="tool-actions">
+        <a class="tool-dl" href="/download/epic-ai-windows.exe" download><span class="material-symbols-rounded">download</span>windows</a>
+        <a class="tool-dl" href="/download/epic-ai-mac-apple-silicon.dmg" download><span class="material-symbols-rounded">download</span>mac (apple silicon)</a>
+        <a class="tool-dl" href="/download/epic-ai-mac-intel.dmg" download><span class="material-symbols-rounded">download</span>mac (intel)</a>
+        <a class="tool-dl" href="/download/epic-ai-windows-portable.exe" download><span class="material-symbols-rounded">download</span>windows portable</a>
       </div>
-    </a>
+    </div>
 
     <a href="/chess" class="tool-card">
       <div class="tool-card-header">

@@ -2211,7 +2211,7 @@ document.getElementById('clearBtn').addEventListener('click', () => {
       card.setAttribute('role', 'dialog');
       card.innerHTML = '<span class="material-symbols-rounded">android</span>'
         + '<div class="app-prompt-text"><b>get epic AI for android</b>a digital assistant that sees your screen, listens and does things for you. you can always find it later in tools.</div>'
-        + '<div class="app-prompt-actions"><a href="https://github.com/oeper/releases/releases/download/epicai-latest/EpicAI.apk" download="EpicAI.apk">download</a><button type="button">later</button></div>';
+        + '<div class="app-prompt-actions"><a href="/download/epic-ai-android.apk" download>download</a><button type="button">later</button></div>';
       document.body.appendChild(card);
       const close = () => { card.classList.remove('show'); setTimeout(() => card.remove(), 500); };
       card.querySelector('button').addEventListener('click', close);
