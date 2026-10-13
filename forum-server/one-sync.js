@@ -9,7 +9,7 @@
 // folder (oneWord/, oneSheet/, ...), so it shows up in oeper.dev/files, counts
 // toward the same quota, respects suspensions, and goes through the same trash
 // when deleted from either place. What's extra on the entry:
-//   oneApp      'word' | 'sheet' | 'slide' | 'idea' | 'pdf'
+//   oneApp      'word' | 'sheet' | 'slide' | 'idea' | 'draw' | 'site' | 'pdf'
 //   oneId       the document's id inside the suite
 //   oneUpdated  the document's own "last edited" time (ms) — sync is
 //               last-writer-wins on this, so an older device can't overwrite a
@@ -29,6 +29,7 @@ const APPS = {
   sheet: { folder: 'oneSheet', ext: 'onesheet', type: 'application/json' },
   slide: { folder: 'oneSlide', ext: 'oneslide', type: 'application/json' },
   idea: { folder: 'oneIdea', ext: 'oneidea', type: 'application/json' },
+  draw: { folder: 'oneDraw', ext: 'onedraw', type: 'application/json' },
   pdf: { folder: 'onePDF', ext: 'pdf', type: 'application/pdf' },
   site: { folder: 'oneSite', ext: 'onesite', type: 'application/json' },
   // a published oneSite website: public at /site/<file>, see below

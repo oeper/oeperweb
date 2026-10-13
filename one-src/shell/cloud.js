@@ -13,6 +13,7 @@ const LOCAL = {
   sheet: { lib:'os-lib', doc:'os-doc-', meta:d => ({ title:d.title, updated:d.updated, sheets:(d.sheets || []).length || 1 }) },
   slide: { lib:'op-lib', doc:'op-doc-', meta:d => ({ title:d.title, updated:d.updated, slides:(d.slides || []).length, theme:d.theme }) },
   site: { lib:'ob-lib', doc:'ob-doc-', meta:d => ({ title:d.title, updated:d.updated, pages:(d.pages || []).length, palette:d.theme && d.theme.palette }) },
+  draw: { lib:'od-lib', doc:'od-doc-', meta:d => ({ title:d.title, updated:d.updated, pages:(d.pages || []).length }) },
   idea: { lib:'oi-lib', doc:'oi-doc-', meta:d => ({ title:d.title, updated:d.updated, sections:(d.sections || []).length, pages:(d.sections || []).reduce((a, s) => a + (s.pages || []).length, 0), color:d.color }) },
 };
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;

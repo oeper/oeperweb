@@ -1,0 +1,85 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>oneDraw</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&family=Roboto+Flex:opsz,wght@8..144,300..800&family=Caveat:wght@400..700&family=EB+Garamond:wght@400;600&family=Roboto+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="shared/m3.css?v=5">
+<link rel="stylesheet" href="draw.css?v=1">
+
+<div class="app" id="app">
+  <header class="titlebar">
+    <div class="logo" aria-hidden="true"><span class="ms">draw</span></div>
+    <span class="appname">oneDraw</span>
+    <div class="qat">
+      <button class="tb-btn" data-act="save" title="Save (Ctrl+S)"><span class="ms" aria-hidden="true">save</span></button>
+      <button class="tb-btn" data-act="undo" title="Undo (Ctrl+Z)"><span class="ms" aria-hidden="true">undo</span></button>
+      <button class="tb-btn" data-act="redo" title="Redo (Ctrl+Y)"><span class="ms" aria-hidden="true">redo</span></button>
+    </div>
+    <div class="docname">
+      <input id="docTitle" aria-label="Board name" value="Untitled board" autocomplete="off">
+      <span class="savestate" id="saveState">Saved</span>
+    </div>
+    <label class="tsearch"><span class="ms" aria-hidden="true">search</span><input id="topSearch" placeholder="Search (Alt+Q)" aria-label="Search commands" autocomplete="off"></label>
+    <button class="tb-btn" data-act="apps" title="Apps and Home"><span class="ms" aria-hidden="true">apps</span></button>
+    <button class="tb-btn" data-act="seed" title="App color"><span class="ms" aria-hidden="true">palette</span></button>
+    <button class="tb-btn" data-act="shortcuts" title="Keyboard shortcuts (F1)"><span class="ms" aria-hidden="true">keyboard</span></button>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <div class="ribbon-wrap"><div class="ribbon" id="ribbon"></div></div>
+
+  <div class="work">
+    <aside class="pagesbar" id="pagesbar" aria-label="Pages">
+      <div class="ph"><b>Pages</b><button class="icon-btn" data-act="newPage" title="Add page"><span class="ms" aria-hidden="true">note_add</span></button></div>
+      <div class="plist" id="pagelist"></div>
+    </aside>
+    <div class="navscrim" onclick="document.getElementById('app').classList.remove('nav-open')"></div>
+    <section class="boardwrap" id="boardwrap" data-tool="pen" aria-label="Whiteboard">
+      <canvas id="board" aria-label="Drawing board. Draw with a mouse, finger or pen."></canvas>
+      <div class="dock" id="dock" role="toolbar" aria-label="Tools">
+        <button class="dk" data-act="tool:select" title="Select (V)"><span class="ms" aria-hidden="true">near_me</span></button>
+        <button class="dk" data-act="tool:hand" title="Move the board (H or hold Space)"><span class="ms" aria-hidden="true">pan_tool</span></button>
+        <i class="dsep"></i>
+        <button class="dk" data-act="tool:pen" title="Pen (P)"><span class="ms" aria-hidden="true">edit</span><i class="dkbar" id="dkPen"></i></button>
+        <button class="dk" data-act="tool:hl" title="Highlighter (I)"><span class="ms" aria-hidden="true">ink_highlighter</span><i class="dkbar" id="dkHl"></i></button>
+        <button class="dk" data-act="tool:write" title="Write to text (W): your handwriting turns into typed text"><span class="ms" aria-hidden="true">edit_note</span></button>
+        <button class="dk" data-act="tool:eraser" title="Eraser (E)"><span class="ms" aria-hidden="true">ink_eraser</span></button>
+        <button class="dk" data-act="tool:laser" title="Laser pointer (L)"><span class="ms" aria-hidden="true">flare</span></button>
+        <i class="dsep"></i>
+        <button class="dk" data-act="pop:dockShapes" id="dkShape" title="Shapes and lines"><span class="ms" aria-hidden="true">category</span><span class="ms dd" aria-hidden="true">arrow_drop_down</span></button>
+        <button class="dk" data-act="tool:text" title="Text (T)"><span class="ms" aria-hidden="true">text_fields</span></button>
+        <button class="dk" data-act="tool:sticky" title="Sticky note (N)"><span class="ms" aria-hidden="true">sticky_note_2</span></button>
+        <button class="dk" data-act="picture" title="Picture"><span class="ms" aria-hidden="true">image</span></button>
+      </div>
+      <div class="selbar" id="selbar" hidden>
+        <button class="btn tonal" data-act="inkToText" hidden><span class="ms" aria-hidden="true">font_download</span>Convert to text</button>
+        <button class="icon-btn" data-act="dupe" title="Duplicate (Ctrl+D)"><span class="ms" aria-hidden="true">content_copy</span></button>
+        <button class="icon-btn" data-act="del" title="Delete (Del)"><span class="ms" aria-hidden="true">delete</span></button>
+      </div>
+      <div class="hint" id="hint" hidden></div>
+    </section>
+  </div>
+
+  <footer class="status">
+    <button class="icon-btn navbtn" data-act="togglePages" title="Show or hide the pages"><span class="ms" aria-hidden="true">view_sidebar</span></button>
+    <span class="sb" id="pageInfo"></span>
+    <span class="sb on hide-sm" id="toolInfo"></span>
+    <span class="grow"></span>
+    <button class="icon-btn hide-sm" data-act="fullPage" title="Full screen (F11)"><span class="ms" aria-hidden="true">fullscreen</span></button>
+    <div class="zoomctl">
+      <button class="icon-btn" data-act="zoomOut" title="Zoom out"><span class="ms" aria-hidden="true">remove</span></button>
+      <input type="range" id="zoomRange" min="8" max="400" value="100" aria-label="Zoom">
+      <button class="icon-btn" data-act="zoomIn" title="Zoom in"><span class="ms" aria-hidden="true">add</span></button>
+      <button class="sb zoompct" id="zoomPct" data-act="zoom100" title="Zoom to 100%">100%</button>
+    </div>
+  </footer>
+</div>
+<input type="file" id="openInput" accept=".json,.onedraw" multiple hidden>
+<input type="file" id="picInput" accept="image/*" multiple hidden>
+
+<script src="shared/core.js?v=6"></script>
+<script src="js/model.js?v=1"></script>
+<script src="js/board.js?v=1"></script>
+<script src="js/ink.js?v=1"></script>
+<script src="js/app.js?v=1"></script>

@@ -115,7 +115,7 @@ main{max-width:1120px;margin:0 auto;padding:12px 20px 60px}
     </div>
     <section class="apps" id="apps" aria-label="Apps"></section>
     <div class="files-head"><h2>Your files</h2><button class="btn tonal" id="importBtn" type="button" title="Open files from this device (or drop them anywhere on this page)"><span class="ms" aria-hidden="true">upload_file</span>Import</button></div>
-    <input type="file" id="importInput" multiple hidden accept=".docx,.html,.htm,.md,.markdown,.txt,.oneword,.xlsx,.xls,.xlsm,.ods,.csv,.tsv,.onesheet,.pptx,.oneslide,.oneidea,.pdf,.onesite,.json">
+    <input type="file" id="importInput" multiple hidden accept=".docx,.html,.htm,.md,.markdown,.txt,.oneword,.xlsx,.xls,.xlsm,.ods,.csv,.tsv,.onesheet,.pptx,.oneslide,.oneidea,.pdf,.onesite,.onedraw,.json">
     <div class="chips" id="chips"></div>
     <div class="files" id="files"></div>
     <p class="note"><span class="ms" aria-hidden="true">lock</span><span>Files are kept in this browser’s storage for this page’s address, so they stay private to this device. Use each app’s File › Export to keep a copy elsewhere.</span></p>
@@ -133,13 +133,13 @@ const APP_SRC = /*APP_SRC*/;
 const { $, el, esc, icon, store } = { $:s => document.querySelector(s), el:ONE.el, esc:ONE.esc, icon:ONE.icon, store:ONE.store };
 ONE.boot('one', 'home');
 const APPS = ONE.APPS, byId = Object.fromEntries(APPS.map(a => [a.id, a]));
-const LIBS = { word:['ow-lib', 'description'], sheet:['os-lib', 'table_chart'], slide:['op-lib', 'slideshow'], idea:['oi-lib', 'book_2'], site:['ob-lib', 'web'] };
-const NEW_LABEL = { word:'Blank document', sheet:'Blank workbook', slide:'New presentation', idea:'New notebook', site:'New website', pdf:'Open a PDF' };
+const LIBS = { word:['ow-lib', 'description'], sheet:['os-lib', 'table_chart'], slide:['op-lib', 'slideshow'], idea:['oi-lib', 'book_2'], site:['ob-lib', 'web'], draw:['od-lib', 'draw'] };
+const NEW_LABEL = { word:'Blank document', sheet:'Blank workbook', slide:'New presentation', idea:'New notebook', site:'New website', draw:'New whiteboard', pdf:'Open a PDF' };
 const logo = a => a.icon ? icon(a.icon) : esc(a.letter);
 let filter = 'all', files = [];
 
 /* ---------- files from every app ---------- */
-const meta = (id, m) => id === 'word' ? `${(m.words || 0).toLocaleString()} words` : id === 'sheet' ? `${m.sheets || 1} sheet${m.sheets > 1 ? 's' : ''}` : id === 'slide' ? `${m.slides || 0} slide${m.slides === 1 ? '' : 's'}` : id === 'idea' ? `${m.sections || 0} sections · ${m.pages || 0} pages` : id === 'site' ? `${m.pages || 1} page${m.pages > 1 ? 's' : ''}` : '';
+const meta = (id, m) => id === 'word' ? `${(m.words || 0).toLocaleString()} words` : id === 'sheet' ? `${m.sheets || 1} sheet${m.sheets > 1 ? 's' : ''}` : id === 'slide' ? `${m.slides || 0} slide${m.slides === 1 ? '' : 's'}` : id === 'idea' ? `${m.sections || 0} sections · ${m.pages || 0} pages` : id === 'site' ? `${m.pages || 1} page${m.pages > 1 ? 's' : ''}` : id === 'draw' ? `${m.pages || 1} page${m.pages > 1 ? 's' : ''}` : '';
 function pdfFiles(){
   return new Promise(ok => { try {
     const r = indexedDB.open('PdfToolsViewerDB'); r.onerror = () => ok([]);
@@ -230,12 +230,12 @@ addEventListener('popstate', e => { const id = e.state && e.state.app; if (id &&
 let lt; addEventListener('storage', () => { if (!$('#home').hidden) { clearTimeout(lt); lt = setTimeout(loadFiles, 300); } });
 ONE.mountAvatar(document.getElementById('avatarSlot'));
 /* ---------- Import: pick or drop files, each goes to the app that opens it ---------- */
-const APP_FOR_EXT = { docx:'word', html:'word', htm:'word', md:'word', markdown:'word', txt:'word', oneword:'word', xlsx:'sheet', xls:'sheet', xlsm:'sheet', ods:'sheet', csv:'sheet', tsv:'sheet', onesheet:'sheet', pptx:'slide', oneslide:'slide', oneidea:'idea', pdf:'pdf', onesite:'site' };
+const APP_FOR_EXT = { docx:'word', html:'word', htm:'word', md:'word', markdown:'word', txt:'word', oneword:'word', xlsx:'sheet', xls:'sheet', xlsm:'sheet', ods:'sheet', csv:'sheet', tsv:'sheet', onesheet:'sheet', pptx:'slide', oneslide:'slide', oneidea:'idea', pdf:'pdf', onesite:'site', onedraw:'draw' };
 async function appForFile(f) {
   const ext = (f.name.split('.').pop() || '').toLowerCase();
   if (ext !== 'json') return APP_FOR_EXT[ext] || null;
   // a .json: look at what's inside (one's own saved formats, or plain data for oneSheet)
-  try { const d = JSON.parse(await f.text()); if (d && d.header && d.pages) return 'site'; if (d && d.slides) return 'slide'; if (d && Array.isArray(d.sheets)) return 'sheet'; if (d && typeof d.html === 'string') return 'word'; if (d && Array.isArray(d.sections)) return 'idea'; return 'sheet'; } catch { return null; }
+  try { const d = JSON.parse(await f.text()); if (d && d.header && d.pages) return 'site'; if (d && Array.isArray(d.pages) && d.pages[0] && Array.isArray(d.pages[0].els)) return 'draw'; if (d && d.slides) return 'slide'; if (d && Array.isArray(d.sheets)) return 'sheet'; if (d && typeof d.html === 'string') return 'word'; if (d && Array.isArray(d.sections)) return 'idea'; return 'sheet'; } catch { return null; }
 }
 const waitReady = id => new Promise(ok => { const t0 = Date.now(); (function poll() { if (ready[id] || Date.now() - t0 > 15000) return setTimeout(ok, 250); setTimeout(poll, 120); })(); });
 async function importFiles(list) {
