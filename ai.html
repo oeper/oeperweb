@@ -560,7 +560,7 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification } from './shared/account.js?v=39';
+import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification } from './shared/account.js?v=40';
 import { mountTopNav } from './shared/topnav.js?v=42';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
@@ -2148,6 +2148,13 @@ async function sendToModel(chat) {
     clearInterval(watchdog);
     controller = null;
     setSending(false);
+    // the desktop app: tell the person when the answer is ready while they are in another window
+    if (window.epicDesktop && contentBuf && !document.hasFocus() && !bubble.classList.contains('error')) {
+      try {
+        const n = new Notification('epic AI replied', { body: contentBuf.replace(/[*_`#>]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 140) });
+        n.onclick = () => window.epicDesktop.focus();
+      } catch {}
+    }
     // The final <think> tag (if inline, not a separate reasoning_content
     // field) is stripped from what gets persisted/re-sent, so reloading
     // history never re-shows old reasoning as if it were the answer. Pass

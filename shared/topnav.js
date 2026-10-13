@@ -11,7 +11,7 @@
 import {
   mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange, signIn,
   onCreditsChange, CREDITS_ICON,
-} from './account.js?v=39';
+} from './account.js?v=40';
 import './settings-sync.js?v=2'; // keeps this person's settings the same on every device (can be switched off in settings)
 import {
   collection, query, orderBy, limit, getDocs, onSnapshot, where, doc, updateDoc, writeBatch,

@@ -38,18 +38,39 @@
   <p class="small">this gives the epic ai app access to your oeper.dev account on this phone. you can sign out of it in the app any time.</p>
 </div>
 <script type="module">
-import { auth, signIn, onAccountChange, getCurrentUser } from './shared/account.js?v=39';
+import { auth, signIn, googleIdTokenForDesktop, onAccountChange, getCurrentUser } from './shared/account.js?v=40';
 
 const params = new URLSearchParams(location.search);
 const state = params.get('state') || '';
 const $ = id => document.getElementById(id);
 let authKnown = false;
 let handedOver = false;
+const desktop = params.get('mode') === 'desktop';   // the epic AI desktop app (Windows / macOS) instead of the Android app
 
 if (!/^[0-9a-f]{16,64}$/.test(state)) {
   $('card').innerHTML = '<h1>open this from the epic ai app</h1><p>this page only works when it is opened by the epic ai app\'s sign in button.</p>';
 } else {
   const go = $('go');
+
+  if (desktop) {
+    // the desktop app needs a Google ID token (the Android app gets a refresh token): always sign in fresh in this browser
+    $('card').querySelector('h1').textContent = 'sign in to epic ai on your computer';
+    $('msg').textContent = 'use your oeper.dev account so your chats and memory follow you between the website, your phone and this computer.';
+    $('card').querySelector('.small').textContent = 'this gives the epic ai desktop app access to your oeper.dev account on this computer. you can sign out of it in the app any time.';
+    go.textContent = 'sign in with google';
+    go.disabled = false;
+    go.onclick = async () => {
+      go.disabled = true; $('err').textContent = '';
+      try {
+        const token = await googleIdTokenForDesktop();
+        const url = 'epicai://desktop-auth?state=' + encodeURIComponent(state) + '&it=' + encodeURIComponent(token);
+        $('msg').textContent = 'signed in. opening epic ai…';
+        go.textContent = 'open epic ai'; go.disabled = false;
+        go.onclick = () => { location.href = url; };
+        location.href = url;
+      } catch (e) { $('err').textContent = 'sign in failed: ' + (e && e.message || e); go.disabled = false; }
+    };
+  }
 
   // the app only ever receives its own state value back, plus the refresh token that lets it keep the account signed in
   function handOver(user) {
@@ -85,7 +106,7 @@ if (!/^[0-9a-f]{16,64}$/.test(state)) {
     }
   }
 
-  onAccountChange(user => render(user || getCurrentUser()));
+  if (!desktop) onAccountChange(user => render(user || getCurrentUser()));
 }
 </script>
 </body>

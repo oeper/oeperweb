@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>epic AI</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root { color-scheme: dark light; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0f0f10; color: #ececec; font: 16px/1.5 system-ui, sans-serif; }
+  @media (prefers-color-scheme: light) { body { background: #f6f6f7; color: #1b1b1d; } }
+  main { max-width: 420px; padding: 24px; text-align: center; }
+  h1 { font-size: 28px; font-weight: 500; margin: 0 0 8px; }
+  p { opacity: .7; margin: 0 0 22px; }
+  button { font: inherit; border: 0; border-radius: 100px; padding: 12px 26px; background: currentColor; cursor: pointer; }
+  button span { color: #0f0f10; mix-blend-mode: normal; }
+</style></head>
+<body><main>
+  <h1>can't reach oeper.dev</h1>
+  <p id="why">check your internet connection, then try again.</p>
+  <button id="retry"><span style="filter: invert(1) grayscale(1)">try again</span></button>
+</main>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get('why')) document.getElementById('why').textContent = 'check your internet connection, then try again. (' + q.get('why') + ')';
+  document.getElementById('retry').onclick = () => { location.href = q.get('retry') || 'https://oeper.dev/ai'; };
+</script></body></html>

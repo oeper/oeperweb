@@ -11,7 +11,7 @@
 
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signInWithCredential, getRedirectResult, signOut, onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
   getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, serverTimestamp, deleteField, collection, addDoc,
@@ -685,6 +685,11 @@ export function signIn() {
   if (!hasConsent()) {
     return askConsent().then(ok => ok ? signIn() : Promise.reject(Object.assign(new Error('you need to agree to the terms first'), { code: 'oe/consent-declined' })));
   }
+  // the epic AI desktop app (desktop/epicai): Google refuses sign-in inside an embedded window, so the app signs in through the
+  // system browser (app-auth.html?mode=desktop) and hands back a Google ID token, which the Firebase SDK accepts here
+  if (window.epicDesktop && window.epicDesktop.signIn) {
+    return window.epicDesktop.signIn().then(idToken => signInWithCredential(auth, GoogleAuthProvider.credential(idToken)));
+  }
   return signInWithPopup(auth, provider).catch(err => {
     // Popup-based sign-in is unreliable on a lot of mobile browsers — either
     // blocked outright, or the popup opens but Chrome-on-Android's window
@@ -696,6 +701,14 @@ export function signIn() {
     }
     throw err;
   });
+}
+/** For app-auth.html?mode=desktop: a fresh Google sign-in in this (real) browser whose Google ID token goes to the desktop app. */
+export async function googleIdTokenForDesktop() {
+  if (!hasConsent() && !(await askConsent())) throw Object.assign(new Error('you need to agree to the terms first'), { code: 'oe/consent-declined' });
+  const res = await signInWithPopup(auth, provider);
+  const cred = GoogleAuthProvider.credentialFromResult(res);
+  if (!cred || !cred.idToken) throw new Error('google did not send a sign-in token');
+  return cred.idToken;
 }
 export function signOutUser() {
   return signOut(auth);
