@@ -10,8 +10,7 @@
 <meta property="og:image" content="https://oeper.dev/icon.png">
 <meta property="og:url" content="https://oeper.dev/ai">
 <meta property="og:type" content="website">
-<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
-<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
+<link rel="icon" href="./epicai-icon.svg" type="image/svg+xml">
 <script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -445,6 +444,42 @@
   .memory-forget-btn:hover { background: rgba(0,0,0,0.15); color: var(--md-sys-color-error); }
   .memory-forget-btn .material-symbols-rounded { font-size: 16px; }
   .memory-empty { color: var(--md-sys-color-on-surface-variant); font-size: 13px; text-align: center; padding: 20px 0; }
+
+  /* ── the epic AI app's look ── */
+  .epic-mark { width: 1em; height: 1em; display: block; flex-shrink: 0; }
+  .header h1 { background: none; -webkit-text-fill-color: currentColor; color: var(--md-sys-color-on-surface); font-size: 1.4rem; font-weight: 500; letter-spacing: 0; gap: 10px; }
+  .header h1 .epic-mark { width: 26px; height: 26px; }
+  .header-icon-btn { background: transparent; }
+  .header-icon-btn:hover { background: var(--md-sys-color-surface-variant); }
+  .chat-empty { align-items: flex-start; justify-content: center; text-align: left; gap: 2px; min-height: 40vh; }
+  .chat-empty .hello { font-size: clamp(2.6rem, 9vw, 3.6rem); font-weight: 500; letter-spacing: -1px; line-height: 1.1;
+    background: linear-gradient(90deg, var(--md-sys-color-on-surface), var(--md-sys-color-on-surface-variant)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .chat-empty .hello-sub { font-size: clamp(1.5rem, 5.5vw, 2.1rem); color: var(--md-sys-color-on-surface-variant); line-height: 1.2; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+  .sugg { border: 1px solid var(--md-sys-color-outline); background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); border-radius: 100px;
+    padding: 10px 18px; font: inherit; font-size: 14px; cursor: pointer; transition: background .15s, transform .12s; }
+  .sugg:hover { background: var(--md-sys-color-surface-variant); }
+  .sugg:active { transform: scale(.96); }
+  .msg.assistant .msg-avatar { background: none; width: 24px; height: 24px; margin-top: 5px; color: var(--md-sys-color-on-surface); }
+  .msg.assistant .msg-avatar .epic-mark { width: 22px; height: 22px; }
+  .msg.assistant .msg-col { flex: 1; max-width: calc(100% - 36px); }
+  .msg.assistant .msg-bubble { background: none; padding: 2px 0; border-radius: 0; font-size: 16px; line-height: 1.65; }
+  .msg.user .msg-bubble { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline);
+    border-radius: 22px 22px 6px 22px; padding: 11px 16px; }
+  .msg.user .msg-col { max-width: min(78%, 520px); }
+  .chat-inputbar { border-radius: 28px; background: var(--md-sys-color-surface); border: 1px solid var(--md-sys-color-outline); box-shadow: none; padding: 8px 8px 8px 10px; }
+  .send-btn { background: var(--md-sys-color-on-surface); color: var(--md-sys-color-background); }
+  .send-btn.stop { background: var(--md-sys-color-on-surface); color: var(--md-sys-color-background); }
+  .chats-panel { gap: 8px; padding: 16px 12px; }
+  .new-chat-btn { justify-content: flex-start; background: transparent; color: var(--md-sys-color-on-surface); border-radius: 24px; padding: 12px 14px; font-size: 15px; font-weight: 400; }
+  .new-chat-btn:hover { background: var(--md-sys-color-surface-variant); opacity: 1; }
+  .chats-search { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 24px; border: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface-variant); }
+  .chats-search input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--md-sys-color-on-surface); font: inherit; font-size: 14px; }
+  .chats-search .material-symbols-rounded { font-size: 20px; }
+  .chats-heading { font-size: 13px; color: var(--md-sys-color-on-surface-variant); padding: 10px 14px 2px; font-weight: 500; }
+  .chat-row { border-radius: 24px; padding: 11px 14px; }
+  .chat-row > .material-symbols-rounded:first-child { display: none; }
+  .chat-row.active { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); }
 </style>
 </head>
 <body>
@@ -455,7 +490,9 @@
       <h3>chats</h3>
       <button id="chatsCloseBtn" class="header-icon-btn" title="close" style="width:36px;height:36px;"><span class="material-symbols-rounded">close</span></button>
     </div>
-    <button id="newChatBtn" class="new-chat-btn"><span class="material-symbols-rounded">add</span> new chat</button>
+    <button id="newChatBtn" class="new-chat-btn"><span class="material-symbols-rounded">edit_square</span> New chat</button>
+    <label class="chats-search"><span class="material-symbols-rounded">search</span><input type="text" id="chatsSearch" placeholder="Search chats" autocomplete="off"></label>
+    <div class="chats-heading">Recent</div>
     <div class="chats-list" id="chatsList"></div>
   </div>
 
@@ -466,17 +503,14 @@
           <button id="chatsBtn" class="header-icon-btn" title="chats"><span class="material-symbols-rounded">menu</span></button>
           <button id="newChatHeaderBtn" class="header-icon-btn" title="new chat"><span class="material-symbols-rounded">add</span></button>
         </div>
-        <h1><span class="material-symbols-rounded">auto_awesome</span>epic AI</h1>
+        <h1><svg class="epic-mark" viewBox="0 0 100 100" aria-hidden="true"><g stroke="currentColor" stroke-width="17" stroke-linecap="round"><line x1="28" y1="12" x2="28" y2="58"/><line x1="72" y1="12" x2="72" y2="58"/><line x1="28" y1="86" x2="72" y2="86"/></g></svg>epic AI</h1>
         <button id="memoryBtn" class="header-icon-btn" title="what epic AI remembers about you"><span class="material-symbols-rounded">psychology</span></button>
       </div>
     </header>
 
     <div class="chat-shell">
       <div class="chat-messages" id="chatMessages">
-        <div class="chat-empty" id="chatEmpty">
-          <span class="material-symbols-rounded">auto_awesome</span>
-          <p>ask epic AI anything.</p>
-        </div>
+        <div class="chat-empty" id="chatEmpty"><div class="hello">Hello</div><div class="hello-sub">How can I help you today?</div><div class="chip-row"><button type="button" class="sugg" data-q="Explain something simply: how do vaccines work?">Explain something simply</button><button type="button" class="sugg" data-q="Help me write a short, friendly email asking my teacher for an extension.">Help me write something</button><button type="button" class="sugg" data-q="Show me a bar chart of the five largest planets by diameter, interactive.">Draw me a chart</button><button type="button" class="sugg" data-q="Give me a plan for a productive day.">Plan my day</button></div></div>
       </div>
 
       <div class="chat-input-area">
@@ -501,7 +535,7 @@
             <span class="material-symbols-rounded">add_photo_alternate</span>
             <input type="file" id="attachInput" accept="image/*,application/pdf,.pdf,.txt,.md,.csv,.tsv,.json,.log">
           </label>
-          <textarea id="chatInput" placeholder="message…" rows="1"></textarea>
+          <textarea id="chatInput" placeholder="Ask epic AI" rows="1"></textarea>
           <button id="sendBtn" class="send-btn" title="send"><span class="material-symbols-rounded">arrow_upward</span></button>
         </div>
       </div>
@@ -1065,6 +1099,8 @@ localStorage.setItem(CURRENT_CHAT_KEY, currentChatId);
 function getCurrentChat() { return chats.find(c => c.id === currentChatId); }
 
 const messagesEl = document.getElementById('chatMessages');
+const EMPTY_STATE_HTML = '<div class="chat-empty" id="chatEmpty"><div class="hello">Hello</div><div class="hello-sub">How can I help you today?</div><div class="chip-row"><button type="button" class="sugg" data-q="Explain something simply: how do vaccines work?">Explain something simply</button><button type="button" class="sugg" data-q="Help me write a short, friendly email asking my teacher for an extension.">Help me write something</button><button type="button" class="sugg" data-q="Show me a bar chart of the five largest planets by diameter, interactive.">Draw me a chart</button><button type="button" class="sugg" data-q="Give me a plan for a productive day.">Plan my day</button></div></div>';
+const EPIC_MARK_SVG = '<svg class="epic-mark" viewBox="0 0 100 100" aria-hidden="true"><g stroke="currentColor" stroke-width="17" stroke-linecap="round"><line x1="28" y1="12" x2="28" y2="58"/><line x1="72" y1="12" x2="72" y2="58"/><line x1="28" y1="86" x2="72" y2="86"/></g></svg>';
 const inputEl = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 
@@ -1182,7 +1218,7 @@ function addMessageEl(role, content, imageUrl, index, docLinks, botLinks) {
     ? `<div class="msg-actions"><button type="button" class="msg-action-btn" data-edit-msg="${index}" title="edit"><span class="material-symbols-rounded">edit</span></button></div>`
     : `<div class="msg-actions"><button type="button" class="msg-action-btn" data-regen-msg="${index}" title="regenerate"><span class="material-symbols-rounded">refresh</span></button>${aiFeaturesEnabled() ? `<button type="button" class="msg-action-btn" data-save-one="${index}" title="save to oneWord"><span class="material-symbols-rounded">note_add</span></button>` : ''}</div>`;
   wrap.innerHTML = `
-    <div class="msg-avatar"><span class="material-symbols-rounded">${role === 'user' ? 'person' : 'auto_awesome'}</span></div>
+    ${role === 'user' ? '' : `<div class="msg-avatar">${EPIC_MARK_SVG}</div>`}
     <div class="msg-col">
       ${imageUrl ? `<img class="msg-attach-img" src="${escHtml(imageUrl)}" alt="">` : ''}
       <div class="msg-bubble"></div>
@@ -1217,7 +1253,7 @@ function renderChatFromHistory() {
   messagesEl.style.opacity = '0';
   messagesEl.innerHTML = '';
   if (!chat.messages.length) {
-    messagesEl.innerHTML = `<div class="chat-empty" id="chatEmpty"><span class="material-symbols-rounded">auto_awesome</span><p>ask epic AI anything.</p></div>`;
+    messagesEl.innerHTML = EMPTY_STATE_HTML;
   } else {
     chat.messages.forEach((m, i) => addMessageEl(m.role, m.content, m.imageUrl, i, m.docLinks, m.botLinks));
   }
@@ -1281,7 +1317,10 @@ function renderChatsList() {
   const list = document.getElementById('chatsList');
   observeList(list);
   if (!chats.length) { list.innerHTML = '<p class="chats-empty">no chats yet.</p>'; return; }
-  const sorted = [...chats].sort((a, b) => b.updatedAt - a.updatedAt);
+  const q = (document.getElementById('chatsSearch')?.value || '').trim().toLowerCase();
+  const sorted = [...chats].sort((a, b) => b.updatedAt - a.updatedAt)
+    .filter(c => !q || String(c.title || '').toLowerCase().includes(q) || (c.messages || []).some(m => typeof m.content === 'string' && m.content.toLowerCase().includes(q)));
+  if (!sorted.length) { list.innerHTML = '<p class="chats-empty">nothing matches.</p>'; return; }
   list.innerHTML = sorted.map(c => `
     <div class="chat-row ${c.id === currentChatId ? 'active' : ''}" data-id="${c.id}">
       <span class="material-symbols-rounded">chat_bubble</span>
@@ -1299,6 +1338,15 @@ function renderChatsList() {
     btn.addEventListener('click', e => { e.stopPropagation(); deleteChat(btn.dataset.id); });
   });
 }
+
+document.getElementById('chatsSearch')?.addEventListener('input', () => renderChatsList());
+// the suggestion chips on the empty chat
+messagesEl.addEventListener('click', e => {
+  const b = e.target.closest('.sugg');
+  if (!b || !b.dataset.q) return;
+  inputEl.value = b.dataset.q;
+  sendBtn.click();
+});
 
 function switchChat(id) {
   if (id === currentChatId) { closeChatsPanel(); return; }
@@ -1991,7 +2039,7 @@ async function sendToModel(chat) {
     if (!res.ok || !res.body) {
       let msg = `Server error (${res.status})`;
       try { msg = (await res.json()).error || msg; } catch {}
-      throw new Error(msg);
+      const e = new Error(msg); if (res.status === 429) e.isLimit = true; throw e;
     }
 
     const reader = res.body.getReader();
@@ -2050,7 +2098,7 @@ async function sendToModel(chat) {
     } else if (err.name === 'AbortError') {
       if (!contentBuf) bubble.textContent = '(stopped)';
     } else {
-      bubble.textContent = contentBuf || ('Could not reach the model: ' + err.message);
+      bubble.textContent = contentBuf || (err.isLimit ? err.message : 'Could not reach the model: ' + err.message);
       bubble.classList.add('error');
     }
   } finally {
