@@ -5,7 +5,7 @@
 const { $, el, icon, store } = ONE;
 const INK = window.INK = {};
 const ENDPOINT = 'https://oeper-ai.oeper.workers.dev/api/chat';
-const PROMPT = 'The picture holds handwriting. Transcribe it exactly as written, correcting nothing. Reply with ONLY the transcribed text: no quotes, no explanation, no markdown. Keep the line breaks between lines, and keep a list as one item per line. If you cannot read any writing, reply with exactly NO_TEXT.';
+const PROMPT = 'The picture holds handwriting. Transcribe it exactly as written, correcting nothing. Reply with ONLY the transcribed text: no quotes, no explanation, no markdown. Write maths with plain Unicode symbols (√, ², ³, ×, ÷, ½, π, ≤) and the characters as written, never LaTeX, never dollar signs or backslashes. Keep the line breaks between lines, and keep a list as one item per line. If you cannot read any writing, reply with exactly NO_TEXT.';
 let busy = false;
 
 INK.ready = () => !!store.get('od-ink-ok');
@@ -16,11 +16,26 @@ INK.consent = () => new Promise(ok => {
     actions:[{ label:'Not now', on:() => ok(false) }, { label:'Allow', kind:'filled', on:() => { store.set('od-ink-ok', 1); ok(true); } }], onClose:() => ok(false) });
 });
 
+
+/* the reader sometimes answers maths in LaTeX anyway; turn the common bits back into plain symbols */
+const SUP = { '0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','+':'⁺','-':'⁻','−':'⁻','=':'⁼','(':'⁽',')':'⁾','n':'ⁿ','i':'ⁱ' }, SUB = { '0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉','+':'₊','-':'₋','=':'₌','(':'₍',')':'₎' };
+const SYM = { times:'×', div:'÷', cdot:'·', pm:'±', mp:'∓', leq:'≤', le:'≤', geq:'≥', ge:'≥', neq:'≠', ne:'≠', approx:'≈', infty:'∞', pi:'π', theta:'θ', alpha:'α', beta:'β', gamma:'γ', delta:'δ', Delta:'Δ', lambda:'λ', mu:'μ', sigma:'σ', Sigma:'Σ', omega:'ω', degree:'°', circ:'°', rightarrow:'→', to:'→', leftarrow:'←', sum:'Σ', int:'∫', ldots:'…', dots:'…' };
+INK.unTeX = t => {
+  if (!/[$\\]/.test(t)) return t;
+  const word = /^[\w.]+$/;
+  let o = t.replace(/\$+/g, '').replace(/\\[()[\]]/g, '').replace(/\\(left|right|displaystyle)\b/g, '').replace(/\\[,;:! ]/g, ' ');
+  for (let i = 0; i < 6; i++) o = o.replace(/\\d?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, (m, a, b) => (word.test(a) ? a : '(' + a + ')') + '/' + (word.test(b) ? b : '(' + b + ')'))
+    .replace(/\\sqrt\s*\[3\]\s*\{([^{}]*)\}/g, (m, a) => '∛(' + a + ')').replace(/\\sqrt\s*\{([^{}]*)\}/g, (m, a) => word.test(a) ? '√' + a : '√(' + a + ')');
+  o = o.replace(/\^\s*\{([^{}]*)\}|\^\s*([\w+-])/g, (m, a, b) => { const x = a != null ? a : b; return [...x].every(c => SUP[c]) ? [...x].map(c => SUP[c]).join('') : '^(' + x + ')'; })
+    .replace(/_\s*\{([^{}]*)\}|_\s*(\d)/g, (m, a, b) => { const x = a != null ? a : b; return [...x].every(c => SUB[c]) ? [...x].map(c => SUB[c]).join('') : '_' + x; });
+  o = o.replace(/\\([A-Za-z]+)/g, (m, n) => SYM[n] || n).replace(/[{}]/g, '').replace(/ {2,}/g, ' ');
+  return o.trim();
+};
 const clean = s => {
   let t = String(s || '').replace(/<think>[\s\S]*?(<\/think>|$)/g, '').trim();
   t = t.replace(/^```[a-z]*\n?|\n?```$/g, '').trim();
   if (/^(["“”'`]).*\1$/s.test(t) && t.length > 2 && !/\n/.test(t)) t = t.slice(1, -1).trim();
-  return t;
+  return INK.unTeX(t);
 };
 /* one request to the worker; the answer streams back as server-sent events */
 INK.read = async (url, signal) => {
