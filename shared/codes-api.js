@@ -3,7 +3,7 @@
 //
 // Local testing only: on localhost, ?api=http://127.0.0.1:8788&as=someone@x.com talks to a local `wrangler dev --var TEST_AUTH:1`
 // as that person without signing in. The worker ignores that unless it is running on localhost with TEST_AUTH set, so it does nothing on the live site.
-import { getCurrentUser, isOwnerEmail } from './account.js?v=37';
+import { getCurrentUser, isOwnerEmail } from './account.js?v=38';
 
 const params = new URLSearchParams(location.search);
 const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';

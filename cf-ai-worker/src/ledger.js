@@ -291,6 +291,39 @@ export class Ledger extends DurableObject {
     await this.ctx.storage.put('user:' + email, user);
     return { email, ...userView(user) };
   }
+  // ── feedback and bug reports (from the epic AI app and the website) ──
+  // Kept here so nothing is lost even when no Discord webhook is set; the owners read them on promo-admin.html. Newest 500 are kept.
+
+  /** Stores one report. At most 5 per hour per person (guests: per network address). Returns {ok, id} or {ok:false, reason}. */
+  async addFeedback(entry, ip) {
+    const now = Date.now();
+    const subject = entry.email ? 'u:' + entry.email : 'g:' + ip;
+    const rk = 'fbrate:' + subject;
+    const r = (await this.ctx.storage.get(rk)) || { at: now, n: 0 };
+    if (now - r.at > 3600_000) { r.at = now; r.n = 0; }
+    if (r.n >= 5) return { ok: false, reason: 'rate' };
+    r.n++;
+    await this.ctx.storage.put(rk, r);
+    // forget old rate counters so the address/email of someone who wrote once isn't kept
+    const stale = [...(await this.ctx.storage.list({ prefix: 'fbrate:' })).entries()].filter(([, v]) => now - v.at > 3600_000).map(([k]) => k);
+    if (stale.length) await this.ctx.storage.delete(stale.slice(0, 120));
+    const id = 'fb:' + String(now).padStart(14, '0') + '-' + crypto.randomUUID().slice(0, 4);
+    await this.ctx.storage.put(id, { id, at: now, status: 'new', ...entry });
+    const all = [...(await this.ctx.storage.list({ prefix: 'fb:' })).keys()];
+    if (all.length > 500) await this.ctx.storage.delete(all.slice(0, all.length - 500).slice(0, 120));
+    return { ok: true, id };
+  }
+  async adminFeedback() { return [...(await this.ctx.storage.list({ prefix: 'fb:', reverse: true, limit: 200 })).values()]; }
+  async adminFeedbackUpdate(id, patch) {
+    if (!String(id).startsWith('fb:')) throw new Error('Not a feedback id');
+    const f = await this.ctx.storage.get(id);
+    if (!f) throw new Error('No such report');
+    if (patch && ['new', 'seen', 'done'].includes(patch.status)) f.status = patch.status;
+    await this.ctx.storage.put(id, f);
+    return f;
+  }
+  async adminFeedbackDelete(id) { if (String(id).startsWith('fb:')) await this.ctx.storage.delete(id); }
+
   async adminStats() {
     const day = dayOf();
     const codes = [...(await this.ctx.storage.list({ prefix: 'code:' })).values()];

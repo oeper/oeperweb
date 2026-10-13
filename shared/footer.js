@@ -38,7 +38,7 @@ const LEGAL_LINKS = [
   { name: 'privacy', url: '/privacy' },
   { name: 'terms', url: '/terms' },
   { name: 'refunds', url: '/refunds' },
-  { name: 'cookies', url: '/cookies' },
+  { name: 'cookies', url: '/cookies' }, { name: 'feedback', url: '/feedback' },
 ];
 
 let stylesInjected = false;

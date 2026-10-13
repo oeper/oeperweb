@@ -108,6 +108,15 @@
   .denied.show { display: block; }
   .person { margin-top: 12px; font-size: 14px; line-height: 1.7; display: none; }
   .person.show { display: block; }
+  .fb { border-top: 1px solid var(--md-sys-color-outline); padding: 12px 0; font-size: 13.5px; line-height: 1.55; }
+  .fb:first-child { border-top: none; }
+  .fb .meta { color: var(--md-sys-color-on-surface-variant); font-size: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 4px; }
+  .fb .tag { padding: 2px 9px; border-radius: 100px; background: var(--md-sys-color-surface-variant); font-weight: 600; font-size: 11.5px; }
+  .fb .tag.bug { color: #ffb4ab; } .fb .tag.legal { color: #f2b950; } .fb .tag.idea { color: #a6d9a8; }
+  .fb .msg { white-space: pre-wrap; word-break: break-word; }
+  .fb pre { margin-top: 6px; padding: 8px 10px; border-radius: 10px; background: var(--md-sys-color-surface-variant); font-size: 11.5px; overflow: auto; max-height: 140px; }
+  .fb .acts { display: flex; gap: 6px; margin-top: 8px; }
+  .fb.done { opacity: .55; }
   .person ul { margin: 6px 0 0 18px; color: var(--md-sys-color-on-surface-variant); font-size: 13px; }
 </style>
 </head>
@@ -202,6 +211,17 @@
   </div>
 
   <div class="card">
+    <h2><span class="material-symbols-rounded">feedback</span>Feedback &amp; bug reports</h2>
+    <p class="sub">Sent from the epic AI app and <a href="/feedback">oeper.dev/feedback</a>. The newest 500 are kept.</p>
+    <div class="toolbar">
+      <select id="fbFilter"><option value="open">Not done</option><option value="all">All</option><option value="bug">Bugs</option><option value="idea">Ideas</option><option value="legal">Legal</option><option value="rating">Ratings</option></select>
+      <button class="btn" id="fbReload"><span class="material-symbols-rounded">refresh</span>Reload</button>
+    </div>
+    <div id="fbList"></div>
+    <div class="empty" id="fbEmpty" hidden>Nothing here.</div>
+  </div>
+
+  <div class="card">
     <h2><span class="material-symbols-rounded">person_search</span>Look up a person</h2>
     <p class="sub">See someone's plan and usage, or give them Plus or bonus messages directly.</p>
     <div class="toolbar"><input type="text" id="uEmail" placeholder="email@example.com" style="text-transform:none"><button class="btn" id="uFind"><span class="material-symbols-rounded">search</span>Look up</button></div>
@@ -217,9 +237,9 @@
 <div class="toast" id="toast"></div>
 
 <script type="module" data-cfasync="false">
-import { onAccountChange, mountAccountBar } from './shared/account.js?v=37';
+import { onAccountChange, mountAccountBar } from './shared/account.js?v=38';
 import { mountTopNav } from './shared/topnav.js?v=42';
-import { mountFooter } from './shared/footer.js?v=6';
+import { mountFooter } from './shared/footer.js?v=7';
 import { oeConfirm } from './shared/dialog.js?v=4';
 import { call, who, isOwner, fmtDate, DEV_AS } from './shared/codes-api.js?v=1';
 
@@ -355,6 +375,37 @@ $('dlKeys').addEventListener('click', () => {
 });
 
 let person = '';
+let fbItems = [];
+async function loadFeedback() {
+  try { fbItems = (await call('GET', '/api/admin/feedback')).items || []; } catch (e) { toast(e.message, true); return; }
+  renderFeedback();
+}
+function renderFeedback() {
+  const f = $('fbFilter').value;
+  const list = fbItems.filter(x => f === 'all' ? true : f === 'open' ? x.status !== 'done' : x.kind === f);
+  $('fbEmpty').hidden = list.length > 0;
+  $('fbList').innerHTML = list.map(x => `<div class="fb ${x.status === 'done' ? 'done' : ''}" data-id="${esc(x.id)}">
+    <div class="meta"><span class="tag ${esc(x.kind)}">${esc(x.kind)}</span><span>${esc(new Date(x.at).toLocaleString())}</span><span>${esc(x.app)}${x.version ? ' ' + esc(x.version) : ''}</span>${x.email ? `<span>${esc(x.email)}</span>` : '<span>guest</span>'}${x.contact ? `<span>reply to: ${esc(x.contact)}</span>` : ''}${x.device ? `<span>${esc(x.device)}</span>` : ''}${x.page ? `<span>${esc(x.page)}</span>` : ''}</div>
+    <div class="msg">${esc(x.message)}</div>${x.log ? `<pre>${esc(x.log)}</pre>` : ''}
+    <div class="acts"><button class="btn small" data-fb="done">${x.status === 'done' ? 'Reopen' : 'Mark done'}</button><button class="btn small danger" data-fb="del">Delete</button></div>
+  </div>`).join('');
+}
+$('fbFilter').addEventListener('change', renderFeedback);
+$('fbReload').addEventListener('click', e => run(e.currentTarget, loadFeedback));
+$('fbList').addEventListener('click', e => {
+  const b = e.target.closest('[data-fb]'); if (!b) return;
+  const id = b.closest('.fb').dataset.id, it = fbItems.find(x => x.id === id);
+  run(b, async () => {
+    if (b.dataset.fb === 'del') {
+      if (!await oeConfirm('Delete this report for good?')) return;
+      await call('DELETE', '/api/admin/feedback/' + encodeURIComponent(id)); fbItems = fbItems.filter(x => x.id !== id);
+    } else {
+      const r = await call('PATCH', '/api/admin/feedback/' + encodeURIComponent(id), { status: it.status === 'done' ? 'new' : 'done' }); Object.assign(it, r);
+    }
+    renderFeedback();
+  });
+});
+
 async function showPerson(email) {
   const p = await call('GET', '/api/admin/user?email=' + encodeURIComponent(email));
   person = p.email;
@@ -380,7 +431,7 @@ function gate() {
   $('lock').style.display = ok ? 'none' : '';
   $('app').style.display = ok ? '' : 'none';
   $('denied').classList.toggle('show', !!u && !ok);
-  if (ok) load().catch(e => toast(e.message, true));
+  if (ok) { load().catch(e => toast(e.message, true)); loadFeedback(); }
 }
 onAccountChange(gate);
 if (DEV_AS) gate();

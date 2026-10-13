@@ -756,6 +756,44 @@ async function handleRedeem(request, env) {
   return json(r, r.ok ? 200 : (r.reason === 'locked' ? 429 : 400), request);
 }
 
+// Feedback / bug reports. Guests may send too (limited per network address); a signed-in sender's email is stored so the owner can answer.
+const FEEDBACK_KINDS = ['bug', 'idea', 'legal', 'rating', 'other'];
+const clipText = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, n);
+async function handleFeedback(request, env) {
+  const body = await readBody(request);
+  const message = clipText(body.message, 2000);
+  if (message.length < 5) return json({ error: 'Write a few words about it first.' }, 400, request);
+  const user = await userFromRequest(request, env);
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const entry = {
+    kind: FEEDBACK_KINDS.includes(body.kind) ? body.kind : 'other',
+    message,
+    contact: clipText(body.contact, 120),
+    email: user ? user.email : '',
+    app: clipText(body.app, 30) || 'site',
+    version: clipText(body.version, 40),
+    device: clipText(body.device, 100),
+    page: clipText(body.page, 200),
+    log: clipText(body.log, 6000),
+  };
+  const r = await ledgerOf(env).addFeedback(entry, ip);
+  if (!r.ok) return json({ error: 'You have sent a few already. Please try again in an hour.' }, 429, request);
+  if (env.FEEDBACK_WEBHOOK) {
+    try {
+      const color = { bug: 0xe57373, idea: 0x81c784, legal: 0xf2b950, rating: 0x64b5f6, other: 0x90a4ae }[entry.kind];
+      await fetch(env.FEEDBACK_WEBHOOK, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(4000),
+        body: JSON.stringify({ embeds: [{
+          title: `${({ bug: 'Bug report', idea: 'Idea', legal: 'Legal issue', rating: 'Answer rating' })[entry.kind] || 'Feedback'} · ${entry.app}${entry.version ? ' ' + entry.version : ''}`,
+          description: entry.message.slice(0, 1800), color,
+          fields: [entry.email && { name: 'from', value: entry.email }, entry.contact && { name: 'contact', value: entry.contact }, entry.device && { name: 'device', value: entry.device }, entry.log && { name: 'log', value: '```' + entry.log.slice(0, 900).replace(/`/g, "'") + '```' }].filter(Boolean),
+        }] }),
+      });
+    } catch { /* the report is stored either way */ }
+  }
+  return json({ ok: true, id: r.id }, 200, request);
+}
+
 async function handleAdmin(request, env, url) {
   const user = await userFromRequest(request, env);
   if (!user) return json({ error: 'Sign in first.' }, 401, request);
@@ -768,6 +806,9 @@ async function handleAdmin(request, env, url) {
     if (path.startsWith('codes/') && m === 'PATCH') return json(await L.adminUpdateCode(decodeURIComponent(path.slice(6)), await readBody(request)), 200, request);
     if (path.startsWith('codes/') && m === 'DELETE') { await L.adminDeleteCode(decodeURIComponent(path.slice(6))); return json({ ok: true }, 200, request); }
     if (path === 'config' && m === 'PUT') return json(await L.adminSetConfig(await readBody(request)), 200, request);
+    if (path === 'feedback' && m === 'GET') return json({ items: await L.adminFeedback() }, 200, request);
+    if (path.startsWith('feedback/') && m === 'PATCH') return json(await L.adminFeedbackUpdate(decodeURIComponent(path.slice(9)), await readBody(request)), 200, request);
+    if (path.startsWith('feedback/') && m === 'DELETE') { await L.adminFeedbackDelete(decodeURIComponent(path.slice(9))); return json({ ok: true }, 200, request); }
     if (path === 'user' && m === 'GET') return json(await L.adminUser(url.searchParams.get('email')), 200, request);
     if (path === 'user/grant' && m === 'POST') { const b = await readBody(request); return json(await L.adminGrantUser(b.email, b.grant, user.email), 200, request); }
     if (path === 'user/revoke' && m === 'POST') { const b = await readBody(request); return json(await L.adminRevokePlus(b.email), 200, request); }
@@ -920,6 +961,7 @@ export default {
     if (env.LEDGER) {
       if (url.pathname === '/api/usage' && request.method === 'GET') return handleUsage(request, env);
       if (url.pathname === '/api/redeem' && request.method === 'POST') return handleRedeem(request, env);
+      if (url.pathname === '/api/feedback' && request.method === 'POST') return handleFeedback(request, env);
       if (url.pathname.startsWith('/api/admin/')) return handleAdmin(request, env, url);
     }
 

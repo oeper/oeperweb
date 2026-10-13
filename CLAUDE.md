@@ -35,6 +35,9 @@ No build step for the site: plain HTML/CSS/JS, one `.html` per page.
   (keys: prefix + random, default 1 use; promos: chosen word, many uses, once per person; scope `epicai` = site+app, `site` = site only), brute-force lockouts. `auth.js` verifies
   the Firebase ID token (Google JWKS, WebCrypto); owners = `OWNER_EMAILS`. Only requests with `app:"epicai"` are counted; ledger errors fail open. Routes: `/api/usage`, `/api/redeem`, `/api/admin/*`.
   Pages: `usage.html` (plan + meter), `redeem.html` (enter a code, history), `promo-admin.html` (owners: codes, keys, limits, stats) — all via `shared/codes-api.js`.
+  Feedback: `POST /api/feedback` (guests ok, 5 per hour per person/IP, kinds bug|idea|legal|rating|other; optional `FEEDBACK_WEBHOOK` secret forwards to Discord) stores `fb:*` rows in the
+  Ledger DO (newest 500); owners read/mark/delete via `/api/admin/feedback`. Pages: `feedback.html` (public form) and a Feedback card in `promo-admin.html`. Legal pages `terms`/`privacy` cover epic AI;
+  `CONSENT_VERSION` in `shared/account.js` re-asks consent when the terms change (bumped to '2' on 2026-10-13; the Android app has its own `Consent.VERSION`).
   `wrangler deploy` is NOT automatic: the user must run `cd cf-ai-worker && npx wrangler deploy` (new DO migration `v1-ledger`). `ai.html` only sends the token header once `GET /api/usage` answers (old worker safe).
   `ai.html` streaming: the answer is not re-rendered while the reader is touching/flinging the page (`readerIsScrolling`), otherwise the DOM swap cancels the scroll.
 - `one/`, `one-src/` — "One" office suite (`bundle.py` builds `one/index.html` from `one-src/*`). Edit `one-src`, then rebundle.
