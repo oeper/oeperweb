@@ -1,3 +1,7 @@
+import { userFromRequest, isOwner } from './auth.js';
+import { Ledger } from './ledger.js';
+export { Ledger };
+
 // Public proxy in front of Cloudflare Workers AI, replacing the old
 // ai-proxy.js (which forwarded to LM Studio running on a home PC over a
 // Cloudflare Tunnel). Same request/response contract as that server —
@@ -51,7 +55,7 @@
 // needs its own provider API key, not just this Worker's env.AI binding.
 const MODEL = '@cf/google/gemma-4-26b-a4b-it';
 
-const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765'];
+const ALLOWED_ORIGINS = ['https://oeper.dev', 'http://localhost:8765', 'http://localhost:8080'];
 
 const MAX_MESSAGES = 40;
 const MAX_MESSAGE_CHARS = 4000;
@@ -108,8 +112,8 @@ function corsHeaders(request) {
   const headers = { Vary: 'Origin' };
   if (origin && ALLOWED_ORIGINS.includes(origin)) {
     headers['Access-Control-Allow-Origin'] = origin;
-    headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
-    headers['Access-Control-Allow-Headers'] = 'Content-Type';
+    headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
+    headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
   }
   return headers;
 }
@@ -185,7 +189,20 @@ function normalizeToolCalls(acc) {
 // round's stream ends, so the caller can decide whether to execute tools
 // and start another round, or stop (the round already streamed its full
 // answer to the client if it didn't call any tools).
-async function streamOneRound(upstream, send, quiet) {
+// Rough token counts for the ledger. Workers AI streams don't always report usage, so the size of what is sent and what comes back is turned
+// into tokens (about 3.3 characters each, a little pessimistic on purpose; a picture counts as 1,200).
+const CHARS_PER_TOKEN = 3.3;
+function estimateInputTokens(messages, tools) {
+  let chars = tools ? JSON.stringify(tools).length : 0, images = 0;
+  for (const m of messages) {
+    if (typeof m.content === 'string') chars += m.content.length;
+    else if (Array.isArray(m.content)) for (const part of m.content) { if (part && part.type === 'text') chars += String(part.text || '').length; else images++; }
+    if (m.tool_calls) chars += JSON.stringify(m.tool_calls).length;
+  }
+  return Math.ceil(chars / CHARS_PER_TOKEN) + images * 1200;
+}
+
+async function streamOneRound(upstream, send, quiet, tally) {
   const reader = upstream.getReader();
   const decoder = new TextDecoder();
   let buf = '';
@@ -216,9 +233,10 @@ async function streamOneRound(upstream, send, quiet) {
       if (!payload || payload === '[DONE]') continue;
       // `quiet` callers (the one suite's assistant) never show the model's reasoning, so it is dropped before it is even parsed: a long
       // reasoning stream used to burn the Worker's whole CPU budget ("Worker exceeded CPU time limit") and cut the answer off mid-sentence
-      if (quiet && payload.includes('"reasoning') && !payload.includes('"content"') && !payload.includes('tool_calls') && !payload.includes('finish_reason":"')) continue;
+      if (quiet && payload.includes('"reasoning') && !payload.includes('"content"') && !payload.includes('tool_calls') && !payload.includes('finish_reason":"')) { tally.outChars += payload.length * 0.5; continue; }
       let evt;
       try { evt = JSON.parse(payload); } catch { continue; }
+      if (evt.usage) tally.usage = evt.usage;
       const choice = evt.choices && evt.choices[0];
       if (!choice) continue;
       if (choice.finish_reason) finishReason = choice.finish_reason;
@@ -236,7 +254,7 @@ async function streamOneRound(upstream, send, quiet) {
           if (tc.id) toolCallAcc[idx].id = tc.id;
           if (tc.function) {
             if (tc.function.name) toolCallAcc[idx].name = tc.function.name;
-            if (tc.function.arguments) toolCallAcc[idx].arguments += tc.function.arguments;
+            if (tc.function.arguments) { toolCallAcc[idx].arguments += tc.function.arguments; tally.outChars += tc.function.arguments.length; }
           }
         }
         continue;
@@ -245,8 +263,9 @@ async function streamOneRound(upstream, send, quiet) {
       // Field name varies by backend — normalize both to reasoning_content,
       // the only name ai.html's client-side parser looks for.
       const reasoning = delta.reasoning_content || delta.reasoning;
-      if (reasoning) send({ choices: [{ delta: { reasoning_content: reasoning } }] });
+      if (reasoning) { tally.outChars += reasoning.length; send({ choices: [{ delta: { reasoning_content: reasoning } }] }); }
       if (delta.content) {
+        tally.outChars += delta.content.length;
         assistantContent += delta.content;
         send({ choices: [{ delta: { content: delta.content } }] });
       }
@@ -294,12 +313,13 @@ async function streamOneRound(upstream, send, quiet) {
 // to the client, and between rounds — invisibly to the client — executes
 // any tool calls the model made and feeds the results back in, up to
 // MAX_TOOL_ROUNDS.
-function streamToolLoop(env, initialMessages, tools, quiet) {
+function streamToolLoop(env, initialMessages, tools, quiet, meter) {
   const encoder = new TextEncoder();
   return new ReadableStream({
     async start(controller) {
       const send = obj => controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
       let workingMessages = initialMessages;
+      let tokensIn = 0, tokensOut = 0;
       try {
         for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
           // The last round gets no tools at all. Otherwise a model that keeps
@@ -307,10 +327,21 @@ function streamToolLoop(env, initialMessages, tools, quiet) {
           // loop would stop right there, and the viewer got a half-written
           // answer that just ended (sometimes mid-heading).
           const lastRound = round === MAX_TOOL_ROUNDS;
-          const upstream = await env.AI.run(MODEL, lastRound
-            ? { messages: workingMessages, stream: true, max_tokens: MAX_TOKENS }
-            : { messages: workingMessages, tools: tools || TOOLS, stream: true, max_tokens: MAX_TOKENS });
-          const { finishedWithToolCalls, toolCalls, assistantContent } = await streamOneRound(upstream, send, quiet);
+          const roundTools = lastRound ? null : (tools || TOOLS);
+          const tally = { outChars: 0, usage: null };
+          tokensIn += estimateInputTokens(workingMessages, roundTools); // replaced below by the real number when the model reports one
+          let upstream, round_;
+          try {
+            upstream = await env.AI.run(MODEL, lastRound
+              ? { messages: workingMessages, stream: true, max_tokens: MAX_TOKENS }
+              : { messages: workingMessages, tools: roundTools, stream: true, max_tokens: MAX_TOKENS });
+            round_ = await streamOneRound(upstream, send, quiet, tally);
+          } finally {
+            // counted even when the viewer closes the page mid-answer: the model still did the work
+            if (tally.usage && tally.usage.prompt_tokens) tokensIn += tally.usage.prompt_tokens - estimateInputTokens(workingMessages, roundTools);
+            tokensOut += tally.usage && tally.usage.completion_tokens ? tally.usage.completion_tokens : Math.ceil(tally.outChars / CHARS_PER_TOKEN);
+          }
+          const { finishedWithToolCalls, toolCalls, assistantContent } = round_;
           if (!finishedWithToolCalls || round === MAX_TOOL_ROUNDS) break;
 
           workingMessages = [...workingMessages, { role: 'assistant', content: assistantContent, tool_calls: toolCalls }];
@@ -357,10 +388,16 @@ function streamToolLoop(env, initialMessages, tools, quiet) {
           }
         }
       } catch (err) {
-        send({ choices: [{ delta: { content: `\n\n[error: ${err.message}]` } }] });
+        try { send({ choices: [{ delta: { content: `\n\n[error: ${err.message}]` } }] }); } catch { /* the viewer is gone */ }
       }
-      controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-      controller.close();
+      if (meter && env.LEDGER) {
+        try { await env.LEDGER.get(env.LEDGER.idFromName('main')).record(meter.email, meter.ip, tokensIn, tokensOut); }
+        catch (err) { console.log('ledger could not record usage:', err && err.message); }
+      }
+      try {
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      } catch { /* the viewer is gone */ }
     },
   });
 }
@@ -660,7 +697,21 @@ async function handleChat(request, env) {
     return json({ error: 'Too many requests — please slow down and try again in a few minutes.' }, 429, request);
   }
 
-  const stream = streamToolLoop(env, messages, [...TOOLS, ...(body.oneTools === true ? ONE_TOOLS : []), ...(body.botTools === true ? BOT_TOOLS : [])], body.quiet === true);
+  // epic AI's own chat (the site's ai page and the Android app say so with app:"epicai") has a daily token allowance per person.
+  // The other clients (the One suite, study tools) are not counted. If the ledger itself breaks, the chat still works.
+  let meter = null;
+  if (body.app === 'epicai' && env.LEDGER) {
+    try {
+      const user = await userFromRequest(request, env);
+      const r = await ledgerOf(env).check(user ? user.email : null, ip);
+      if (!r.ok) return json({ error: limitMessage(r), limit: r }, 429, request);
+      meter = { email: user ? user.email : null, ip };
+    } catch (err) {
+      console.log('ledger unavailable, letting the message through:', err && err.message);
+    }
+  }
+
+  const stream = streamToolLoop(env, messages, [...TOOLS, ...(body.oneTools === true ? ONE_TOOLS : []), ...(body.botTools === true ? BOT_TOOLS : [])], body.quiet === true, meter);
 
   return new Response(stream, {
     status: 200,
@@ -671,6 +722,59 @@ async function handleChat(request, env) {
       ...corsHeaders(request),
     },
   });
+}
+
+// ── Usage allowance, codes and keys (see ledger.js) ─────────────────────────
+const ledgerOf = env => env.LEDGER.get(env.LEDGER.idFromName('main'));
+
+const tokensText = n => n >= 10000 ? Math.round(n / 1000) + 'k' : n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n);
+function limitMessage(r) {
+  const when = 'It resets at midnight UTC.';
+  if (r.reason === 'pool') return r.plan === 'plus'
+    ? `epic AI has used all of today's capacity. ${when}`
+    : `epic AI is busy: everyone together has used up most of today's capacity, and what is left is kept for Plus. ${when}`;
+  if (r.plan === 'guest') return `You've used today's ${tokensText(r.limit)} tokens for guests. Sign in for more, or redeem a key at oeper.dev/redeem. ${when}`;
+  if (r.plan === 'plus') return `You've used today's ${tokensText(r.limit)} tokens. ${when}`;
+  return `You've used today's ${tokensText(r.limit)} tokens. ${when} A product key or promo code from oeper.dev/redeem gives you more.`;
+}
+
+async function readBody(request) { try { return await request.json(); } catch { return {}; } }
+const asError = (err, request, status = 400) => json({ error: (err && err.message) || 'Something went wrong' }, status, request);
+
+async function handleUsage(request, env) {
+  const user = await userFromRequest(request, env);
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  return json(await ledgerOf(env).me(user ? user.email : null, ip), 200, request);
+}
+
+async function handleRedeem(request, env) {
+  const user = await userFromRequest(request, env);
+  if (!user) return json({ error: 'Sign in first, then redeem your code.', reason: 'signin' }, 401, request);
+  const body = await readBody(request);
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const r = await ledgerOf(env).redeem(user.email, body.code, body.source === 'app' ? 'app' : 'site', ip);
+  return json(r, r.ok ? 200 : (r.reason === 'locked' ? 429 : 400), request);
+}
+
+async function handleAdmin(request, env, url) {
+  const user = await userFromRequest(request, env);
+  if (!user) return json({ error: 'Sign in first.' }, 401, request);
+  if (!isOwner(user)) return json({ error: 'Owners only.' }, 403, request);
+  const L = ledgerOf(env), m = request.method, path = url.pathname.replace(/^\/api\/admin\//, '');
+  try {
+    if (path === 'codes' && m === 'GET') return json({ codes: await L.adminListCodes(), config: await L.adminGetConfig(), stats: await L.adminStats() }, 200, request);
+    if (path === 'promo' && m === 'POST') return json(await L.adminCreatePromo(await readBody(request), user.email), 200, request);
+    if (path === 'keys' && m === 'POST') return json({ keys: await L.adminCreateKeys(await readBody(request), user.email) }, 200, request);
+    if (path.startsWith('codes/') && m === 'PATCH') return json(await L.adminUpdateCode(decodeURIComponent(path.slice(6)), await readBody(request)), 200, request);
+    if (path.startsWith('codes/') && m === 'DELETE') { await L.adminDeleteCode(decodeURIComponent(path.slice(6))); return json({ ok: true }, 200, request); }
+    if (path === 'config' && m === 'PUT') return json(await L.adminSetConfig(await readBody(request)), 200, request);
+    if (path === 'user' && m === 'GET') return json(await L.adminUser(url.searchParams.get('email')), 200, request);
+    if (path === 'user/grant' && m === 'POST') { const b = await readBody(request); return json(await L.adminGrantUser(b.email, b.grant, user.email), 200, request); }
+    if (path === 'user/revoke' && m === 'POST') { const b = await readBody(request); return json(await L.adminRevokePlus(b.email), 200, request); }
+  } catch (err) {
+    return asError(err, request);
+  }
+  return json({ error: 'Not found' }, 404, request);
 }
 
 // ── Content moderation for the file server ─────────────────────────────
@@ -811,6 +915,12 @@ export default {
 
     if (url.pathname === '/api/chat' && request.method === 'POST') {
       return handleChat(request, env);
+    }
+
+    if (env.LEDGER) {
+      if (url.pathname === '/api/usage' && request.method === 'GET') return handleUsage(request, env);
+      if (url.pathname === '/api/redeem' && request.method === 'POST') return handleRedeem(request, env);
+      if (url.pathname.startsWith('/api/admin/')) return handleAdmin(request, env, url);
     }
 
     return json({ error: 'Not found' }, 404, request);

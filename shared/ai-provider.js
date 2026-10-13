@@ -372,12 +372,12 @@ export async function customChatResponse(body, signal) {
 }
 
 // The one entry point ai.html and the one suite use: the custom provider when it is on, otherwise the oeper.dev worker.
-export async function chatFetch(endpoint, body, signal) {
+export async function chatFetch(endpoint, body, signal, extraHeaders) {
   if (getProvider()) {
     try { return await customChatResponse(body, signal); }
     catch (err) { if (err.name === 'AbortError') throw err; return new Response(JSON.stringify({ error: err.message }), { status: 502, headers: { 'Content-Type': 'application/json' } }); }
   }
-  return fetch(endpoint + '/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal });
+  return fetch(endpoint + '/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(extraHeaders || {}) }, body: JSON.stringify(body), signal });
 }
 
 // ── for the settings page ──

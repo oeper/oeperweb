@@ -15,3 +15,12 @@ binding = "AI"
 # routes = [
 #   { pattern = "ai3.oeper.dev", custom_domain = true }
 # ]
+
+# The ledger (src/ledger.js): promo codes, product keys, epic AI Plus and the daily message counts. One Durable Object, SQLite-backed.
+[[durable_objects.bindings]]
+name = "LEDGER"
+class_name = "Ledger"
+
+[[migrations]]
+tag = "v1-ledger"
+new_sqlite_classes = ["Ledger"]

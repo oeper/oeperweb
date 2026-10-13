@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Codes &amp; limits — oeper.dev</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
+<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./shared/fonts.css?v=1">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+  input:focus-visible, select:focus-visible { outline-offset: 0; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-success: #a6d9a8;
+  }
+  body {
+    min-height: 100vh; background-color: var(--md-sys-color-background);
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    background-image: var(--oe-bg-image, none); color: var(--md-sys-color-on-surface); -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1000px; margin: 0 auto; padding: 56px 20px 100px; }
+  h1 {
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2rem, 5vw, 2.6rem);
+    font-weight: 400; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+  }
+  h1 .material-symbols-rounded { color: var(--md-sys-color-primary); font-size: 0.85em; }
+  .lead { color: var(--md-sys-color-on-surface-variant); font-size: 14px; line-height: 1.6; margin-bottom: 24px; max-width: 70ch; }
+  .lead a { color: var(--md-sys-color-primary); }
+
+  .card { background: var(--md-sys-color-surface); border-radius: 24px; padding: 22px; margin-bottom: 18px; }
+  .card h2 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 17px; font-weight: 500; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .card h2 .material-symbols-rounded { font-size: 20px; color: var(--md-sys-color-primary); }
+  .card .sub { color: var(--md-sys-color-on-surface-variant); font-size: 13px; line-height: 1.5; margin-bottom: 14px; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .stat { background: var(--md-sys-color-surface-variant); border-radius: 16px; padding: 12px 14px; }
+  .stat b { display: block; font-size: 24px; font-weight: 500; }
+  .stat span { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-bottom: 5px; }
+  input[type="text"], input[type="number"], input[type="date"], select, textarea {
+    width: 100%; background: var(--md-sys-color-surface-variant); border: none; border-radius: 12px; padding: 11px 13px;
+    color: var(--md-sys-color-on-surface); font-size: 14px; font-family: inherit; outline: none; color-scheme: dark;
+  }
+  input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
+  textarea { min-height: 110px; font-family: ui-monospace, Consolas, monospace; font-size: 13px; resize: vertical; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
+    font-size: 14px; font-weight: 500; padding: 10px 18px; border-radius: 100px; border: none; cursor: pointer;
+    background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); transition: opacity .15s, transform .15s, background-color .15s;
+  }
+  .btn .material-symbols-rounded { font-size: 18px; }
+  .btn:hover { opacity: .88; } .btn:active { transform: scale(.97); } .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.primary { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .btn.danger { color: var(--md-sys-color-error); background: color-mix(in srgb, var(--md-sys-color-error) 16%, transparent); }
+  .btn.small { padding: 5px 11px; font-size: 12.5px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 500; color: var(--md-sys-color-on-surface-variant); font-size: 12px; padding: 8px 10px; white-space: nowrap; }
+  td { padding: 9px 10px; border-top: 1px solid var(--md-sys-color-outline); vertical-align: middle; }
+  td code { font-size: 12.5px; letter-spacing: .3px; }
+  tr.off td { opacity: .5; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .3px; padding: 2px 9px; border-radius: 100px; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant); }
+  .tag.key { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+  .tag.bad { background: color-mix(in srgb, var(--md-sys-color-error) 16%, transparent); color: var(--md-sys-color-error); }
+  .tag.good { background: color-mix(in srgb, var(--md-sys-color-success) 16%, transparent); color: var(--md-sys-color-success); }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .toolbar input, .toolbar select { width: auto; flex: 1; min-width: 140px; }
+  .empty { padding: 26px; text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 14px; }
+  .keys-out { margin-top: 14px; display: none; }
+  .keys-out.show { display: block; }
+
+  .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background: #303034; box-shadow: 0 4px 12px rgba(0,0,0,.4);
+    border-radius: 16px; padding: 14px 24px; font-size: 14px; color: #e3e2e6; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 100; max-width: 90vw; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.bad { color: var(--md-sys-color-error); }
+
+  .lock { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+  .lock .material-symbols-rounded.icon { font-size: 40px; color: var(--md-sys-color-primary); width: 72px; height: 72px; border-radius: 50%; background: var(--md-sys-color-surface-variant); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+  .lock h2 { font-weight: 400; font-size: 26px; margin-bottom: 8px; }
+  .lock p { color: var(--md-sys-color-on-surface-variant); font-size: 14px; max-width: 360px; margin-bottom: 24px; line-height: 1.5; }
+  .denied { display: none; margin-top: 18px; color: var(--md-sys-color-error); font-size: 13px; }
+  .denied.show { display: block; }
+  .person { margin-top: 12px; font-size: 14px; line-height: 1.7; display: none; }
+  .person.show { display: block; }
+  .person ul { margin: 6px 0 0 18px; color: var(--md-sys-color-on-surface-variant); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="lock" id="lock">
+  <span class="material-symbols-rounded icon">lock</span>
+  <h2>sign in required</h2>
+  <p>codes, keys and usage limits are managed by the site owners. sign in with an authorized Google account.</p>
+  <div id="lockSignIn"></div>
+  <div class="denied" id="denied">signed in, but this Google account isn't an owner.</div>
+</div>
+
+<div class="page" id="app" style="display:none">
+  <h1><span class="material-symbols-rounded">confirmation_number</span>codes &amp; limits</h1>
+  <p class="lead">Promo codes and product keys for epic AI, and how many epic AI messages people get per day. People redeem at <a href="/redeem">oeper.dev/redeem</a>; epic AI codes also work inside the app. Changes apply immediately.</p>
+
+  <div class="card">
+    <h2><span class="material-symbols-rounded">monitoring</span>Today</h2>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="material-symbols-rounded">speed</span>Usage limits (tokens per day)</h2>
+    <p class="sub">What the model reads plus writes (its thinking counts too), per person per day, resetting at midnight UTC. Guests are counted per network address. "Plus" is what a product key unlocks. Bonus tokens from codes are used after the daily allowance runs out. A typical turn is about 3,000 to 4,000 tokens because the whole chat is read again every message.</p>
+    <div class="grid">
+      <div class="field"><label>Guests (not signed in)</label><input type="number" id="limGuest" min="0" step="1000"></div>
+      <div class="field"><label>Free (signed in)</label><input type="number" id="limFree" min="0" step="1000"></div>
+      <div class="field"><label>epic AI Plus</label><input type="number" id="limPlus" min="0" step="1000"></div>
+    </div>
+    <p class="sub" style="margin-top:6px"><b>Shared daily pool.</b> Cloudflare's free plan gives your whole account 10,000 neurons a day, and the One suite, study tools and moderation use the same ones. epic AI stops for everyone when it has spent its share. The last part of the pool is kept for Plus people.</p>
+    <div class="grid">
+      <div class="field"><label>epic AI pool (neurons/day)</label><input type="number" id="poolNeurons" min="0" step="500"></div>
+      <div class="field"><label>Kept for Plus (%)</label><input type="number" id="poolReserve" min="0" max="100"></div>
+      <div class="field"><label>Input price (neurons per 1M tokens)</label><input type="number" id="rateIn" min="1"></div>
+      <div class="field"><label>Output price (neurons per 1M tokens)</label><input type="number" id="rateOut" min="1"></div>
+    </div>
+    <p class="sub" id="poolHint"></p>
+    <div class="actions"><button class="btn primary" id="saveLimits"><span class="material-symbols-rounded">save</span>Save limits</button></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="material-symbols-rounded">sell</span>Create a promo code</h2>
+    <p class="sub">A word you choose, usable by many people (once each). Promo codes can't use a product prefix, so they never get mixed up with keys.</p>
+    <div class="grid">
+      <div class="field"><label>Code</label><input type="text" id="pCode" placeholder="WELCOME" maxlength="32" style="text-transform:uppercase"></div>
+      <div class="field"><label>Bonus tokens</label><input type="number" id="pBonus" min="0" value="50000" step="1000"></div>
+      <div class="field"><label>Plus days (−1 = for life)</label><input type="number" id="pDays" min="-1" value="0"></div>
+      <div class="field"><label>Max uses (0 = no limit)</label><input type="number" id="pMax" min="0" value="100"></div>
+      <div class="field"><label>Works in</label><select id="pScope"><option value="epicai">oeper.dev + epic AI app</option><option value="site">oeper.dev only</option></select></div>
+      <div class="field"><label>Expires (optional)</label><input type="date" id="pExp"></div>
+    </div>
+    <div class="field" style="margin-bottom:14px"><label>Note (only you see it)</label><input type="text" id="pNote" maxlength="200" style="text-transform:none"></div>
+    <div class="actions"><button class="btn primary" id="makePromo"><span class="material-symbols-rounded">add</span>Create promo code</button></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="material-symbols-rounded">key</span>Generate product keys</h2>
+    <p class="sub">Random one-time keys with the product's prefix, like <code id="prefixDemo">EAI-XXXX-XXXX-XXXX</code>. Hand them out or sell them.</p>
+    <div class="grid">
+      <div class="field"><label>Product</label><select id="kProduct"></select></div>
+      <div class="field"><label>How many</label><input type="number" id="kCount" min="1" max="200" value="5"></div>
+      <div class="field"><label>Plus days (−1 = for life)</label><input type="number" id="kDays" min="-1" value="30"></div>
+      <div class="field"><label>Bonus tokens</label><input type="number" id="kBonus" min="0" value="0" step="1000"></div>
+      <div class="field"><label>Uses per key</label><input type="number" id="kMax" min="1" value="1"></div>
+      <div class="field"><label>Works in</label><select id="kScope"><option value="epicai">oeper.dev + epic AI app</option><option value="site">oeper.dev only</option></select></div>
+      <div class="field"><label>Expires (optional)</label><input type="date" id="kExp"></div>
+    </div>
+    <div class="field" style="margin-bottom:14px"><label>Note (only you see it)</label><input type="text" id="kNote" maxlength="200" style="text-transform:none" placeholder="e.g. giveaway, October"></div>
+    <div class="actions"><button class="btn primary" id="makeKeys"><span class="material-symbols-rounded">add</span>Generate keys</button></div>
+    <div class="keys-out" id="keysOut">
+      <div class="field"><label id="keysLabel"></label><textarea id="keysText" readonly></textarea></div>
+      <div class="actions" style="margin-top:10px">
+        <button class="btn small" id="copyKeys"><span class="material-symbols-rounded">content_copy</span>Copy</button>
+        <button class="btn small" id="dlKeys"><span class="material-symbols-rounded">download</span>Download .txt</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="material-symbols-rounded">list_alt</span>All codes</h2>
+    <p class="sub">Disable a code to stop it working without losing its history. Deleting a code frees the name (people who already redeemed it keep what they got).</p>
+    <div class="toolbar">
+      <input type="text" id="search" placeholder="Search codes or notes" style="text-transform:none">
+      <select id="filter"><option value="all">All</option><option value="promo">Promo codes</option><option value="key">Product keys</option><option value="live">Still usable</option></select>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Code</th><th>Gives</th><th>Where</th><th>Used</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <div class="empty" id="empty" hidden>No codes yet.</div>
+  </div>
+
+  <div class="card">
+    <h2><span class="material-symbols-rounded">person_search</span>Look up a person</h2>
+    <p class="sub">See someone's plan and usage, or give them Plus or bonus messages directly.</p>
+    <div class="toolbar"><input type="text" id="uEmail" placeholder="email@example.com" style="text-transform:none"><button class="btn" id="uFind"><span class="material-symbols-rounded">search</span>Look up</button></div>
+    <div class="person" id="person"></div>
+    <div class="grid person" id="grantRow" style="margin-top:14px">
+      <div class="field"><label>Plus days (−1 = for life)</label><input type="number" id="gDays" min="-1" value="30"></div>
+      <div class="field"><label>Bonus tokens</label><input type="number" id="gBonus" min="0" value="0" step="1000"></div>
+      <div class="field"><label>&nbsp;</label><div class="actions"><button class="btn primary" id="gGo"><span class="material-symbols-rounded">card_giftcard</span>Give</button><button class="btn danger" id="gRevoke">Remove Plus</button></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" data-cfasync="false">
+import { onAccountChange, mountAccountBar } from './shared/account.js?v=37';
+import { mountTopNav } from './shared/topnav.js?v=42';
+import { mountFooter } from './shared/footer.js?v=6';
+import { oeConfirm } from './shared/dialog.js?v=4';
+import { call, who, isOwner, fmtDate, DEV_AS } from './shared/codes-api.js?v=1';
+
+mountTopNav();
+mountFooter();
+mountAccountBar(document.getElementById('lockSignIn'));
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let data = { codes: [], config: { limits: {}, products: {} }, stats: null };
+
+let toastTimer;
+function toast(msg, bad) {
+  const t = $('toast');
+  t.textContent = msg; t.classList.toggle('bad', !!bad); t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+async function run(button, fn) {
+  button.disabled = true;
+  try { return await fn(); } catch (e) { toast(e.message, true); } finally { button.disabled = false; }
+}
+const dateToMs = v => v ? new Date(v + 'T23:59:59').getTime() : 0;
+const kfmt = n => n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + 'M' : n >= 1000 ? (n / 1000).toFixed(n % 1000 ? 1 : 0) + 'k' : String(n);
+const grantText = g => [g.plusDays === -1 ? 'Plus for life' : g.plusDays > 0 ? `${g.plusDays}d Plus` : '', g.bonusTokens ? `+${kfmt(g.bonusTokens)} tokens` : ''].filter(Boolean).join(' · ') || '—';
+
+async function load() {
+  data = await call('GET', '/api/admin/codes');
+  const s = data.stats, t = s.today;
+  $('stats').innerHTML = [
+    [t.requests, 'epic AI turns today'], [kfmt(t.tokensIn + t.tokensOut), 'tokens used today'], [Math.round(t.neurons) + ' / ' + s.pool.neurons, 'pool neurons used'],
+    [t.signedIn + ' / ' + t.guests, 'signed in / guest turns'], [t.denied, 'blocked by a limit'], [s.codes, 'codes & keys'], [s.redemptions, 'redemptions'],
+  ].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
+  const lim = data.config.limits;
+  $('limGuest').value = lim.guest.tokens; $('limFree').value = lim.free.tokens; $('limPlus').value = lim.plus.tokens;
+  const cfg = data.config;
+  $('poolNeurons').value = cfg.pool.neurons; $('poolReserve').value = cfg.pool.reservePct; $('rateIn').value = cfg.rates.inPerM; $('rateOut').value = cfg.rates.outPerM;
+  updatePoolHint();
+  const prods = Object.entries(data.config.products);
+  const keep = $('kProduct').value;
+  $('kProduct').innerHTML = prods.map(([id, p]) => `<option value="${esc(id)}">${esc(p.name)} (${esc(p.prefix)}-…)</option>`).join('');
+  if (keep) $('kProduct').value = keep;
+  updatePrefix();
+  renderRows();
+}
+function updatePoolHint() {
+  // a typical turn: about 2,800 tokens read and 700 written
+  const per = 2800 * (+$('rateIn').value || 0) / 1e6 + 700 * (+$('rateOut').value || 0) / 1e6;
+  const turns = per ? Math.floor((+$('poolNeurons').value || 0) / per) : 0;
+  $('poolHint').textContent = `A typical turn (2,800 tokens read, 700 written) costs about ${per.toFixed(0)} neurons, so a pool of ${(+$('poolNeurons').value || 0).toLocaleString()} neurons covers roughly ${turns.toLocaleString()} turns a day for everyone together.`;
+}
+['poolNeurons', 'rateIn', 'rateOut'].forEach(id => $(id).addEventListener('input', updatePoolHint));
+const updatePrefix = () => { const p = data.config.products[$('kProduct').value]; $('prefixDemo').textContent = (p ? p.prefix : 'XXX') + '-XXXX-XXXX-XXXX'; };
+$('kProduct').addEventListener('change', updatePrefix);
+
+function status(c) {
+  const now = Date.now();
+  if (c.disabled) return ['off', 'bad'];
+  if (c.expiresAt && c.expiresAt < now) return ['expired', 'bad'];
+  if (c.maxUses > 0 && c.uses >= c.maxUses) return ['used up', 'bad'];
+  return ['active', 'good'];
+}
+function renderRows() {
+  const q = $('search').value.trim().toLowerCase(), f = $('filter').value;
+  const rows = data.codes.filter(c => {
+    if (f === 'promo' && c.kind !== 'promo') return false;
+    if (f === 'key' && c.kind !== 'key') return false;
+    if (f === 'live' && status(c)[0] !== 'active') return false;
+    return !q || c.code.toLowerCase().includes(q) || (c.note || '').toLowerCase().includes(q);
+  });
+  $('empty').hidden = rows.length > 0;
+  $('rows').innerHTML = rows.map(c => {
+    const [label, tone] = status(c);
+    return `<tr class="${c.disabled ? 'off' : ''}" data-code="${esc(c.code)}">
+      <td><code>${esc(c.code)}</code> <span class="tag ${c.kind === 'key' ? 'key' : ''}">${c.kind === 'key' ? 'KEY' : 'PROMO'}</span>${c.note ? `<div class="sub" style="margin:2px 0 0">${esc(c.note)}</div>` : ''}</td>
+      <td>${esc(grantText(c.grant))}</td>
+      <td>${c.scope === 'site' ? 'oeper.dev only' : 'site + app'}</td>
+      <td>${c.uses}${c.maxUses ? ' / ' + c.maxUses : ''}</td>
+      <td>${c.expiresAt ? fmtDate(c.expiresAt) : '—'}</td>
+      <td><span class="tag ${tone}">${label}</span></td>
+      <td><div class="actions" style="flex-wrap:nowrap">
+        <button class="btn small" data-act="copy" title="Copy">Copy</button>
+        <button class="btn small" data-act="toggle">${c.disabled ? 'Enable' : 'Disable'}</button>
+        <button class="btn small danger" data-act="delete">Delete</button></div></td></tr>`;
+  }).join('');
+}
+$('search').addEventListener('input', renderRows);
+$('filter').addEventListener('change', renderRows);
+$('rows').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const code = b.closest('tr').dataset.code, rec = data.codes.find(c => c.code === code);
+  if (b.dataset.act === 'copy') { await navigator.clipboard.writeText(code).catch(() => {}); toast('Copied ' + code); return; }
+  if (b.dataset.act === 'toggle') await run(b, async () => { await call('PATCH', '/api/admin/codes/' + encodeURIComponent(code), { disabled: !rec.disabled }); await load(); toast(rec.disabled ? 'Enabled' : 'Disabled'); });
+  if (b.dataset.act === 'delete') {
+    if (!(await oeConfirm(`Delete ${code}? People who already redeemed it keep what they got.`))) return;
+    await run(b, async () => { await call('DELETE', '/api/admin/codes/' + encodeURIComponent(code)); await load(); toast('Deleted'); });
+  }
+});
+
+$('saveLimits').addEventListener('click', e => run(e.currentTarget, async () => {
+  await call('PUT', '/api/admin/config', {
+    limits: { guest: { tokens: +$('limGuest').value }, free: { tokens: +$('limFree').value }, plus: { tokens: +$('limPlus').value } },
+    pool: { neurons: +$('poolNeurons').value, reservePct: +$('poolReserve').value }, rates: { inPerM: +$('rateIn').value, outPerM: +$('rateOut').value },
+  });
+  await load(); toast('Limits saved');
+}));
+
+$('makePromo').addEventListener('click', e => run(e.currentTarget, async () => {
+  const r = await call('POST', '/api/admin/promo', {
+    code: $('pCode').value, scope: $('pScope').value, maxUses: +$('pMax').value, expiresAt: dateToMs($('pExp').value), note: $('pNote').value,
+    grant: { plusDays: +$('pDays').value, bonusTokens: +$('pBonus').value },
+  });
+  $('pCode').value = ''; $('pNote').value = '';
+  await load(); toast('Created ' + r.code);
+}));
+
+let lastKeys = [];
+$('makeKeys').addEventListener('click', e => run(e.currentTarget, async () => {
+  const r = await call('POST', '/api/admin/keys', {
+    product: $('kProduct').value, count: +$('kCount').value, scope: $('kScope').value, maxUses: +$('kMax').value, expiresAt: dateToMs($('kExp').value), note: $('kNote').value,
+    grant: { plusDays: +$('kDays').value, bonusTokens: +$('kBonus').value },
+  });
+  lastKeys = r.keys;
+  $('keysText').value = r.keys.join('\n');
+  $('keysLabel').textContent = `${r.keys.length} new key${r.keys.length === 1 ? '' : 's'} (they stay in the list below too)`;
+  $('keysOut').classList.add('show');
+  await load(); toast(`Generated ${r.keys.length} key${r.keys.length === 1 ? '' : 's'}`);
+}));
+$('copyKeys').addEventListener('click', async () => { await navigator.clipboard.writeText(lastKeys.join('\n')).catch(() => {}); toast('Copied'); });
+$('dlKeys').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lastKeys.join('\n') + '\n'], { type: 'text/plain' }));
+  a.download = 'product-keys-' + new Date().toISOString().slice(0, 10) + '.txt'; a.click(); URL.revokeObjectURL(a.href);
+});
+
+let person = '';
+async function showPerson(email) {
+  const p = await call('GET', '/api/admin/user?email=' + encodeURIComponent(email));
+  person = p.email;
+  const plus = p.plan === 'plus' ? (p.plusUntil === -1 ? 'epic AI Plus, for life' : 'epic AI Plus until ' + fmtDate(p.plusUntil)) : 'Free plan';
+  $('person').innerHTML = `<b>${esc(p.email)}</b><br>${plus} · ${kfmt(p.usedToday)} tokens used today · ${kfmt(p.bonus)} bonus tokens` +
+    (p.history.length ? '<ul>' + p.history.slice(0, 8).map(h => `<li>${esc(h.code)} — ${fmtDate(h.at)} (${esc(h.source)})</li>`).join('') + '</ul>' : '');
+  $('person').classList.add('show'); $('grantRow').classList.add('show');
+}
+$('uFind').addEventListener('click', e => run(e.currentTarget, () => showPerson($('uEmail').value.trim())));
+$('uEmail').addEventListener('keydown', e => { if (e.key === 'Enter') $('uFind').click(); });
+$('gGo').addEventListener('click', e => run(e.currentTarget, async () => {
+  await call('POST', '/api/admin/user/grant', { email: person, grant: { plusDays: +$('gDays').value, bonusTokens: +$('gBonus').value } });
+  await showPerson(person); toast('Given');
+}));
+$('gRevoke').addEventListener('click', async e => {
+  if (!(await oeConfirm('Remove Plus from ' + person + '?'))) return;
+  run(e.currentTarget, async () => { await call('POST', '/api/admin/user/revoke', { email: person }); await showPerson(person); toast('Plus removed'); });
+});
+
+function gate() {
+  const u = who();
+  const ok = !!u && isOwner(u);
+  $('lock').style.display = ok ? 'none' : '';
+  $('app').style.display = ok ? '' : 'none';
+  $('denied').classList.toggle('show', !!u && !ok);
+  if (ok) load().catch(e => toast(e.message, true));
+}
+onAccountChange(gate);
+if (DEV_AS) gate();
+</script>
+</body>
+</html>

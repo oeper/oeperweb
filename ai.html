@@ -534,13 +534,19 @@ import { observeList } from './shared/motion.js?v=3';
 import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=3';
 import { codeBlockHtml, copyToClipboard, injectCodeBlockStyles } from './shared/code-block.js?v=3';
 import { readFileForAI, FILE_ACCEPT, isImage } from './shared/ai-files.js?v=1';
-import { chatFetch, providerLabel } from './shared/ai-provider.js?v=3';
+import { chatFetch, providerLabel } from './shared/ai-provider.js?v=4';
 import { aiFeaturesEnabled, onAiFeaturesChange, listOneDocs, readOneDocText, sanitizeForOne, createWordDoc, oneDocUrl } from './shared/ai-features.js?v=6';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 mountTopNav();
 injectCodeBlockStyles();
 
 const AI_ENDPOINT = 'https://oeper-ai.oeper.workers.dev';
+// Does the worker have the token allowance (GET /api/usage)? Asked once per page load.
+let countsUsagePromise = null;
+function workerCountsUsage() {
+  if (!countsUsagePromise) countsUsagePromise = fetch(AI_ENDPOINT + '/api/usage').then(r => r.ok).catch(() => false);
+  return countsUsagePromise;
+}
 
 // Sent as the first message on every request, never shown in the UI or
 // persisted as a visible chat message — just steers tone/formatting.
@@ -1077,13 +1083,28 @@ function isNearBottom() {
   return window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 120;
 }
 let scrollRAF = null;
+let ownScrollUntil = 0;
 function scheduleScroll(bubble) {
   if (scrollRAF) return;
   scrollRAF = requestAnimationFrame(() => {
     scrollRAF = null;
+    ownScrollUntil = Date.now() + 150;   // the scroll events this causes are ours, not the reader's
     bubble.scrollIntoView({ block: 'end' });
   });
 }
+
+// While the reader has a finger on the page or is still flinging it, the streamed answer is NOT re-rendered: replacing the
+// answer's DOM under a touch cancels the scroll (the "page is hard to scroll while the AI writes" problem). The text catches
+// up the moment they let go and the page has settled; the final render always runs.
+let readerTouching = false, lastReaderScroll = 0;
+const touchOn = () => { readerTouching = true; };
+const touchOff = () => { readerTouching = false; lastReaderScroll = Date.now(); };
+window.addEventListener('touchstart', touchOn, { passive: true });
+window.addEventListener('touchend', touchOff, { passive: true });
+window.addEventListener('touchcancel', touchOff, { passive: true });
+window.addEventListener('wheel', () => { lastReaderScroll = Date.now(); }, { passive: true });
+window.addEventListener('scroll', () => { if (Date.now() > ownScrollUntil) lastReaderScroll = Date.now(); }, { passive: true });
+function readerIsScrolling() { return readerTouching || Date.now() - lastReaderScroll < 220; }
 
 // Delegated once (not per-render) since bubbles get their innerHTML
 // replaced on every streamed chunk, which would drop a directly-attached
@@ -1945,7 +1966,9 @@ async function sendToModel(chat) {
   let timedOut = false;
   let lastPaint = 0, paintTimer = null;
   const paintNow = () => {
-    paintTimer = null; lastPaint = Date.now();
+    paintTimer = null;
+    if (readerIsScrolling()) { paintTimer = setTimeout(paintNow, 120); return; }   // try again once they let go
+    lastPaint = Date.now();
     const stick = isNearBottom();
     renderAssistantContent(bubble, reasoningBuf, contentBuf);
     if (stick) scheduleScroll(bubble);
@@ -1959,7 +1982,12 @@ async function sendToModel(chat) {
   try {
     const wireMessages = await toWireMessages(chat.messages);
     // the oeper.dev model, or the person's own provider (settings > epic AI); ai-provider.js hands back the same stream either way
-    const res = await chatFetch(AI_ENDPOINT, { messages: wireMessages, model: modelDropdown.getValue() || undefined, oneTools: aiFeaturesEnabled() || undefined, botTools: aiFeaturesEnabled() || undefined }, controller.signal);
+    // app:"epicai" + the sign-in token let the worker count this against the person's daily tokens (their own provider is never counted)
+    // (only when the worker knows about limits: an older worker would reject the Authorization header at the CORS check)
+    const me = getCurrentUser();
+    const counted = await workerCountsUsage();
+    const authHeaders = counted && me ? { Authorization: 'Bearer ' + await me.getIdToken() } : undefined;
+    const res = await chatFetch(AI_ENDPOINT, { ...(counted ? { app: 'epicai' } : {}), messages: wireMessages, model: modelDropdown.getValue() || undefined, oneTools: aiFeaturesEnabled() || undefined, botTools: aiFeaturesEnabled() || undefined }, controller.signal, authHeaders);
     if (!res.ok || !res.body) {
       let msg = `Server error (${res.status})`;
       try { msg = (await res.json()).error || msg; } catch {}

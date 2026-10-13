@@ -30,6 +30,13 @@ No build step for the site: plain HTML/CSS/JS, one `.html` per page.
 - `cf-ai-worker/` — Cloudflare Worker replacing `ai-proxy.js` (Workers AI); deploy with `npx wrangler deploy`.
   Epic AI tools (offered only with the settings.html "epic AI" switch on): `create_document` (oneWord) and `create_discord_bot` (`botTools: true`) — the worker only streams a
   `createBot` SSE event; `ai.html` `aiCreateBot()` then creates the bot via `/dbhosting/api` (POST /bots, PUT /bots/:id/file, POST /install) as the signed-in user. Token never in code (DISCORD_TOKEN env).
+- epic AI usage limits + codes (worker `cf-ai-worker/src/`): `ledger.js` = SQLite Durable Object `Ledger` (binding `LEDGER`, one instance "main"): per-person daily **tokens**
+  (guest 5k / free 25k / plus 120k, editable), a shared neuron pool (7,000/day of the 10k free Workers AI neurons, 20% reserved for Plus), promo codes vs product keys
+  (keys: prefix + random, default 1 use; promos: chosen word, many uses, once per person; scope `epicai` = site+app, `site` = site only), brute-force lockouts. `auth.js` verifies
+  the Firebase ID token (Google JWKS, WebCrypto); owners = `OWNER_EMAILS`. Only requests with `app:"epicai"` are counted; ledger errors fail open. Routes: `/api/usage`, `/api/redeem`, `/api/admin/*`.
+  Pages: `usage.html` (plan + meter), `redeem.html` (enter a code, history), `promo-admin.html` (owners: codes, keys, limits, stats) — all via `shared/codes-api.js`.
+  `wrangler deploy` is NOT automatic: the user must run `cd cf-ai-worker && npx wrangler deploy` (new DO migration `v1-ledger`). `ai.html` only sends the token header once `GET /api/usage` answers (old worker safe).
+  `ai.html` streaming: the answer is not re-rendered while the reader is touching/flinging the page (`readerIsScrolling`), otherwise the DOM swap cancels the scroll.
 - `one/`, `one-src/` — "One" office suite (`bundle.py` builds `one/index.html` from `one-src/*`). Edit `one-src`, then rebundle.
 - `firestore.rules` — Firestore security rules (auth is Firebase; owner accounts = admins).
 

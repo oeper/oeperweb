@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redeem a code — oeper.dev</title>
+<meta name="description" content="Redeem a promo code or product key for epic AI and oeper.dev.">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
+<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./shared/fonts.css?v=1">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-success: #a6d9a8;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--md-sys-color-background);
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    background-image: var(--oe-bg-image, none);
+    color: var(--md-sys-color-on-surface);
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 640px; margin: 0 auto; padding: 56px 20px 100px; }
+  h1 {
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
+    font-size: clamp(2rem, 6vw, 2.6rem); font-weight: 400; letter-spacing: -0.5px;
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  }
+  h1 .material-symbols-rounded { color: var(--md-sys-color-primary); font-size: 0.85em; }
+  .lead { color: var(--md-sys-color-on-surface-variant); font-size: 15px; line-height: 1.6; margin-bottom: 28px; }
+
+  .card { background: var(--md-sys-color-surface); border-radius: 24px; padding: 22px; margin-bottom: 18px; }
+  .card h2 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 17px; font-weight: 500; margin-bottom: 14px; }
+
+  .row { display: flex; gap: 10px; }
+  input[type="text"] {
+    flex: 1; min-width: 0; background: var(--md-sys-color-surface-variant); border: none; border-radius: 14px;
+    padding: 14px 16px; color: var(--md-sys-color-on-surface); font-size: 16px; font-family: inherit; letter-spacing: 1px; text-transform: uppercase; outline: none;
+  }
+  input[type="text"]::placeholder { text-transform: none; letter-spacing: 0; color: var(--md-sys-color-on-surface-variant); opacity: .7; }
+  input[type="text"]:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 15px; font-weight: 500;
+    padding: 0 22px; min-height: 48px; border-radius: 100px; border: none; cursor: pointer;
+    background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); transition: opacity .15s, transform .15s;
+  }
+  .btn:hover { opacity: .9; }
+  .btn:active { transform: scale(.97); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .result { margin-top: 14px; border-radius: 14px; padding: 12px 16px; font-size: 14px; line-height: 1.5; display: none; animation: pop .25s ease; }
+  .result.show { display: block; }
+  .result.ok { background: color-mix(in srgb, var(--md-sys-color-success) 16%, transparent); color: var(--md-sys-color-success); }
+  .result.bad { background: color-mix(in srgb, var(--md-sys-color-error) 14%, transparent); color: var(--md-sys-color-error); }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
+
+  .plan { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .badge { font-size: 12px; font-weight: 600; letter-spacing: .4px; padding: 4px 12px; border-radius: 100px; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant); }
+  .badge.plus { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .meter { height: 10px; border-radius: 10px; background: var(--md-sys-color-surface-variant); overflow: hidden; }
+  .meter > i { display: block; height: 100%; width: 0; border-radius: 10px; background: var(--md-sys-color-primary); transition: width .6s cubic-bezier(.2,.8,.2,1); }
+  .meter.full > i { background: #f2b950; }
+  .facts { margin-top: 10px; font-size: 13px; color: var(--md-sys-color-on-surface-variant); line-height: 1.7; }
+  .facts b { color: var(--md-sys-color-on-surface); font-weight: 500; }
+
+  .hist { list-style: none; font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .hist li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--md-sys-color-outline); }
+  .hist li:first-child { border-top: none; }
+  .hist code { color: var(--md-sys-color-on-surface); font-size: 12.5px; }
+
+  .kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .kinds div { background: var(--md-sys-color-surface-variant); border-radius: 16px; padding: 14px; font-size: 13px; line-height: 1.55; color: var(--md-sys-color-on-surface-variant); }
+  .kinds b { display: block; color: var(--md-sys-color-on-surface); font-size: 14px; margin-bottom: 4px; }
+  .kinds code { font-size: 12px; color: var(--md-sys-color-primary); }
+  @media (max-width: 520px) { .kinds { grid-template-columns: 1fr; } .row { flex-direction: column; } .btn { width: 100%; } }
+  .signin { text-align: center; padding: 6px 0 2px; }
+  .signin p { color: var(--md-sys-color-on-surface-variant); font-size: 14px; margin-bottom: 14px; }
+  .muted { color: var(--md-sys-color-on-surface-variant); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1><span class="material-symbols-rounded">redeem</span>redeem a code</h1>
+  <p class="lead">Got a promo code or a product key? Enter it here. Codes made for epic AI work here and inside the epic AI app; codes made for oeper.dev only work on this page.</p>
+
+  <div class="card" id="redeemCard">
+    <h2>Enter your code</h2>
+    <div id="signedOut" class="signin" hidden>
+      <p>Sign in to redeem a code.</p>
+      <div id="signInBtn"></div>
+    </div>
+    <form id="form" class="row" autocomplete="off">
+      <input type="text" id="code" placeholder="EAI-XXXX-XXXX-XXXX or a promo code" maxlength="40" spellcheck="false" autocapitalize="characters">
+      <button class="btn" id="go" type="submit"><span class="material-symbols-rounded">redeem</span>Redeem</button>
+    </form>
+    <div class="result" id="result" role="status" aria-live="polite"></div>
+  </div>
+
+  <div class="card" id="histCard" hidden>
+    <h2>Recently redeemed</h2>
+    <ul class="hist" id="hist"></ul>
+  </div>
+
+  <p class="muted" style="margin:-4px 0 18px 4px">Want to see how much you have used today? <a href="./usage.html" style="color:var(--md-sys-color-primary)">Open usage</a>.</p>
+
+  <div class="card">
+    <h2>Which is which?</h2>
+    <div class="kinds">
+      <div><b>Product key</b>A random key like <code>EAI-7K2M-QW4X-9PTD</code>. Unlocks a product, for example epic AI Plus. Usually works once.</div>
+      <div><b>Promo code</b>A short word like <code>WELCOME</code>. Gives a bonus, for example extra tokens. Can be shared; once per person.</div>
+    </div>
+  </div>
+</div>
+
+<script type="module" data-cfasync="false">
+import { onAccountChange, mountAccountBar } from './shared/account.js?v=37';
+import { mountTopNav } from './shared/topnav.js?v=42';
+import { mountFooter } from './shared/footer.js?v=6';
+import { call, who, fmtDate, DEV_AS } from './shared/codes-api.js?v=1';
+
+mountTopNav();
+mountFooter();
+mountAccountBar(document.getElementById('signInBtn'));
+
+const $ = id => document.getElementById(id);
+const code = $('code'), go = $('go'), result = $('result');
+
+function show(kind, text) {
+  result.className = 'result show ' + kind;
+  result.textContent = text;
+}
+
+async function refresh() {
+  let me;
+  try { me = await call('GET', '/api/usage'); } catch (e) { return; }
+  const h = me.history || [];
+  $('histCard').hidden = !h.length;
+  $('hist').innerHTML = h.map(x => `<li><code>${x.code.replace(/[<>&]/g, '')}</code><span>${fmtDate(x.at)}</span></li>`).join('');
+}
+
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const value = code.value.trim();
+  if (!value) return;
+  if (!who()) { show('bad', 'Sign in first, then redeem your code.'); return; }
+  go.disabled = true; result.className = 'result';
+  try {
+    const r = await call('POST', '/api/redeem', { code: value, source: 'site' });
+    show('ok', `Redeemed. You got ${r.summary}.`);
+    code.value = '';
+    refresh();
+  } catch (err) {
+    show('bad', err.message);
+  } finally { go.disabled = false; }
+});
+
+onAccountChange(() => {
+  const signedIn = !!who();
+  $('signedOut').hidden = signedIn;
+  $('form').hidden = !signedIn;
+  refresh();
+});
+if (DEV_AS) { $('signedOut').hidden = true; $('form').hidden = false; refresh(); }
+</script>
+</body>
+</html>
