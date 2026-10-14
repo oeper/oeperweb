@@ -11,7 +11,7 @@ const ptToPx = pt => pt * 4 / 3;
 W.setFont = stack => W.applyInline({ fontFamily:stack });
 W.setSize = pt => W.applyInline({ fontSize:pt + 'pt' });
 W.stepSize = dir => {
-  const cur = parseFloat($('#fontSize').value) || 11;
+  const n0 = W.selNode && W.selNode(), cur = (n0 && Math.round(parseFloat(getComputedStyle(n0).fontSize) * .75 * 2) / 2) || parseFloat($('#fontSize').value) || 11;
   const next = dir > 0 ? (W.SIZES_PT.find(s => s > cur) || cur + 10) : ([...W.SIZES_PT].reverse().find(s => s < cur) || Math.max(1, cur - 1));
   W.setSize(next); $('#fontSize').value = next;
 };
@@ -554,6 +554,17 @@ sheet.addEventListener('dblclick', e => {
   const p = Math.floor(y / S), yin = y - p * S, [mt, , mb] = W.doc.layout.m;
   if (yin < mt - 4) { e.preventDefault(); W.hfEdit('header', p); } else if (yin > ph - mb + 4 && yin < ph) { e.preventDefault(); W.hfEdit('footer', p); }
 });
+/* Clicks that miss the text (page margins, the empty part of a page, or the page of a header left in edit mode) used to do nothing, and a header could only be left with a double-click. Like Word and Docs: any click outside the header/footer being edited leaves it and puts the caret at the nearest spot of the text. */
+sheet.addEventListener('mousedown', e => {
+  if (e.button !== 0 || W.isRO() || e.target.closest('.hf.editing') || (e.target.closest('#editor') && !W.hfEditing)) return;
+  if (!W.isFlow() && !W.hfEditing) return;
+  if (W.hfEditing) W.hfClose(true);
+  const er = E.getBoundingClientRect(), x = Math.min(Math.max(e.clientX, er.left + 1), er.right - 1), y = Math.min(Math.max(e.clientY, er.top + 1), er.bottom - 1);
+  let r = document.caretRangeFromPoint ? document.caretRangeFromPoint(x, y) : null;
+  if (!r || !E.contains(r.startContainer)) { r = document.createRange(); r.selectNodeContents(E); r.collapse(false); }
+  e.preventDefault(); E.focus({ preventScroll:true }); const s = getSelection(); s.removeAllRanges(); s.addRange(r); W.saved = r.cloneRange();
+  ONE.ribbon.setContext('hf', false); W.scheduleState();
+});
 const fld = f => `<span class="fld" data-f="${f}" contenteditable="false">#</span>`;
 W.setHF = (which, html) => { W.doc.hf[which] = html; W._pagesSig = ''; if (W.hfEditing) { W.hfEditing = false; sheet.classList.remove('hf-mode'); } W.changed({ history:false }); };
 P.header = a => ONE.menuAt(a, [{ title:'Built-in' },
@@ -818,6 +829,19 @@ E.addEventListener('beforeinput', e => {
     e.preventDefault(); W.trackedDelete(/Backward/.test(t), /Word/.test(t)); if (t === 'deleteByCut') {} W.changed({ kind:'type' });
   }
 });
+
+/* Chrome turns an empty paragraph into <p><ul><li>…</li></ul></p> when a list is started in it. That is not valid HTML: Enter and Tab then act on the wrong thing (a new bullet was never made) and a saved copy reloads differently. Lift every list out of a paragraph that holds nothing else, keeping the caret where it was. */
+W.fixLists = () => {
+  const bad = $$('p > ul, p > ol', E).filter(l => l.parentElement.childNodes.length === 1);
+  // leaving a list leaves a bare <div> as the next line; the document's lines are paragraphs (spacing, styles), so make it one
+  const divs = [...E.children].filter(d => d.tagName === 'DIV' && !d.attributes.length && !d.querySelector('p,ul,ol,table,div,h1,h2,h3,h4,h5,h6,blockquote,pre'));
+  if (!bad.length && !divs.length) return;
+  const s = getSelection(), a = s.rangeCount ? [s.anchorNode, s.anchorOffset, s.focusNode, s.focusOffset] : null;
+  bad.forEach(l => l.parentElement.replaceWith(l));
+  divs.forEach(d => { const p = document.createElement('p'); while (d.firstChild) p.appendChild(d.firstChild); if (a) { if (a[0] === d) a[0] = p; if (a[2] === d) a[2] = p; } d.replaceWith(p); });
+  if (a && a[0] && E.contains(a[0])) { try { s.setBaseAndExtent(a[0], Math.min(a[1], (a[0].nodeType === 3 ? a[0].length : a[0].childNodes.length)), a[2], Math.min(a[3], (a[2].nodeType === 3 ? a[2].length : a[2].childNodes.length))); } catch {} }
+};
+E.addEventListener('input', () => W.fixLists());
 
 /* ---------- autocorrect & autoformat (after the character lands) ---------- */
 const AC = [[/\(c\)$/i, '©'], [/\(r\)$/i, '®'], [/\(tm\)$/i, '™'], [/\.\.\.$/, '…'], [/->$/, '→'], [/<-$/, '←'], [/=>$/, '⇒'], [/:\)$/, '☺'], [/(\S) ?--$/, '$1—']];

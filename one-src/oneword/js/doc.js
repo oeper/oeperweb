@@ -330,10 +330,21 @@ W.setZoom = z => {
 W.fitWidth = () => { const extra = app.classList.contains('show-comments') && Object.keys(W.doc.comments).length ? 290 : 0; return (canvas.clientWidth - 40) / (W.dims()[0] + extra); };
 
 /* ---------- ribbon state sync ---------- */
+/* The element whose formatting the ribbon should show. A selection that was just formatted often has an ELEMENT as its anchor (anchorNode = the paragraph, offset = the span), and reading the paragraph's size then made the size box jump back after every "increase font size" press. So step into the child the selection really starts at. */
+W.selNode = () => {
+  const s = getSelection(); if (!s.rangeCount) return null;
+  let n = s.anchorNode;
+  if (n.nodeType === 1) {
+    let c = n.childNodes[s.anchorOffset] || n.lastChild;
+    while (c && c.nodeType === 1 && c.firstChild && !/^(IMG|BR|HR|INPUT|CANVAS|SVG)$/i.test(c.tagName)) c = c.firstChild;
+    if (c) n = c;
+  }
+  return n.nodeType === 3 ? n.parentElement : n;
+};
 W.updateState = () => {
   const s = getSelection(), inDoc = s.rangeCount && hostOf(s.anchorNode);
   if (inDoc) {
-    const node = s.anchorNode.nodeType === 3 ? s.anchorNode.parentElement : s.anchorNode;
+    const node = W.selNode() || s.anchorNode;
     const cs = getComputedStyle(node);
     const fam = cs.fontFamily.split(',')[0].replace(/["']/g, '').trim().toLowerCase();
     const fsel = $('#fontName');

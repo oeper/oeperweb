@@ -67,7 +67,7 @@
 .sheet.darkpage{--page:#1d1d1d!important;--page-text:#eee;--h-color:#8fb3f0;--h3-color:#aec6f2;--title-color:#fff}
 
 /* ---------- document typography (design-driven) ---------- */
-.doc{position:relative;z-index:2;outline:none;font-family:var(--body-font);font-size:11pt;line-height:var(--lh);white-space:pre-wrap;overflow-wrap:break-word;tab-size:.5in;min-height:1.3em;caret-color:var(--page-text);color:var(--page-text)}
+.doc{position:relative;z-index:2;outline:none;font-family:var(--body-font);font-size:11pt;line-height:var(--lh);white-space:pre-wrap;overflow-wrap:break-word;tab-size:.5in;min-height:max(1.3em,calc(var(--ph) - var(--mt) - var(--mb)));caret-color:var(--page-text);color:var(--page-text)}
 .doc p,.doc div:not([class]){margin:0 0 var(--pspace)}
 .doc h1,.doc h2,.doc h3,.doc h4{font-family:var(--head-font);font-weight:var(--h-weight);color:var(--h-color);margin:12pt 0 3pt;line-height:1.2;text-transform:var(--h-transform);border-bottom:var(--h-rule)}
 .doc h1{font-size:16pt}
@@ -173,7 +173,7 @@
 .app.readmode .canvas{margin:0;border-radius:0;padding-top:64px}
 .app.readmode .zoomer{width:min(760px,calc(100% - 32px));margin:0 auto}
 .app.readmode .sheet{width:auto;min-height:0;padding:48px 56px 80px;background:var(--page);border-radius:24px;box-shadow:var(--elev1)}
-.app.readmode .doc{font-size:12.5pt;line-height:1.7;caret-color:transparent}
+.app.readmode .doc{min-height:0;font-size:12.5pt;line-height:1.7;caret-color:transparent}
 .app.readmode .pages,.app.readmode .ruler,.app.readmode .cpane{display:none}
 .readbar{position:fixed;top:0;left:0;right:0;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:color-mix(in srgb,var(--surface) 85%,transparent);backdrop-filter:blur(10px);z-index:20;animation:fadeUp .4s var(--ease-dec)}
 .rb-title{font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
