@@ -171,6 +171,7 @@
     <div class="grid">
       <div class="field"><label>Code</label><input type="text" id="pCode" placeholder="WELCOME" maxlength="32" style="text-transform:uppercase"></div>
       <div class="field"><label>Bonus tokens</label><input type="number" id="pBonus" min="0" value="50000" step="1000"></div>
+      <div class="field"><label>oeper.dev credits</label><input type="number" id="pCredits" min="0" value="0" step="10"></div>
       <div class="field"><label>Plus days (−1 = for life)</label><input type="number" id="pDays" min="-1" value="0"></div>
       <div class="field"><label>More daily usage (%)</label><input type="number" id="pBoost" min="0" max="1000" value="0"></div>
       <div class="field"><label>…for how many days</label><input type="number" id="pBoostDays" min="1" max="3650" value="30"></div>
@@ -190,6 +191,7 @@
       <div class="field"><label>How many</label><input type="number" id="kCount" min="1" max="200" value="5"></div>
       <div class="field"><label>Plus days (−1 = for life)</label><input type="number" id="kDays" min="-1" value="30"></div>
       <div class="field"><label>Bonus tokens</label><input type="number" id="kBonus" min="0" value="0" step="1000"></div>
+      <div class="field"><label>oeper.dev credits</label><input type="number" id="kCredits" min="0" value="0" step="10"></div>
       <div class="field"><label>More daily usage (%)</label><input type="number" id="kBoost" min="0" max="1000" value="0"></div>
       <div class="field"><label>…for how many days</label><input type="number" id="kBoostDays" min="1" max="3650" value="30"></div>
       <div class="field"><label>Uses per key</label><input type="number" id="kMax" min="1" value="1"></div>
@@ -235,12 +237,13 @@
 
   <div class="card">
     <h2><span class="material-symbols-rounded">person_search</span>Look up a person</h2>
-    <p class="sub">See someone's plan and usage, or give them Plus or bonus messages directly.</p>
+    <p class="sub">See someone's plan and usage, or give them Plus, bonus tokens or oeper.dev credits directly.</p>
     <div class="toolbar"><input type="text" id="uEmail" placeholder="email@example.com" style="text-transform:none"><button class="btn" id="uFind"><span class="material-symbols-rounded">search</span>Look up</button></div>
     <div class="person" id="person"></div>
     <div class="grid person" id="grantRow" style="margin-top:14px">
       <div class="field"><label>Plus days (−1 = for life)</label><input type="number" id="gDays" min="-1" value="30"></div>
       <div class="field"><label>Bonus tokens</label><input type="number" id="gBonus" min="0" value="0" step="1000"></div>
+      <div class="field"><label>oeper.dev credits</label><input type="number" id="gCredits" min="0" value="0" step="10"></div>
       <div class="field"><label>&nbsp;</label><div class="actions"><button class="btn primary" id="gGo"><span class="material-symbols-rounded">card_giftcard</span>Give</button><button class="btn danger" id="gRevoke">Remove Plus</button></div></div>
     </div>
   </div>
@@ -275,7 +278,7 @@ async function run(button, fn) {
 }
 const dateToMs = v => v ? new Date(v + 'T23:59:59').getTime() : 0;
 const kfmt = n => n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + 'M' : n >= 1000 ? (n / 1000).toFixed(n % 1000 ? 1 : 0) + 'k' : String(n);
-const grantText = g => [g.plusDays === -1 ? 'Plus for life' : g.plusDays > 0 ? `${g.plusDays}d Plus` : '', g.bonusTokens ? `+${kfmt(g.bonusTokens)} tokens` : '', g.boostPercent ? `+${g.boostPercent}% usage ${g.boostDays}d` : ''].filter(Boolean).join(' · ') || '—';
+const grantText = g => [g.plusDays === -1 ? 'Plus for life' : g.plusDays > 0 ? `${g.plusDays}d Plus` : '', g.bonusTokens ? `+${kfmt(g.bonusTokens)} tokens` : '', g.credits ? `+${kfmt(g.credits)} credits` : '', g.boostPercent ? `+${g.boostPercent}% usage ${g.boostDays}d` : ''].filter(Boolean).join(' · ') || '—';
 
 // every oeper.dev product code starts with OPD-: make sure the worker's product list says so (done once, by the first owner who opens this page)
 const OPD_PRODUCT = { opd: { name: 'oeper.dev product code', prefix: 'OPD' } };
@@ -389,7 +392,7 @@ $('saveLimits').addEventListener('click', e => run(e.currentTarget, async () => 
 $('makePromo').addEventListener('click', e => run(e.currentTarget, async () => {
   const r = await call('POST', '/api/admin/promo', {
     code: $('pCode').value, scope: $('pScope').value, maxUses: +$('pMax').value, expiresAt: dateToMs($('pExp').value), note: $('pNote').value,
-    grant: { plusDays: +$('pDays').value, bonusTokens: +$('pBonus').value, boostPercent: +$('pBoost').value, boostDays: +$('pBoostDays').value },
+    grant: { plusDays: +$('pDays').value, bonusTokens: +$('pBonus').value, credits: +$('pCredits').value, boostPercent: +$('pBoost').value, boostDays: +$('pBoostDays').value },
   });
   $('pCode').value = ''; $('pNote').value = '';
   await load(); toast('Created ' + r.code);
@@ -399,7 +402,7 @@ let lastKeys = [];
 $('makeKeys').addEventListener('click', e => run(e.currentTarget, async () => {
   const r = await call('POST', '/api/admin/keys', {
     product: $('kProduct').value, count: +$('kCount').value, scope: $('kScope').value, maxUses: +$('kMax').value, expiresAt: dateToMs($('kExp').value), note: $('kNote').value,
-    grant: { plusDays: +$('kDays').value, bonusTokens: +$('kBonus').value, boostPercent: +$('kBoost').value, boostDays: +$('kBoostDays').value },
+    grant: { plusDays: +$('kDays').value, bonusTokens: +$('kBonus').value, credits: +$('kCredits').value, boostPercent: +$('kBoost').value, boostDays: +$('kBoostDays').value },
   });
   lastKeys = r.keys;
   // the codes themselves are never written on the page: a hidden row each, with its own Copy
@@ -462,7 +465,7 @@ async function showPerson(email) {
 $('uFind').addEventListener('click', e => run(e.currentTarget, () => showPerson($('uEmail').value.trim())));
 $('uEmail').addEventListener('keydown', e => { if (e.key === 'Enter') $('uFind').click(); });
 $('gGo').addEventListener('click', e => run(e.currentTarget, async () => {
-  await call('POST', '/api/admin/user/grant', { email: person, grant: { plusDays: +$('gDays').value, bonusTokens: +$('gBonus').value } });
+  await call('POST', '/api/admin/user/grant', { email: person, grant: { plusDays: +$('gDays').value, bonusTokens: +$('gBonus').value, credits: +$('gCredits').value } });
   await showPerson(person); toast('Given');
 }));
 $('gRevoke').addEventListener('click', async e => {

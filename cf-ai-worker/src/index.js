@@ -1,5 +1,6 @@
 import { userFromRequest, isOwner } from './auth.js';
 import { Ledger } from './ledger.js';
+import { addCredits } from './firestore-admin.js';
 export { Ledger };
 
 // Public proxy in front of Cloudflare Workers AI, replacing the old
@@ -786,9 +787,19 @@ async function handleUsage(request, env) {
   const user = await userFromRequest(request, env);
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const me = await ledgerOf(env).me(user ? user.email : null, ip);
+  if (user && me.pendingCredits > 0) { try { me.pendingCredits = (await flushCredits(env, user.email)).pending; } catch {} }
   // owners are never limited: show them as unlimited Plus
   if (isOwner(user)) Object.assign(me, { plan: 'plus', limit: 1_000_000_000, used: 0, unlimited: true });
   return json(me, 200, request);
+}
+
+/** Moves any credits a person has earned from codes into their oeper.dev balance. Whatever can't be delivered stays pending in the ledger. */
+async function flushCredits(env, email) {
+  const L = ledgerOf(env);
+  const n = await L.takePendingCredits(email);
+  if (!n) return { added: 0, pending: 0 };
+  try { await addCredits(env, email, n); return { added: n, pending: 0 }; }
+  catch (e) { await L.restorePendingCredits(email, n); console.log('credits not delivered:', e && e.message); return { added: 0, pending: n }; }
 }
 
 async function handleRedeem(request, env) {
@@ -797,6 +808,11 @@ async function handleRedeem(request, env) {
   const body = await readBody(request);
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const r = await ledgerOf(env).redeem(user.email, body.code, body.source === 'app' ? 'app' : 'site', ip);
+  if (r.ok && r.pendingCredits > 0) {
+    const f = await flushCredits(env, user.email);
+    r.credits = f.added; r.pendingCredits = f.pending;
+    if (f.pending > 0) r.summary += ' (the credits could not be added right now; they are saved and will arrive on their own shortly)';
+  }
   return json(r, r.ok ? 200 : (r.reason === 'locked' ? 429 : 400), request);
 }
 
@@ -854,7 +870,7 @@ async function handleAdmin(request, env, url) {
     if (path.startsWith('feedback/') && m === 'PATCH') return json(await L.adminFeedbackUpdate(decodeURIComponent(path.slice(9)), await readBody(request)), 200, request);
     if (path.startsWith('feedback/') && m === 'DELETE') { await L.adminFeedbackDelete(decodeURIComponent(path.slice(9))); return json({ ok: true }, 200, request); }
     if (path === 'user' && m === 'GET') return json(await L.adminUser(url.searchParams.get('email')), 200, request);
-    if (path === 'user/grant' && m === 'POST') { const b = await readBody(request); return json(await L.adminGrantUser(b.email, b.grant, user.email), 200, request); }
+    if (path === 'user/grant' && m === 'POST') { const b = await readBody(request); const r = await L.adminGrantUser(b.email, b.grant, user.email); if (r.pendingCredits > 0) { const f = await flushCredits(env, r.email); r.credits = f.added; r.pendingCredits = f.pending; } return json(r, 200, request); }
     if (path === 'user/revoke' && m === 'POST') { const b = await readBody(request); return json(await L.adminRevokePlus(b.email), 200, request); }
   } catch (err) {
     return asError(err, request);

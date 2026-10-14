@@ -5,7 +5,8 @@
 //   product key  OPD-XXXX-XXXX-XXXX   a random key with a product prefix, made in bulk, normally one use. Unlocks a product (epic AI Plus).
 //   promo code   WELCOME50            a word the owner picks, can be used many times (cap, expiry, once per person). Gives a bonus.
 // Where a code may be redeemed (scope): "epicai" works on oeper.dev/redeem AND inside the epic AI app, "site" only on oeper.dev.
-// What a code gives (grant): plusDays (-1 = for life) of epic AI Plus and/or bonusTokens (extra tokens, used after the daily allowance runs out).
+// What a code gives (grant): plusDays (-1 = for life) of epic AI Plus and/or bonusTokens (extra tokens, used after the daily allowance runs out)
+// and/or credits (oeper.dev's site currency: the ledger only remembers them as pending, index.js adds them to users/{email}.credits, see firestore-admin.js).
 //
 // Limits are in TOKENS (what the model reads + writes, reasoning included), because that is what Cloudflare bills. Cloudflare's free plan allows 10,000
 // "neurons" a day for the whole account; on the Gemma 4 model that is 9,091 neurons per million input tokens and 27,273 per million output tokens, so
@@ -44,14 +45,16 @@ function cleanGrant(g) {
   // boost: this many percent more daily tokens for boostDays days ("10% more usage for a month")
   const boostPercent = clampInt(g.boostPercent, 0, 1000);
   const boostDays = boostPercent > 0 ? clampInt(g.boostDays || 30, 1, 3650) : 0;
-  return { plusDays, bonusTokens, boostPercent, boostDays };
+  const credits = clampInt(g.credits, 0, 1_000_000_000);
+  return { plusDays, bonusTokens, boostPercent, boostDays, credits };
 }
-const grantEmpty = g => g.plusDays === 0 && g.bonusTokens === 0 && !g.boostPercent;
+const grantEmpty = g => g.plusDays === 0 && g.bonusTokens === 0 && !g.boostPercent && !g.credits;
 export function describeGrant(g) {
   const parts = [];
   if (g.plusDays === -1) parts.push('epic AI Plus for life');
   else if (g.plusDays > 0) parts.push(`${g.plusDays} day${g.plusDays === 1 ? '' : 's'} of epic AI Plus`);
   if (g.bonusTokens > 0) parts.push(`${g.bonusTokens.toLocaleString('en-US')} extra tokens`);
+  if (g.credits > 0) parts.push(`${g.credits.toLocaleString('en-US')} oeper.dev credits`);
   if (g.boostPercent > 0) parts.push(`${g.boostPercent}% more usage for ${g.boostDays % 30 === 0 ? (g.boostDays / 30) + ' month' + (g.boostDays === 30 ? '' : 's') : g.boostDays + ' days'}`);
   return parts.join(' + ') || 'nothing';
 }
@@ -77,7 +80,7 @@ function planOf(user, now = Date.now()) {
 }
 function userView(user, now = Date.now()) {
   const u = user || { plusUntil: 0, bonus: 0 };
-  return { plan: planOf(u, now), plusUntil: u.plusUntil === -1 ? -1 : (u.plusUntil > now ? u.plusUntil : 0), bonus: u.bonus || 0 };
+  return { plan: planOf(u, now), plusUntil: u.plusUntil === -1 ? -1 : (u.plusUntil > now ? u.plusUntil : 0), bonus: u.bonus || 0, pendingCredits: u.pendingCredits || 0 };
 }
 
 export class Ledger extends DurableObject {
@@ -98,6 +101,7 @@ export class Ledger extends DurableObject {
     if (grant.plusDays === -1) user.plusUntil = -1;
     else if (grant.plusDays > 0 && user.plusUntil !== -1) user.plusUntil = Math.max(now, user.plusUntil || 0) + grant.plusDays * DAY_MS;
     user.bonus = (user.bonus || 0) + grant.bonusTokens;
+    user.pendingCredits = (user.pendingCredits || 0) + (grant.credits || 0);
     if (grant.boostPercent > 0) {
       const live = user.boostUntil > now;
       user.boostPct = live ? Math.max(user.boostPct || 0, grant.boostPercent) : grant.boostPercent;
@@ -185,7 +189,7 @@ export class Ledger extends DurableObject {
     const msgUsed = plan === 'guest' ? ((await this.ctx.storage.get('msgs:' + day + ':' + this.#subject(email, ip))) || 0) : 0;
     return {
       messageLimit: msgLimit, messagesUsed: msgUsed,
-      plan, used, limit: limitFor(cfg, plan, user, now), bonus: v.bonus,
+      plan, used, limit: limitFor(cfg, plan, user, now), bonus: v.bonus, pendingCredits: v.pendingCredits || 0,
       boostPercent: user && user.boostUntil > now ? user.boostPct || 0 : 0, boostUntil: user && user.boostUntil > now ? user.boostUntil : 0, plusUntil: v.plusUntil, resetsAt: nextMidnight(now), signedIn: !!email,
       poolPct: cfg.pool.neurons ? Math.min(100, Math.round(poolUsed / cfg.pool.neurons * 100)) : 100, history: user ? (user.history || []).slice(0, 10) : [],
     };
@@ -223,6 +227,18 @@ export class Ledger extends DurableObject {
     return { ok: true, kind: rec.kind, grant: rec.grant, summary: describeGrant(rec.grant), ...userView(user, now) };
   }
 
+  /** Credits a person has earned from codes that are not yet in their oeper.dev balance. The caller adds them to Firestore, and puts them back if that fails. */
+  async takePendingCredits(email) {
+    const user = await this.#user(email), n = user.pendingCredits || 0;
+    if (n > 0) { user.pendingCredits = 0; await this.ctx.storage.put('user:' + email, user); }
+    return n;
+  }
+  async restorePendingCredits(email, n) {
+    const user = await this.#user(email);
+    user.pendingCredits = (user.pendingCredits || 0) + n;
+    await this.ctx.storage.put('user:' + email, user);
+  }
+
   // ── owner tools ──
 
   async adminListCodes() {
@@ -258,7 +274,7 @@ export class Ledger extends DurableObject {
     if (looksLikeKey(code, cfg)) throw new Error('That looks like a product key. Promo codes must not use a product prefix.');
     if (await this.ctx.storage.get('code:' + code)) throw new Error('That code already exists.');
     const grant = cleanGrant(spec.grant);
-    if (grantEmpty(grant)) throw new Error('Give it something: Plus days or bonus messages.');
+    if (grantEmpty(grant)) throw new Error('Give it something: Plus days, bonus tokens, a boost or credits.');
     const rec = {
       code, kind: 'promo', scope: spec.scope === 'site' ? 'site' : 'epicai', grant, maxUses: clampInt(spec.maxUses, 0, 10_000_000), uses: 0,
       startsAt: spec.startsAt ? Number(spec.startsAt) : 0, expiresAt: spec.expiresAt ? Number(spec.expiresAt) : 0,
@@ -274,7 +290,7 @@ export class Ledger extends DurableObject {
     if (!product) throw new Error('Unknown product.');
     const count = clampInt(spec.count, 1, 200);
     const grant = cleanGrant(spec.grant);
-    if (grantEmpty(grant)) throw new Error('Give the key something: Plus days or bonus messages.');
+    if (grantEmpty(grant)) throw new Error('Give the key something: Plus days, bonus tokens, a boost or credits.');
     const keys = [], now = Date.now();
     while (keys.length < count) {
       const code = randomKey(product.prefix);
@@ -314,7 +330,7 @@ export class Ledger extends DurableObject {
     const email = String(rawEmail || '').trim().toLowerCase();
     if (!email.includes('@')) throw new Error('Give an email.');
     const grant = cleanGrant(grantIn);
-    if (grantEmpty(grant)) throw new Error('Give it something: Plus days or bonus messages.');
+    if (grantEmpty(grant)) throw new Error('Give it something: Plus days, bonus tokens, a boost or credits.');
     const user = await this.#applyGrant(email, grant, 'by ' + by, 'admin');
     return { email, ...userView(user) };
   }
