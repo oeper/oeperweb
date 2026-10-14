@@ -1106,44 +1106,29 @@ const EPIC_MARK_SVG = '<svg class="epic-mark" viewBox="0 0 100 100" aria-hidden=
 const inputEl = document.getElementById('chatInput');
 const sendBtn = document.getElementById('sendBtn');
 
-// The page itself scrolls (chat-messages has no overflow of its own), so
-// streaming used to call bubble.scrollIntoView() on every single SSE
-// chunk — tens of times a second while a response streams in, each one
-// an instant jump that fought any attempt to scroll up and read earlier
-// messages while the reply was still coming in. isNearBottom() is
-// checked BEFORE each render (against the *pre*-update scrollHeight) so
-// scrolling only auto-follows when the reader was already at the bottom,
-// same as any chat app's "stick to bottom unless you've scrolled away"
-// behavior; scheduleScroll() then coalesces however many chunks land
-// within one frame into a single scrollIntoView call via rAF, instead of
-// one per chunk.
-function isNearBottom() {
-  return window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 120;
-}
+// The page itself scrolls (chat-messages has no overflow of its own).
+// "Following" = the page rides the bottom of the chat while an answer streams in (what the phone app does). It is on whenever a message
+// is sent, goes off only when the reader deliberately scrolls up, and comes back on when they scroll back to the bottom. The page's own end
+// (where the sticky composer sits in flow) is the target, so the newest line is never left hidden behind the composer.
+let following = true;
+const pageBottom = () => Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
 let scrollRAF = null;
 let ownScrollUntil = 0;
-// Follows the growing answer by easing the page up to it every frame (so each new line slides into view)
-// instead of jumping. The target is whatever scrollIntoView would have picked, measured without painting.
-function followTarget(bubble) {
-  const y0 = window.scrollY;
-  bubble.scrollIntoView({ block: 'end', behavior: 'instant' });
-  const y1 = window.scrollY;
-  if (y1 !== y0) window.scrollTo({ top: y0, behavior: 'instant' });
-  return y1;
-}
-function scheduleScroll(bubble) {
-  if (scrollRAF) return;
+function scheduleScroll() {
+  if (scrollRAF || !following) return;
   const step = () => {
     scrollRAF = null;
-    if (readerIsScrolling() || !bubble.isConnected) return;   // the reader took over: let go
-    const target = followTarget(bubble), cur = window.scrollY, diff = target - cur;
+    if (!following) return;
+    if (readerIsScrolling()) { scrollRAF = requestAnimationFrame(step); return; }   // wait for the reader to let go, then catch up
+    const target = pageBottom(), cur = window.scrollY, diff = target - cur;
     ownScrollUntil = Date.now() + 150;   // the scroll events this causes are ours, not the reader's
     if (Math.abs(diff) < 0.6) { if (diff) window.scrollTo({ top: target, behavior: 'instant' }); return; }
-    window.scrollTo({ top: cur + diff * 0.16 + Math.sign(diff) * 0.4, behavior: 'instant' });
+    window.scrollTo({ top: Math.abs(diff) > 900 ? target : cur + diff * 0.2 + Math.sign(diff) * 0.5, behavior: 'instant' });
     scrollRAF = requestAnimationFrame(step);
   };
   scrollRAF = requestAnimationFrame(step);
 }
+function followNow() { following = true; scheduleScroll(); }
 
 // While the reader has a finger on the page or is still flinging it, the streamed answer is NOT re-rendered: replacing the
 // answer's DOM under a touch cancels the scroll (the "page is hard to scroll while the AI writes" problem). The text catches
@@ -1154,8 +1139,19 @@ const touchOff = () => { readerTouching = false; lastReaderScroll = Date.now(); 
 window.addEventListener('touchstart', touchOn, { passive: true });
 window.addEventListener('touchend', touchOff, { passive: true });
 window.addEventListener('touchcancel', touchOff, { passive: true });
-window.addEventListener('wheel', () => { lastReaderScroll = Date.now(); }, { passive: true });
-window.addEventListener('scroll', () => { if (Date.now() > ownScrollUntil) lastReaderScroll = Date.now(); }, { passive: true });
+let lastY = window.scrollY;
+window.addEventListener('wheel', e => { lastReaderScroll = Date.now(); if (e.deltaY < 0) following = false; }, { passive: true });
+window.addEventListener('keydown', e => { if (['PageUp', 'Home', 'ArrowUp'].includes(e.key) && !/INPUT|TEXTAREA|SELECT/.test((e.target || {}).tagName || '')) following = false; });
+window.addEventListener('scroll', () => {
+  const y = window.scrollY, mine = Date.now() <= ownScrollUntil;
+  if (!mine) {
+    lastReaderScroll = Date.now();
+    if (y < lastY - 2) following = false;                              // they moved up
+    else if (pageBottom() - y < 60) following = true;                  // they came back to the bottom
+  }
+  lastY = y;
+}, { passive: true });
+window.addEventListener('touchend', () => { if (pageBottom() - window.scrollY < 60) following = true; }, { passive: true });
 function readerIsScrolling() { return readerTouching || Date.now() - lastReaderScroll < 220; }
 
 // Delegated once (not per-render) since bubbles get their innerHTML
@@ -1260,7 +1256,7 @@ function addMessageEl(role, content, imageUrl, index, docLinks, botLinks) {
   wrap.querySelector('[data-save-one]')?.addEventListener('click', () => saveReplyToOne(index));
   wrap.querySelector('[data-edit-msg]')?.addEventListener('click', () => editMessage(index));
   wrap.querySelector('[data-regen-msg]')?.addEventListener('click', () => regenerateResponse(index));
-  wrap.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  followNow();
   return bubble;
 }
 
@@ -2059,9 +2055,8 @@ async function sendToModel(chat) {
     paintTimer = null;
     if (readerIsScrolling()) { paintTimer = setTimeout(paintNow, 120); return; }   // try again once they let go
     lastPaint = Date.now();
-    const stick = isNearBottom() || !!scrollRAF;
     renderAssistantContent(bubble, reasoningBuf, contentBuf);
-    if (stick) scheduleScroll(bubble);
+    scheduleScroll();
   };
   const watchdog = setInterval(() => {
     if (Date.now() - lastActivity > INACTIVITY_TIMEOUT_MS) {
@@ -2131,7 +2126,7 @@ async function sendToModel(chat) {
     }
     if (paintTimer) { clearTimeout(paintTimer); paintTimer = null; }
     if (!reasoningBuf && !contentBuf) bubble.classList.remove('thinking');
-    else renderAssistantContent(bubble, reasoningBuf, contentBuf, true);
+    else { renderAssistantContent(bubble, reasoningBuf, contentBuf, true); scheduleScroll(); }
   } catch (err) {
     if (paintTimer) { clearTimeout(paintTimer); paintTimer = null; }
     bubble.classList.remove('thinking');
