@@ -10,7 +10,7 @@
 //
 // The switch itself (oe-sync-settings) is per device and on by default. Imported once, by topnav.js, so every
 // page of the site gets it. Bump its ?v=N in topnav.js when this file changes.
-import { db, onAccountChange } from './account.js?v=41';
+import { db, onAccountChange } from './account.js?v=42';
 import { doc, onSnapshot, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 export const SYNCED_KEYS = [

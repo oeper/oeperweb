@@ -647,7 +647,7 @@ export async function resolveUidsToEmails(uids) {
 // First-time sign-in consent. Remembered per browser (the stored value is
 // the version of the legal pages that was accepted, so bumping CONSENT_VERSION
 // asks everyone again after a material change to the terms/privacy policy).
-const CONSENT_VERSION = '2';
+const CONSENT_VERSION = '3';
 function hasConsent() {
   try { return localStorage.getItem('oe_terms_ok') === CONSENT_VERSION; } catch { return false; }
 }

@@ -92,7 +92,7 @@
     <h1><span class="material-symbols-rounded" aria-hidden="true">shield</span>privacy policy</h1>
   </header>
   <nav class="legal-nav" aria-label="legal pages"><a href="/privacy" aria-current="page">privacy policy</a><a href="/terms">terms of service</a><a href="/refunds">refund policy</a><a href="/cookies">cookie policy</a></nav>
-  <p class="updated">last updated october 13, 2026</p>
+  <p class="updated">last updated october 14, 2026</p>
   <main class="doc">
 
     <h2>who we are</h2>
@@ -105,7 +105,8 @@
       <tr><td><strong>profile details you add</strong>: handle, bio, badge and similar</td><td>to show on your public profile.</td></tr>
       <tr><td><strong>things you post</strong>: posts, comments, stories, videos, projects, notes, uploaded files, direct and group messages, follows, reactions</td><td>to run the features you asked to use. Posts, comments and profiles are public. Direct and group messages are visible to the people in that conversation and to the site owners (see "who can see it").</td></tr>
       <tr><td><strong>files you attach to epic AI</strong> (PDFs and text files)</td><td>to let the AI answer questions about them. The file is read inside your browser and is not uploaded. Only the extracted text is sent to the AI service together with your message, and it is saved in your AI chat history like the rest of the conversation.</td></tr>
-      <tr><td><strong>ai chats and ai memory</strong></td><td>so the AI assistant can show your past chats and remember things you told it to remember.</td></tr>
+      <tr><td><strong>ai chats</strong></td><td>so the AI assistant can show your past chats on all your devices.</td></tr>
+      <tr><td><strong>epic AI's memory file about you</strong> (signed-in people only): a short text profile, a list of quick facts, and a switch for whether epic AI may learn about you. It holds things you told epic AI or wrote there yourself, such as the name you go by, what you study or do, your interests, how you like answers written, and your goals. epic AI is told not to store passwords, ID, card or bank numbers, exact addresses, health, religion, sexuality or political views, or private details about other people</td><td>so epic AI can remember you between chats and devices and help you better. The file is saved to your account, is not shown to other people, and is sent to the AI service (Cloudflare Workers AI) with each message you send while you are signed in. You can read, change and delete all of it, and turn learning off, in the memory panel on the website and in the app's Settings.</td></tr>
       <tr><td><strong>epic AI usage</strong>: how many tokens you used today and in total, which plan or codes you have redeemed and when, and for people who are not signed in, a count tied to their network address</td><td>to apply the daily limits, to apply codes, and to stop abuse. Daily counters are small numbers per person; they are not a copy of what you wrote.</td></tr>
       <tr><td><strong>screen text and screenshots, when you use phone control or ask epic AI to look at your screen</strong> (Android app)</td><td>to let the AI see what you see so it can help or do the task. The text and picture of the screen go to Cloudflare Workers AI with your message. Nothing is read in the background, and banking, wallet and password apps are skipped. They are kept in your chat only as a short note, not as the picture.</td></tr>
       <tr><td><strong>feedback and bug reports</strong> you send from the app or the feedback page: your message, the kind of report, the app and version, and, only if you leave them in, your account email, a contact address you typed, the device model and Android version, and the last crash log</td><td>to read, answer and fix what you reported. A crash report is only sent after you press Send. Reports are kept in our database (the newest few hundred), can be forwarded to a private owner channel, and can be deleted on request. A thumbs up or down on an answer is sent as a short report; the answer's text is included only if you tick that box.</td></tr>
@@ -145,6 +146,7 @@
       <li>Your account data and content stay until you delete them or delete your account.</li>
       <li>Uploads made without an account expire automatically, and larger files expire sooner.</li>
       <li>Deleted files move to a trash and are removed after a retention period.</li>
+      <li>Your memory file and quick facts stay until you edit or delete them, or delete your account. Turning learning off stops new things being added but keeps what is already there until you clear it.</li>
       <li>Daily epic AI usage counters are small and are replaced day by day. Feedback reports are kept until we have dealt with them and, at most, for as long as the newest few hundred reports fit; ask us if you want one deleted.</li>
       <li>Moderation and audit records may be kept for as long as needed to protect the site and other users.</li>
     </ul>
@@ -171,7 +173,7 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=42';
+import { mountTopNav } from './shared/topnav.js?v=43';
 import { revealStatic } from './shared/motion.js?v=3';
 import { mountFooter } from './shared/footer.js?v=7';
 mountTopNav();

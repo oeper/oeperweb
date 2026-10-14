@@ -43,9 +43,20 @@ export function pushChats(chats) {
 }
 
 // ── what epic AI remembers (aiMemory/{email}.facts) ──
-export function watchMemory(cb) {
+export function watchMemory(cb) {   // cb({ facts, profile, learn }): the quick facts, the memory file (markdown) and the "let epic AI learn about me" switch
   if (!current) return () => {};
-  return onSnapshot(doc(db, 'aiMemory', current.email), snap => cb((snap.exists() && Array.isArray(snap.data().facts)) ? snap.data().facts : []), () => cb([]));
+  return onSnapshot(doc(db, 'aiMemory', current.email), snap => {
+    const d = snap.exists() ? snap.data() : {};
+    cb({ facts: Array.isArray(d.facts) ? d.facts : [], profile: typeof d.profile === 'string' ? d.profile : '', learn: d.learn !== false });
+  }, () => cb({ facts: [], profile: '', learn: true }));
+}
+export async function saveProfile(text) {
+  if (!current) return;
+  try { await setDoc(doc(db, 'aiMemory', current.email), { profile: String(text || '').slice(0, 6000), profileUpdated: Date.now() }, { merge: true }); } catch (err) { console.error('could not save the memory file', err); throw err; }
+}
+export async function setLearn(on) {
+  if (!current) return;
+  try { await setDoc(doc(db, 'aiMemory', current.email), { learn: !!on }, { merge: true }); } catch (err) { console.error('could not save the learning switch', err); }
 }
 const memRef = () => doc(db, 'aiMemory', current.email);
 export async function rememberFact(fact) {

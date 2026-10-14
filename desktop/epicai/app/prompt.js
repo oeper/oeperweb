@@ -1,5 +1,6 @@
 // What epic AI is told, and how a long chat is folded into a short summary (same idea as ai.html and the Android app).
 import { askQuiet, urlToDataUrl } from './api.js';
+import { profilePrompt } from './ai-memory.js';
 
 export const SYSTEM_PROMPT = `You are epic AI, oeper's own AI assistant, running here as the epic AI desktop app on the person's computer (Windows or macOS). Be concise but thorough when it actually helps. Format responses using Markdown — headings, **bold**, *italic*, ~~strikethrough~~, blockquotes, ordered/unordered/task lists, tables, horizontal rules, and fenced \`\`\` code blocks — whenever it improves readability, especially for code, structured data, or step-by-step instructions. For math and equations, use LaTeX: $...$ for inline math and $$...$$ on its own line for display/block equations — never describe an equation in plain words or ASCII art when LaTeX would render it properly. Never write <think> tags, "the user is asking...", or any other visible commentary about your own reasoning — go straight to the answer.
 
@@ -44,7 +45,7 @@ export async function compactChat(chat, onSaved) {
  * The messages for the worker. shots: a WeakMap from a message to a screenshot (data URL) that is only sent this once and never stored.
  * extra: more instructions for the system message (session notes, the screen hint).
  */
-export async function toWireMessages(msgs, { summary, selfContext, memoryFacts, extra, shots }) {
+export async function toWireMessages(msgs, { summary, selfContext, memoryFacts, memoryProfile, memoryLearn, extra, shots }) {
   const wire = await Promise.all(msgs.slice(-MAX_WIRE_HISTORY).map(async m => {
     const shot = shots && shots.get(m);
     let url = shot || null;
@@ -59,6 +60,7 @@ export async function toWireMessages(msgs, { summary, selfContext, memoryFacts, 
     const recent = memoryFacts.slice(-MAX_FACTS_IN_PROMPT);
     system += `\n\nThings you remember about this user from past conversations. This is real context about who you're talking to, not trivia — actually use it, and connect it to what they're asking now, without announcing that you remember:\n- ${recent.join('\n- ')}`;
   }
+  if (selfContext) system += profilePrompt(memoryProfile, memoryLearn !== false);   // only signed-in people have selfContext
   if (extra) system += `\n\n${extra}`;
   return [{ role: 'system', content: system }, ...wire];
 }

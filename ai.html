@@ -424,7 +424,7 @@
   }
   .memory-overlay.open { opacity: 1; pointer-events: all; }
   .memory-box {
-    width: min(420px, 100%); max-height: 80vh; background: var(--md-sys-color-surface); border-radius: 20px;
+    width: min(560px, 100%); overflow-y: auto; max-height: 80vh; background: var(--md-sys-color-surface); border-radius: 20px;
     padding: 20px; display: flex; flex-direction: column; gap: 14px; transform: scale(0.95); transition: transform 0.2s;
   }
   .memory-overlay.open .memory-box { transform: scale(1); }
@@ -434,7 +434,20 @@
     display: flex; align-items: center; gap: 8px;
   }
   .memory-box-hint { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: -8px; }
-  #memoryList { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .memory-learn { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; }
+  .memory-learn input { width: 18px; height: 18px; accent-color: var(--md-sys-color-primary); }
+  #memoryFile {
+    width: 100%; min-height: 190px; resize: vertical; box-sizing: border-box; padding: 12px; border-radius: 12px; border: 1px solid rgba(128,128,128,.4);
+    background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); font-size: 13px; line-height: 1.5; font-family: inherit;
+  }
+  .memory-file-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .memory-file-bar .grow { flex: 1; }
+  .memory-file-count { font-size: 11px; color: var(--md-sys-color-on-surface-variant); }
+  .memory-btn { border: none; border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); }
+  .memory-btn.primary { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .memory-btn:disabled { opacity: .5; cursor: default; }
+  .memory-sub { font-size: 12px; font-weight: 600; color: var(--md-sys-color-on-surface-variant); margin-top: 4px; }
+  #memoryList { overflow-y: visible; display: flex; flex-direction: column; gap: 6px; }
   .memory-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--md-sys-color-surface-variant); }
   .memory-fact { flex: 1; font-size: 13px; line-height: 1.4; }
   .memory-forget-btn {
@@ -551,18 +564,27 @@
 <div class="memory-overlay" id="memoryOverlay">
   <div class="memory-box">
     <div class="memory-box-header">
-      <h3><span class="material-symbols-rounded">psychology</span>what I remember</h3>
+      <h3><span class="material-symbols-rounded">psychology</span>my memory file</h3>
       <button type="button" id="memoryCloseBtn" class="header-icon-btn" title="close"><span class="material-symbols-rounded">close</span></button>
     </div>
-    <div class="memory-box-hint">epic AI saves things worth recalling as you chat — tap × to make it forget something.</div>
+    <div class="memory-box-hint">epic AI keeps notes about you here so it can help you better over time. you can read and change anything: what you write here is treated as the truth, and it is saved to your account (not shared with anyone).</div>
+    <label class="memory-learn"><input type="checkbox" id="memoryLearn" checked> let epic AI learn about me as we chat (and ask the odd question to get to know me)</label>
+    <textarea id="memoryFile" spellcheck="false" placeholder="nothing here yet. epic AI fills this in as you chat, or you can write your own notes, e.g.&#10;## About you&#10;- call me Sam&#10;## Preferences&#10;- keep answers short"></textarea>
+    <div class="memory-file-bar">
+      <button type="button" class="memory-btn primary" id="memorySave" disabled>save</button>
+      <button type="button" class="memory-btn" id="memoryKnow">get to know me</button>
+      <span class="grow"></span><span class="memory-file-count" id="memoryCount"></span>
+    </div>
+    <div class="memory-sub">quick facts it saved</div>
     <div id="memoryList"></div>
   </div>
 </div>
 
 <script type="module" data-cfasync="false">
-import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification } from './shared/account.js?v=41';
-import { mountTopNav } from './shared/topnav.js?v=42';
+import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification } from './shared/account.js?v=42';
+import { mountTopNav } from './shared/topnav.js?v=43';
 import { createDropdown } from './shared/dropdown.js?v=2';
+import { applySection, profilePrompt, PROFILE_MAX, GET_TO_KNOW } from './shared/ai-memory.js?v=1';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=3';
 import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=3';
@@ -1410,6 +1432,15 @@ document.getElementById('memoryBtn').addEventListener('click', () => {
 });
 document.getElementById('memoryCloseBtn').addEventListener('click', closeMemoryPanel);
 memoryOverlay.addEventListener('click', e => { if (e.target === memoryOverlay) closeMemoryPanel(); });
+const memoryFileEl = document.getElementById('memoryFile'), memorySaveBtn = document.getElementById('memorySave'), memoryLearnEl = document.getElementById('memoryLearn');
+memoryFileEl.addEventListener('input', () => { memoryDirty = true; memorySaveBtn.disabled = false; renderMemoryCount(); });
+memorySaveBtn.addEventListener('click', async () => { await saveProfileText(memoryFileEl.value); memoryDirty = false; memorySaveBtn.disabled = true; });
+memoryLearnEl.addEventListener('change', () => setLearn(memoryLearnEl.checked));
+document.getElementById('memoryKnow').addEventListener('click', () => {
+  if (controller) return;
+  if (!memoryLearnEl.checked) { memoryLearnEl.checked = true; setLearn(true); }
+  closeMemoryPanel(); startNewChat(); inputEl.value = GET_TO_KNOW; sendMessage();
+});
 document.getElementById('memoryList').addEventListener('click', e => {
   const btn = e.target.closest('.memory-forget-btn');
   if (btn) forgetFact(btn.dataset.fact);
@@ -1463,10 +1494,20 @@ function pushChatsToCloud() {
 // sessions.
 const MAX_MEMORY_FACTS_IN_PROMPT = 25;
 let memoryFacts = [];
+let memoryProfile = '';
+let memoryLearn = true;
+let memoryDirty = false;
 let memoryUnsub = null;
+function renderMemoryCount() {
+  const c = document.getElementById('memoryCount');
+  if (c) c.textContent = memoryFileEl.value.length + ' / ' + PROFILE_MAX;
+}
 function renderMemoryPanel() {
   const list = document.getElementById('memoryList');
   if (!list) return;
+  if (!memoryDirty) { memoryFileEl.value = memoryProfile; memorySaveBtn.disabled = true; }
+  memoryLearnEl.checked = memoryLearn;
+  renderMemoryCount();
   list.innerHTML = memoryFacts.length
     ? memoryFacts.map(f => `
       <div class="memory-row">
@@ -1476,8 +1517,31 @@ function renderMemoryPanel() {
     `).join('')
     : '<div class="memory-empty">nothing remembered yet — epic AI saves things worth recalling as you chat.</div>';
 }
+async function saveProfileText(text) {
+  const user = getCurrentUser();
+  if (!user) return;
+  try { await setDoc(doc(db, 'aiMemory', user.email), { profile: String(text || '').slice(0, PROFILE_MAX), profileUpdated: Date.now() }, { merge: true }); }
+  catch (err) { console.error('Could not save the memory file:', err); oeAlert('could not save your memory file. try again.'); }
+}
+async function setLearn(on) {
+  const user = getCurrentUser();
+  memoryLearn = !!on;
+  if (!user) return;
+  try { await setDoc(doc(db, 'aiMemory', user.email), { learn: !!on }, { merge: true }); } catch (err) { console.error('Could not save the learning switch:', err); }
+}
+// the model's update_profile call: it names a section and sends that section's whole new text; this merges it into the current file
+async function profileFromModel(section, text) {
+  const user = getCurrentUser();
+  if (!user || !memoryLearn) return;
+  const next = applySection(memoryProfile, section, text);
+  if (next === memoryProfile) return;
+  memoryProfile = next;
+  renderMemoryPanel();
+  await saveProfileText(next);
+}
 async function rememberFact(fact) {
   const user = getCurrentUser();
+  if (!memoryLearn) return;
   const trimmed = String(fact || '').trim().slice(0, 300);
   if (!user || !trimmed) return;
   try { await setDoc(doc(db, 'aiMemory', user.email), { facts: arrayUnion(trimmed) }, { merge: true }); }
@@ -1499,7 +1563,7 @@ async function forgetFact(fact) {
 async function updateMemoryFact(oldFact, newFact) {
   const user = getCurrentUser();
   const trimmedNew = String(newFact || '').trim().slice(0, 300);
-  if (!user || !oldFact || !trimmedNew) return;
+  if (!user || !oldFact || !trimmedNew || !memoryLearn) return;
   try {
     await setDoc(doc(db, 'aiMemory', user.email), { facts: arrayRemove(oldFact) }, { merge: true });
     await setDoc(doc(db, 'aiMemory', user.email), { facts: arrayUnion(trimmedNew) }, { merge: true });
@@ -1536,12 +1600,15 @@ async function aiSetFollow(handleRaw, follow) {
 
 onAccountChange(user => {
   if (memoryUnsub) { memoryUnsub(); memoryUnsub = null; }
-  memoryFacts = [];
+  memoryFacts = []; memoryProfile = ''; memoryLearn = true; memoryDirty = false;
   if (user) {
     memoryUnsub = onSnapshot(doc(db, 'aiMemory', user.email), snap => {
-      memoryFacts = (snap.exists() && Array.isArray(snap.data().facts)) ? snap.data().facts : [];
+      const d = snap.exists() ? snap.data() : {};
+      memoryFacts = Array.isArray(d.facts) ? d.facts : [];
+      memoryProfile = typeof d.profile === 'string' ? d.profile : '';
+      memoryLearn = d.learn !== false;
       renderMemoryPanel();
-    }, () => { memoryFacts = []; renderMemoryPanel(); });
+    }, () => { memoryFacts = []; memoryProfile = ''; renderMemoryPanel(); });
   } else {
     renderMemoryPanel();
   }
@@ -1949,6 +2016,7 @@ async function toWireMessages(msgs, summary) {
     const recentFacts = memoryFacts.slice(-MAX_MEMORY_FACTS_IN_PROMPT);
     systemContent += `\n\nThings you remember about this user from past conversations. This is real context about who you're talking to, not trivia — actually use it: tailor examples, suggestions and explanations to it, connect it to what they're asking now, and bring it up yourself when it's genuinely relevant (a follow-up on a project or goal they mentioned, a preference they've stated, something due soon) instead of only using it when directly asked. Don't just recite the list back at them, and don't force a mention into every reply — use it the way someone who actually remembers you would, naturally and only when it fits:\n${recentFacts.map(f => '- ' + f).join('\n')}`;
   }
+  if (getCurrentUser()) systemContent += profilePrompt(memoryProfile, memoryLearn);
   return [{ role: 'system', content: systemContent }, ...wire];
 }
 
@@ -2098,6 +2166,7 @@ async function sendToModel(chat) {
         if (!payload || payload === '[DONE]') continue;
         try {
           const json = JSON.parse(payload);
+          if (json.profile) { profileFromModel(json.profile.section, json.profile.text); continue; }
           if (json.remember) { rememberFact(json.remember); continue; }
           if (json.updateMemory) { updateMemoryFact(json.updateMemory.old, json.updateMemory.new); continue; }
           if (json.forget) { forgetFact(json.forget); continue; }

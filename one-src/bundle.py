@@ -46,7 +46,7 @@ themes_js = '<script>window.ONE_SITE_THEMES = ' + json.dumps(themes) + ';</scrip
 # installable web app: manifest, icons and a service worker (one/manifest.json, one/sw.js, one/icons/) so the page can be installed on Windows, Mac, Android and iOS and opens offline
 pwa_head = '<link rel="manifest" href="/one/manifest.json">\n<meta name="theme-color" content="#3f5aa8">\n<link rel="apple-touch-icon" href="/one/icons/apple-touch-icon.png">\n<meta name="mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-title" content="one">\n'
 pwa_js = '<script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/one/sw.js", { scope:"/one/" }).catch(() => {}));</script>\n'
-site = shell.replace('<head>', '<head>' + themes_js + pwa_head, 1).replace('<!--CLOUD-->', pwa_js + '<script type="module">\n' + cloud.replace('</script', '<\\/script') + '\n</script>\n<script type="module" src="/shared/one-ai.js?v=49"></script>\n<script type="module">import "/shared/settings-sync.js?v=2";</script>')
+site = shell.replace('<head>', '<head>' + themes_js + pwa_head, 1).replace('<!--CLOUD-->', pwa_js + '<script type="module">\n' + cloud.replace('</script', '<\\/script') + '\n</script>\n<script type="module" src="/shared/one-ai.js?v=49"></script>\n<script type="module">import "/shared/settings-sync.js?v=3";</script>')
 (OUT / 'one-oeper.html').write_text(site, encoding='utf-8')
 # published copy: oeper.dev/one
 (D.parent / 'one' / 'index.html').write_text(site, encoding='utf-8')

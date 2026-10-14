@@ -134,7 +134,7 @@ function toolStatus(name, args) {
     case 'lookup_oeper_user': return args && args.handle ? `Looking up @${clip(String(args.handle).replace(/^@/, ''))}` : 'Looking up a profile';
     case 'create_document': return 'Writing a document';
     case 'create_discord_bot': return args && args.name ? `Coding the Discord bot "${clip(args.name)}"` : 'Coding a Discord bot';
-    case 'remember_fact': case 'update_memory': case 'forget_fact': return 'Updating memory';
+    case 'remember_fact': case 'update_memory': case 'forget_fact': case 'update_profile': return 'Updating memory';
     case 'set_follow': return 'Updating who you follow';
     default: return 'Working on it';
   }
@@ -384,6 +384,9 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce) {
             // mid-conversation.
             if (call.function.name === 'remember_fact' && args.fact) {
               send({ remember: String(args.fact).slice(0, 300) });
+            } else if (call.function.name === 'update_profile' && args.section) {
+              send({ profile: { section: String(args.section).replace(/[#
+]/g, ' ').trim().slice(0, 40), text: String(args.content || '').slice(0, 1200) } });
             } else if (call.function.name === 'update_memory' && args.old_fact && args.new_fact) {
               send({ updateMemory: { old: String(args.old_fact).slice(0, 300), new: String(args.new_fact).slice(0, 300) } });
             } else if (call.function.name === 'forget_fact' && args.fact) {
@@ -561,6 +564,18 @@ const TOOLS = [
     },
   },
   {
+    name: 'update_profile',
+    description: "Keep the memory file about this user — a short, readable profile that is shown back to you at the start of every conversation and that the user can read and edit themselves. Use it for LASTING things about who they are, grouped by section: \"About you\" (name they go by, age range, where they live in broad terms, languages), \"Interests\", \"Preferences\" (tone, format, level of detail, units, spelling), \"Work & study\" (school/job/field, subjects, tools they use), \"Goals & projects\", \"People & places\" (only things they chose to tell you, nothing about third parties' private lives), \"How to help me\" (what works and doesn't for them). content replaces that whole section: write it as short markdown bullets (\"- …\", one fact per line, plain words, no more than ~10 bullets), merging what was already there with what you just learned. Send empty content to delete the section. Call it quietly whenever you learn something lasting, correct it as soon as it changes or they correct you, and never store passwords, ID/card/bank numbers, exact addresses, health, religion, sexuality or political views unless the user clearly asks you to. Don't announce that you did it.",
+    parameters: {
+      type: 'object',
+      properties: {
+        section: { type: 'string', description: 'The section heading, e.g. "Interests" (reuse the exact heading already in the memory file when there is one)' },
+        content: { type: 'string', description: 'The new full content of that section as markdown bullets, or empty to remove the section' },
+      },
+      required: ['section', 'content'],
+    },
+  },
+  {
     name: 'update_memory',
     description: "Correct or revise something you already remember about this user, in place — the fact changed or you got it wrong the first time (e.g. they were learning Rust, now they've said they've moved on to Zig). old_fact must match one of the facts listed under \"Things you remember about this user\" verbatim, word for word — if you're not certain of the exact wording, use forget_fact and remember_fact separately instead of guessing at a match.",
     parameters: {
@@ -665,6 +680,7 @@ async function createDocument() { return JSON.stringify({ ok: true, note: 'Saved
 async function rememberFact() { return JSON.stringify({ ok: true }); }
 async function updateMemory() { return JSON.stringify({ ok: true }); }
 async function forgetFact() { return JSON.stringify({ ok: true }); }
+async function updateProfile() { return JSON.stringify({ ok: true }); }
 async function setFollow() { return JSON.stringify({ ok: true }); }
 const TOOL_FUNCTIONS = {
   search_web: searchWeb,
@@ -672,6 +688,7 @@ const TOOL_FUNCTIONS = {
   remember_fact: rememberFact,
   update_memory: updateMemory,
   forget_fact: forgetFact,
+  update_profile: updateProfile,
   set_follow: setFollow,
   create_document: createDocument,
   create_discord_bot: createDiscordBot,

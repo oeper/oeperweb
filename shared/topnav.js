@@ -11,8 +11,8 @@
 import {
   mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange, signIn,
   onCreditsChange, CREDITS_ICON,
-} from './account.js?v=41';
-import './settings-sync.js?v=2'; // keeps this person's settings the same on every device (can be switched off in settings)
+} from './account.js?v=42';
+import './settings-sync.js?v=3'; // keeps this person's settings the same on every device (can be switched off in settings)
 import {
   collection, query, orderBy, limit, getDocs, onSnapshot, where, doc, updateDoc, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';

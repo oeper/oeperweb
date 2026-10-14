@@ -189,6 +189,10 @@ select, .dialog input[type=text] { background: var(--surface-3); color: var(--te
 .meter > div { height: 100%; background: var(--primary); border-radius: 99px; transition: width 0.4s; }
 .plan-badge { display: inline-block; padding: 2px 10px; border-radius: 99px; background: var(--container); color: var(--on-container); font-size: 12px; font-weight: 600; letter-spacing: 0.4px; margin-bottom: 8px; }
 .msg-line { font-size: 13px; margin-top: 6px; min-height: 18px; } .msg-line.bad { color: var(--error); } .msg-line.ok { color: var(--primary); }
+.memory-learn { display: flex; align-items: center; gap: 10px; font-size: 13px; margin: 10px 0 8px; cursor: pointer; } .memory-learn input { width: 18px; height: 18px; accent-color: var(--primary); }
+.memory-file { width: 100%; min-height: 170px; resize: vertical; box-sizing: border-box; padding: 12px; border-radius: 12px; border: 1px solid var(--surface-3); background: var(--surface-2); color: var(--text); font: inherit; font-size: 13px; line-height: 1.5; outline: none; }
+.memory-file:focus { border-color: var(--primary); }
+.memory-bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .memory-list { margin: 6px 0 4px; display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
 .fact { display: flex; align-items: flex-start; gap: 8px; padding: 8px 8px 8px 12px; border-radius: 12px; background: var(--surface-2); font-size: 13px; line-height: 1.4; }
 .fact span { flex: 1; } .fact .act { flex-shrink: 0; }

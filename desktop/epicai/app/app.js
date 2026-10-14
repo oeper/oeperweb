@@ -5,6 +5,7 @@ import { parseAiMarkdown, splitThinking, escHtml } from './md.js';
 import { injectCodeBlockStyles, wireCodeBlockCopy, copyToClipboard } from './code-block.js';
 import { compactChat, toWireMessages, SCREEN_HINT } from './prompt.js';
 import { readFileForAI, isImage } from './ai-files.js';
+import { applySection, PROFILE_MAX, GET_TO_KNOW } from './ai-memory.js';
 
 const D = window.epicDesktop;
 const $ = id => document.getElementById(id);
@@ -24,7 +25,7 @@ const settings = Object.assign({ screen: 'ask', theme: 'system', notify: true },
 const saveSettings = () => ls.set(KEYS.settings, JSON.stringify(settings));
 let chats = []; try { chats = JSON.parse(ls.get(KEYS.chats) || '[]'); } catch {}
 let curId = ls.get(KEYS.cur);
-let user = null, profile = null, selfContext = '', memory = [], usage = null;
+let user = null, profile = null, selfContext = '', memory = [], memProfile = '', memLearn = true, usage = null;
 let unsubChats = null, unsubMemory = null, applyingCloud = false;
 let controller = null;                    // the reply being streamed
 const pending = { image: null, doc: null, shot: null };   // attachments for the next message
@@ -218,13 +219,14 @@ async function sendToModel(c, { retried = false } = {}) {
   try {
     const compact = await compactChat(c, () => save());
     const extra = sessionNote() + (canLook ? ' ' + SCREEN_HINT : '');
-    const wire = await toWireMessages(compact.msgs, { summary: compact.summary, selfContext, memoryFacts: memory, extra, shots });
+    const wire = await toWireMessages(compact.msgs, { summary: compact.summary, selfContext, memoryFacts: memory, memoryProfile: memProfile, memoryLearn: memLearn, extra, shots });
     await api.streamChat({
       messages: wire, signal: controller.signal,
       onActivity: () => { lastActivity = Date.now(); },
       onEvent: j => {
-        if (j.remember) acct.rememberFact(j.remember);
-        else if (j.updateMemory) acct.updateFact(j.updateMemory.old, j.updateMemory.new);
+        if (j.profile) { if (memLearn) { const next = applySection(memProfile, j.profile.section, j.profile.text); if (next !== memProfile) { memProfile = next; acct.saveProfile(next).catch(() => {}); if (memoryListener) memoryListener(); } } }
+        else if (j.remember) { if (memLearn) acct.rememberFact(j.remember); }
+        else if (j.updateMemory) { if (memLearn) acct.updateFact(j.updateMemory.old, j.updateMemory.new); }
         else if (j.forget) acct.forgetFact(j.forget);
         else if (j.setFollow) acct.setFollow(j.setFollow.handle, j.setFollow.follow);
       },
@@ -448,9 +450,24 @@ function openAccount() {
     <span class="plan-badge">${planName(u).toUpperCase()}</span>
     ${u ? `<div class="meter"><div style="width:${pct}%"></div></div><div class="sub" style="margin-bottom:6px"><b>${kfmt(Math.min(u.used, u.limit))} of ${kfmt(u.limit)}</b> tokens used today · resets at ${reset}${u.bonus ? `<br><b>${kfmt(u.bonus)}</b> bonus tokens saved up` : ''}</div>` : ''}
     <div class="row"><div style="flex:1"><div class="t">Have a code?</div><input type="text" id="code" placeholder="Enter a code" autocomplete="off" spellcheck="false"><div class="msg-line" id="codeMsg"></div></div><button class="btn" id="redeemBtn">Redeem</button></div>
-    <div class="row" style="display:block"><div class="t">What epic AI remembers about you</div><div class="d">It saves things worth remembering so chats feel like a continuation. Remove anything you'd rather it forgot.</div><div class="memory-list" id="memList"></div></div>
+    <div class="row" style="display:block"><div class="t">Your memory file</div><div class="d">epic AI keeps notes about you here so it can help you better over time. You can read and change anything: what you write is treated as the truth, and it is saved to your account only.</div>
+      <label class="memory-learn"><input type="checkbox" id="memLearn"> Let epic AI learn about me as we chat (and ask the odd question to get to know me)</label>
+      <textarea id="memFile" class="memory-file" spellcheck="false" placeholder="Nothing here yet. epic AI fills this in as you chat, or write your own notes, e.g.&#10;## About you&#10;- call me Sam&#10;## Preferences&#10;- keep answers short"></textarea>
+      <div class="memory-bar"><button class="btn" id="memSave" disabled>Save</button><button class="btn ghost" id="memKnow">Get to know me</button><span style="flex:1"></span><span class="d" id="memCount"></span></div>
+      <div class="t" style="margin-top:10px">Quick facts it saved</div><div class="memory-list" id="memList"></div></div>
     <div class="actions"><button class="btn danger" id="signOut">Sign out</button><button class="btn ghost" data-close>Close</button></div>`);
+  let memDirty = false;
+  const memFile = d.root.querySelector('#memFile'), memSave = d.root.querySelector('#memSave'), memLearnEl = d.root.querySelector('#memLearn'), memCount = d.root.querySelector('#memCount');
+  memFile.addEventListener('input', () => { memDirty = true; memSave.disabled = false; memCount.textContent = memFile.value.length + ' / ' + PROFILE_MAX; });
+  memSave.addEventListener('click', async () => { memSave.disabled = true; try { await acct.saveProfile(memFile.value); memProfile = memFile.value.slice(0, PROFILE_MAX); memDirty = false; toast('Saved'); } catch { memSave.disabled = false; toast('Could not save'); } });
+  memLearnEl.addEventListener('change', () => { memLearn = memLearnEl.checked; acct.setLearn(memLearn); });
+  d.root.querySelector('#memKnow').addEventListener('click', () => {
+    if (!memLearn) { memLearn = true; acct.setLearn(true); }
+    d.close(); newChat(); $('input').value = GET_TO_KNOW; send();
+  });
   const renderMem = () => {
+    if (!memDirty) { memFile.value = memProfile; memSave.disabled = true; }
+    memLearnEl.checked = memLearn; memCount.textContent = memFile.value.length + ' / ' + PROFILE_MAX;
     const l = d.root.querySelector('#memList'); if (!l) return; l.innerHTML = '';
     if (!memory.length) l.appendChild(el('div', 'd', 'Nothing yet.'));
     for (const f of memory) { const r = el('div', 'fact', `<span>${escHtml(f)}</span>`); const x = el('button', 'act', '<span class="ms">close</span>'); x.title = 'Forget this'; x.addEventListener('click', () => acct.forgetFact(f)); r.appendChild(x); l.appendChild(r); }
@@ -492,12 +509,12 @@ async function openSettings() {
 acct.onUser(async u => {
   user = u; profile = null; selfContext = '';
   if (unsubChats) { unsubChats(); unsubChats = null; } if (unsubMemory) { unsubMemory(); unsubMemory = null; }
-  memory = [];
+  memory = []; memProfile = ''; memLearn = true;
   const av = $('acctAvatar');
   if (!u) { $('acctName').textContent = 'Guest'; av.innerHTML = '<span class="ms">person</span>'; refreshUsage(); return; }
   $('acctName').textContent = u.displayName || 'Signed in';
   if (u.photoURL) { av.innerHTML = ''; const im = el('img'); im.src = u.photoURL; im.referrerPolicy = 'no-referrer'; av.appendChild(im); }
-  unsubMemory = acct.watchMemory(f => { memory = f; if (memoryListener) memoryListener(); });
+  unsubMemory = acct.watchMemory(m => { memory = m.facts; memProfile = m.profile; memLearn = m.learn; if (memoryListener) memoryListener(); });
   unsubChats = acct.watchChats(cloud => {
     const byId = new Map(chats.map(c => [c.id, c]));
     for (const c of cloud) { const e = byId.get(c.id); if (!e || (c.updatedAt || 0) > (e.updatedAt || 0)) byId.set(c.id, c); }
