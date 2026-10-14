@@ -1,0 +1,40 @@
+{
+  "id": "/one/",
+  "name": "one: documents, spreadsheets, slides, notes and whiteboards",
+  "short_name": "one",
+  "description": "oneWord, oneSheet, oneSlide, oneIdea, oneSite, oneDraw and onePDF in one app. Works offline; saving to your oeper.dev account is optional.",
+  "start_url": "/one/?source=app",
+  "scope": "/one/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#111318",
+  "theme_color": "#3f5aa8",
+  "categories": ["productivity", "office"],
+  "launch_handler": { "client_mode": "navigate-existing" },
+  "icons": [
+    { "src": "/one/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/one/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/one/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "New document", "short_name": "Document", "url": "/one/#word", "icons": [{ "src": "/one/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "New spreadsheet", "short_name": "Spreadsheet", "url": "/one/#sheet", "icons": [{ "src": "/one/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "New presentation", "short_name": "Presentation", "url": "/one/#slide", "icons": [{ "src": "/one/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "New whiteboard", "short_name": "Whiteboard", "url": "/one/#draw", "icons": [{ "src": "/one/icons/icon-192.png", "sizes": "192x192" }] }
+  ],
+  "file_handlers": [
+    {
+      "action": "/one/",
+      "accept": {
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx", ".xlsm"],
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation": [".pptx"],
+        "application/pdf": [".pdf"],
+        "text/markdown": [".md", ".markdown"],
+        "text/plain": [".txt"],
+        "text/csv": [".csv", ".tsv"],
+        "application/json": [".oneword", ".onesheet", ".oneslide", ".oneidea", ".onesite", ".onedraw"]
+      }
+    }
+  ]
+}

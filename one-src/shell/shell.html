@@ -104,6 +104,7 @@ main{max-width:1120px;margin:0 auto;padding:12px 20px 60px}
     <div class="brand"><span class="brandmark"><svg class="onemark" viewBox="0 0 60 200" aria-hidden="true"><path d="M20 0H40A20 20 0 0 1 60 20V180A20 20 0 0 1 20 180V41A20 20 0 0 1 0 21V20A20 20 0 0 1 20 0Z" fill="currentColor"/></svg></span>one</div>
     <span class="grow"></span>
     <span id="cloudSlot"></span>
+    <button class="tb-btn" id="installBtn" title="Install one as an app" hidden><span class="ms" aria-hidden="true">install_desktop</span></button>
     <button class="tb-btn" id="seedBtn" title="Color"><span class="ms" aria-hidden="true">palette</span></button>
     <button class="tb-btn" id="settingsBtn" title="Settings" hidden><span class="ms" aria-hidden="true">settings</span></button>
     <span id="avatarSlot"></span>
@@ -192,6 +193,33 @@ function renderFiles(){
 }
 $('#q').addEventListener('input', renderFiles);
 $('#seedBtn').onclick = e => ONE.seedMenu(e.currentTarget);
+/* ---------- Install as an app (only in the oeper.dev build, which carries the web app manifest) ---------- */
+const installBtn = $('#installBtn');
+let installEvt = null;
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const hasManifest = () => !!document.querySelector('link[rel="manifest"]');
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const syncInstallBtn = () => { installBtn.hidden = !hasManifest() || standalone() || !(installEvt || isIOS || /safari/i.test(navigator.userAgent) && !/chrome|chromium|android/i.test(navigator.userAgent)); };
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; syncInstallBtn(); });
+addEventListener('appinstalled', () => { installEvt = null; syncInstallBtn(); ONE.toast('one is installed. Open it from your apps.'); });
+function showInstall() {
+  if (!hasManifest()) return ONE.toast('Open oeper.dev/one in your browser to install it as an app.');
+  if (standalone()) return ONE.toast('You’re already using the installed app.');
+  const ua = navigator.userAgent, mac = /Macintosh/i.test(ua) && !isIOS, safari = /safari/i.test(ua) && !/chrome|chromium|crios|fxios|edg/i.test(ua);
+  const steps = isIOS ? 'Tap the <b>Share</b> button in Safari, then <b>Add to Home Screen</b>.'
+    : installEvt ? 'It installs like any app, opens in its own window and works offline. Your files stay on this device unless you turn on saving to your oeper.dev account.'
+    : mac && safari ? 'In Safari choose <b>File › Add to Dock</b>.'
+    : /firefox/i.test(ua) ? 'Firefox can’t install web apps. Open oeper.dev/one in <b>Chrome</b> or <b>Edge</b> to install it, or use the menu of your phone’s browser.'
+    : 'Use your browser’s menu: <b>Install one</b> (or <b>Add to Home screen</b> on a phone). If you don’t see it, it may already be installed.';
+  const api = ONE.modal({ title:'Install one', icon:'install_desktop', width:440, body:`<p>Use one as a real app on Windows, Mac, Android and iPhone: its own window, offline, and it opens your Word, Excel, PowerPoint, PDF and one files.</p><p class="muted">${steps}</p>`,
+    actions:[{ label:'Close' }, ...(installEvt ? [{ label:'Install', kind:'filled', on:async () => { const e = installEvt; installEvt = null; try { await e.prompt(); await e.userChoice; } catch {} syncInstallBtn(); } }] : [])] });
+  return api;
+}
+installBtn.onclick = showInstall;
+syncInstallBtn();
+// files opened with the installed app (double-click a .docx, "Open with one"): hand them to the same code as Import
+if ('launchQueue' in window) launchQueue.setConsumer(async p => { if (!p.files || !p.files.length) return; try { const fs = await Promise.all(p.files.map(h => h.getFile())); importFiles(fs); } catch { ONE.toast('That file couldn’t be opened.'); } });
+
 const hr = new Date().getHours(); $('#greet').textContent = hr < 5 ? 'Up late?' : hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
 
 /* ---------- app frames ---------- */
@@ -276,6 +304,7 @@ loadFiles();
 const clearHash = () => { try { history.replaceState({ app:null }, '', location.pathname + location.search); } catch {} };
 async function openFromHash() {
   const h = decodeURIComponent(location.hash.slice(1));
+  if (h === 'install') { clearHash(); return showInstall(); }
   if (byId[h]) { clearHash(); return openApp(h); }
   if (h.startsWith('shared=')) {
     const rest = h.slice(7), i = rest.indexOf(':'); clearHash();
