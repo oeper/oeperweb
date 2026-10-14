@@ -461,13 +461,13 @@ ONE.appSwitcher = anchor => {
   const g = ONE.el('div', { class:'appgrid' });
   const tile = (a, label, onClick) => {
     const t = ONE.el('button', { class:'apptile' + (a && a.id === ONE.appId ? ' on' : ''), style:{ '--c':a ? a.color : '#3f5aa8' }, onclick:onClick });
-    t.append(ONE.el('span', { class:'apptile-logo', html:a ? (a.icon ? ONE.icon(a.icon) : ONE.esc(a.letter)) : ONE.MARK }), ONE.el('span', { text:label }));
+    t.append(ONE.el('span', { class:'apptile-logo', html:a ? (a.html || (a.icon ? ONE.icon(a.icon) : ONE.esc(a.letter))) : ONE.MARK }), ONE.el('span', { text:label }));
     return t;
   };
   g.append(tile(null, 'Home', () => { ONE.pop.close(); ONE.post({ type:'home' }); }));
   // epic AI (optional): a way in that is always one tap from any app, which matters on a phone where the floating button is easy to miss
   let aiOn = false; try { aiOn = localStorage.getItem('oe-ai-features') === '1'; } catch {}
-  if (aiOn) g.append(tile({ id:'ai', icon:'auto_awesome', color:'#6750a4' }, 'epic AI', () => { ONE.pop.close(); ONE.post({ type:'ai' }); }));
+  if (aiOn) g.append(tile({ id:'ai', html:'<svg class="epic-face" viewBox="0 0 381 486" aria-hidden="true"><g fill="currentColor"><rect x="2" width="80" height="300" rx="40"/><rect x="297" width="80" height="300" rx="40"/></g><path d="M40 421C140 454.333 240 454.333 340 421" fill="none" stroke="currentColor" stroke-width="80" stroke-linecap="round"/></svg>', color:'#6750a4' }, 'epic AI', () => { ONE.pop.close(); ONE.post({ type:'ai' }); }));
   ONE.APPS.forEach(a => g.append(tile(a, a.name, () => { ONE.pop.close(); if (a.id !== ONE.appId) ONE.post({ type:'switch', app:a.id }); })));
   d.append(g);
   ONE.pop.open(anchor, d, { alignRight:true });

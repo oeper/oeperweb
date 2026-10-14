@@ -344,6 +344,7 @@ textarea.tf{height:auto;padding:10px 12px;resize:vertical;line-height:1.4}
 .apptile:hover .apptile-logo{border-radius:50%}
 .onemark{display:block;height:1em;width:auto}
 .apptile-logo .onemark{height:26px;color:#fff}
+.apptile-logo .epic-face{height:26px;width:auto;color:#fff}
 .apptile-logo .ms{font-size:24px;font-variation-settings:"FILL" 1,"wght" 500,"GRAD" 0,"opsz" 24}
 /* app home (start) screen */
 .home-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}

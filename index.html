@@ -349,6 +349,7 @@
   }
   .home-ai-btn:hover { background: var(--md-sys-state-hover); }
   .home-ai-btn .material-symbols-rounded { font-size: 16px; color: var(--md-sys-color-primary); }
+  .home-ai-btn .epic-face { width: 16px; height: 16px; color: var(--md-sys-color-primary); flex-shrink: 0; }
   .home-ai-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--md-sys-color-outline); flex-shrink: 0; }
   .home-ai-status-dot.online { background: var(--md-sys-color-success, #4caf50); }
   .home-ai-status-dot.offline { background: var(--md-sys-color-error); }
@@ -2223,7 +2224,7 @@ PAGES.forEach((page, index) => {
           </div>
         </form>
         <a href="/ai" class="home-ai-btn">
-          <span class="material-symbols-rounded">auto_awesome</span>
+          <svg class="epic-face" viewBox="0 0 381 486" aria-hidden="true"><g fill="currentColor"><rect x="2" width="80" height="300" rx="40"/><rect x="297" width="80" height="300" rx="40"/></g><path d="M40 421C140 454.333 240 454.333 340 421" fill="none" stroke="currentColor" stroke-width="80" stroke-linecap="round"/></svg>
           Ask epic AI
           <span class="home-ai-status-dot" id="homeAiStatusDot" title="Checking status…"></span>
         </a>

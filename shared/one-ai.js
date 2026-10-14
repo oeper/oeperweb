@@ -282,6 +282,8 @@ function injectStyles() {
   .oai-fab:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.32)}
   .oai-fab[hidden],.oai-panel[hidden]{display:none}
   .oai-fab .ms{font-size:22px}
+  .epic-face{width:1em;height:1em;display:block;flex-shrink:0}
+  .oai-fab .epic-face{width:22px;height:22px}.oai-head .epic-face{width:22px;height:22px}.oai-home .epic-face{width:20px;height:20px}
   .oai-panel{position:fixed;top:0;right:0;bottom:0;width:min(400px,100vw);z-index:41;display:flex;flex-direction:column;background:var(--surface-lowest,#fff);color:var(--on-surface,#1b1b1f);box-shadow:-8px 0 30px rgba(0,0,0,.25);font:14px "Google Sans",sans-serif;animation:oaiIn .22s cubic-bezier(.2,0,0,1)}
   @keyframes oaiIn{from{transform:translateX(30px);opacity:0}}
   .oai-head{display:flex;align-items:center;gap:10px;padding:16px 12px 12px 18px}
@@ -358,7 +360,7 @@ function build() {
   fab.type = 'button';
   fab.hidden = true;
   fab.title = 'Ask epic AI';
-  fab.innerHTML = '<span class="ms" aria-hidden="true">auto_awesome</span><span>epic AI</span>';
+  fab.innerHTML = '<svg class="epic-face" viewBox="0 0 381 486" aria-hidden="true"><g fill="currentColor"><rect x="2" width="80" height="300" rx="40"/><rect x="297" width="80" height="300" rx="40"/></g><path d="M40 421C140 454.333 240 454.333 340 421" fill="none" stroke="currentColor" stroke-width="80" stroke-linecap="round"/></svg><span>epic AI</span>';
   // Keep the app's text selection alive when the button is pressed.
   fab.addEventListener('mousedown', e => e.preventDefault());
   fab.addEventListener('click', openPanel);
@@ -368,7 +370,7 @@ function build() {
   panel.className = 'oai-panel';
   panel.hidden = true;
   panel.innerHTML = `
-    <div class="oai-head"><span class="ms" aria-hidden="true" style="color:var(--primary)">auto_awesome</span><b>epic AI</b><small id="oaiApp"></small><span class="grow"></span>
+    <div class="oai-head"><svg class="epic-face" viewBox="0 0 381 486" aria-hidden="true" style="color:var(--primary)"><g fill="currentColor"><rect x="2" width="80" height="300" rx="40"/><rect x="297" width="80" height="300" rx="40"/></g><path d="M40 421C140 454.333 240 454.333 340 421" fill="none" stroke="currentColor" stroke-width="80" stroke-linecap="round"/></svg><b>epic AI</b><small id="oaiApp"></small><span class="grow"></span>
       <button class="oai-new" type="button" id="oaiNew" title="New chat" aria-label="New chat"><span class="ms" aria-hidden="true">add_comment</span></button>
       <button class="oai-x" type="button" id="oaiClose" title="Close"><span class="ms" aria-hidden="true">close</span></button></div>
     <div class="oai-ctx"><span class="ms" aria-hidden="true">article</span><span id="oaiCtx"></span></div>
@@ -1114,7 +1116,7 @@ function syncHomeBtn(on) {
   if (b) return;
   b = document.createElement('button');
   b.id = 'oaiHomeBtn'; b.type = 'button'; b.className = 'tb-btn oai-home'; b.title = 'Ask epic AI'; b.setAttribute('aria-label', 'Ask epic AI');
-  b.innerHTML = '<span class="ms" aria-hidden="true">auto_awesome</span>';
+  b.innerHTML = '<svg class="epic-face" viewBox="0 0 381 486" aria-hidden="true"><g fill="currentColor"><rect x="2" width="80" height="300" rx="40"/><rect x="297" width="80" height="300" rx="40"/></g><path d="M40 421C140 454.333 240 454.333 340 421" fill="none" stroke="currentColor" stroke-width="80" stroke-linecap="round"/></svg>';
   b.addEventListener('click', () => { if (!panel) enable(); toggleFromMenu(); });
   const before = document.getElementById('seedBtn');
   top.insertBefore(b, before && before.parentNode === top ? before : null);

@@ -4,10 +4,10 @@ const fs = require('fs');
 const path = require('path');
 
 const OUT = path.join(__dirname, '..', 'assets');
-const svg = size => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
-  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6d6d6"/><stop offset="1" stop-color="#9c9c9c"/></linearGradient></defs>
-  <circle cx="50" cy="50" r="48" fill="url(#g)"/>
-  <g stroke="#141414" stroke-width="9" stroke-linecap="round"><line x1="35" y1="22" x2="35" y2="55"/><line x1="65" y1="22" x2="65" y2="55"/><line x1="35" y1="77" x2="65" y2="77"/></g>
+const svg = size => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 1700 1700">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dcdcdc"/><stop offset="1" stop-color="#767676"/></linearGradient></defs>
+  <rect width="1700" height="1700" fill="url(#g)"/>
+  <g transform="translate(469 404) scale(2)"><rect x="2" width="80" height="300" rx="40"/><rect x="297" width="80" height="300" rx="40"/><path d="M40 421C140 454.333 240 454.333 340 421" fill="none" stroke="#000" stroke-width="80" stroke-linecap="round"/></g>
 </svg>`;
 
 async function render(size) {

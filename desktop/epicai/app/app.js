@@ -9,7 +9,7 @@ import { readFileForAI, isImage } from './ai-files.js';
 const D = window.epicDesktop;
 const $ = id => document.getElementById(id);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
-const MARK = '<svg viewBox="0 0 100 100" aria-hidden="true"><g stroke="currentColor" stroke-width="17" stroke-linecap="round"><line x1="28" y1="12" x2="28" y2="58"/><line x1="72" y1="12" x2="72" y2="58"/><line x1="28" y1="86" x2="72" y2="86"/></g></svg>';
+const MARK = '<svg viewBox="0 0 381 486" aria-hidden="true"><g fill="currentColor"><rect x="2" width="80" height="300" rx="40"/><rect x="297" width="80" height="300" rx="40"/></g><path d="M40 421C140 454.333 240 454.333 340 421" fill="none" stroke="currentColor" stroke-width="80" stroke-linecap="round"/></svg>';
 const KEYS = { chats: 'oe-ai-chats', cur: 'oe-ai-current-chat', settings: 'epic-desktop-settings' };
 const SUGGESTIONS = [
   ['Explain something simply', 'Explain something simply: how do vaccines work?'],
@@ -425,7 +425,7 @@ async function refreshUsage() {
 }
 
 function signInCard() {
-  return `<div class="signin-card"><svg class="epic-mark" viewBox="0 0 100 100"><g stroke="currentColor" stroke-width="17" stroke-linecap="round"><line x1="28" y1="12" x2="28" y2="58"/><line x1="72" y1="12" x2="72" y2="58"/><line x1="28" y1="86" x2="72" y2="86"/></g></svg>
+  return `<div class="signin-card"><svg class="epic-mark" viewBox="0 0 381 486" aria-hidden="true"><g fill="currentColor"><rect x="2" width="80" height="300" rx="40"/><rect x="297" width="80" height="300" rx="40"/></g><path d="M40 421C140 454.333 240 454.333 340 421" fill="none" stroke="currentColor" stroke-width="80" stroke-linecap="round"/></svg>
     <h2>Sign in to epic AI</h2><div class="sub">Your chats and what epic AI remembers follow you between this app, the website and your phone. Signed-in people get a bigger daily allowance and voice input.</div>
     <button class="btn g-btn" id="doSignIn"><span class="ms">login</span>Continue with Google</button>
     <div class="fine">Sign-in opens in your browser. By continuing you agree to the <a data-link="https://oeper.dev/terms">terms</a> and <a data-link="https://oeper.dev/privacy">privacy policy</a>.</div></div>`;
