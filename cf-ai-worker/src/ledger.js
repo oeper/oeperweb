@@ -2,7 +2,7 @@
 // One Durable Object (a single instance, "main") holds all of it, so counting and "this key was already used" are exact, never racy.
 //
 // Two kinds of code, kept apart on purpose:
-//   product key  EAI-XXXX-XXXX-XXXX   a random key with a product prefix, made in bulk, normally one use. Unlocks a product (epic AI Plus).
+//   product key  OPD-XXXX-XXXX-XXXX   a random key with a product prefix, made in bulk, normally one use. Unlocks a product (epic AI Plus).
 //   promo code   WELCOME50            a word the owner picks, can be used many times (cap, expiry, once per person). Gives a bonus.
 // Where a code may be redeemed (scope): "epicai" works on oeper.dev/redeem AND inside the epic AI app, "site" only on oeper.dev.
 // What a code gives (grant): plusDays (-1 = for life) of epic AI Plus and/or bonusTokens (extra tokens, used after the daily allowance runs out).
@@ -28,7 +28,8 @@ export const DEFAULT_CONFIG = {
   // What the model costs, in neurons per million tokens (Cloudflare's price list for @cf/google/gemma-4-26b-a4b-it).
   rates: { inPerM: 9091, outPerM: 27273 },
   // Product keys: each product has a prefix. A promo code can never look like "<prefix>-xxxx-xxxx-xxxx".
-  products: { epicai: { name: 'epic AI Plus', prefix: 'EAI' } },
+  // (oeper.dev product codes all start with OPD-. Keys made earlier with the old EAI- prefix still redeem: redeeming looks the code up, it never checks the prefix.)
+  products: { opd: { name: 'oeper.dev product code', prefix: 'OPD' } },
 };
 
 const dayOf = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);

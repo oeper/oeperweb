@@ -94,6 +94,12 @@
   .empty { padding: 26px; text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 14px; }
   .keys-out { margin-top: 14px; display: none; }
   .keys-out.show { display: block; }
+  .masked-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
+  .masked-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--md-sys-color-surface-variant); border-radius: 12px; padding: 7px 8px 7px 14px; animation: maskedIn .28s ease both; }
+  .masked-row code { font-size: 13.5px; letter-spacing: 1px; user-select: none; -webkit-user-select: none; }
+  @keyframes maskedIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .code-hidden { user-select: none; -webkit-user-select: none; letter-spacing: 1px; }
+  .field[hidden] { display: none; }
 
   .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background: #303034; box-shadow: 0 4px 12px rgba(0,0,0,.4);
     border-radius: 16px; padding: 14px 24px; font-size: 14px; color: #e3e2e6; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 100; max-width: 90vw; }
@@ -132,7 +138,7 @@
 
 <div class="page" id="app" style="display:none">
   <h1><span class="material-symbols-rounded">confirmation_number</span>codes &amp; limits</h1>
-  <p class="lead">Promo codes and product keys for epic AI, and how many epic AI messages people get per day. People redeem at <a href="/redeem">oeper.dev/redeem</a>; epic AI codes also work inside the app. Changes apply immediately.</p>
+  <p class="lead">Promo codes and product codes for epic AI, and how many epic AI messages people get per day. People redeem at <a href="/redeem">oeper.dev/redeem</a>; epic AI codes also work inside the app. Changes apply immediately. Product codes are made by the system (they all start with <code>OPD-</code>) and stay hidden on this page: use Copy to take one.</p>
 
   <div class="card">
     <h2><span class="material-symbols-rounded">monitoring</span>Today</h2>
@@ -166,6 +172,8 @@
       <div class="field"><label>Code</label><input type="text" id="pCode" placeholder="WELCOME" maxlength="32" style="text-transform:uppercase"></div>
       <div class="field"><label>Bonus tokens</label><input type="number" id="pBonus" min="0" value="50000" step="1000"></div>
       <div class="field"><label>Plus days (−1 = for life)</label><input type="number" id="pDays" min="-1" value="0"></div>
+      <div class="field"><label>More daily usage (%)</label><input type="number" id="pBoost" min="0" max="1000" value="0"></div>
+      <div class="field"><label>…for how many days</label><input type="number" id="pBoostDays" min="1" max="3650" value="30"></div>
       <div class="field"><label>Max uses (0 = no limit)</label><input type="number" id="pMax" min="0" value="100"></div>
       <div class="field"><label>Works in</label><select id="pScope"><option value="epicai">oeper.dev + epic AI app</option><option value="site">oeper.dev only</option></select></div>
       <div class="field"><label>Expires (optional)</label><input type="date" id="pExp"></div>
@@ -175,23 +183,26 @@
   </div>
 
   <div class="card">
-    <h2><span class="material-symbols-rounded">key</span>Generate product keys</h2>
-    <p class="sub">Random one-time keys with the product's prefix, like <code id="prefixDemo">EAI-XXXX-XXXX-XXXX</code>. Hand them out or sell them.</p>
+    <h2><span class="material-symbols-rounded">key</span>Generate product codes</h2>
+    <p class="sub">The system makes the codes (random, like <code id="prefixDemo">OPD-XXXX-XXXX-XXXX</code>); you choose what each one gives. They are never shown in full on this page: Copy takes the real code. Hand them out or sell them.</p>
     <div class="grid">
-      <div class="field"><label>Product</label><select id="kProduct"></select></div>
+      <div class="field" id="kProductField" hidden><label>Product</label><select id="kProduct"></select></div>
       <div class="field"><label>How many</label><input type="number" id="kCount" min="1" max="200" value="5"></div>
       <div class="field"><label>Plus days (−1 = for life)</label><input type="number" id="kDays" min="-1" value="30"></div>
       <div class="field"><label>Bonus tokens</label><input type="number" id="kBonus" min="0" value="0" step="1000"></div>
+      <div class="field"><label>More daily usage (%)</label><input type="number" id="kBoost" min="0" max="1000" value="0"></div>
+      <div class="field"><label>…for how many days</label><input type="number" id="kBoostDays" min="1" max="3650" value="30"></div>
       <div class="field"><label>Uses per key</label><input type="number" id="kMax" min="1" value="1"></div>
       <div class="field"><label>Works in</label><select id="kScope"><option value="epicai">oeper.dev + epic AI app</option><option value="site">oeper.dev only</option></select></div>
       <div class="field"><label>Expires (optional)</label><input type="date" id="kExp"></div>
     </div>
     <div class="field" style="margin-bottom:14px"><label>Note (only you see it)</label><input type="text" id="kNote" maxlength="200" style="text-transform:none" placeholder="e.g. giveaway, October"></div>
-    <div class="actions"><button class="btn primary" id="makeKeys"><span class="material-symbols-rounded">add</span>Generate keys</button></div>
+    <div class="actions"><button class="btn primary" id="makeKeys"><span class="material-symbols-rounded">add</span>Generate product codes</button></div>
     <div class="keys-out" id="keysOut">
-      <div class="field"><label id="keysLabel"></label><textarea id="keysText" readonly></textarea></div>
+      <div class="field"><label id="keysLabel"></label></div>
+      <div id="keysList" class="masked-list"></div>
       <div class="actions" style="margin-top:10px">
-        <button class="btn small" id="copyKeys"><span class="material-symbols-rounded">content_copy</span>Copy</button>
+        <button class="btn small" id="copyKeys"><span class="material-symbols-rounded">content_copy</span>Copy all</button>
         <button class="btn small" id="dlKeys"><span class="material-symbols-rounded">download</span>Download .txt</button>
       </div>
     </div>
@@ -266,8 +277,14 @@ const dateToMs = v => v ? new Date(v + 'T23:59:59').getTime() : 0;
 const kfmt = n => n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + 'M' : n >= 1000 ? (n / 1000).toFixed(n % 1000 ? 1 : 0) + 'k' : String(n);
 const grantText = g => [g.plusDays === -1 ? 'Plus for life' : g.plusDays > 0 ? `${g.plusDays}d Plus` : '', g.bonusTokens ? `+${kfmt(g.bonusTokens)} tokens` : '', g.boostPercent ? `+${g.boostPercent}% usage ${g.boostDays}d` : ''].filter(Boolean).join(' · ') || '—';
 
+// every oeper.dev product code starts with OPD-: make sure the worker's product list says so (done once, by the first owner who opens this page)
+const OPD_PRODUCT = { opd: { name: 'oeper.dev product code', prefix: 'OPD' } };
 async function load() {
   data = await call('GET', '/api/admin/codes');
+  if (!Object.values(data.config.products || {}).some(p => p.prefix === 'OPD')) {
+    await call('PUT', '/api/admin/config', { products: OPD_PRODUCT });
+    data = await call('GET', '/api/admin/codes');
+  }
   const s = data.stats, t = s.today;
   $('stats').innerHTML = [
     [t.requests, 'epic AI turns today'], [kfmt(t.tokensIn + t.tokensOut), 'tokens used today'], [Math.round(t.neurons) + ' / ' + s.pool.neurons, 'pool neurons used'],
@@ -282,6 +299,7 @@ async function load() {
   const keep = $('kProduct').value;
   $('kProduct').innerHTML = prods.map(([id, p]) => `<option value="${esc(id)}">${esc(p.name)} (${esc(p.prefix)}-…)</option>`).join('');
   if (keep) $('kProduct').value = keep;
+  $('kProductField').hidden = prods.length < 2;   // one product (OPD): nothing to choose
   updatePrefix();
   renderRows();
 }
@@ -292,9 +310,26 @@ function updatePoolHint() {
   $('poolHint').textContent = `A typical turn (2,800 tokens read, 700 written) costs about ${per.toFixed(0)} neurons, so a pool of ${(+$('poolNeurons').value || 0).toLocaleString()} neurons covers roughly ${turns.toLocaleString()} turns a day for everyone together.`;
 }
 ['poolNeurons', 'rateIn', 'rateOut'].forEach(id => $(id).addEventListener('input', updatePoolHint));
-const updatePrefix = () => { const p = data.config.products[$('kProduct').value]; $('prefixDemo').textContent = (p ? p.prefix : 'XXX') + '-XXXX-XXXX-XXXX'; };
+const updatePrefix = () => { const p = data.config.products[$('kProduct').value]; $('prefixDemo').textContent = (p ? p.prefix : 'OPD') + '-XXXX-XXXX-XXXX'; };
 $('kProduct').addEventListener('change', updatePrefix);
 
+let shownCodes = [];   // the real code of each row in the table, by row number
+/** OPD-K7QM-… → OPD-••••-••••-••••: only the prefix is ever shown. */
+const maskKey = code => { const i = code.indexOf('-'); return i < 0 ? '••••' : code.slice(0, i) + code.slice(i).replace(/[A-Z0-9]/g, '•'); };
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch { /* older browsers / no permission: fall back below */ }
+  try {
+    const t = document.createElement('textarea'); t.value = text; t.style.cssText = 'position:fixed;opacity:0;top:0;left:0'; document.body.appendChild(t); t.select();
+    const ok = document.execCommand('copy'); t.remove(); return ok;
+  } catch { return false; }
+}
+/** The Copy button says "Copied" for a moment. */
+function flashCopied(btn, ok) {
+  if (!ok) return;
+  const old = btn.dataset.label || btn.innerHTML; btn.dataset.label = old;
+  btn.innerHTML = '<span class="material-symbols-rounded">check</span>Copied';
+  clearTimeout(btn._t); btn._t = setTimeout(() => { btn.innerHTML = old; }, 1400);
+}
 function status(c) {
   const now = Date.now();
   if (c.disabled) return ['off', 'bad'];
@@ -311,10 +346,13 @@ function renderRows() {
     return !q || c.code.toLowerCase().includes(q) || (c.note || '').toLowerCase().includes(q);
   });
   $('empty').hidden = rows.length > 0;
-  $('rows').innerHTML = rows.map(c => {
+  shownCodes = rows.map(c => c.code);
+  $('rows').innerHTML = rows.map((c, n) => {
     const [label, tone] = status(c);
-    return `<tr class="${c.disabled ? 'off' : ''}" data-code="${esc(c.code)}">
-      <td><code>${esc(c.code)}</code> <span class="tag ${c.kind === 'key' ? 'key' : ''}">${c.kind === 'key' ? 'KEY' : 'PROMO'}</span>${c.note ? `<div class="sub" style="margin:2px 0 0">${esc(c.note)}</div>` : ''}</td>
+    // product codes are never written out on the page: only the prefix shows, the real code is looked up by row when you press Copy
+    const shown = c.kind === 'key' ? `<code class="code-hidden" aria-label="hidden product code">${esc(maskKey(c.code))}</code>` : `<code>${esc(c.code)}</code>`;
+    return `<tr class="${c.disabled ? 'off' : ''}" data-n="${n}">
+      <td>${shown} <span class="tag ${c.kind === 'key' ? 'key' : ''}">${c.kind === 'key' ? 'PRODUCT CODE' : 'PROMO'}</span>${c.note ? `<div class="sub" style="margin:2px 0 0">${esc(c.note)}</div>` : ''}${c.kind === 'key' ? `<div class="sub" style="margin:2px 0 0">made ${esc(fmtDate(c.createdAt))}</div>` : ''}</td>
       <td>${esc(grantText(c.grant))}</td>
       <td>${c.scope === 'site' ? 'oeper.dev only' : 'site + app'}</td>
       <td>${c.uses}${c.maxUses ? ' / ' + c.maxUses : ''}</td>
@@ -330,11 +368,12 @@ $('search').addEventListener('input', renderRows);
 $('filter').addEventListener('change', renderRows);
 $('rows').addEventListener('click', async e => {
   const b = e.target.closest('button[data-act]'); if (!b) return;
-  const code = b.closest('tr').dataset.code, rec = data.codes.find(c => c.code === code);
-  if (b.dataset.act === 'copy') { await navigator.clipboard.writeText(code).catch(() => {}); toast('Copied ' + code); return; }
+  const code = shownCodes[+b.closest('tr').dataset.n], rec = data.codes.find(c => c.code === code);
+  if (!rec) return;
+  if (b.dataset.act === 'copy') { const ok = await copyText(code); flashCopied(b, ok); toast(ok ? (rec.kind === 'key' ? 'Copied the product code' : 'Copied ' + code) : "Couldn't copy", !ok); return; }
   if (b.dataset.act === 'toggle') await run(b, async () => { await call('PATCH', '/api/admin/codes/' + encodeURIComponent(code), { disabled: !rec.disabled }); await load(); toast(rec.disabled ? 'Enabled' : 'Disabled'); });
   if (b.dataset.act === 'delete') {
-    if (!(await oeConfirm(`Delete ${code}? People who already redeemed it keep what they got.`))) return;
+    if (!(await oeConfirm(`Delete ${rec.kind === 'key' ? 'this product code' : code}? People who already redeemed it keep what they got.`))) return;
     await run(b, async () => { await call('DELETE', '/api/admin/codes/' + encodeURIComponent(code)); await load(); toast('Deleted'); });
   }
 });
@@ -350,7 +389,7 @@ $('saveLimits').addEventListener('click', e => run(e.currentTarget, async () => 
 $('makePromo').addEventListener('click', e => run(e.currentTarget, async () => {
   const r = await call('POST', '/api/admin/promo', {
     code: $('pCode').value, scope: $('pScope').value, maxUses: +$('pMax').value, expiresAt: dateToMs($('pExp').value), note: $('pNote').value,
-    grant: { plusDays: +$('pDays').value, bonusTokens: +$('pBonus').value },
+    grant: { plusDays: +$('pDays').value, bonusTokens: +$('pBonus').value, boostPercent: +$('pBoost').value, boostDays: +$('pBoostDays').value },
   });
   $('pCode').value = ''; $('pNote').value = '';
   await load(); toast('Created ' + r.code);
@@ -360,15 +399,20 @@ let lastKeys = [];
 $('makeKeys').addEventListener('click', e => run(e.currentTarget, async () => {
   const r = await call('POST', '/api/admin/keys', {
     product: $('kProduct').value, count: +$('kCount').value, scope: $('kScope').value, maxUses: +$('kMax').value, expiresAt: dateToMs($('kExp').value), note: $('kNote').value,
-    grant: { plusDays: +$('kDays').value, bonusTokens: +$('kBonus').value },
+    grant: { plusDays: +$('kDays').value, bonusTokens: +$('kBonus').value, boostPercent: +$('kBoost').value, boostDays: +$('kBoostDays').value },
   });
   lastKeys = r.keys;
-  $('keysText').value = r.keys.join('\n');
-  $('keysLabel').textContent = `${r.keys.length} new key${r.keys.length === 1 ? '' : 's'} (they stay in the list below too)`;
+  // the codes themselves are never written on the page: a hidden row each, with its own Copy
+  $('keysList').innerHTML = r.keys.map((k, i) => `<div class="masked-row" style="animation-delay:${Math.min(i, 12) * 35}ms"><code>${esc(maskKey(k))}</code><button class="btn small" data-i="${i}"><span class="material-symbols-rounded">content_copy</span>Copy</button></div>`).join('');
+  $('keysLabel').textContent = `${r.keys.length} new product code${r.keys.length === 1 ? '' : 's'}. They stay hidden here and in the list below: use Copy.`;
   $('keysOut').classList.add('show');
-  await load(); toast(`Generated ${r.keys.length} key${r.keys.length === 1 ? '' : 's'}`);
+  await load(); toast(`Generated ${r.keys.length} product code${r.keys.length === 1 ? '' : 's'}`);
 }));
-$('copyKeys').addEventListener('click', async () => { await navigator.clipboard.writeText(lastKeys.join('\n')).catch(() => {}); toast('Copied'); });
+$('keysList').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-i]'); if (!b) return;
+  const ok = await copyText(lastKeys[+b.dataset.i] || ''); flashCopied(b, ok); toast(ok ? 'Copied the product code' : "Couldn't copy", !ok);
+});
+$('copyKeys').addEventListener('click', async e => { const ok = await copyText(lastKeys.join('\n')); flashCopied(e.currentTarget, ok); toast(ok ? `Copied ${lastKeys.length} product code${lastKeys.length === 1 ? '' : 's'}` : "Couldn't copy", !ok); });
 $('dlKeys').addEventListener('click', () => {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([lastKeys.join('\n') + '\n'], { type: 'text/plain' }));
