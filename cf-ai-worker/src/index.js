@@ -387,7 +387,7 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce) {
               send({ remember: String(args.fact).slice(0, 300) });
             } else if (call.function.name === 'update_profile' && args.section) {
               send({ profile: { section: String(args.section).replace(/[#
-]/g, ' ').trim().slice(0, 40), text: String(args.content || '').slice(0, 1200) } });
+]/g, ' ').trim().slice(0, 40), text: String(args.content || '').slice(0, 1200) } });
             } else if (call.function.name === 'update_memory' && args.old_fact && args.new_fact) {
               send({ updateMemory: { old: String(args.old_fact).slice(0, 300), new: String(args.new_fact).slice(0, 300) } });
             } else if (call.function.name === 'forget_fact' && args.fact) {
