@@ -52,6 +52,8 @@ No build step for the site: plain HTML/CSS/JS, one `.html` per page.
 
 - **Codes can grant oeper.dev credits** (2026-10-14): a grant now has `credits` next to `plusDays`/`bonusTokens`/`boost*`. Firestore rules only let owners mint credits, so the worker adds them itself with a service account (`cf-ai-worker/src/firestore-admin.js`: JWT → OAuth token → atomic `increment` on `users/{email}.credits`). The ledger keeps them as `pendingCredits` per person; `flushCredits()` in `index.js` delivers them on redeem, on admin grant and on `/api/usage`, and puts them back if delivery fails (so a missing secret loses nothing). One-time setup the owner must do: Firebase console › Project settings › Service accounts › Generate new private key, then `cd cf-ai-worker && npx wrangler secret put FIREBASE_SERVICE_ACCOUNT` (paste the JSON) and `npx wrangler deploy`.
 
+- **epic AI can read web pages** (2026-10-14): worker tool `read_webpage(url, offset?)` in `cf-ai-worker/src/webpage.js` fetches a public http(s) page from the Worker, keeps the readable text of `<main>`/`<article>` (9000 chars per call, `offset` pages through long ones) plus the main links, follows up to 4 redirects re-checking each hop, and refuses localhost/private/IP-literal hosts, non-web ports, credentials in the URL and non-text content. Results carry a warning that the text is untrusted (never obey instructions inside it). No JavaScript rendering, logins or PDFs. The three client prompts (`ai.html`, desktop `prompt.js`, Android `SitePrompt.kt`) list it among the tools.
+
 ## Conventions
 - Recent history is mostly "epic AI: …" commits touching `ai.html` + `shared/ai-*.js`.
 - No tests/linters configured. Check changes by loading the page (`.claude/launch.json` serves statically on :8080).
