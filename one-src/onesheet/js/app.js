@@ -6,7 +6,8 @@ const A = X.act, P = X.pops, kb = $('#kb');
 ONE.boot('os', 'sheet');
 
 X.FONTLIST = [['Calibri','Calibri, Carlito, "Segoe UI", sans-serif'],['Aptos','Aptos, Calibri, Carlito, sans-serif'],['Arial','Arial, Helvetica, sans-serif'],['Cambria','Cambria, Caladea, Georgia, serif'],['Consolas','Consolas, "Courier New", monospace'],['Courier New','"Courier New", monospace'],['Georgia','Georgia, serif'],['Segoe UI','"Segoe UI", system-ui, sans-serif'],['Tahoma','Tahoma, sans-serif'],['Times New Roman','"Times New Roman", serif'],['Trebuchet MS','"Trebuchet MS", sans-serif'],['Verdana','Verdana, sans-serif']];
-const fontSel = () => { const s = el('select', { class:'combo fontsel', id:'fontName', 'aria-label':'Font' }); X.FONTLIST.forEach(([n, st]) => s.append(el('option', { value:n, text:n, style:{ fontFamily:st } }))); s.onchange = () => { X.setFont(s.value === 'Calibri' ? 'Calibri' : X.FONTLIST.find(f => f[0] === s.value)[1]); kb.focus(); }; return s; };
+X.FONTLIST.push(...ONE.fonts.entries);
+const fontSel = () => { const s = el('select', { class:'combo fontsel', id:'fontName', 'aria-label':'Font' }); ONE.fonts.fill(s, X.FONTLIST); s.onchange = () => { X.setFont(s.value === 'Calibri' ? 'Calibri' : X.FONTLIST.find(f => f[0] === s.value)[1]); kb.focus(); }; return s; };
 const sizeSel = () => { const w = el('span'), i = el('input', { class:'combo sizesel', id:'fontSize', list:'fsizes', value:'11', 'aria-label':'Font size' }), dl = el('datalist', { id:'fsizes' }); [8,9,10,11,12,14,16,18,20,24,28,36,48,72].forEach(s => dl.append(el('option', { value:s }))); i.onchange = () => { const v = parseFloat(i.value); if (v > 0 && v < 410) X.setSize(v); kb.focus(); }; i.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); i.onchange(); } }; w.append(i, dl); return w; };
 const numFmtSel = () => { const s = el('select', { class:'combo numfmt', id:'numFmt', 'aria-label':'Number format' }); X.NUMFMTS.filter(x => x[0] !== 'longdate').forEach(([k, n]) => s.append(el('option', { value:k, text:n }))); s.onchange = () => { X.setNumFmt(s.value); kb.focus(); }; return s; };
 
@@ -190,6 +191,7 @@ X.save = explicit => {
   const s = $('#saveState'); s.classList.remove('busy'); s.textContent = ok ? 'Saved' : 'Not saved'; s.title = ok ? 'Saved in this browser' : 'This browser blocked local storage.'; void explicit; return ok;
 };
 X.openBook = wb => {
+  ONE.fonts.scan(JSON.stringify(wb));
   if (X.wb && X.wb.id && X.lib.docs[X.wb.id]) X.save(false);
   const fresh = X.newBook(); X.wb = Object.assign(fresh, wb); X.wb.print = Object.assign(fresh.print, wb.print || {});
   X.wb.sheets.forEach(s => { const d = X.newSheet(s.name); Object.keys(d).forEach(k => { if (s[k] === undefined) s[k] = d[k]; }); });

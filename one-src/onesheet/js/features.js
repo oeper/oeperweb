@@ -28,7 +28,7 @@ P.fill = a => ONE.pop.open(a, ONE.colorGrid(c => { if (c && c !== 'none') { X.fi
 A.alignL = () => X.styleSel({ align:'left' }); A.alignC = () => X.styleSel({ align:'center' }); A.alignR = () => X.styleSel({ align:'right' });
 A.vTop = () => X.styleSel({ valign:'top' }); A.vMid = () => X.styleSel({ valign:'middle' }); A.vBot = () => X.styleSel({ valign:undefined });
 A.indentInc = () => X.styleSel({ indent:(cur().indent || 0) + 1 }); A.indentDec = () => X.styleSel({ indent:Math.max(0, (cur().indent || 0) - 1) || undefined });
-X.setFont = f => X.styleSel({ font:f === 'Calibri' ? undefined : f });
+X.setFont = f => ONE.fonts.useCss(f) || X.styleSel({ font:f === 'Calibri' ? undefined : f });
 X.setSize = n => X.styleSel({ size:n === 11 ? undefined : n });
 const SIZES = [8,9,10,11,12,14,16,18,20,22,24,26,28,36,48,72];
 A.grow = () => { const s = cur().size || 11; X.setSize(SIZES.find(x => x > s) || s + 8); };

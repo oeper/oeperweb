@@ -6,7 +6,7 @@ const E = W.editor, sheet = W.sheet, app = W.app, A = W.act, P = W.pops;
 ONE.boot('ow', 'word');
 
 /* ---------- custom ribbon widgets ---------- */
-const fontSel = () => { const s = el('select', { class:'combo fontsel', id:'fontName', 'aria-label':'Font', title:'Font (Ctrl+Shift+F)' }); W.FONTS.forEach(([n, st]) => s.append(el('option', { value:n, text:n, style:{ fontFamily:st } }))); s.value = 'Calibri'; s.onchange = () => W.setFont(W.FONTS.find(f => f[0] === s.value)[1]); return s; };
+const fontSel = () => { const s = el('select', { class:'combo fontsel', id:'fontName', 'aria-label':'Font', title:'Font (Ctrl+Shift+F)' }); ONE.fonts.fill(s, W.FONTS); s.value = 'Calibri'; s.onchange = () => W.setFont(W.FONTS.find(f => f[0] === s.value)[1]); return s; };
 const sizeSel = () => { const w = el('span'); const i = el('input', { class:'combo sizesel', id:'fontSize', list:'sizeList', value:'11', 'aria-label':'Font size', title:'Font Size (Ctrl+Shift+P)' }); const dl = el('datalist', { id:'sizeList' }); W.SIZES_PT.forEach(s => dl.append(el('option', { value:s }))); i.onchange = () => { const v = parseFloat(i.value); if (v >= 1 && v <= 1638) W.setSize(v); }; i.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); i.onchange(); } }; w.append(i, dl); return w; };
 const styleCard = ([k, n, css]) => el('button', { class:'sty', 'data-style':k, title:n, html:`<span class="pv" style="${css};font-family:${k.startsWith('h') ? 'var(--hf)' : 'var(--bf)'}">AaBbCcDd</span><span class="nm">${k === 'p' ? '¶ ' : ''}${esc(n)}</span>`, onclick:() => W.setStyle(k) });
 const gallery = () => { const g = el('div', { class:'gallery', id:'gallery' }); W.STYLES.slice(0, 7).forEach(s => g.append(styleCard(s))); g.append(el('div', { class:'gal-more' }, el('button', { class:'rb icon', 'data-act':'pop:styles', title:'More styles', html:icon('expand_more') }))); syncGalleryVars(g); return g; };
@@ -373,7 +373,7 @@ function htmlToMd(root){
   return walk(root).replace(/\n{3,}/g, '\n\n').trim() + '\n';
 }
 function standaloneHTML(){
-  return `<!doctype html>\n<html><head><meta charset="utf-8"><title>${esc($('#docTitle').value)}</title><style>body{font-family:Calibri,Carlito,sans-serif;font-size:11pt;line-height:1.3;max-width:6.5in;margin:1in auto;color:#000}h1,h2,h3{color:#2f5496;font-weight:400}h1.title{font-size:28pt;color:#000}table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:2pt 5pt;text-align:left}img{max-width:100%}.toc a{display:flex;color:inherit;text-decoration:none}.toc .dots{flex:1}</style></head><body>\n${W.cleanHTML()}\n</body></html>`;
+  return `<!doctype html>\n<html><head><meta charset="utf-8"><title>${esc($('#docTitle').value)}</title><style>body{font-family:Calibri,Carlito,sans-serif;font-size:11pt;line-height:1.3;max-width:6.5in;margin:1in auto;color:#000}h1,h2,h3{color:#2f5496;font-weight:400}h1.title{font-size:28pt;color:#000}table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:2pt 5pt;text-align:left}img{max-width:100%}.toc a{display:flex;color:inherit;text-decoration:none}.toc .dots{flex:1}</style>${ONE.fonts.linkTags(W.cleanHTML())}</head><body>\n${W.cleanHTML()}\n</body></html>`;
 }
 async function loadMammoth(){
   if (window.mammoth) return window.mammoth;

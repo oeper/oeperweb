@@ -49,6 +49,58 @@ ONE.loadIcons = () => {
   setTimeout(() => { if (!document.documentElement.classList.contains('ms-on')) document.fonts.check('20px "Material Symbols Rounded"') ? done() : null; }, 6000);
 };
 
+/* ---------- Google Fonts catalogue (oneWord, oneSlide, oneSheet font pickers) ----------
+   About 80 extra fonts next to the Office-style ones. Nothing is downloaded until it is needed: opening a font list loads tiny preview
+   subsets (just the letters of the names), choosing a font loads the real font, and opening a document loads the fonts it uses.
+   Weights/italics are tried from richest to plainest because Google answers 400 when a family lacks one of them. */
+ONE.fonts = (() => {
+  const G = {
+    'Sans-serif':['Inter','Poppins','Montserrat','Open Sans','Lato','Nunito','Work Sans','DM Sans','Manrope','Outfit','Raleway','Rubik','Source Sans 3','Noto Sans','Fira Sans','Quicksand','Karla','Mulish','Barlow','Josefin Sans','Space Grotesk','Plus Jakarta Sans','Lexend','Figtree','Urbanist','Archivo'],
+    'Serif':['Merriweather','Playfair Display','Lora','Libre Baskerville','Crimson Pro','Cormorant Garamond','PT Serif','Noto Serif','Source Serif 4','Bitter','Spectral','DM Serif Display','Domine','Vollkorn','Zilla Slab','Roboto Slab','Alegreya','Cinzel'],
+    'Display':['Bebas Neue','Oswald','Anton','Abril Fatface','Archivo Black','Righteous','Fredoka','Bangers','Orbitron','Lobster','Russo One','Staatliches','Alfa Slab One','Bungee'],
+    'Handwriting':['Caveat','Dancing Script','Pacifico','Shadows Into Light','Indie Flower','Satisfy','Great Vibes','Kalam','Permanent Marker','Amatic SC','Sacramento','Patrick Hand','Gloria Hallelujah','Courgette'],
+    'Monospace':['JetBrains Mono','Fira Code','Source Code Pro','IBM Plex Mono','Space Mono','Roboto Mono','Inconsolata','Ubuntu Mono']
+  };
+  const GENERIC = { 'Sans-serif':'sans-serif', 'Serif':'serif', 'Display':'sans-serif', 'Handwriting':'cursive', 'Monospace':'monospace' };
+  const entries = [], byName = new Map();
+  for (const [grp, names] of Object.entries(G)) for (const n of names) { const e = [n, '"' + n + '", ' + GENERIC[grp], grp]; entries.push(e); byName.set(n, e); }
+  const q = n => encodeURIComponent(n).replace(/%20/g, '+');
+  const addLink = href => new Promise(res => { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; l.onload = () => res(true); l.onerror = () => { l.remove(); res(false); }; document.head.append(l); });
+  const full = async name => {
+    for (const axis of [':ital,wght@0,400;0,700;1,400;1,700', ':wght@400;700', '']) if (await addLink('https://fonts.googleapis.com/css2?family=' + q(name) + axis + '&display=swap')) return true;
+    return false;
+  };
+  const asked = new Set(['Caveat']); // Caveat is already in every app's page head
+  const use = names => names.forEach(n => {
+    if (!byName.has(n) || asked.has(n)) return;
+    asked.add(n);
+    full(n).then(ok => { if (!ok) asked.delete(n); else document.fonts.load('16px "' + n + '"').catch(() => {}).then(() => dispatchEvent(new Event('one-fonts'))); });
+  });
+  const useCss = css => { const n = String(css || '').split(',')[0].replace(/["']/g, '').trim(); if (n) use([n]); };
+  const names = entries.map(e => e[0]).sort((a, b) => b.length - a.length).map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const re = new RegExp('["\']((?:' + names.join('|') + '))["\']', 'g');
+  const scanNames = str => { const found = new Set(); const t = String(str).replace(/\\/g, '').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'"); let m; re.lastIndex = 0; while ((m = re.exec(t))) found.add(m[1]); return [...found]; };
+  const scan = str => use(scanNames(str));
+  // <link> tags that make an exported page show the fonts it uses
+  const linkTags = str => { const f = scanNames(str); return f.length ? '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?' + f.map(n => 'family=' + q(n)).join('&') + '&display=swap">' : ''; };
+  let previewed = false;
+  const preview = () => {
+    if (previewed) return; previewed = true;
+    const text = encodeURIComponent([...new Set(entries.map(e => e[0]).join(''))].join(''));
+    for (let i = 0; i < entries.length; i += 40) addLink('https://fonts.googleapis.com/css2?' + entries.slice(i, i + 40).map(e => 'family=' + q(e[0])).join('&') + '&text=' + text + '&display=swap');
+  };
+  /* Fills a <select> from a [name, css] list: the Office-style ones first, then the catalogue grouped by kind. */
+  const fill = (sel, list) => {
+    const opt = ([n, st]) => ONE.el('option', { value:n, text:n, style:st ? { fontFamily:st } : null });
+    const base = list.filter(e => !byName.has(e[0]));
+    const g0 = ONE.el('optgroup', { label:'Standard' }); base.forEach(e => g0.append(opt(e))); sel.append(g0);
+    for (const grp of Object.keys(G)) { const g = ONE.el('optgroup', { label:grp + ' · Google Fonts' }); entries.filter(e => e[2] === grp).forEach(e => g.append(opt(e))); sel.append(g); }
+    const go = () => preview();
+    sel.addEventListener('pointerdown', go, { once:true }); sel.addEventListener('focus', go, { once:true });
+  };
+  return { entries:entries.map(e => [e[0], e[1]]), use, useCss, scan, linkTags, preview, fill };
+})();
+
 /* ---------- ripple ---------- */
 ONE.RIPPLE = '.rb,.rb-lg,.tb-btn,.tab,.btn,.menu-item,.sb,.nav-item,.rail-item,.chip,.fab,.icon-btn,.sty,.card-btn';
 document.addEventListener('pointerdown', e => {

@@ -8,7 +8,7 @@ const today = () => new Date();
 const ptToPx = pt => pt * 4 / 3;
 
 /* ---------- fonts ---------- */
-W.setFont = stack => W.applyInline({ fontFamily:stack });
+W.setFont = stack => { ONE.fonts.useCss(stack); W.applyInline({ fontFamily:stack }); };
 W.setSize = pt => W.applyInline({ fontSize:pt + 'pt' });
 W.stepSize = dir => {
   const n0 = W.selNode && W.selNode(), cur = (n0 && Math.round(parseFloat(getComputedStyle(n0).fontSize) * .75 * 2) / 2) || parseFloat($('#fontSize').value) || 11;

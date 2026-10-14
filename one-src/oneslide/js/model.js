@@ -193,6 +193,7 @@ S.save = () => {
   const st = $('#saveState'); st.classList.remove('busy'); st.textContent = ok ? 'Saved' : 'Not saved'; st.title = ok ? 'Saved in this browser' : 'This browser blocked local storage.'; return ok;
 };
 S.open = d => {
+  ONE.fonts.scan(JSON.stringify(d));
   if (S.deck && S.deck.id && S.lib.docs[S.deck.id]) S.save();
   S.deck = Object.assign(S.newDeck(), d); S.deck.footer = Object.assign({ text:'', num:false, date:false }, d.footer || {});
   if (!S.deck.slides.length) S.deck.slides.push(S.newSlide('title'));

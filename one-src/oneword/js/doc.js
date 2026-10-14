@@ -18,6 +18,7 @@ W.FONTS = [
   ['Segoe Print','"Segoe Print", Caveat, cursive'], ['Segoe UI','"Segoe UI", system-ui, sans-serif'], ['Tahoma','Tahoma, Verdana, sans-serif'], ['Times New Roman','"Times New Roman", Times, serif'],
   ['Trebuchet MS','"Trebuchet MS", sans-serif'], ['Verdana','Verdana, sans-serif']
 ];
+W.FONTS.push(...ONE.fonts.entries);
 W.SIZES_PT = [8,9,10,10.5,11,12,14,16,18,20,22,24,26,28,36,48,72];
 
 /* design presets (Design tab) */
@@ -400,6 +401,7 @@ W.save = explicit => {
   return ok;
 };
 W.open = d => {
+  ONE.fonts.scan(JSON.stringify(d));
   W.doc = Object.assign(W.newDoc(), d);
   W.doc.layout = Object.assign(W.newDoc().layout, d.layout || {}); W.doc.design = Object.assign(W.newDoc().design, d.design || {}); W.doc.hf = Object.assign(W.newDoc().hf, d.hf || {});
   $('#docTitle').value = W.doc.title;

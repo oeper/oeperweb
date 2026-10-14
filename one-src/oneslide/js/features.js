@@ -61,7 +61,8 @@ A.dateTime = () => { const s = new Date().toLocaleDateString(undefined, { year:'
 
 /* ---------- font & paragraph ---------- */
 S.FONTS = [['Theme Fonts',''],['Roboto Flex','"Roboto Flex", sans-serif'],['Calibri','Calibri, Carlito, sans-serif'],['Aptos','Aptos, Calibri, Carlito, sans-serif'],['Arial','Arial, sans-serif'],['Century Gothic','"Century Gothic", Futura, sans-serif'],['Georgia','Georgia, serif'],['Garamond','Garamond, "EB Garamond", Georgia, serif'],['Segoe UI','"Segoe UI", sans-serif'],['Trebuchet MS','"Trebuchet MS", sans-serif'],['Times New Roman','"Times New Roman", serif'],['Consolas','Consolas, monospace'],['Caveat','Caveat, cursive']];
-S.setFont = f => S.applyStyle({ font:f || undefined }, f ? ['fontName', f] : null);
+S.FONTS.push(...ONE.fonts.entries);
+S.setFont = f => ONE.fonts.useCss(f) || S.applyStyle({ font:f || undefined }, f ? ['fontName', f] : null);
 S.setSize = n => S.applyStyle({ size:n });
 const SIZES = [10,12,14,16,18,20,24,28,32,36,40,44,48,54,60,72,88,96,120,150];
 A.grow = () => { const c = S.curStyle().size || 24; S.setSize(SIZES.find(x => x > c) || c + 12); };
