@@ -555,7 +555,7 @@ async function publishSite(id, title, html) {
   if (!r.ok) throw new Error(j.error || 'Publishing failed (' + r.status + ')');
   return { url:j.publicUrl || j.url };
 }
-// epic AI pictures for the apps (ONE.pictures in shared/core.js asks for these): same limits as in epic AI itself, counted by the worker
+// epic AI pictures for the apps (the epic AI panel, shared/one-ai.js, asks for these): same limits as in epic AI itself, counted by the worker
 const AI_WORKER = 'https://oeper-ai.oeper.workers.dev';
 async function workerCall(method, path, body) {
   const u = getCurrentUser(); if (!u) throw new Error('Sign in to your oeper.dev account to make pictures.');

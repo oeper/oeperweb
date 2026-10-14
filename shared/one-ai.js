@@ -45,6 +45,7 @@ const ACTIONS = [
   { label: 'Improve the copy', instr: 'Rewrite the text on this page to be clearer, friendlier and more convincing. Keep the same sections and layout.', only: 'site' },
   { label: 'Add a section', instr: 'Add one more useful section to this page that fits the rest of it.', only: 'site' },
   { label: 'Add a page', instr: 'Add a new page that would suit this site (pick a sensible one that is missing), with real content.', only: 'site' },
+  { label: 'Make a picture', instr: '', pic: true },
   { label: 'Fresh look', instr: 'Pick a different colour palette, font and corner style that fit this site.', only: 'site' },
 ];
 const SYSTEM = 'You are epic AI, an assistant built into the one office suite, helping with the user\'s document. Do exactly what the instruction says. ' +
@@ -394,7 +395,7 @@ function build() {
 
   };
   ui.chips.innerHTML = ACTIONS.map((a, i) => `<button class="oai-chip" type="button" data-i="${i}" hidden>${esc(a.label)}</button>`).join('');
-  ui.chips.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b && !ui.send.disabled) { const a = ACTIONS[b.dataset.i]; if (a.deep) runDeep(a.instr); else run(a.instr); } });
+  ui.chips.addEventListener('click', e => { const b = e.target.closest('[data-i]'); if (b && !ui.send.disabled) { const a = ACTIONS[b.dataset.i]; if (a.pic) { ui.prompt.value = 'Draw a picture of '; ui.prompt.focus(); ui.prompt.setSelectionRange(ui.prompt.value.length, ui.prompt.value.length); } else if (a.deep) runDeep(a.instr); else run(a.instr); } });
   $('#oaiClose').onclick = closePanel;
   $('#oaiNew').onclick = () => { if (busy) { busy.abort(); busy = null; } hist = []; saveHist(); renderHistory(); refresh(); ui.prompt.focus(); };
   $('#oaiClip').onclick = () => ui.fileIn.click();
@@ -403,7 +404,7 @@ function build() {
   panel.addEventListener('dragover', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); panel.classList.add('drop'); } });
   panel.addEventListener('dragleave', e => { if (!panel.contains(e.relatedTarget)) panel.classList.remove('drop'); });
   panel.addEventListener('drop', e => { panel.classList.remove('drop'); const f = e.dataTransfer && e.dataTransfer.files[0]; if (!f) return; e.preventDefault(); attachFile(f); });
-  ui.send.onclick = () => { const q = ui.prompt.value.trim(); if (q && !ui.send.disabled) { ui.prompt.value = ''; if (wantsDeepNotes(q)) runDeep(q); else run(q); } };
+  ui.send.onclick = () => { const q = ui.prompt.value.trim(); if (q && !ui.send.disabled) { ui.prompt.value = ''; if (wantsPicture(q)) runPicture(q); else if (wantsDeepNotes(q)) runDeep(q); else run(q); } };
   ui.prompt.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ui.send.click(); } });
   ui.replace.onclick = () => applyToDocument('replace', lastAnswer);
   ui.insert.onclick = () => applyToDocument('insert', lastAnswer);
@@ -425,6 +426,7 @@ function refresh() {
   const canEdit = !!c.editable;
   ui.chips.querySelectorAll('button').forEach(b => {
     const only = ACTIONS[b.dataset.i].only;
+    if (ACTIONS[b.dataset.i].pic) { b.hidden = !pictureHost(); b.disabled = false; return; }
     b.hidden = only === 'idea' ? c.kind !== 'idea' : only === 'page' ? !(c.kind === 'idea' && c.idea === 'page') : only === 'site' ? c.kind !== 'site' : only === 'sheet' ? c.kind !== 'sheet' : only === 'slide' ? c.kind !== 'slide' : only === 'map' ? c.idea !== 'map' : (c.build && c.source !== 'selection');
     b.disabled = c.source === 'none' && !attach;
   });
@@ -479,6 +481,7 @@ function parseEdit(reply) {
 
 // What a saved answer looks like when the chat is reopened: an applied edit shows as its one-line note, not the whole new text.
 const saved = t => {
+  const pm = /^<<picture>>([\s\S]*?)<<\/picture>>/.exec(t || ''); if (pm) return 'Made a picture: ' + pm[1];
   const e = parseEdit(t), mk = parseMakes(t), said = shown(t).replace(/\s+/g, ' ').trim();
   if (e) return e.said || (e.kind === 'append' ? 'Added to the document.' : 'Edited the document.');
   if (mk.length) return said || (mk[0].kind === 'mcq' ? 'Made a multiple choice quiz.' : mk[0].kind === 'cells' || mk[0].kind === 'sheetedit' ? 'Updated the spreadsheet.' : mk[0].kind === 'slides' || mk[0].kind === 'slideedit' ? 'Updated the presentation.' : mk[0].kind === 'site' ? 'Updated the site.' : mk[0].kind === 'cards' ? 'Made flashcards.' : mk[0].kind === 'quiz' ? 'Made a quiz.' : mk[0].kind === 'highlight' ? 'Highlighted key terms.' : 'Made ' + mk.map(b => b.kind === 'notes' ? 'a notes page' : 'a mind map').join(' and ') + '.');
@@ -501,7 +504,7 @@ function renderHistory() {
   hist.forEach(m => addMsg(m.r === 'u' ? 'user' : 'ai', m.r === 'u' ? m.t : saved(m.t), m.r === 'u' && m.x ? 'with ' + m.x : ''));
   const lastA = [...hist].reverse().find(m => m.r === 'a');
   // only a plain answer can be inserted by hand; an edit / map / notes answer was applied when it arrived
-  lastAnswer = lastA && !parseEdit(lastA.t) && !parseMakes(lastA.t).length ? shown(lastA.t) : '';
+  lastAnswer = lastA && !/^<<picture>>/.test(lastA.t) && !parseEdit(lastA.t) && !parseMakes(lastA.t).length ? shown(lastA.t) : '';
 }
 // The "what is it doing" box inside an answer that is still being written: its reasoning as it
 // streams, plus what it is searching for when it uses a tool. Collapses to "Thought for Ns".
@@ -519,6 +522,55 @@ function makeThink(parent, before) {
   };
 }
 
+// ── pictures ──
+// Making a picture is only offered here, in the epic AI panel (never in an app's own "Add a picture" menu). The shell page (shell/cloud.js) owns the
+// sign-in and talks to the worker (window.ONE_CLOUD.makePicture / pictureInfo); the finished picture goes into the open document through the app's
+// ONE.insertPicture (oneWord, oneSlide, oneDraw, oneIdea), and every app can save it as a file.
+const pictureHost = () => { try { const c = window.ONE_CLOUD; return c && c.makePicture ? c : null; } catch { return null; } };
+const PIC_ASK = /\b(draw|paint|sketch|illustrate|generate|make|create|design|render|produce)\b[^.?!\n]{0,70}\b(picture|image|photo|photograph|illustration|drawing|artwork|logo|icon|poster|wallpaper|banner|portrait|painting|cartoon|sticker|mascot)s?\b/i;
+const PIC_START = /^\s*(draw|paint|sketch|illustrate)\b/i;
+const wantsPicture = q => !!pictureHost() && (PIC_START.test(q) || PIC_ASK.test(q)) && q.length < 700 && !/\b(slide|slides|deck|presentation|page|document|worksheet|spreadsheet|notes|essay|summary)\b.*\b(about|on|with)\b/i.test(q.replace(PIC_ASK, ''));
+const picShape = q => /\b(tall|vertical|story|stories|phone wallpaper|9:16)\b/i.test(q) ? 'tall' : /\b(wide|banner|wallpaper|landscape|slide|header|cover|16:9)\b/i.test(q) ? 'wide' : /\b(portrait|poster|3:4)\b/i.test(q) ? 'portrait' : 'square';
+const picBest = q => /\b(best quality|highest quality|photo ?realistic|hyper ?realistic|ultra realistic|with the text|that says)\b/i.test(q);
+// a 1024 px picture is about 150 KB once recompressed; the raw model output (600 KB) would fill this browser's storage after a few of them
+const shrinkPic = (src, max = 1024, q = .82) => new Promise(res => {
+  const im = new Image();
+  im.onload = () => { const k = Math.min(1, max / Math.max(im.width, im.height)), w = Math.round(im.width * k), h = Math.round(im.height * k), c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(im, 0, 0, w, h); res({ url: c.toDataURL('image/jpeg', q), w, h }); };
+  im.onerror = () => res({ url: src, w: 0, h: 0 });
+  im.src = src;
+});
+async function runPicture(q) {
+  const cloud = pictureHost(); if (!cloud) return;
+  if (busy) busy.abort();
+  const prompt = q.replace(/^\s*(please\s+)?(can you\s+|could you\s+)?/i, '').trim();
+  hist.push({ r: 'u', t: q }); saveHist();
+  addMsg('user', q);
+  lastAnswer = ''; ui.acts.style.display = 'none';
+  const am = addMsg('ai', 'Drawing it... this takes up to a minute.');
+  ui.send.disabled = true;
+  const mine = busy = new AbortController();
+  try {
+    const r = await cloud.makePicture({ prompt, shape: picShape(q), best: picBest(q) });
+    if (mine.signal.aborted) return;
+    const small = await shrinkPic('data:' + r.mime + ';base64,' + r.data);
+    am.b.textContent = (r.best ? 'Here is your picture (best quality).' : 'Here is your picture.') + (r.limit ? ' You have made ' + r.used + ' of ' + r.limit + ' today.' : '');
+    const img = document.createElement('img'); img.src = small.url; img.alt = prompt; img.style.cssText = 'display:block;max-width:100%;border-radius:14px;margin-top:8px';
+    const bar = document.createElement('div'); bar.className = 'oai-acts'; bar.style.cssText = 'padding:0;margin-top:8px';
+    const btn = (icon, label, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn2'; b.innerHTML = '<span class="ms" aria-hidden="true">' + icon + '</span>' + label; b.onclick = fn; bar.append(b); return b; };
+    let put = null; try { const fr = activeFrame(); put = fr && fr.contentWindow.ONE && fr.contentWindow.ONE.insertPicture; } catch {}
+    if (put) btn('add_photo_alternate', 'Add to document', () => { try { put(small.url, { w: small.w, h: small.h, alt: prompt }); toast('Picture added.'); } catch (e) { toast('Couldn\'t add it here. Use Save instead.'); } });
+    btn('download', 'Save', () => { const a = document.createElement('a'); a.href = small.url; a.download = 'epic-ai-picture.jpg'; document.body.append(a); a.click(); a.remove(); });
+    btn('refresh', 'Try again', () => { if (!ui.send.disabled) runPicture(q); });
+    am.d.append(img, bar); scrollLog();
+    hist.push({ r: 'a', t: '<<picture>>' + prompt.slice(0, 200) + '<</picture>>' }); saveHist();
+  } catch (err) {
+    if (!mine.signal.aborted) am.b.textContent = (err && err.message) || 'Couldn\'t make the picture.';
+  } finally {
+    if (busy === mine) busy = null;
+    ui.send.disabled = false; refresh();
+  }
+}
+
 async function run(instruction) {
   if (busy) busy.abort();
   const c = readContext(true);
@@ -533,6 +585,7 @@ async function run(instruction) {
   // So earlier turns go back shortened: built blocks and edits become a one-line note, and everything is capped.
   const forModel = m => m.r === 'u' ? m.t.slice(0, 3800)
     : m.t.replace(MAKE_RE, (_, k) => k === 'mcq' ? '[a multiple choice quiz was made]' : k === 'cells' || k === 'sheetedit' ? '[the spreadsheet was changed]' : k === 'slides' || k === 'slideedit' ? '[the presentation was changed]' : k === 'site' ? '[the site was changed]' : k === 'cards' ? '[flashcards were made]' : k === 'quiz' ? '[a quiz was made]' : k === 'highlight' ? '[key terms were highlighted]' : k === 'notes' ? '[a notes page was made]' : k === 'pageedit' ? '[the page was updated]' : k === 'pageadd' ? '[sections were added to the page]' : k === 'mapedit' ? '[the mind map was updated]' : '[a mind map was made]')
+      .replace(/<<picture>>[\s\S]*?<<\/picture>>/g, '[a picture was made]')
       .replace(/<<(edit|append)>>[\s\S]*?(?:<<\/\1>>|$)/g, (_, k) => k === 'edit' ? '[the text was edited]' : '[text was added]').slice(0, 3800);
   const prior = hist.slice(-12).filter(m => !(m.r === 'a' && isPlaceholder(m.t))).map(m => ({ role: m.r === 'u' ? 'user' : 'assistant', content: forModel(m) })).filter(m => m.content.trim());
   hist.push({ r: 'u', t: instruction, x: tag }); saveHist();

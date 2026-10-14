@@ -106,7 +106,7 @@ Object.assign(A, {
     if (!B.pasteClip()) ONE.toast('Press Ctrl+V to paste here.');
   },
   del:() => B.del(), dupe:() => B.dupe(), inkToText:() => INK.convert(B.sel), pad:() => INK.pad(),
-  picture:() => ONE.pictures.choose(() => $('#picInput').click(), (url, m) => B.addImage(url, m.w || 1024, m.h || 1024)), front:() => B.order('front'), back:() => B.order('back'), forward:() => B.order('forward'), backward:() => B.order('backward'),
+  picture:() => $('#picInput').click(), front:() => B.order('front'), back:() => B.order('back'), forward:() => B.order('forward'), backward:() => B.order('backward'),
   selectAll:() => B.selectAll(), lockTool:() => { B.lock = !B.lock; ONE.ribbon.refresh(); ONE.toast(B.lock ? 'The tool stays selected after each shape.' : 'Back to Select after each shape.'); },
   clearPage:() => { if (!D.page().els.length) return; ONE.modal({ title:'Clear this page?', body:'Everything on the page will be removed. You can undo it right after.', actions:[{ label:'Cancel' }, { label:'Clear', kind:'filled', on:() => B.clear() }] }); },
   dupPageNow:() => A.dupPage(), delPageNow:() => A.delPage(),
@@ -202,6 +202,7 @@ $('.qat').addEventListener('mousedown', e => e.preventDefault());
 $('#selbar').addEventListener('mousedown', e => e.preventDefault());
 ONE.commandSearch($('#topSearch'), { run });
 $('#zoomRange').addEventListener('input', e => B.zoomAt(e.target.value / 100, $('#boardwrap').clientWidth / 2, $('#boardwrap').clientHeight / 2));
+ONE.insertPicture = (url, m) => B.addImage(url, (m && m.w) || 1024, (m && m.h) || 1024); // the epic AI panel puts the pictures it makes on the board
 $('#picInput').addEventListener('change', async e => { const f = [...e.target.files]; e.target.value = ''; for (const x of f) await B.loadImageFile(x); });
 const title = $('#docTitle');
 title.addEventListener('input', () => { D.doc.title = title.value; D.dirty(); });

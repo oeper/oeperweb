@@ -289,7 +289,7 @@ Object.assign(A, {
   todo:() => P.tag('todo'), important:() => P.tag('important'), question:() => P.tag('question'),
   findTags:() => sideKind === 'tags' ? A.closeSide() : showSide('tags', 'Tags Summary'), search:() => showSide('search', 'Search'), versions:() => sideKind === 'versions' ? A.closeSide() : showSide('versions', 'Page Versions'), bin:() => sideKind === 'bin' ? A.closeSide() : showSide('bin', 'Recycle Bin'),
   newSub:() => A.newPage('blank', true), newSectionBtn:A.newSection, deletePage:() => deletePage(N.nb.cur.p),
-  picture:() => ONE.pictures.choose(() => $('#picInput').click(), (url, m) => P.insertPictureSrc(url, m.alt)), file:() => $('#fileInput').click(), space:() => { const s = P.freeSpot(); P.newContainerAt(s.x, s.y); },
+  picture:() => $('#picInput').click(), file:() => $('#fileInput').click(), space:() => { const s = P.freeSpot(); P.newContainerAt(s.x, s.y); },
   date:() => P.insertText(new Date().toLocaleDateString()), time:() => P.insertText(new Date().toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' })), dateTime:() => P.insertText(new Date().toLocaleString(undefined, { dateStyle:'medium', timeStyle:'short' })),
   hr:() => P.insertHTML('<hr><p><br></p>'), symbol:b => ONE.menuAt(b, ['→','←','✓','✗','•','©','®','™','°','±','×','÷','≈','≠','≤','≥','∞','π','Σ','√','€','£','¥','§','¶','…','—','★','♥','☐'].map(s => ({ label:s, on:() => P.insertText(s) }))),
   typeTool:() => P.setTool('type'), penTool:() => P.setTool('pen'), hlTool:() => P.setTool('hl'), eraser:() => P.setTool('eraser'),
@@ -369,6 +369,7 @@ $('.qat').addEventListener('mousedown', e => e.preventDefault());
 ONE.commandSearch($('#topSearch'), { run, docSearch:q2 => { lastQuery = q2; showSide('search', 'Search'); } });
 $('#zoomRange').addEventListener('input', e => P.setZoom(e.target.value / 100));
 $('#canvaswrap').addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); P.setZoom(N.k * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); } }, { passive:false });
+ONE.insertPicture = (url, m) => P.insertPictureSrc(url, m && m.alt); // the epic AI panel puts the pictures it makes into the page
 $('#picInput').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; if (f.length) P.insertFiles(f); });
 $('#fileInput').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; if (f.length) P.insertFiles(f); });
 
