@@ -408,12 +408,28 @@
   .chat-row.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
   .chat-row .material-symbols-rounded:first-child { font-size: 18px; flex-shrink: 0; }
   .chat-row-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
-  .chat-row-delete {
+  .chat-row-menu {
     width: 28px; height: 28px; border-radius: 50%; border: none; background: none; color: inherit; opacity: 0.6;
     display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
   }
-  .chat-row-delete:hover { opacity: 1; background: rgba(0,0,0,0.15); }
-  .chat-row-delete .material-symbols-rounded { font-size: 16px; }
+  .chat-row-menu:hover { opacity: 1; background: rgba(0,0,0,0.15); }
+  .chat-row-menu .material-symbols-rounded { font-size: 18px; }
+  .chat-row .pin-ind { font-size: 16px; opacity: 0.7; flex-shrink: 0; transform: rotate(35deg); }
+  .chat-row .nb-count { font-size: 12px; opacity: 0.7; flex-shrink: 0; }
+  .chats-heading-row { display: flex; align-items: center; justify-content: space-between; }
+  .chats-heading-row button { width: 28px; height: 28px; border-radius: 50%; border: none; background: none; color: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .chats-heading-row button:hover { background: var(--md-sys-state-hover); }
+  .chats-heading-row button .material-symbols-rounded { font-size: 20px; }
+  .chats-list.nbs { margin-bottom: 4px; }
+  /* the pop-up menu of a chat / notebook (opened from its three dots or by right-click / long-press) */
+  .oe-menu { position: fixed; z-index: 300; min-width: 210px; max-width: min(300px, 92vw); max-height: 70vh; overflow-y: auto; background: var(--md-sys-color-surface-variant); border-radius: 18px; padding: 6px; box-shadow: 0 10px 34px rgba(0,0,0,0.4); animation: menuIn 0.12s ease; }
+  @keyframes menuIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+  .oe-menu .menu-title { font-size: 12px; color: var(--md-sys-color-on-surface-variant); padding: 8px 12px 4px; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .oe-menu button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: none; border-radius: 12px; background: none; color: var(--md-sys-color-on-surface); font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
+  .oe-menu button:hover { background: var(--md-sys-state-hover); }
+  .oe-menu button.danger { color: var(--md-sys-color-error); }
+  .oe-menu button .material-symbols-rounded { font-size: 20px; flex-shrink: 0; }
+  .share-link { width: 100%; padding: 11px 14px; border-radius: 12px; border: 1px solid var(--md-sys-color-outline); background: transparent; color: var(--md-sys-color-on-surface); font: inherit; font-size: 13px; }
 
   @media (min-width: 900px) {
     .chats-panel {
@@ -515,7 +531,9 @@
     </div>
     <button id="newChatBtn" class="new-chat-btn"><span class="material-symbols-rounded">edit_square</span> New chat</button>
     <label class="chats-search"><span class="material-symbols-rounded">search</span><input type="text" id="chatsSearch" placeholder="Search chats" autocomplete="off"></label>
-    <div class="chats-heading">Recent</div>
+    <div class="chats-heading chats-heading-row"><span>Notebooks</span><button type="button" id="newNotebookBtn" title="new notebook"><span class="material-symbols-rounded">add</span></button></div>
+    <div class="chats-list nbs" id="notebooksList"></div>
+    <div class="chats-heading" id="chatsHeading">Recent</div>
     <div class="chats-list" id="chatsList"></div>
   </div>
 
@@ -527,6 +545,7 @@
           <button id="newChatHeaderBtn" class="header-icon-btn" title="new chat"><span class="material-symbols-rounded">add</span></button>
         </div>
         <h1><svg class="epic-mark" viewBox="0 0 381 486" aria-hidden="true"><g fill="currentColor"><rect x="2" width="80" height="300" rx="40"/><rect x="297" width="80" height="300" rx="40"/></g><path d="M40 421C140 454.333 240 454.333 340 421" fill="none" stroke="currentColor" stroke-width="80" stroke-linecap="round"/></svg>epic AI</h1>
+        <button id="shareChatBtn" class="header-icon-btn" title="share this conversation"><span class="material-symbols-rounded">ios_share</span></button>
         <button id="memoryBtn" class="header-icon-btn" title="what epic AI remembers about you"><span class="material-symbols-rounded">psychology</span></button>
       </div>
     </header>
@@ -599,6 +618,8 @@ import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=3';
 import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=3';
 import { codeBlockHtml, copyToClipboard, injectCodeBlockStyles } from './shared/code-block.js?v=3';
+import { escHtml, parseAiMarkdown, splitThinking } from './shared/ai-markdown.js?v=1';
+import { call as workerCall } from './shared/codes-api.js?v=2';
 import { readFileForAI, FILE_ACCEPT, isImage } from './shared/ai-files.js?v=1';
 import { chatFetch, providerLabel } from './shared/ai-provider.js?v=4';
 import { askAI, aiFeaturesEnabled, onAiFeaturesChange, listOneDocs, readOneDocText, sanitizeForOne, createWordDoc, oneDocUrl } from './shared/ai-features.js?v=6';
@@ -655,314 +676,6 @@ Sign-in is Google-only, site-wide.
 About yourself: your name is epic AI, written exactly like that (lowercase "epic", capital "AI"), never "Epic AI" or "Gemini"). You are oeper's own AI assistant, made for oeper.dev, and you also exist as an Android app (the download is on the site's Tools page) where you can additionally read the phone screen, control the phone and talk by voice; the website version can't do those. You run on an open model (Gemma 4 26B) hosted on Cloudflare Workers AI. People who aren't signed in get 5 messages a day; signed-in people get a daily token allowance (shown on the Usage page, oeper.dev/usage), and a code can raise it. If someone asks what you are, who made you or what you can do, answer from this, and never claim abilities that aren't described here.
 
 Two scripted easter eggs, exact triggers only — don't force them into unrelated answers: if the user asks something equivalent to "what's the capital of France", reply with exactly: Oui oui oui, it is Paris. Merci! Only after that exact exchange has already happened earlier in this same conversation, if the user later asks something equivalent to "what does the cow say", reply with exactly: Oh moo moo moo, I speak that too. All day!`;
-
-function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-const EMOJI_SHORTCODES = {
-  smile: '😄', laugh: '😂', wink: '😉', heart: '❤️', fire: '🔥', thumbsup: '👍',
-  thumbsdown: '👎', clap: '👏', wave: '👋', thinking: '🤔', eyes: '👀', tada: '🎉',
-  rocket: '🚀', check: '✅', x: '❌', star: '⭐', warning: '⚠️', 100: '💯',
-};
-function expandShortcodes(text) {
-  return text.replace(/:([a-z0-9_+-]+):/g, (m, name) => EMOJI_SHORTCODES[name] || m);
-}
-
-// Renders a LaTeX expression via KaTeX (loaded in <head>, see the comment
-// there) into ready-to-embed HTML. Falls back to showing the raw $...$/
-// $$...$$ source, escaped, rather than throwing or silently eating the
-// text — both if KaTeX hasn't loaded yet for some reason and if the LaTeX
-// itself is malformed (throwOnError: false already covers the latter, but
-// katex.renderToString can still throw for a few edge cases it doesn't
-// consider "parse errors").
-const mathCache = new Map(); // a streamed answer is re-rendered over and over, so each expression is typeset once
-function renderMathOrFallback(expr, display) {
-  const raw = display ? `$$${expr}$$` : `$${expr}$`;
-  if (typeof katex === 'undefined') return escHtml(raw);
-  const key = (display ? 'd' : 'i') + expr;
-  if (mathCache.has(key)) return mathCache.get(key);
-  let html;
-  try {
-    html = katex.renderToString(expr.trim(), { throwOnError: false, displayMode: display, output: 'htmlAndMathml', maxSize: 20, maxExpand: 500 });
-  } catch {
-    html = escHtml(raw);
-  }
-  if (mathCache.size > 300) mathCache.clear();
-  mathCache.set(key, html);
-  return html;
-}
-
-// Inline formatting: bold/italic (incl. combined ***bold italic***),
-// strikethrough, images, the [[Button]](url) styled-link syntax, links,
-// and bare autolinks. Applied to already-HTML-escaped text (entities and
-// stashed placeholders only) coming out of a single block's content, so
-// none of this ever sees raw < > & from the model's own output.
-function parseInline(text) {
-  // a single enormous line (30,000 "[" for example) makes every emphasis and link pattern rescan the rest of the line: for those only the cheap rules run
-  if (text.length > 8000) return text.replace(/(?<!["'>])(https?:\/\/[^\s<]{1,2000}[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
-  return text
-    .replace(/&lt;(https?:\/\/[^\s<>&]+)&gt;/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
-    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, '<em>$1</em>')
-    .replace(/(?<!_)__(.+?)__(?!_)/g, '<strong>$1</strong>')
-    .replace(/(?<!\w)_([^_\n]+?)_(?!\w)/g, '<em>$1</em>')
-    .replace(/~~(.+?)~~/g, '<del>$1</del>')
-    .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g, '<img class="md-img" src="$2" alt="$1" loading="lazy">')
-    .replace(/\[\[([^\]]+)\]\]\((https?:\/\/[^)]+)\)/g, '<a class="md-btn" href="$2" target="_blank" rel="noopener"><span class="material-symbols-rounded">arrow_forward</span>$1</a>')
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    .replace(/(?<!["'>])(https?:\/\/[^\s<]+[^\s<.,:;!?'")\]])/g, url => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
-}
-
-// Groups consecutive '- '/'* '/'+ ' or '1. ' lines (tracking indentation
-// depth in units of 2 spaces) into a real, possibly-nested <ul>/<ol> tree.
-// '- [ ] '/'- [x] ' items render as disabled checkboxes instead of bullets.
-// Returns null if `lines` isn't actually a list so the block parser can
-// fall through to its other block types.
-function parseListBlock(lines) {
-  const itemRe = /^([ \t]*)(?:([-*+])|(\d+)[.)])[ \t]+(.*)$/;
-  if (!itemRe.test(lines[0])) return null;
-  let i = 0;
-  function parseAt(indentLevel) {
-    const items = [];
-    let ordered = null, start = 1;
-    while (i < lines.length) {
-      const m = lines[i].match(itemRe);
-      if (!m) break;
-      const indent = m[1].replace(/\t/g, '  ').length;
-      if (indent !== indentLevel) break; // shallower: belongs to caller. deeper: consumed by the recursive call below, never seen here.
-      if (ordered === null) { ordered = m[3] !== undefined; if (ordered) start = Math.max(0, parseInt(m[3], 10) || 1); }
-      else if ((m[3] !== undefined) !== ordered) break; // bullets turned into numbers (or back): that is a new list
-      i++;
-      let content = m[4];
-      let checkbox = '';
-      const task = content.match(/^\[( |x|X)\][ \t]+(.*)$/);
-      if (task) {
-        checkbox = `<input type="checkbox" class="md-task-checkbox" disabled ${task[1] !== ' ' ? 'checked' : ''}> `;
-        content = task[2];
-      }
-      let sub = '';
-      if (i < lines.length) {
-        const nextM = lines[i].match(itemRe);
-        const nextIndent = nextM ? nextM[1].replace(/\t/g, '  ').length : -1;
-        if (nextM && nextIndent > indent) sub = parseAt(nextIndent);
-      }
-      items.push(`<li>${checkbox}${parseInline(content)}${sub}</li>`);
-    }
-    const tag = ordered ? 'ol' : 'ul';
-    return `<${tag}${ordered && start !== 1 ? ` start="${start}"` : ''}>${items.join('')}</${tag}>`;
-  }
-  let html = '';
-  while (i < lines.length) {
-    const before = i, m = lines[i].match(itemRe);
-    html += parseAt(m ? m[1].replace(/\t/g, '  ').length : 0);
-    if (i === before) break;
-  }
-  return html;
-}
-
-// Splits already-placeholder-stashed, HTML-escaped text into blocks
-// (headings, horizontal rules, blockquotes, lists, tables, paragraphs) and
-// runs parseInline() over each block's own text. This is a real line-based
-// block parser rather than one flat regex chain — needed once lists can
-// nest and blockquotes can span multiple lines, since those don't compose
-// cleanly as independent global replaces.
-function parseBlocks(src) {
-  const lines = src.split('\n');
-  const out = [];
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-
-    if (!line.trim()) { i++; continue; }
-
-    // Stashed placeholder (code block / math block) sitting alone on its
-    // own line — emit as-is, not wrapped in a paragraph.
-    if (/^\u0000\d+\u0000$/.test(line.trim())) { out.push(line.trim()); i++; continue; }
-
-    const heading = line.match(/^(#{1,6})[ \t]+(.+)$/);
-    if (heading) {
-      out.push(`<h${heading[1].length}>${parseInline(heading[2])}</h${heading[1].length}>`);
-      i++; continue;
-    }
-
-    if (/^[ \t]*([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(line)) {
-      out.push('<hr>'); i++; continue;
-    }
-
-    // '>' shows up here as '&gt;' — this text has already been through
-    // escHtml() by the time parseBlocks sees it (has to be, so raw prose
-    // is never unescaped HTML), so every block-syntax check needs to
-    // match the escaped form. '#', '-', '*', '+', '|', digits and '.'
-    // aren't touched by escHtml, so only this one needs it.
-    if (/^[ \t]*&gt;[ \t]?/.test(line)) {
-      // A non-quote line is allowed to continue the quote as long as it's
-      // non-blank and we're already inside one ("lazy continuation") —
-      // a blank line always ends it.
-      const quoteLines = [];
-      while (i < lines.length && (/^[ \t]*&gt;[ \t]?/.test(lines[i]) || (lines[i].trim() && quoteLines.length))) {
-        quoteLines.push(lines[i].replace(/^[ \t]*&gt;[ \t]?/, ''));
-        i++;
-      }
-      out.push(`<blockquote>${parseBlocks(quoteLines.join('\n'))}</blockquote>`);
-      continue;
-    }
-
-    // only lines that start with "|" can be a table, so only those are joined (joining the whole rest of the reply for every line made long answers quadratic)
-    let tj = i; while (tj < lines.length && lines[tj].charAt(0) === '|') tj++;
-    const tableMatch = line.charAt(0) !== '|' ? null : lines.slice(i, tj + 1).join('\n').match(/^(\|.+\|)\n(\|[ \t]*:?-{2,}:?[ \t]*(?:\|[ \t]*:?-{2,}:?[ \t]*)*\|?)\n((?:\|.*\|\n?)*)/);
-    if (tableMatch && tableMatch.index === 0) {
-      const [full, headerLine, , bodyLines] = tableMatch;
-      const splitRow = row => row.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
-      const headers = splitRow(headerLine);
-      const rows = bodyLines.trim().split('\n').filter(Boolean).map(splitRow);
-      const thead = `<tr>${headers.map(h => `<th>${parseInline(h)}</th>`).join('')}</tr>`;
-      const tbody = rows.map(r => `<tr>${r.map(c => `<td>${parseInline(c)}</td>`).join('')}</tr>`).join('');
-      out.push(`<table class="md-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`);
-      i += full.split('\n').length;
-      continue;
-    }
-
-    if (/^[ \t]*(?:[-*+]|\d+[.)])[ \t]+/.test(line)) {
-      // Only actual "- "/"1. " item lines are collected here — a plain
-      // indented continuation line wouldn't match parseListBlock's itemRe
-      // and would otherwise get silently dropped rather than rendered, so
-      // it's better left for the next paragraph to pick up.
-      const listLines = [], itemTest = /^[ \t]*(?:[-*+]|\d+[.)])[ \t]+/;
-      while (i < lines.length) {
-        if (itemTest.test(lines[i])) { listLines.push(lines[i]); i++; continue; }
-        // A "loose" list (blank line between items, which models do all the time) stays one list so numbering does not restart at 1.
-        let j = i; while (j < lines.length && !lines[j].trim()) j++;
-        if (j > i && j < lines.length && listLines.length && itemTest.test(lines[j])) { i = j; continue; }
-        break;
-      }
-      out.push(parseListBlock(listLines));
-      continue;
-    }
-
-    // Paragraph: a run of plain, non-blank lines. Single \n between them
-    // becomes a soft <br> (this block output goes through .answer-content,
-    // which is white-space: normal — unlike raw chat bubbles, real block
-    // HTML here means bare newlines would otherwise just collapse away).
-    const paraLines = [];
-    while (i < lines.length && lines[i].trim() && !/^\u0000\d+\u0000$/.test(lines[i].trim())
-      && !/^(#{1,6})[ \t]+/.test(lines[i]) && !/^[ \t]*&gt;[ \t]?/.test(lines[i])
-      && !/^[ \t]*(?:[-*+]|\d+[.)])[ \t]+/.test(lines[i]) && !/^[ \t]*([-*_])(?:[ \t]*\1){2,}[ \t]*$/.test(lines[i])) {
-      paraLines.push(lines[i]); i++;
-    }
-    if (paraLines.length) out.push(`<p>${parseInline(paraLines.join('\n')).replace(/\n/g, '<br>')}</p>`);
-  }
-  return out.join('');
-}
-
-// Markdown for assistant replies — the full common set: headings, bold/
-// italic/bold-italic, strikethrough, blockquotes, ordered/unordered/task
-// lists (nested), tables, horizontal rules, images, links, the
-// [[Button]](url) styled-link syntax, emoji shortcodes, fenced ``` code
-// blocks, and $...$/$$...$$ LaTeX math via KaTeX. Code blocks and math are
-// pulled out into stashed placeholders before anything else runs, so
-// nothing downstream (escaping, emphasis, list/table parsing) ever
-// touches their contents — LaTeX especially is full of _, *, {, } that
-// would otherwise get mangled by the emphasis passes.
-function parseAiMarkdown(text) {
-  const stash = [];
-  const hold = html => { stash.push(html); return `\u0000${stash.length - 1}\u0000`; };
-
-  let src = String(text || '').replace(/\r\n/g, '\n');
-
-  src = src.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => hold(codeBlockHtml(lang, code.replace(/\n$/, ''))));
-
-  // $ must hug its content (no space right inside) so ordinary prose like
-  // "$5 and $10" is never misread as the start of a math span.
-  src = src.replace(/\$\$([\s\S]+?)\$\$/g, (m, expr) => hold(`<div class="math-block">${renderMathOrFallback(expr, true)}</div>`));
-  // the two alternatives cannot match the same character (a backslash pair, or anything that is not $, \ or a newline), so a stray run of $ and \ cannot backtrack for ever
-  src = src.replace(/\$(?!\s)((?:\\[^\n]|[^$\\\n])+?)(?<!\s)\$/g, (m, expr) => hold(`<span class="math-inline">${renderMathOrFallback(expr, false)}</span>`));
-
-  src = src.replace(/`([^`\n]+)`/g, (m, code) => hold(`<code>${escHtml(code)}</code>`));
-
-  src = expandShortcodes(escHtml(src));
-
-  const html = parseBlocks(src);
-  return html.replace(/\u0000(\d+)\u0000/g, (m, i) => stash[Number(i)]);
-}
-
-// The small local model occasionally repeats its entire answer verbatim
-// right after finishing it (e.g. "Hello! ...oeper.dev?\nHello! ...oeper.dev?")
-// instead of stopping. Collapse exact, consecutive duplicate lines in the
-// final answer rather than showing/saving the repeat — only touches lines
-// that are identical to the one directly before them, so it can't affect
-// legitimately repeated words/phrases within otherwise-different lines.
-function dedupeRepeatedLines(text) {
-  const lines = text.split('\n');
-  const out = [];
-  for (const line of lines) {
-    const t = line.trim();
-    if (t && out.length && out[out.length - 1].trim() === t) continue;
-    out.push(line);
-  }
-  return out.join('\n');
-}
-
-// Splits a raw assistant reply into "thinking" (reasoning-model output,
-// either a separate reasoning_content stream field or an inline <think>
-// tag) and the real answer, so the UI can show reasoning as a collapsible
-// "Show thinking" block instead of dumping it inline with the answer.
-function splitThinking(reasoningBuf, contentBuf, done) {
-  if (reasoningBuf) {
-    // Reasoning is already covered by the native reasoning_content channel
-    // above — but the model occasionally also writes a redundant
-    // <think>...</think> block as plain text inside content on top of
-    // that (see the system-prompt comment for why). Strip it out entirely
-    // rather than let raw reasoning text leak into the visible answer.
-    const openIdx = contentBuf.indexOf('<think>');
-    if (openIdx === -1) {
-      return { thinking: reasoningBuf, answer: contentBuf, stillThinking: contentBuf.length === 0 };
-    }
-    const closeIdx = contentBuf.indexOf('</think>', openIdx);
-    if (closeIdx === -1) {
-      // Still mid-block — hide it rather than show a partial raw dump.
-      return { thinking: reasoningBuf, answer: contentBuf.slice(0, openIdx), stillThinking: true };
-    }
-    const answer = (contentBuf.slice(0, openIdx) + contentBuf.slice(closeIdx + 8)).trim();
-    return { thinking: reasoningBuf, answer, stillThinking: answer.length === 0 };
-  }
-  const openIdx = contentBuf.indexOf('<think>');
-  if (openIdx === -1) {
-    const answer = contentBuf.replace(/<\/?think>/g, '').trim();
-    return { thinking: '', answer: done ? dedupeRepeatedLines(answer) : answer, stillThinking: false };
-  }
-  const closeIdx = contentBuf.indexOf('</think>', openIdx);
-  if (closeIdx === -1) {
-    // The small local model sometimes never emits a closing </think> and
-    // just rambles until it runs out of tokens without ever giving a real
-    // answer. While still streaming we can't tell the difference from a
-    // slow thinker, so keep showing it as reasoning. Once the stream is
-    // actually done, don't dump that raw rambling in as if it were the
-    // answer — it reads as broken (an earlier version of this did exactly
-    // that, and it looked like the AI wasn't responding at all). Keep it
-    // tucked behind "Show thinking" like normal, and give a plain fallback
-    // answer instead, since there's no real answer to show.
-    if (done) {
-      return {
-        thinking: contentBuf.slice(openIdx + 7).trim(),
-        answer: "(Didn't quite finish that thought — mind trying again?)",
-        stillThinking: false,
-      };
-    }
-    return { thinking: contentBuf.slice(openIdx + 7), answer: contentBuf.slice(0, openIdx), stillThinking: true };
-  }
-  const rawAnswer = (contentBuf.slice(0, openIdx) + contentBuf.slice(closeIdx + 8)).replace(/<\/?think>/g, '').trim();
-  return {
-    thinking: contentBuf.slice(openIdx + 7, closeIdx).trim(),
-    // The small local model occasionally emits a stray extra </think> after
-    // the real answer (<think>...</think>Hello!</think>) — only the first
-    // </think> is the real close, so strip any leftover tag text instead of
-    // letting it leak into the visible reply. It also sometimes repeats the
-    // whole answer verbatim right after finishing — dedupeRepeatedLines()
-    // collapses that once the stream is done.
-    answer: done ? dedupeRepeatedLines(rawAnswer) : rawAnswer,
-    stillThinking: false,
-  };
-}
 
 // Custom-animated collapse (see .thinking-content-wrap's grid-rows trick in
 // the CSS) instead of native <details>, which has no animation hook in any
@@ -1120,6 +833,21 @@ function saveChats() {
 }
 function newChatId() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 function makeChat() { return { id: newChatId(), title: 'new chat', messages: [], updatedAt: Date.now() }; }
+
+// Pins, notebooks and the links this browser shared are kept in this browser only (the Android app keeps its own on the phone); the chats themselves sync as before.
+const SHELF_KEY = 'oe-ai-shelf';
+const shelf = (() => {
+  let o = {}; try { o = JSON.parse(localStorage.getItem(SHELF_KEY) || '{}') || {}; } catch {}
+  return { pinned: Array.isArray(o.pinned) ? o.pinned : [], notebooks: Array.isArray(o.notebooks) ? o.notebooks : [], shares: o.shares && typeof o.shares === 'object' ? o.shares : {} };
+})();
+const saveShelf = () => { try { localStorage.setItem(SHELF_KEY, JSON.stringify(shelf)); } catch {} };
+let activeNotebook = null;
+function forgetChat(id) {
+  shelf.pinned = shelf.pinned.filter(x => x !== id);
+  shelf.notebooks.forEach(n => { n.chats = n.chats.filter(x => x !== id); });
+  delete shelf.shares[id];
+  saveShelf();
+}
 
 let chats = loadChats();
 let currentChatId = localStorage.getItem(CURRENT_CHAT_KEY);
@@ -1307,7 +1035,7 @@ function addMessageEl(role, content, imageUrl, index, docLinks, botLinks, images
   wrap.className = 'msg ' + role;
   const actionsHtml = index === undefined ? '' : role === 'user'
     ? `<div class="msg-actions"><button type="button" class="msg-action-btn" data-edit-msg="${index}" title="edit"><span class="material-symbols-rounded">edit</span></button></div>`
-    : `<div class="msg-actions"><button type="button" class="msg-action-btn" data-regen-msg="${index}" title="regenerate"><span class="material-symbols-rounded">refresh</span></button>${aiFeaturesEnabled() ? `<button type="button" class="msg-action-btn" data-save-one="${index}" title="save to oneWord"><span class="material-symbols-rounded">note_add</span></button>` : ''}</div>`;
+    : `<div class="msg-actions"><button type="button" class="msg-action-btn" data-regen-msg="${index}" title="regenerate"><span class="material-symbols-rounded">refresh</span></button><button type="button" class="msg-action-btn" data-share-msg="${index}" title="share this answer"><span class="material-symbols-rounded">ios_share</span></button>${aiFeaturesEnabled() ? `<button type="button" class="msg-action-btn" data-save-one="${index}" title="save to oneWord"><span class="material-symbols-rounded">note_add</span></button>` : ''}</div>`;
   wrap.innerHTML = `
     ${role === 'user' ? '' : `<div class="msg-avatar">${EPIC_MARK_SVG}</div>`}
     <div class="msg-col">
@@ -1337,6 +1065,7 @@ function addMessageEl(role, content, imageUrl, index, docLinks, botLinks, images
   wrap.querySelector('[data-save-one]')?.addEventListener('click', () => saveReplyToOne(index));
   wrap.querySelector('[data-edit-msg]')?.addEventListener('click', () => editMessage(index));
   wrap.querySelector('[data-regen-msg]')?.addEventListener('click', () => regenerateResponse(index));
+  wrap.querySelector('[data-share-msg]')?.addEventListener('click', () => shareMessage(index));
   followNow();
   return bubble;
 }
@@ -1409,28 +1138,215 @@ renderChatsList();
 function renderChatsList() {
   const list = document.getElementById('chatsList');
   observeList(list);
+  renderNotebooks();
+  const nb = shelf.notebooks.find(n => n.id === activeNotebook);
+  if (!nb) activeNotebook = null;
+  document.getElementById('chatsHeading').textContent = nb ? 'Chats in ' + nb.name : 'Recent';
   if (!chats.length) { list.innerHTML = '<p class="chats-empty">no chats yet.</p>'; return; }
   const q = (document.getElementById('chatsSearch')?.value || '').trim().toLowerCase();
-  const sorted = [...chats].sort((a, b) => b.updatedAt - a.updatedAt)
+  const pin = c => shelf.pinned.includes(c.id) ? 1 : 0;
+  const sorted = chats.filter(c => !nb || nb.chats.includes(c.id)).sort((x, y) => (pin(y) - pin(x)) || (y.updatedAt - x.updatedAt))
     .filter(c => !q || String(c.title || '').toLowerCase().includes(q) || (c.messages || []).some(m => typeof m.content === 'string' && m.content.toLowerCase().includes(q)));
-  if (!sorted.length) { list.innerHTML = '<p class="chats-empty">nothing matches.</p>'; return; }
+  if (!sorted.length) { list.innerHTML = '<p class="chats-empty">' + (q ? 'nothing matches.' : nb ? 'open a chat\'s menu and choose add to notebook.' : 'no chats yet.') + '</p>'; return; }
   list.innerHTML = sorted.map(c => `
     <div class="chat-row ${c.id === currentChatId ? 'active' : ''}" data-id="${c.id}">
       <span class="material-symbols-rounded">chat_bubble</span>
       <span class="chat-row-title">${escHtml(c.title)}</span>
-      <button class="chat-row-delete" data-id="${c.id}" title="delete"><span class="material-symbols-rounded">delete</span></button>
+      ${shelf.pinned.includes(c.id) ? '<span class="material-symbols-rounded pin-ind" title="pinned">push_pin</span>' : ''}
+      <button class="chat-row-menu" data-id="${c.id}" title="more"><span class="material-symbols-rounded">more_vert</span></button>
     </div>
   `).join('');
   list.querySelectorAll('.chat-row').forEach(row => {
     row.addEventListener('click', e => {
-      if (e.target.closest('.chat-row-delete')) return;
+      if (e.target.closest('.chat-row-menu')) return;
       switchChat(row.dataset.id);
     });
+    row.addEventListener('contextmenu', e => { e.preventDefault(); openChatMenu(row.dataset.id, { x: e.clientX, y: e.clientY }); });
   });
-  list.querySelectorAll('.chat-row-delete').forEach(btn => {
-    btn.addEventListener('click', e => { e.stopPropagation(); deleteChat(btn.dataset.id); });
+  list.querySelectorAll('.chat-row-menu').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); openChatMenu(btn.dataset.id, btn); });
   });
 }
+
+function renderNotebooks() {
+  const box = document.getElementById('notebooksList');
+  box.innerHTML = shelf.notebooks.map(n => `
+    <div class="chat-row ${n.id === activeNotebook ? 'active' : ''}" data-nb="${n.id}">
+      <span class="material-symbols-rounded">menu_book</span>
+      <span class="chat-row-title">${escHtml(n.name)}</span>
+      <span class="nb-count">${n.chats.length}</span>
+      <button class="chat-row-menu" data-nb="${n.id}" title="more"><span class="material-symbols-rounded">more_vert</span></button>
+    </div>
+  `).join('');
+  box.querySelectorAll('.chat-row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('.chat-row-menu')) return;
+      activeNotebook = activeNotebook === row.dataset.nb ? null : row.dataset.nb;
+      renderChatsList();
+    });
+    row.addEventListener('contextmenu', e => { e.preventDefault(); openNotebookMenu(row.dataset.nb, { x: e.clientX, y: e.clientY }); });
+  });
+  box.querySelectorAll('.chat-row-menu').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); openNotebookMenu(btn.dataset.nb, btn); }));
+}
+
+// ── pop-up menu ──
+let openMenuEl = null;
+function closeMenu() { if (openMenuEl) { openMenuEl.remove(); openMenuEl = null; } }
+document.addEventListener('pointerdown', e => { if (openMenuEl && !openMenuEl.contains(e.target)) closeMenu(); }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+function showMenu(anchor, title, items) {
+  closeMenu();
+  const m = document.createElement('div'); m.className = 'oe-menu';
+  if (title) { const t = document.createElement('div'); t.className = 'menu-title'; t.textContent = title; m.append(t); }
+  items.forEach(it => {
+    const b = document.createElement('button'); b.type = 'button'; if (it.danger) b.className = 'danger';
+    b.innerHTML = '<span class="material-symbols-rounded"></span><span></span>';
+    b.firstChild.textContent = it.icon; b.lastChild.textContent = it.label;
+    b.addEventListener('click', e => { e.stopPropagation(); if (!it.keepOpen) closeMenu(); it.fn(); });
+    m.append(b);
+  });
+  document.body.append(m); openMenuEl = m;
+  const r = anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : { left: anchor.x, right: anchor.x, top: anchor.y, bottom: anchor.y };
+  const mw = m.offsetWidth, mh = m.offsetHeight;
+  let x = r.right - mw; if (x < 8) x = Math.min(r.left, innerWidth - mw - 8); x = Math.max(8, Math.min(x, innerWidth - mw - 8));
+  let y = r.bottom + 4; if (y + mh > innerHeight - 8) y = r.top - mh - 4; y = Math.max(8, Math.min(y, innerHeight - mh - 8));
+  m.style.left = x + 'px'; m.style.top = y + 'px';
+}
+
+function openChatMenu(id, anchor) {
+  const chat = chats.find(c => c.id === id); if (!chat) return;
+  const pinned = shelf.pinned.includes(id);
+  showMenu(anchor, chat.title, [
+    { icon: 'ios_share', label: 'Share conversation', fn: () => openShareModal(chat) },
+    { icon: 'push_pin', label: pinned ? 'Unpin' : 'Pin', fn: () => { shelf.pinned = pinned ? shelf.pinned.filter(x => x !== id) : [...shelf.pinned, id]; saveShelf(); renderChatsList(); } },
+    { icon: 'menu_book', label: 'Add to notebook', keepOpen: true, fn: () => openNotebookPicker(chat, anchor) },
+    { icon: 'edit', label: 'Rename', fn: () => renameChat(chat) },
+    { icon: 'delete', label: 'Delete', danger: true, fn: () => deleteChat(id) },
+  ]);
+}
+function openNotebookPicker(chat, anchor) {
+  showMenu(anchor, 'Add to notebook', [
+    ...shelf.notebooks.map(n => ({
+      icon: n.chats.includes(chat.id) ? 'check_box' : 'check_box_outline_blank', label: n.name, keepOpen: true,
+      fn: () => { n.chats = n.chats.includes(chat.id) ? n.chats.filter(x => x !== chat.id) : [...n.chats, chat.id]; saveShelf(); renderChatsList(); openNotebookPicker(chat, anchor); },
+    })),
+    { icon: 'add', label: 'New notebook', fn: () => newNotebook(chat.id) },
+  ]);
+}
+function openNotebookMenu(id, anchor) {
+  const n = shelf.notebooks.find(x => x.id === id); if (!n) return;
+  showMenu(anchor, n.name, [
+    { icon: 'edit', label: 'Rename', fn: async () => { const t = await oePrompt('rename this notebook', { defaultValue: n.name, maxLength: 40 }); if (t && t.trim()) { n.name = t.trim().slice(0, 40); saveShelf(); renderChatsList(); } } },
+    { icon: 'delete', label: 'Delete notebook (keeps the chats)', danger: true, fn: () => { shelf.notebooks = shelf.notebooks.filter(x => x.id !== id); if (activeNotebook === id) activeNotebook = null; saveShelf(); renderChatsList(); } },
+  ]);
+}
+async function newNotebook(addChatId) {
+  const t = await oePrompt('name your notebook', { placeholder: 'untitled notebook', maxLength: 40 });
+  if (t === null) return;
+  shelf.notebooks.push({ id: 'n' + Date.now().toString(36), name: t.trim().slice(0, 40) || 'untitled notebook', chats: addChatId ? [addChatId] : [] });
+  saveShelf(); renderChatsList();
+}
+document.getElementById('newNotebookBtn')?.addEventListener('click', () => newNotebook(null));
+async function renameChat(chat) {
+  const t = await oePrompt('rename this chat', { defaultValue: chat.title, maxLength: 60 });
+  if (!t || !t.trim()) return;
+  chat.title = t.trim().slice(0, 60); chat.updatedAt = Date.now();
+  saveChats(); renderChatsList();
+}
+
+// ── sharing: a public, read-only copy of the conversation (or of one answer and its question) at oeper.dev/share?c=ID, made by the worker ──
+const SHARE_BASE = 'https://oeper.dev/share?c=';
+async function shrinkPicture(rec) {
+  if (!rec || !rec.data) return null;
+  if (rec.data.length < 300000) return { mime: rec.mime || 'image/jpeg', data: rec.data };
+  return new Promise(res => {
+    const im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 1024 / Math.max(im.width, im.height)), w = Math.round(im.width * k), h = Math.round(im.height * k);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(im, 0, 0, w, h);
+      res({ mime: 'image/jpeg', data: c.toDataURL('image/jpeg', 0.8).split(',')[1] });
+    };
+    im.onerror = () => res(null);
+    im.src = picSrc(rec);
+  });
+}
+async function shareMessages(chat, from, to) {
+  const out = []; let pics = 0;
+  for (const m of chat.messages.slice(from, to)) {
+    const role = m.role === 'user' ? 'user' : 'assistant';
+    const raw = String(m.content || '');
+    const text = (role === 'user' ? splitDocMarker(raw).text : splitThinking('', raw, true).answer) || '';
+    const o = { role, text: String(text).trim() };
+    if (role === 'assistant' && m.images && m.images.length) {
+      const imgs = [];
+      for (const p of m.images) {
+        if (pics >= 6) break;
+        const rec = await shrinkPicture(await PicStore.get(p.id));
+        if (rec) { imgs.push({ mime: rec.mime, data: rec.data, w: p.w, h: p.h, prompt: p.prompt }); pics++; }
+      }
+      if (imgs.length) o.images = imgs;
+    }
+    if (o.text || o.images) out.push(o);
+  }
+  return out;
+}
+function shareMessage(index) {
+  const chat = getCurrentChat(); const m = chat && chat.messages[index]; if (!m) return;
+  openShareModal(chat, index > 0 && chat.messages[index - 1].role === 'user' ? index - 1 : index, index + 1);
+}
+function openShareModal(chat, from, to) {
+  if (!getCurrentUser()) { oeAlert('sign in to share a conversation. the link belongs to your account, so you can switch it off again later.'); return; }
+  if (!chat.messages.length) { oeAlert('send a message first, then there is something to share.'); return; }
+  const whole = from == null, key = whole ? chat.id : null;
+  let id = key ? shelf.shares[key] || null : null;
+  const ov = document.createElement('div'); ov.className = 'memory-overlay';
+  ov.innerHTML = '<div class="memory-box" style="width:min(460px,100%)"><div class="memory-box-header"><h3><span class="material-symbols-rounded">ios_share</span><span data-h></span></h3><button type="button" class="header-icon-btn" data-x title="close"><span class="material-symbols-rounded">close</span></button></div><div class="memory-box-hint" data-hint style="margin-top:0"></div><div data-body></div></div>';
+  ov.querySelector('[data-h]').textContent = whole ? 'share conversation' : 'share this answer';
+  ov.querySelector('[data-hint]').textContent = whole
+    ? 'anyone with the link can read this conversation as it is now (including pictures), but not change it. messages you send later stay private until you update the link.'
+    : 'anyone with the link can read this answer and the question before it, but not change it.';
+  const body = ov.querySelector('[data-body]');
+  const close = () => { ov.classList.remove('open'); setTimeout(() => ov.remove(), 200); };
+  ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-x]')) close(); });
+  const say = (t, err) => { body.innerHTML = '<div class="memory-empty"></div>'; const d = body.firstChild; d.textContent = t; if (err) d.style.color = 'var(--md-sys-color-error)'; };
+  const paintNone = () => { body.innerHTML = '<div class="memory-empty">this is not shared right now.</div><div class="memory-file-bar"><button type="button" class="memory-btn primary" data-act="make">create link</button></div>'; };
+  const paintLink = note => {
+    const url = SHARE_BASE + id;
+    body.innerHTML = '<input class="share-link" readonly><div class="memory-file-bar" style="margin-top:12px"><button type="button" class="memory-btn primary" data-act="copy">copy link</button>'
+      + (navigator.share ? '<button type="button" class="memory-btn" data-act="native">share…</button>' : '') + '<a class="memory-btn" data-act="open" target="_blank" rel="noopener" style="text-decoration:none">open</a></div>'
+      + '<div class="memory-file-bar" style="margin-top:8px">' + (whole ? '<button type="button" class="memory-btn" data-act="update">update with new messages</button>' : '') + '<button type="button" class="memory-btn" data-act="stop" style="color:var(--md-sys-color-error)">stop sharing</button></div>'
+      + '<div class="memory-box-hint" data-note style="margin-top:10px"></div>';
+    body.querySelector('input').value = url; body.querySelector('[data-act=open]').href = url; body.querySelector('[data-note]').textContent = note || '';
+  };
+  async function make(update) {
+    say(update ? 'updating the link…' : 'making the link…');
+    try {
+      const msgs = await shareMessages(chat, whole ? 0 : from, whole ? undefined : to);
+      const firstQ = (msgs.find(m => m.role === 'user') || {}).text || '';
+      const r = await workerCall('POST', '/api/share', { id: update ? id : undefined, title: whole ? chat.title : (firstQ.slice(0, 80) || chat.title), messages: msgs, app: 'web' });
+      id = r.id; if (key) { shelf.shares[key] = id; saveShelf(); }
+      paintLink(update ? 'the link now shows the conversation as it is.' : 'copy it and send it to anyone.');
+    } catch (e) { say(e.message || 'could not make the link.', true); body.insertAdjacentHTML('beforeend', '<div class="memory-file-bar" style="margin-top:12px;justify-content:center"><button type="button" class="memory-btn primary" data-act="make">try again</button></div>'); }
+  }
+  body.addEventListener('click', async e => {
+    const act = e.target.closest('[data-act]'); if (!act) return;
+    const w = act.dataset.act;
+    if (w === 'make') make(false);
+    else if (w === 'update') make(true);
+    else if (w === 'copy') { const ok = await copyToClipboard(SHARE_BASE + id); body.querySelector('[data-note]').textContent = ok ? 'link copied.' : 'could not copy, select the link and copy it by hand.'; }
+    else if (w === 'native') { try { await navigator.share({ title: chat.title, url: SHARE_BASE + id }); } catch { /* cancelled */ } }
+    else if (w === 'stop') {
+      if (!await oeConfirm('stop sharing? the link will stop working for everyone who has it.', { danger: true, okLabel: 'stop sharing' })) return;
+      try { await workerCall('DELETE', '/api/share/' + id); } catch (er) { if (er.status !== 404) { oeAlert(er.message || 'could not stop sharing right now.'); return; } }
+      if (key) { delete shelf.shares[key]; saveShelf(); }
+      id = null; paintNone();
+    }
+  });
+  document.body.append(ov); requestAnimationFrame(() => ov.classList.add('open'));
+  if (id) paintLink('this conversation is already shared. update the link if you want it to show your newer messages.'); else make(false);
+}
+document.getElementById('shareChatBtn')?.addEventListener('click', () => { const c = getCurrentChat(); if (c) openShareModal(c); });
 
 document.getElementById('chatsSearch')?.addEventListener('input', () => renderChatsList());
 // the suggestion chips on the empty chat
@@ -1462,6 +1378,10 @@ function startNewChat() {
   closeChatsPanel();
 }
 function deleteChat(id) {
+  // a deleted conversation must not stay readable through a link
+  const sid = shelf.shares[id];
+  if (sid && getCurrentUser()) workerCall('DELETE', '/api/share/' + sid).catch(() => {});
+  forgetChat(id);
   chats = chats.filter(c => c.id !== id);
   saveChats();
   if (id === currentChatId) {

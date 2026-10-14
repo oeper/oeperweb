@@ -878,6 +878,59 @@ async function handleRedeem(request, env) {
 // Feedback / bug reports. Guests may send too (limited per network address); a signed-in sender's email is stored so the owner can answer.
 const FEEDBACK_KINDS = ['bug', 'idea', 'legal', 'rating', 'other'];
 const clipText = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, n);
+// ── shared conversations: a public, read-only snapshot of a chat (or of one answer with the question before it), opened at oeper.dev/share?c=ID ──
+const SHARE_TEXT_MAX = 40_000, SHARE_MSGS_MAX = 400, SHARE_TOTAL_TEXT = 400_000, SHARE_PICS_MAX = 6, SHARE_PIC_CHARS = 450_000, SHARE_PICS_TOTAL = 1_300_000;
+function cleanShare(body) {
+  const msgs = [];
+  let total = 0, pics = 0, picChars = 0;
+  for (const m of (Array.isArray(body.messages) ? body.messages : []).slice(0, SHARE_MSGS_MAX)) {
+    if (!m || typeof m !== 'object') continue;
+    const role = m.role === 'user' ? 'user' : 'assistant';
+    const text = clipText(m.text, SHARE_TEXT_MAX);
+    const images = [];
+    for (const p of (Array.isArray(m.images) ? m.images : []).slice(0, 4)) {
+      if (!p || typeof p.data !== 'string' || !/^[A-Za-z0-9+/=]+$/.test(p.data)) continue;
+      if (pics >= SHARE_PICS_MAX || p.data.length > SHARE_PIC_CHARS || picChars + p.data.length > SHARE_PICS_TOTAL) continue;
+      pics++; picChars += p.data.length;
+      images.push({ mime: p.mime === 'image/png' ? 'image/png' : 'image/jpeg', data: p.data, w: Math.min(4096, Number(p.w) || 0), h: Math.min(4096, Number(p.h) || 0), prompt: clipText(p.prompt, 300) });
+    }
+    if (!text && !images.length) continue;
+    total += text.length;
+    if (total > SHARE_TOTAL_TEXT) break;
+    msgs.push(images.length ? { role, text, images } : { role, text });
+  }
+  return msgs;
+}
+async function handleShareSave(request, env) {
+  const user = await userFromRequest(request, env);
+  if (!user) return json({ error: 'Sign in to share a conversation.' }, 401, request);
+  const body = await readBody(request);
+  const messages = cleanShare(body);
+  if (!messages.length) return json({ error: 'There is nothing to share yet.' }, 400, request);
+  const title = clipText(body.title, 120) || 'epic AI conversation';
+  const id = typeof body.id === 'string' && /^[A-Za-z0-9_-]{6,24}$/.test(body.id) ? body.id : null;
+  const r = await ledgerOf(env).shareSave(user.email, id, title, JSON.stringify({ messages, app: clipText(body.app, 20) }));
+  if (!r.ok) return json({ error: 'You have 100 shared links already. Stop sharing some of them first.' }, 429, request);
+  return json({ id: r.id, url: 'https://oeper.dev/share?c=' + r.id, updated: !!r.updated }, 200, request);
+}
+async function handleShareGet(request, env, id) {
+  const row = await ledgerOf(env).shareGet(id);
+  if (!row) return json({ error: 'This shared conversation does not exist any more.' }, 404, request);
+  let data = {}; try { data = JSON.parse(row.body); } catch {}
+  return json({ id: row.id, title: row.title, created: row.created, updated: row.updated, messages: data.messages || [] }, 200, request);
+}
+async function handleShareList(request, env) {
+  const user = await userFromRequest(request, env);
+  if (!user) return json({ error: 'Sign in first.' }, 401, request);
+  return json({ shares: await ledgerOf(env).shareList(user.email) }, 200, request);
+}
+async function handleShareDelete(request, env, id) {
+  const user = await userFromRequest(request, env);
+  if (!user) return json({ error: 'Sign in first.' }, 401, request);
+  const ok = await ledgerOf(env).shareDelete(user.email, id, isOwner(user));
+  return json(ok ? { ok: true } : { error: 'That link is not yours, or it is already gone.' }, ok ? 200 : 404, request);
+}
+
 async function handleFeedback(request, env) {
   const body = await readBody(request);
   const message = clipText(body.message, 2000);
@@ -1108,6 +1161,11 @@ export default {
       if (url.pathname === '/api/redeem' && request.method === 'POST') return handleRedeem(request, env);
       if (url.pathname === '/api/image' && request.method === 'POST') return handleImage(request, env);
       if (url.pathname === '/api/feedback' && request.method === 'POST') return handleFeedback(request, env);
+      if (url.pathname === '/api/share' && request.method === 'POST') return handleShareSave(request, env);
+      if (url.pathname === '/api/shares' && request.method === 'GET') return handleShareList(request, env);
+      const sm = /^\/api\/share\/([A-Za-z0-9_-]{6,24})$/.exec(url.pathname);
+      if (sm && request.method === 'GET') return handleShareGet(request, env, sm[1]);
+      if (sm && request.method === 'DELETE') return handleShareDelete(request, env, sm[1]);
       if (url.pathname.startsWith('/api/admin/')) return handleAdmin(request, env, url);
     }
 

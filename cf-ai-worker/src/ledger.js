@@ -1,8 +1,8 @@
-// The ledger: promo codes, product keys, who has epic AI Plus, and how many epic AI messages each person has used today.
+// The ledger: promo codes, product keys, who has oeper+, and how many epic AI messages each person has used today.
 // One Durable Object (a single instance, "main") holds all of it, so counting and "this key was already used" are exact, never racy.
 //
 // Two kinds of code, kept apart on purpose:
-//   product key  OPD-XXXX-XXXX-XXXX   a random key with a product prefix, made in bulk, normally one use. Unlocks a product (epic AI Plus).
+//   product key  OPD-XXXX-XXXX-XXXX   a random key with a product prefix, made in bulk, normally one use. Unlocks a product (oeper+).
 //   promo code   WELCOME50            a word the owner picks, can be used many times (cap, expiry, once per person). Gives a bonus.
 // Where a code may be redeemed (scope): "epicai" works on oeper.dev/redeem AND inside the epic AI app, "site" only on oeper.dev.
 // What a code gives (grant): plusDays (-1 = for life) of oeper+ and/or bonusTokens (extra tokens, used after the daily allowance runs out)
@@ -91,6 +91,44 @@ function userView(user, now = Date.now()) {
 }
 
 export class Ledger extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env);
+    // shared conversations (public read-only links). SQL rather than key/value because a conversation with pictures is bigger than a key/value entry may be
+    ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS shares (id TEXT PRIMARY KEY, owner TEXT NOT NULL, title TEXT, body TEXT NOT NULL, created INTEGER, updated INTEGER, views INTEGER DEFAULT 0)');
+    ctx.storage.sql.exec('CREATE INDEX IF NOT EXISTS shares_owner ON shares(owner)');
+  }
+
+  // ── shared conversations ──
+  /** Saves a snapshot. With an id the person already owns it is updated in place (same link); otherwise a new link is made. At most 100 links per person. */
+  shareSave(email, id, title, body) {
+    const sql = this.ctx.storage.sql, now = Date.now();
+    if (id) {
+      const row = sql.exec('SELECT owner FROM shares WHERE id = ?', id).toArray()[0];
+      if (row && row.owner === email) { sql.exec('UPDATE shares SET title = ?, body = ?, updated = ? WHERE id = ?', title, body, now, id); return { ok: true, id, updated: true }; }
+    }
+    const n = sql.exec('SELECT COUNT(*) AS n FROM shares WHERE owner = ?', email).toArray()[0].n;
+    if (n >= 100) return { ok: false, reason: 'limit' };
+    const bytes = crypto.getRandomValues(new Uint8Array(9));
+    const nid = btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    sql.exec('INSERT INTO shares (id, owner, title, body, created, updated, views) VALUES (?, ?, ?, ?, ?, ?, 0)', nid, email, title, body, now, now);
+    return { ok: true, id: nid };
+  }
+  shareGet(id) {
+    const sql = this.ctx.storage.sql;
+    const row = sql.exec('SELECT id, title, body, created, updated FROM shares WHERE id = ?', id).toArray()[0];
+    if (!row) return null;
+    sql.exec('UPDATE shares SET views = views + 1 WHERE id = ?', id);
+    return row;
+  }
+  shareDelete(email, id, any) {
+    const sql = this.ctx.storage.sql;
+    const row = sql.exec('SELECT owner FROM shares WHERE id = ?', id).toArray()[0];
+    if (!row || (row.owner !== email && !any)) return false;
+    sql.exec('DELETE FROM shares WHERE id = ?', id);
+    return true;
+  }
+  shareList(email) { return this.ctx.storage.sql.exec('SELECT id, title, created, updated, views FROM shares WHERE owner = ? ORDER BY updated DESC', email).toArray(); }
+
   async #config() {
     const c = (await this.ctx.storage.get('config')) || {};
     return {
