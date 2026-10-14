@@ -2,7 +2,7 @@
    Off by default. When on and signed in, every document is mirrored to fs.oeper.dev (forum-server/one-sync.js)
    under oneWord/, oneSheet/, oneSlide/, oneIdea/ and onePDF/, which is also where oeper.dev/files shows them.
    The browser copy stays the working copy; sync is last-writer-wins on each document's own "updated" time. */
-import { onAccountChange, getCurrentUser, signIn, signOutUser, SERVER_ENDPOINT, ensureProfileLoaded, getProfile, handleOf, uploadFile, db } from '/shared/account.js?v=42';
+import { onAccountChange, getCurrentUser, signIn, signOutUser, SERVER_ENDPOINT, ensureProfileLoaded, getProfile, handleOf, uploadFile, db } from '/shared/account.js?v=43';
 import { collection, addDoc, serverTimestamp, doc, setDoc, getDoc, onSnapshot, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 document.documentElement.classList.add('cloud'); // shows the Share buttons (they don't exist in the standalone build)
 
@@ -555,7 +555,18 @@ async function publishSite(id, title, html) {
   if (!r.ok) throw new Error(j.error || 'Publishing failed (' + r.status + ')');
   return { url:j.publicUrl || j.url };
 }
-window.ONE_CLOUD = { ready, syncAll, publishSite, fetchOne, share, openShared, openSettings, enabled:() => settings().enabled, isSynced:(app, id) => app + ':' + id in store.get(STATE, {}),
+// epic AI pictures for the apps (ONE.pictures in shared/core.js asks for these): same limits as in epic AI itself, counted by the worker
+const AI_WORKER = 'https://oeper-ai.oeper.workers.dev';
+async function workerCall(method, path, body) {
+  const u = getCurrentUser(); if (!u) throw new Error('Sign in to your oeper.dev account to make pictures.');
+  const token = await u.getIdToken();
+  let r; try { r = await fetch(AI_WORKER + path, { method, headers:{ Authorization:'Bearer ' + token, 'Content-Type':'application/json' }, body:body ? JSON.stringify(body) : undefined }); } catch { throw new Error('Could not reach epic AI. Check your connection and try again.'); }
+  const j = await jsonOr(r); if (!r.ok) { const e = new Error(j.error || 'Something went wrong (' + r.status + ')'); e.reason = j.reason; throw e; }
+  return j;
+}
+const makePicture = o => workerCall('POST', '/api/image', { prompt:o.prompt, shape:o.shape, quality:o.best ? 'best' : undefined });
+const pictureInfo = () => getCurrentUser() ? workerCall('GET', '/api/usage') : Promise.resolve({ signedIn:false });
+window.ONE_CLOUD = { makePicture, pictureInfo, ready, syncAll, publishSite, fetchOne, share, openShared, openSettings, enabled:() => settings().enabled, isSynced:(app, id) => app + ':' + id in store.get(STATE, {}),
   collaborate, openCollabLink, isCollab, collabInfo,
   account:() => acct,
   onAccount:cb => { acctListeners.add(cb); cb(acct); return () => acctListeners.delete(cb); },

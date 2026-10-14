@@ -211,6 +211,7 @@ P.shrinkImage = async f => {
 const fmtSize = b => b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
 P.imgHTML = (src, alt = '') => `<p><img src="${src}" alt="${esc(alt)}" style="width:${420}px"></p><p><br></p>`;
 P.fileHTML = async f => { if (f.size > 3 * 1048576) { ONE.toast(`${f.name} is ${fmtSize(f.size)}. Files over 3 MB are too big to keep in this browser.`); return ''; } const u = await readURL(f); return `<a class="att" contenteditable="false" href="${u}" download="${esc(f.name)}">${icon('attach_file')}${esc(f.name)} · ${fmtSize(f.size)}</a>&nbsp;`; };
+P.insertPictureSrc = (src, alt) => P.insertHTML(P.imgHTML(src, alt || 'picture'));
 P.insertFiles = async (files, at) => {
   let html = '';
   for (const f of files) html += f.type.startsWith('image/') ? P.imgHTML(await P.shrinkImage(f), f.name) : await P.fileHTML(f);

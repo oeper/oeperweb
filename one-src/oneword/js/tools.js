@@ -239,7 +239,7 @@ A.pageBreak = () => W.insertHTML('<div class="pgbreak" contenteditable="false"><
 A.colBreak = () => W.insertHTML('<div class="colbreak" contenteditable="false"></div><p><br></p>');
 A.blankPage = () => W.insertHTML('<div class="pgbreak" contenteditable="false"></div><p><br></p><div class="pgbreak" contenteditable="false"></div><p><br></p>');
 A.hr = () => W.insertHTML('<hr><p><br></p>');
-A.picture = () => $('#picInput').click();
+A.picture = () => ONE.pictures.choose(() => $('#picInput').click(), (url, m) => W.insertHTML(`<img src="${url}" alt="${ONE.esc(m.alt || '')}" style="width:4in">`));
 W.insertImageFile = f => { const r = new FileReader(); r.onload = () => W.insertHTML(`<img src="${r.result}" alt="" style="width:${Math.min(4, 4)}in">`); r.readAsDataURL(f); };
 $('#picInput').addEventListener('change', e => { const f = e.target.files[0]; if (f) W.insertImageFile(f); e.target.value = ''; });
 

@@ -10,8 +10,7 @@
 // stale cached copy for hours after a deploy.
 import {
   mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange, signIn,
-  onCreditsChange, CREDITS_ICON,
-} from './account.js?v=42';
+} from './account.js?v=43';
 import './settings-sync.js?v=3'; // keeps this person's settings the same on every device (can be switched off in settings)
 import {
   collection, query, orderBy, limit, getDocs, onSnapshot, where, doc, updateDoc, writeBatch,
@@ -227,17 +226,20 @@ function injectStyles() {
     .oe-nav-icon-link .material-symbols-rounded { font-size: 24px; }
     .oe-nav-icon-link:hover { color: var(--md-sys-color-on-surface); }
 
-    /* Credits balance chip — sits between the Settings icon and the account
-       chip, desktop only (mobile reaches credits.html via the Create
+    /* oeper+ chip — sits between the Settings icon and the account
+       chip, desktop only (mobile reaches plus.html via the Create
        drawer instead, same split as Settings/the account chip below). */
-    .oe-credits-chip {
+    .oe-plus-mark {
+      display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%;
+      background: linear-gradient(135deg, #f7d774, #e8a33d); color: #3b2300; font-size: 14px; font-weight: 800; line-height: 1;
+    }
+    .oe-plus-chip {
       display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; text-decoration: none;
       background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);
       font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 13px; font-weight: 500;
       padding: 6px 12px 6px 10px; border-radius: 100px; transition: opacity 0.15s;
     }
-    .oe-credits-chip:hover { opacity: 0.85; }
-    .oe-credits-chip .material-symbols-rounded { font-size: 16px; }
+    .oe-plus-chip:hover { opacity: 0.85; }
 
     .oe-nav-hamburger {
       display: none; align-items: center; justify-content: center; width: 40px; height: 40px;
@@ -373,7 +375,7 @@ function injectStyles() {
       .oe-nav-mobile-search-btn { display: flex; order: 1; }
       .oe-nav-logo { order: 2; flex: 1; justify-content: center; }
       .oe-nav-right { order: 3; gap: 10px; margin-left: 0; }
-      .oe-nav-icon-link[title="Settings"], #oeNavAccountBar, .oe-credits-chip { display: none; }
+      .oe-nav-icon-link[title="Settings"], #oeNavAccountBar, .oe-plus-chip { display: none; }
       /* The chat icon and this menu trade places with mobile's bottom nav:
          Chat/Messages moves down there (see .oe-bottom-nav-item[data-id=
          "messages"]), and this trigger takes roughly where Chat used to
@@ -500,8 +502,8 @@ export function mountTopNav(container) {
         </div>
         <a href="/messages" class="oe-nav-icon-link oe-nav-chat-link" title="Chat"><span class="material-symbols-rounded" id="oeNavChatIcon">chat_bubble</span></a>
         <a href="/settings" class="oe-nav-icon-link" title="Settings"><span class="material-symbols-rounded">settings</span></a>
-        <a href="/credits" class="oe-credits-chip" id="oeNavCreditsChip" title="credits" style="display:none;">
-          <span class="material-symbols-rounded">${CREDITS_ICON}</span><span id="oeNavCreditsValue">0</span>
+        <a href="/plus" class="oe-plus-chip" id="oeNavPlusChip" title="oeper+" style="display:none;">
+          <span class="oe-plus-mark">+</span>oeper+
         </a>
         <div id="oeNavAccountBar"></div>
       </div>
@@ -510,7 +512,7 @@ export function mountTopNav(container) {
       <a href="/feed" class="oe-create-item"><span class="material-symbols-rounded">forum</span>new post</a>
       <a href="/videos" class="oe-create-item"><span class="material-symbols-rounded">smart_display</span>new video</a>
       <a href="/files" class="oe-create-item"><span class="material-symbols-rounded">folder</span>new file</a>
-      <a href="/credits" class="oe-create-item"><span class="material-symbols-rounded">${CREDITS_ICON}</span>credits</a>
+      <a href="/plus" class="oe-create-item"><span class="material-symbols-rounded">add_circle</span>oeper+</a>
       <a href="/tools" class="oe-create-item"><span class="material-symbols-rounded">build</span>tools</a>
     </div>
     <div class="oe-profile-menu-sheet" id="oeProfileMenuSheet">
@@ -651,13 +653,9 @@ export function mountTopNav(container) {
   initNotifications(navEl);
   initChatUnread(navEl);
 
-  // Credits chip: hidden entirely signed-out (onCreditsChange fires 0 for
-  // a signed-out visitor same as an empty balance, so visibility has to
-  // key off account state, not the balance itself).
-  const creditsChip = navEl.querySelector('#oeNavCreditsChip');
-  const creditsValue = navEl.querySelector('#oeNavCreditsValue');
-  onAccountChange(user => { creditsChip.style.display = user ? '' : 'none'; });
-  onCreditsChange(balance => { creditsValue.textContent = balance.toLocaleString(); });
+  // oeper+ chip: only for people who are signed in
+  const plusChip = navEl.querySelector('#oeNavPlusChip');
+  onAccountChange(user => { plusChip.style.display = user ? '' : 'none'; });
 }
 
 // Called from profile.html once it knows whether the signed-in viewer is
@@ -870,8 +868,6 @@ function notifText(n) {
   if (n.type === 'comment') return `${name} commented on your ${target}${n.preview ? ': ' + escHtml(n.preview) : ''}`;
   if (n.type === 'follow') return `${name} started following you`;
   if (n.type === 'badge') return `you were given a badge${n.preview ? ': ' + escHtml(n.preview) : ''}`;
-  if (n.type === 'credits') return `${name} sent you ${n.preview ? escHtml(n.preview) : 'some'} credits`;
-  if (n.type === 'creditsGrant') return `you were granted ${n.preview ? escHtml(n.preview) : 'some'} credits`;
   if (n.type === 'chess_challenge') return `${name} challenged you to a game of chess`;
   if (n.type === 'chess_move') return `it's your move against ${name}`;
   return name;
@@ -879,7 +875,6 @@ function notifText(n) {
 function notifUrl(n) {
   if (n.type === 'follow') { const h = handleOf(n.actorEmail); return h ? `/profile?u=${encodeURIComponent(h)}` : '/'; }
   if (n.type === 'badge') return '/settings';
-  if (n.type === 'credits' || n.type === 'creditsGrant') return '/credits';
   if (n.type === 'chess_challenge' || n.type === 'chess_move') return `/chess?game=${n.targetId}`;
   if (n.targetKind === 'post') return `/feed?post=${n.targetId}`;
   if (n.targetKind === 'video') return `/videos?video=${n.targetId}`;
@@ -898,10 +893,10 @@ function initNotifications(navEl) {
 
   function rowHtml(n) {
     const profile = getProfile(n.actorEmail, n.actorName, n.actorPhoto);
-    const icon = { upvote: 'favorite', comment: 'mode_comment', follow: 'person_add', badge: 'verified', credits: CREDITS_ICON, creditsGrant: CREDITS_ICON }[n.type] || 'notifications';
+    const icon = { upvote: 'favorite', comment: 'mode_comment', follow: 'person_add', badge: 'verified' }[n.type] || 'notifications';
     return `
       <a class="oe-notif-row ${n.read ? '' : 'unread'}" href="${notifUrl(n)}" data-id="${n.id}">
-        ${n.type === 'badge' || n.type === 'creditsGrant'
+        ${n.type === 'badge'
           ? `<div class="oe-notif-icon"><span class="material-symbols-rounded">${icon}</span></div>`
           : `<img class="oe-notif-avatar" src="${profile.photo || ''}" alt="">`}
         <div class="oe-notif-main">

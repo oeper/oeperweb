@@ -110,7 +110,8 @@
       <tr><td><strong>epic AI usage</strong>: how many tokens you used today and in total, which plan or codes you have redeemed and when, and for people who are not signed in, a count tied to their network address</td><td>to apply the daily limits, to apply codes, and to stop abuse. Daily counters are small numbers per person; they are not a copy of what you wrote.</td></tr>
       <tr><td><strong>screen text and screenshots, when you use phone control or ask epic AI to look at your screen</strong> (Android app)</td><td>to let the AI see what you see so it can help or do the task. The text and picture of the screen go to Cloudflare Workers AI with your message. Nothing is read in the background, and banking, wallet and password apps are skipped. They are kept in your chat only as a short note, not as the picture.</td></tr>
       <tr><td><strong>feedback and bug reports</strong> you send from the app or the feedback page: your message, the kind of report, the app and version, and, only if you leave them in, your account email, a contact address you typed, the device model and Android version, and the last crash log</td><td>to read, answer and fix what you reported. A crash report is only sent after you press Send. Reports are kept in our database (the newest few hundred), can be forwarded to a private owner channel, and can be deleted on request. A thumbs up or down on an answer is sent as a short report; the answer's text is included only if you tick that box.</td></tr>
-      <tr><td><strong>credits</strong>: balance, transfers between users, purchase records</td><td>to run the credits system. No payment card details are collected by us.</td></tr>
+      <tr><td><strong>oeper+</strong>: whether you have it and until when, whether you chose to show the + badge, and, once buying opens, purchase records</td><td>to give you what the plan includes and to show the + if you want it. Whether you have oeper+ and until when is part of your public profile record, so others who look can see it. No payment card details are collected by us.</td></tr>
+      <tr><td><strong>pictures you ask epic AI or the One suite to make</strong>: your description, and a count of how many you made today</td><td>to make the picture and to apply the daily limit. The description is checked by a safety filter and goes to Cloudflare Workers AI (for the best-quality pictures, to Google through Cloudflare). The finished picture is sent back to you and kept on your own device; we do not store it on our servers.</td></tr>
       <tr><td><strong>signed-in devices</strong>: a random device id, a label such as your browser and operating system, and the last time that device was active</td><td>to show you a list of where you are signed in, in settings.</td></tr>
       <tr><td><strong>your IP address</strong>, seen by our servers when you connect</td><td>for rate limiting and abuse prevention. For uploads without an account, the IP address is stored along with an upload count so we can enforce the anonymous upload limit.</td></tr>
       <tr><td><strong>reports</strong> you send about content</td><td>to review and act on them. A report, with the reported content and your account, is sent to a private channel only the owners can read.</td></tr>
@@ -121,7 +122,7 @@
     <h2>who can see it</h2>
     <ul>
       <li><strong>the public</strong>: your handle, name, photo, bio, public posts, comments, files you made public and your public activity.</li>
-      <li><strong>other users</strong>: only what you send them, such as messages and credit transfers.</li>
+      <li><strong>other users</strong>: only what you send them, such as messages.</li>
       <li><strong>the site owners</strong>: because we run the database and the file server, we can technically read stored content. We only look at private content when needed to handle a report, enforce the terms, fix a fault or comply with the law.</li>
     </ul>
 
@@ -173,7 +174,7 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=43';
+import { mountTopNav } from './shared/topnav.js?v=44';
 import { revealStatic } from './shared/motion.js?v=3';
 import { mountFooter } from './shared/footer.js?v=7';
 mountTopNav();

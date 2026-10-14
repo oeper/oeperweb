@@ -1,14 +1,13 @@
 // Writing to Firestore as the project itself (a service account), for the one thing the site's own rules can't allow a visitor to do:
-// give someone oeper.dev credits when they redeem a promo code or product key. Rules still protect everything else: only this Worker,
-// holding the service account's key, can mint credits this way.
+// publish who has oeper+ (users/{email}.plusUntil, read by the site to show the + badge). Rules stop everyone else from writing that field.
 //
 // Setup (once): Firebase console › Project settings › Service accounts › Generate new private key, then
 //   cd cf-ai-worker && npx wrangler secret put FIREBASE_SERVICE_ACCOUNT      (paste the whole downloaded JSON file)
-// Without the secret, credits from a code stay "pending" in the ledger (nothing is lost) and are delivered once it is set.
+// Without the secret everything still works; the + badge just doesn't appear for anyone.
 
 const PROJECT_ID = 'oepernet-1683535959256';
 
-export const creditsConfigured = env => !!(env && env.FIREBASE_SERVICE_ACCOUNT);
+export const serviceAccountConfigured = env => !!(env && env.FIREBASE_SERVICE_ACCOUNT);
 
 const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const b64urlText = s => b64url(new TextEncoder().encode(s));
@@ -35,16 +34,14 @@ async function accessToken(env) {
   return cached.token;
 }
 
-/** Adds [amount] credits to users/{email}.credits in one atomic step (creating the field, or the document, if it isn't there yet). */
-export async function addCredits(env, email, amount) {
-  if (!creditsConfigured(env)) throw new Error('credits are not set up on the server yet');
-  const n = Math.floor(Number(amount));
-  if (!(n > 0) || !email) throw new Error('nothing to add');
+/** Publishes whether (and until when) someone has oeper+ on their public profile (users/{email}.plusUntil: 0 none, -1 for life, else a time in ms). */
+export async function setPlusUntil(env, email, plusUntil) {
+  if (!serviceAccountConfigured(env)) throw new Error('not set up');
   const token = await accessToken(env);
   const name = `projects/${PROJECT_ID}/databases/(default)/documents/users/${email}`;
   const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents:commit`, {
     method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ writes: [{ update: { name, fields: {} }, updateMask: { fieldPaths: [] }, updateTransforms: [{ fieldPath: 'credits', increment: { integerValue: String(n) } }] }] }),
+    body: JSON.stringify({ writes: [{ update: { name, fields: { plusUntil: { integerValue: String(Math.floor(plusUntil) || 0) } } }, updateMask: { fieldPaths: ['plusUntil'] } }] }),
   });
-  if (!res.ok) { const t = await res.text().catch(() => ''); throw new Error('Firestore refused the credits (' + res.status + ') ' + t.slice(0, 160)); }
+  if (!res.ok) { const t = await res.text().catch(() => ''); throw new Error('Firestore refused the oeper+ marker (' + res.status + ') ' + t.slice(0, 160)); }
 }

@@ -165,6 +165,68 @@ ONE.input = (props = {}) => ONE.el('input', Object.assign({ class:'tf', type:'te
 ONE.select = (options, value, props = {}) => { const s = ONE.el('select', Object.assign({ class:'tf' }, props)); options.forEach(o => { const [v, t] = Array.isArray(o) ? o : [o, o]; s.append(ONE.el('option', { value:v, text:t })); }); if (value != null) s.value = value; return s; };
 ONE.check = (label, checked, props = {}) => { const i = ONE.el('input', Object.assign({ type:'checkbox', class:'cb' }, props)); i.checked = !!checked; return { wrap:ONE.el('label', { class:'cbl' }, i, ONE.el('span', { text:label })), input:i }; };
 
+/* ---------- pictures made by epic AI (only inside the oeper.dev build, when epic AI is switched on) ----------
+   The shell page (oeper.dev/one) owns the sign-in, so the apps ask it: parent.ONE_CLOUD.makePicture / pictureInfo (see shell/cloud.js).
+   ONE.pictures.choose(upload, use) is what every "Picture" button calls: where epic AI pictures aren't available it just runs upload();
+   where they are it offers "From this device" or "Make with epic AI". use(dataUrl, {w, h}) receives the finished picture, already shrunk to fit a document. */
+ONE.pictures = (() => {
+  const host = () => { try { const c = window.parent !== window ? window.parent.ONE_CLOUD : window.ONE_CLOUD; return c && c.makePicture ? c : null; } catch { return null; } };
+  const ok = () => { let on = false; try { on = localStorage.getItem('oe-ai-features') === '1'; } catch {} return on && !!host(); };
+  // a 1024 px picture is about 150 KB once recompressed; the raw model output (600 KB) would fill this browser's storage after a few of them
+  const shrink = (src, max = 1024, q = .82) => new Promise(res => {
+    const im = new Image();
+    im.onload = () => { const k = Math.min(1, max / Math.max(im.width, im.height)), w = Math.round(im.width * k), h = Math.round(im.height * k), c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(im, 0, 0, w, h); res({ url:c.toDataURL('image/jpeg', q), w, h }); };
+    im.onerror = () => res({ url:src, w:0, h:0 });
+    im.src = src;
+  });
+  const SHAPES = [['square', 'Square'], ['wide', 'Wide (16:9)'], ['tall', 'Tall (9:16)'], ['landscape', 'Landscape (4:3)'], ['portrait', 'Portrait (3:4)']];
+  function make(use, opt = {}) {
+    const c = host(); if (!c) return ONE.toast('Pictures are made with epic AI. Turn it on in oeper.dev settings.');
+    const prompt = ONE.el('textarea', { class:'tf', rows:3, maxlength:600, placeholder:'Describe the picture, e.g. a red fox in a snowy pine forest at dusk, soft watercolour', style:{ resize:'vertical', width:'100%', boxSizing:'border-box' } });
+    const shape = ONE.select(SHAPES, opt.shape || 'square');
+    const best = ONE.check('Best quality (oeper+ members, a few a day)', false);
+    const info = ONE.el('small', { class:'muted', text:'' });
+    const err = ONE.el('div', { class:'muted', style:{ color:'var(--err, #b3261e)', display:'none' } });
+    const result = ONE.el('div', { style:{ display:'none', marginTop:'10px', textAlign:'center' } });
+    const go = ONE.el('button', { class:'btn filled', type:'button', text:'Make picture' });
+    let busy = false, current = null;
+    best.input.disabled = true;
+    c.pictureInfo().then(me => {
+      const im = me.images || {};
+      if (!me.signedIn) { info.textContent = 'Sign in to your oeper.dev account to make pictures.'; return; }
+      info.textContent = im.limit ? Math.max(0, im.limit - im.used) + ' of ' + im.limit + ' pictures left today' + (me.plan === 'plus' ? '' : '. oeper+ members get more.') : '';
+      if (im.bestLimit) { best.input.disabled = false; best.wrap.lastChild.textContent = 'Best quality (' + Math.max(0, im.bestLimit - im.bestUsed) + ' of ' + im.bestLimit + ' left today)'; }
+    }).catch(() => {});
+    const run = async () => {
+      if (busy) return; const text = prompt.value.trim(); if (text.length < 3) { prompt.focus(); return; }
+      busy = true; go.disabled = true; go.textContent = 'Drawing… (up to a minute)'; err.style.display = 'none'; result.style.display = 'none';
+      try {
+        const r = await c.makePicture({ prompt:text, shape:shape.value, best:best.input.checked && !best.input.disabled });
+        const small = await shrink('data:' + r.mime + ';base64,' + r.data);
+        current = small;
+        result.replaceChildren(ONE.el('img', { src:small.url, alt:text, style:{ maxWidth:'100%', maxHeight:'300px', borderRadius:'12px' } }));
+        result.style.display = ''; go.textContent = 'Try again';
+        useBtn.style.display = '';
+        info.textContent = (r.limit ? Math.max(0, r.limit - r.used) + ' of ' + r.limit + ' pictures left today' : '');
+      } catch (e) { err.textContent = e.message || 'Could not make the picture.'; err.style.display = ''; go.textContent = current ? 'Try again' : 'Make picture'; }
+      busy = false; go.disabled = false;
+    };
+    go.onclick = run;
+    const useBtn = ONE.el('button', { class:'btn tonal', type:'button', text:'Use this picture', style:{ display:'none' } });
+    const body = ONE.el('div', { style:{ display:'grid', gap:'12px' } }, prompt, ONE.field('Shape', shape), best.wrap, info, ONE.el('div', { style:{ display:'flex', gap:'8px', flexWrap:'wrap' } }, go, useBtn), err, result,
+      ONE.el('small', { class:'muted', text:'Pictures are made by AI and can be wrong or odd. Your description is checked by a safety filter.' }));
+    const m = ONE.modal({ title:'Make a picture with epic AI', icon:'image', body, width:460, actions:[{ label:'Close' }] });
+    useBtn.onclick = () => { if (current) { use(current.url, { w:current.w, h:current.h, alt:prompt.value.trim() }); m.close(); } };
+  }
+  function choose(upload, use, opt) {
+    if (!ok()) return upload();
+    const m = ONE.modal({ title:'Add a picture', icon:'add_photo_alternate', width:360, actions:[{ label:'Cancel' }], body:ONE.el('div', { style:{ display:'grid', gap:'6px' } },
+      ONE.el('button', { class:'menu-item', type:'button', html:ONE.icon('upload') + '<span class="mi-label">From this device</span>', onclick:() => { m.close(); upload(); } }),
+      ONE.el('button', { class:'menu-item', type:'button', html:ONE.icon('image') + '<span class="mi-label">Make with epic AI</span>', onclick:() => { m.close(); make(use, opt); } })) });
+  }
+  return { ok, make, choose, shrink };
+})();
+
 /* ---------- dynamic colour (Material You seed) ---------- */
 ONE.SEEDS = [['Ocean','#185abd'],['Violet','#6750a4'],['Teal','#006a60'],['Moss','#4c662b'],['Amber','#8b5000'],['Brick','#a8322d'],['Rose','#984061'],['Slate','#535f70']];
 ONE.setSeed = (c, save = true) => { document.documentElement.style.setProperty('--seed', c); if (save) ONE.store.set(ONE.appKey + '-seed', c); };

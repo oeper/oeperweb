@@ -13,13 +13,13 @@ async function authHeaders(extra) {
 
 /**
  * Streams /api/chat. onDelta(content, reasoning) gets the whole text so far; onEvent(json) gets the worker's own events
- * (remember, updateMemory, forget, setFollow). Resolves { content, reasoning, meta }. Errors carry .isLimit for a 429.
+ * (remember, updateMemory, forget, setFollow, profile, image). Resolves { content, reasoning, meta }. Errors carry .isLimit for a 429.
  */
 export async function streamChat({ messages, signal, quiet, onDelta, onEvent, onActivity }) {
   const res = await fetch(AI + '/api/chat', {
     method: 'POST', signal,
     headers: await authHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ app: 'epicai', messages, quiet: quiet ? true : undefined }),
+    body: JSON.stringify({ app: 'epicai', messages, quiet: quiet ? true : undefined, imageTools: quiet ? undefined : true }),
   });
   if (!res.ok || !res.body) {
     let msg = `Server error (${res.status})`;
@@ -41,7 +41,7 @@ export async function streamChat({ messages, signal, quiet, onDelta, onEvent, on
       if (!payload || payload === '[DONE]') continue;
       let j; try { j = JSON.parse(payload); } catch { continue; }
       if (j.meta) { meta = j.meta; continue; }
-      if (j.remember || j.updateMemory || j.forget || j.setFollow) { if (onEvent) onEvent(j); continue; }
+      if (j.remember || j.updateMemory || j.forget || j.setFollow || j.image) { if (onEvent) onEvent(j); continue; }
       const d = (j.choices && j.choices[0] && j.choices[0].delta) || {};
       if (d.reasoning_content) reasoning += d.reasoning_content;
       if (d.content) content += d.content;

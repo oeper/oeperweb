@@ -289,7 +289,7 @@ Object.assign(A, {
   todo:() => P.tag('todo'), important:() => P.tag('important'), question:() => P.tag('question'),
   findTags:() => sideKind === 'tags' ? A.closeSide() : showSide('tags', 'Tags Summary'), search:() => showSide('search', 'Search'), versions:() => sideKind === 'versions' ? A.closeSide() : showSide('versions', 'Page Versions'), bin:() => sideKind === 'bin' ? A.closeSide() : showSide('bin', 'Recycle Bin'),
   newSub:() => A.newPage('blank', true), newSectionBtn:A.newSection, deletePage:() => deletePage(N.nb.cur.p),
-  picture:() => $('#picInput').click(), file:() => $('#fileInput').click(), space:() => { const s = P.freeSpot(); P.newContainerAt(s.x, s.y); },
+  picture:() => ONE.pictures.choose(() => $('#picInput').click(), (url, m) => P.insertPictureSrc(url, m.alt)), file:() => $('#fileInput').click(), space:() => { const s = P.freeSpot(); P.newContainerAt(s.x, s.y); },
   date:() => P.insertText(new Date().toLocaleDateString()), time:() => P.insertText(new Date().toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' })), dateTime:() => P.insertText(new Date().toLocaleString(undefined, { dateStyle:'medium', timeStyle:'short' })),
   hr:() => P.insertHTML('<hr><p><br></p>'), symbol:b => ONE.menuAt(b, ['→','←','✓','✗','•','©','®','™','°','±','×','÷','≈','≠','≤','≥','∞','π','Σ','√','€','£','¥','§','¶','…','—','★','♥','☐'].map(s => ({ label:s, on:() => P.insertText(s) }))),
   typeTool:() => P.setTool('type'), penTool:() => P.setTool('pen'), hlTool:() => P.setTool('hl'), eraser:() => P.setTool('eraser'),

@@ -39,12 +39,6 @@ export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const OWNER_EMAILS = ['sanhackerman@gmail.com', 'taejiding@gmail.com'];
 export function isOwnerEmail(email) { return OWNER_EMAILS.includes(email); }
 
-// Credits: a site currency. The only way to get any right now is an owner
-// granting them (grantCredits below) — no earning mechanism exists yet.
-// One shared icon constant so every page (topnav chip, credits.html,
-// profile kebab, etc.) renders the exact same Material Symbol for it.
-export const CREDITS_ICON = 'payments';
-
 // A small pill-shaped badge next to a name, Discord-official-message style.
 // Owner accounts (the fixed OWNER_EMAILS list) default to a hardcoded
 // "OFFICIAL" badge, overridable/hideable via setOwnBadgeOverride below. Any
@@ -67,10 +61,14 @@ function ensureBadgeStyles() {
     }
     .oe-badge-official .material-symbols-rounded { font-size: 11px; }
     .oe-badge-official.icon-only { padding: 3px; gap: 0; }
+    .oe-badge-plus {
+      display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; margin-left: 4px; border-radius: 50%;
+      background: linear-gradient(135deg, #f7d774, #e8a33d); color: #3b2300; font-size: 13px; font-weight: 800; line-height: 1; vertical-align: middle; cursor: default;
+    }
   `;
   document.head.appendChild(style);
 }
-export function officialBadgeHtml(email) {
+function baseBadgeHtml(email) {
   if (isOwnerEmail(email)) {
     // Owners default to the fixed "OFFICIAL" badge, but — unlike everyone
     // else's badge, which is owner-granted — an owner can override or hide
@@ -95,6 +93,29 @@ export function officialBadgeHtml(email) {
   const icon = badge.icon || 'verified';
   const hasLabel = !!badge.label;
   return `<span class="oe-badge-official${hasLabel ? '' : ' icon-only'}" title="${escBadgeHtml(badge.label || 'Badge')}"><span class="material-symbols-rounded">${escBadgeHtml(icon)}</span>${hasLabel ? escBadgeHtml(badge.label.toUpperCase()) : ''}</span>`;
+}
+
+// oeper+ (the paid plan): the worker (cf-ai-worker) publishes users/{email}.plusUntil (0 = none, -1 = for life, else a time in ms) when someone gets it, and
+// firestore.rules lets nobody else write that field. The member chooses whether to show a small "+" beside their name (users/{email}.plusBadge, shown unless false).
+export function hasPlus(email) {
+  const p = email && profileCache[email], until = p && p.plusUntil;
+  return until === -1 || (typeof until === 'number' && until > Date.now());
+}
+export function plusBadgeShown(email) { return hasPlus(email) && profileCache[email].plusBadge !== false; }
+export async function setOwnPlusBadge(show) {
+  if (!currentUser) throw new Error('sign in first');
+  await setDoc(doc(db, 'users', currentUser.email), { plusBadge: !!show }, { merge: true });
+  profileCache[currentUser.email] = { ...(profileCache[currentUser.email] || {}), plusBadge: !!show };
+  notify();
+}
+// Every place that shows a name already calls this, so the + appears everywhere at once (after the badge, if the person has one too).
+export function officialBadgeHtml(email) {
+  let html = baseBadgeHtml(email);
+  if (plusBadgeShown(email)) {
+    ensureBadgeStyles();
+    html += '<span class="oe-badge-plus" title="oeper+ member">+</span>';
+  }
+  return html;
 }
 
 // Lets settings.html read an owner's current override (or lack of one) to
@@ -258,153 +279,6 @@ export function sendNotification({ recipientEmail, type, targetKind, targetId, p
   }).catch(() => {});
 }
 
-// ── Credits ──────────────────────────────────────────────────────────────
-// Live balance for the signed-in user, kept current via onSnapshot rather
-// than a one-off read — the topnav chip and credits.html both want it to
-// update the instant a grant/transfer lands, not just on next page load.
-// Started/stopped alongside sign-in state in onAuthStateChanged below.
-let creditsBalance = 0;
-let creditsUnsub = null;
-const creditsListeners = [];
-function notifyCredits() { creditsListeners.forEach(cb => cb(creditsBalance)); }
-// cb fires immediately with the current (possibly stale/0) balance, then
-// again on every live update. Returns an unsubscribe function.
-export function onCreditsChange(cb) {
-  creditsListeners.push(cb);
-  cb(creditsBalance);
-  return () => {
-    const i = creditsListeners.indexOf(cb);
-    if (i !== -1) creditsListeners.splice(i, 1);
-  };
-}
-export function getCredits() { return creditsBalance; }
-function startCreditsListener(email) {
-  if (creditsUnsub) creditsUnsub();
-  creditsUnsub = onSnapshot(doc(db, 'users', email), snap => {
-    creditsBalance = (snap.exists() && typeof snap.data().credits === 'number') ? snap.data().credits : 0;
-    notifyCredits();
-  }, () => { creditsBalance = 0; notifyCredits(); });
-}
-function stopCreditsListener() {
-  if (creditsUnsub) { creditsUnsub(); creditsUnsub = null; }
-  creditsBalance = 0;
-  notifyCredits();
-}
-
-// Peer-to-peer transfers carry a 5% tax (burned, not routed anywhere) —
-// owners send tax-free. Kept in sync with firestore.rules'
-// validTransferSender, which is what actually enforces this; this is just
-// the matching client-side math so the UI shows the real number in
-// advance instead of a surprise after the fact.
-const TRANSFER_TAX_RATE = 0.05;
-export function creditTransferNet(amount) {
-  const amt = Math.floor(Number(amount));
-  if (currentUser && isOwnerEmail(currentUser.email)) return amt;
-  return amt - Math.ceil(amt * TRANSFER_TAX_RATE);
-}
-
-// Sends `amount` credits from the signed-in user to toEmail in one atomic
-// batched write — see firestore.rules' validTransferSender/Recipient for
-// the actual security guarantees (this function just has to shape the
-// write correctly; the rules are what make it safe against tampering).
-// amount must be a positive whole number no larger than the sender's
-// current balance — both checked here for a fast/friendly error, and
-// enforced for real by the rules regardless. The recipient gets `amount`
-// minus the transfer tax (0 for owners) — see creditTransferNet above.
-export async function transferCredits(toEmail, amount, note) {
-  if (!currentUser) throw new Error('sign in first');
-  const amt = Math.floor(Number(amount));
-  if (!Number.isFinite(amt) || amt <= 0) throw new Error('enter a whole number of credits greater than 0');
-  if (toEmail === currentUser.email) throw new Error("you can't send credits to yourself");
-  if (amt > creditsBalance) throw new Error("you don't have that many credits");
-  const net = creditTransferNet(amt);
-  // The 5% tax rounds up, so a transfer of exactly 1 credit taxes down to
-  // 0 for anyone but an owner — firestore.rules correctly rejects that
-  // (a transfer where the recipient receives nothing isn't a transfer),
-  // but without this check it'd surface as a confusing permission error
-  // instead of an explanation.
-  if (net <= 0) throw new Error('amount too small after the 5% tax — send at least 2 credits');
-  const batch = writeBatch(db);
-  batch.update(doc(db, 'users', currentUser.email), {
-    credits: increment(-amt),
-    lastTransferTo: toEmail,
-    lastTransferAmount: amt,
-    lastTransferNet: net,
-    lastTransferAt: serverTimestamp(),
-  });
-  batch.update(doc(db, 'users', toEmail), {
-    credits: increment(net),
-    lastReceivedFrom: currentUser.email,
-    lastReceivedAmount: net,
-    lastReceivedAt: serverTimestamp(),
-  });
-  const logRef = doc(collection(db, 'creditTransfers'));
-  batch.set(logRef, {
-    fromEmail: currentUser.email,
-    toEmail,
-    amount: amt,
-    net,
-    note: (note || '').slice(0, 200),
-    createdAt: serverTimestamp(),
-  });
-  await batch.commit();
-  sendNotification({ recipientEmail: toEmail, type: 'credits', preview: String(net) });
-}
-
-// Owner-only: adds (or, with a negative amount, removes/corrects) credits
-// on any account — the only way credits enter the system at all right now.
-// Enforced server-side by firestore.rules regardless of this check.
-export async function grantCredits(email, amount) {
-  if (!currentUser || !isOwnerEmail(currentUser.email)) throw new Error('only owners can do this');
-  const amt = Math.floor(Number(amount));
-  if (!Number.isFinite(amt) || amt === 0) throw new Error('enter a non-zero whole number');
-  await setDoc(doc(db, 'users', email), { credits: increment(amt) }, { merge: true });
-  if (amt > 0) sendNotification({ recipientEmail: email, type: 'creditsGrant', preview: String(amt) });
-}
-
-// Transfer history involving `email`, newest first — two plain equality
-// queries (sent / received) merged client-side rather than one OR query,
-// so this never needs a composite index. capped at 50 each way, which is
-// plenty for a history list.
-export async function getCreditHistory(email) {
-  try {
-    const [sentSnap, receivedSnap] = await Promise.all([
-      getDocs(query(collection(db, 'creditTransfers'), where('fromEmail', '==', email))),
-      getDocs(query(collection(db, 'creditTransfers'), where('toEmail', '==', email))),
-    ]);
-    const rows = [...sentSnap.docs, ...receivedSnap.docs].map(d => {
-      const data = d.data();
-      return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
-    });
-    rows.sort((a, b) => b._date - a._date);
-    return rows;
-  } catch (err) {
-    console.warn('Could not load credit history:', err.message);
-    return [];
-  }
-}
-
-// Real-money purchase history for credits.html's "purchase history" list.
-// Nothing writes to creditPurchases yet — billing isn't wired up, so this
-// always returns [] for now — but the read path, the Firestore collection,
-// and its rules exist so a future payment webhook (writing via the admin
-// SDK, which bypasses rules entirely) has somewhere to land without a
-// client-side schema change. Newest first, capped at 50.
-export async function getCreditPurchaseHistory(email) {
-  try {
-    const snap = await getDocs(query(collection(db, 'creditPurchases'), where('email', '==', email)));
-    const rows = snap.docs.map(d => {
-      const data = d.data();
-      return { id: d.id, ...data, _date: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date() };
-    });
-    rows.sort((a, b) => b._date - a._date);
-    return rows.slice(0, 50);
-  } catch (err) {
-    console.warn('Could not load credit purchase history:', err.message);
-    return [];
-  }
-}
-
 // The @handle for a profile, if one's been assigned yet (see ensureHandle).
 // Used to build /profile?u=<handle> links without ever putting a real
 // email in a URL. Returns null if this account hasn't been assigned one
@@ -559,7 +433,6 @@ function deviceLabel() {
 onAuthStateChanged(auth, async user => {
   currentUser = user;
   if (user) {
-    startCreditsListener(user.email);
     await ensureProfileLoaded(user.email);
     // Awaited (not fire-and-forget): ensureHandle needs displayName to
     // already be present in Firestore for its own write to pass the rules,
@@ -583,8 +456,6 @@ onAuthStateChanged(auth, async user => {
         label: deviceLabel(), lastSeenAt: serverTimestamp(),
       }, { merge: true }).catch(() => {});
     }
-  } else {
-    stopCreditsListener();
   }
   authReady = true;
   notify();
@@ -647,7 +518,7 @@ export async function resolveUidsToEmails(uids) {
 // First-time sign-in consent. Remembered per browser (the stored value is
 // the version of the legal pages that was accepted, so bumping CONSENT_VERSION
 // asks everyone again after a material change to the terms/privacy policy).
-const CONSENT_VERSION = '3';
+const CONSENT_VERSION = '4';
 function hasConsent() {
   try { return localStorage.getItem('oe_terms_ok') === CONSENT_VERSION; } catch { return false; }
 }

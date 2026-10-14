@@ -177,7 +177,7 @@
 <div class="page">
   <header class="header">
     <h1><span class="material-symbols-rounded">smart_toy</span>bot hosting</h1>
-    <p class="subtitle">make a discord bot with no code, or upload your own (node.js or python), and host it on the oeper.dev server. pick a starting point, switch on what you want, paste your bot token and press start — it restarts itself if it crashes and comes back after a server restart. hosting is paid for with oeper.dev credits, only while a bot is running.</p>
+    <p class="subtitle">make a discord bot with no code, or upload your own (node.js or python), and host it on the oeper.dev server. pick a starting point, switch on what you want, paste your bot token and press start — it restarts itself if it crashes and comes back after a server restart. it uses hosting credits, which an owner gives you, and only while a bot is running.</p>
   </header>
 
   <div id="view"></div>
@@ -188,8 +188,8 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { SERVER_ENDPOINT, getCurrentUser, onAccountChange, signIn, transferCredits, creditTransferNet, getCredits } from './shared/account.js?v=42';
-import { mountTopNav } from './shared/topnav.js?v=43';
+import { SERVER_ENDPOINT, getCurrentUser, onAccountChange, signIn } from './shared/account.js?v=43';
+import { mountTopNav } from './shared/topnav.js?v=44';
 import { mountFooter } from './shared/footer.js?v=7';
 import { oeConfirm, oePrompt, oeAlert } from './shared/dialog.js?v=4';
 import { revealStatic } from './shared/motion.js?v=3';
@@ -206,7 +206,6 @@ let system = null;
 let maxBots = 0;
 let account = null;      // this account's hosting-credit balance and burn rate
 let rates = null;        // { slotPerDay, slotMemoryMB, sizes }
-let billingEmail = null; // where top-up transfers go
 let isOwnerUser = false;
 let usedSlots = 0, maxSlots = 0;
 let adminAccounts = [];  // owners only
@@ -260,7 +259,7 @@ async function refresh() {
   try {
     const data = await api('/bots');
     bots = data.bots; system = data.system; maxBots = data.maxBots;
-    account = data.account; rates = data.rates; billingEmail = data.billingEmail;
+    account = data.account; rates = data.rates;
     isOwnerUser = data.isOwner; usedSlots = data.usedSlots; maxSlots = data.maxSlots;
     adminAccounts = isOwnerUser ? (await api('/admin/accounts')).accounts : [];
     if (!makerInfo) { try { makerInfo = await api('/maker/presets'); } catch { /* an older server: the maker is simply not offered */ } }
@@ -374,8 +373,7 @@ function render(force) {
     <p class="system">${sys}</p>
     <div class="${creditsClass()}" id="creditsBox">
       <div class="line" id="creditsLine">${creditsLine()}</div>
-      ${account.exempt ? '' : '<button class="btn small primary" id="topupBtn"><span class="material-symbols-rounded">add_card</span>top up</button>'}
-      ${account.exempt ? '' : `<p class="hint">a small bot costs ${fmtCredits(perDay)} credits a day, only while it's running. when your credits hit zero your bots stop, and they start again by themselves after a top-up.</p>`}
+      ${account.exempt ? '' : `<p class="hint">a small bot costs ${fmtCredits(perDay)} credits a day, only while it's running. when your credits hit zero your bots stop, and they start again by themselves once an owner adds more.</p>`}
     </div>
     <div class="new-row">
       <input class="input" id="newName" maxlength="40" placeholder="new bot name" autocomplete="off">
@@ -396,8 +394,6 @@ function render(force) {
     </div>
     <p class="hint">allocating credits to an email also approves it for bot hosting. a negative amount takes credits back. revoking blocks the account and stops its bots.</p>` : ''}`;
   document.getElementById('newBtn').addEventListener('click', createBot);
-  const top = document.getElementById('topupBtn');
-  if (top) top.addEventListener('click', topUp);
   const alloc = document.getElementById('allocBtn');
   if (alloc) alloc.addEventListener('click', allocate);
   document.getElementById('newName').addEventListener('keydown', e => { if (e.key === 'Enter') createBot(); });
@@ -427,37 +423,6 @@ async function createBot() {
     openId = b.id; openTab = b.kind === 'maker' ? 'maker' : 'files'; mk = null; mkDirty = false;
     await refresh();
   } catch (e) { oeAlert(e.message); }
-}
-
-// Top-up = send oeper.dev credits to the hosting account, then ask the server to
-// verify that transfer and credit it. The server only sees the latest
-// transfer, so any earlier unclaimed one is claimed first.
-async function claim() {
-  const out = await api('/credits/claim', { method: 'POST' });
-  return out.added || 0;
-}
-async function topUp() {
-  if (!billingEmail) { oeAlert('top-ups are not set up on this server.'); return; }
-  const have = Math.floor(getCredits());
-  if (have < 2) { oeAlert("you need at least 2 oeper.dev credits to top up. you have " + have + '.'); return; }
-  const raw = await oePrompt(`how many oeper.dev credits to spend? you have ${have}. a 5% transfer tax applies, so you'll receive about 95% as hosting credits.`, { defaultValue: String(Math.min(have, 100)), placeholder: 'credits' });
-  if (raw == null) return;
-  const amt = Math.floor(Number(raw));
-  if (!Number.isFinite(amt) || amt < 2) { oeAlert('enter a whole number of credits, at least 2.'); return; }
-  if (amt > have) { oeAlert("you don't have that many credits."); return; }
-  const btn = document.getElementById('topupBtn');
-  if (btn) btn.disabled = true;
-  try {
-    await claim(); // flush any earlier transfer before it gets overwritten
-    await transferCredits(billingEmail, amt, 'dbhosting top-up');
-    let added = 0, lastErr = null;
-    for (let i = 0; i < 3 && !added; i++) {
-      try { added = await claim(); } catch (e) { lastErr = e; await new Promise(r => setTimeout(r, 1500)); }
-    }
-    if (added) await oeAlert(`added ${fmtCredits(added)} hosting credits.`);
-    else await oeAlert("your credits were sent, but the server couldn't confirm them yet (" + (lastErr ? lastErr.message : 'try again') + "). reload this page in a minute — it picks them up automatically.");
-  } catch (e) { oeAlert(e.message); }
-  await refresh();
 }
 
 async function allocate() {
@@ -956,11 +921,7 @@ async function renderSettings() {
 onAccountChange(user => {
   stopTimers();
   if (!user) { state = 'signedout'; renderState(); return; }
-  refresh().then(async () => {
-    // Recovers a top-up whose confirmation was interrupted (page closed, server briefly down).
-    if (state !== 'ready' || (account && account.exempt) || !billingEmail) return;
-    try { if (await claim()) refresh(); } catch {}
-  });
+  refresh();
   // Light refresh so status/uptime stay current; skipped while typing in an
   // editor or env field so nothing gets wiped mid-edit.
   pollTimer = setInterval(() => {

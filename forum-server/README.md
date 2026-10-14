@@ -132,13 +132,9 @@ running uploaded code on the phone. Non-owners only ever see their own bots.
   slots of `DBHOSTING_NODE_MEMORY_MB`, default 192 MB) × `DBHOSTING_CREDITS_PER_SLOT_DAY`
   (default 10 credits/day per slot). An account's quota is `added - used` in
   `dbhosting-credits.json` (gitignored); at zero its bots are stopped and start
-  again automatically after a top-up. Owner accounts' bots are free. Credits are
-  added by an owner allocating them (this also approves the email) or by the user
-  sending oeper.dev credits to `DBHOSTING_BILLING_EMAIL` (default: first owner) and
-  pressing top up — the server verifies the transfer from the sender's
-  `users/{email}` doc, which Firestore rules only let change alongside a real
-  transfer. Only the latest transfer is visible there, so the page claims right
-  after each top-up and again on load.
+  again automatically once an owner allocates more. Owner accounts' bots are free. Credits
+  are added by an owner allocating them (this also approves the email); there is no way for users
+  to buy or top up themselves, and oeper.dev has no currency of its own any more.
 - Limits: `DBHOSTING_MAX_BOTS` (15 total), `DBHOSTING_MAX_BOTS_PER_USER` (3),
   `DBHOSTING_MAX_SLOTS` (20 running at once), `DBHOSTING_DIR` to move the bots folder.
 

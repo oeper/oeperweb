@@ -315,9 +315,6 @@ const oneSync = require('./one-sync')(app, {
 const dbhosting = require('./dbhosting')(app, {
   verifyFirebaseToken, isOwner, loadJson, saveJson,
   dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname,
-  // Hosting top-ups are oeper.dev credits sent to this account.
-  billingEmail: process.env.DBHOSTING_BILLING_EMAIL || OWNER_EMAILS[0],
-  firebaseProjectId: FIREBASE_PROJECT_ID,
 });
 
 // New Searver Android builds pushed from the developer's PC (needs RELEASE_KEY in .env) — see app-release.js.

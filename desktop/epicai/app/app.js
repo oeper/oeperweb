@@ -122,10 +122,37 @@ function userEl(m, i) {
   wrap.appendChild(actions(['content_copy', 'Copy', () => copyToClipboard(text || '').then(() => toast('Copied'))], ['edit', 'Edit', () => editMessage(i)]));
   return wrap;
 }
+// ── pictures epic AI drew: the picture lives in this app's IndexedDB; the chat only keeps a small note about it ──
+const PicStore = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => { const r = indexedDB.open('epic-pictures', 1); r.onupgradeneeded = () => r.result.createObjectStore('p', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+  const run = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction('p', mode); const out = fn(t.objectStore('p')); t.oncomplete = () => res(out && out.result); t.onerror = () => rej(t.error); }); };
+  return {
+    put: async rec => { try { await run('readwrite', st => st.put(rec)); const keys = await run('readonly', st => st.getAllKeys()); if (keys.length > 80) await run('readwrite', st => { keys.sort().slice(0, keys.length - 80).forEach(k => st.delete(k)); }); } catch (e) { console.warn('picture not stored', e); } },
+    get: async id => { try { return await run('readonly', st => st.get(id)); } catch { return null; } },
+  };
+})();
+function picNode(p, rec) {
+  const box = el('div');
+  const src = 'data:' + (rec.mime || 'image/jpeg') + ';base64,' + rec.data;
+  const ext = /png/.test(rec.mime || '') ? 'png' : /webp/.test(rec.mime || '') ? 'webp' : 'jpg';
+  box.innerHTML = '<div class="pic"><img alt=""></div><div class="pic-bar"><a class="pic-btn" download="epic-ai-picture.' + ext + '"><span class="ms">download</span>Save</a>' + (p.best ? '<span class="pic-tag">best quality</span>' : '') + '</div>';
+  const img = box.querySelector('img'); img.src = src; img.alt = p.prompt || 'picture epic AI drew';
+  box.querySelector('a').href = src;
+  img.addEventListener('click', () => { const lb = el('div', 'pic-lightbox', '<img alt="">'); lb.querySelector('img').src = src; lb.addEventListener('click', () => lb.remove()); document.body.appendChild(lb); });
+  return box;
+}
+async function fillPic(slot, p) {
+  const rec = await PicStore.get(p.id);
+  if (!slot.isConnected) return;
+  if (rec) slot.replaceChildren(picNode(p, rec));
+  else slot.innerHTML = '<div class="pic-missing">This picture is saved on the device where it was made.' + (p.prompt ? ' It was drawn from: “' + escHtml(String(p.prompt).slice(0, 160)) + '”' : '') + '</div>';
+}
 function assistantEl(m, i, last) {
   const wrap = el('div', 'msg assistant', `<div class="mark">${MARK}</div><div class="col"><div class="bubble"></div></div>`);
   const bubble = wrap.querySelector('.bubble');
-  if (m.error) { bubble.classList.add('error'); bubble.textContent = m.content; } else renderAnswer(bubble, '', m.content || '', true);
+  if (m.error) { bubble.classList.add('error'); bubble.textContent = m.content; } else if (m.content) renderAnswer(bubble, '', m.content || '', true); else bubble.remove();
+  for (const p of (m.images || [])) { const slot = el('div'); wrap.querySelector('.col').appendChild(slot); fillPic(slot, p); }
   const btns = [['content_copy', 'Copy', () => copyToClipboard(m.content || '').then(() => toast('Copied'))]];
   if (last) btns.push(['refresh', 'Try again', () => regenerate(i)]);
   wrap.querySelector('.col').appendChild(actions(...btns));
@@ -216,6 +243,7 @@ async function sendToModel(c, { retried = false } = {}) {
   };
   const watchdog = setInterval(() => { if (Date.now() - lastActivity > 45000) { timedOut = true; controller.abort(); } }, 5000);
   let answer = '', failed = false;
+  const pics = [];
   try {
     const compact = await compactChat(c, () => save());
     const extra = sessionNote() + (canLook ? ' ' + SCREEN_HINT : '');
@@ -229,6 +257,14 @@ async function sendToModel(c, { retried = false } = {}) {
         else if (j.updateMemory) { if (memLearn) acct.updateFact(j.updateMemory.old, j.updateMemory.new); }
         else if (j.forget) acct.forgetFact(j.forget);
         else if (j.setFollow) acct.setFollow(j.setFollow.handle, j.setFollow.follow);
+        else if (j.image) {
+          const im = j.image, id = 'pic_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+          const note = { id, w: im.w || 0, h: im.h || 0, best: !!im.best, prompt: String(im.prompt || '').slice(0, 400) };
+          pics.push(note);
+          PicStore.put({ id, mime: im.mime, data: im.data, w: note.w, h: note.h, best: note.best, prompt: note.prompt });
+          bubble.classList.remove('thinking'); sawText = true;
+          wrap.querySelector('.col').appendChild(picNode(note, { mime: im.mime, data: im.data })); follow();
+        }
       },
       onDelta: (cn, rs) => {
         content = cn; reasoning = rs;
@@ -273,10 +309,11 @@ async function sendToModel(c, { retried = false } = {}) {
     return;
   }
   const { answer: finalAnswer } = splitThinking(reasoning, content, true);
-  if (finalAnswer && !failed) {
-    c.messages.push({ role: 'assistant', content: finalAnswer }); c.updatedAt = Date.now(); save();
+  if ((finalAnswer || pics.length) && !failed) {
+    const reply = { role: 'assistant', content: finalAnswer || '' }; if (pics.length) reply.images = pics;
+    c.messages.push(reply); c.updatedAt = Date.now(); save();
     renderChat(true);
-    if (settings.notify && !document.hasFocus()) {
+    if (settings.notify && !document.hasFocus() && finalAnswer) {
       try { const n = new Notification('epic AI replied', { body: finalAnswer.replace(/[*_`#>]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 140) }); n.onclick = () => D.focus(); } catch {}
     }
   } else if (!failed && !finalAnswer && (content || reasoning)) { wrap.remove(); }
@@ -416,7 +453,7 @@ function dialog(html) {
 }
 addEventListener('keydown', e => { if (e.key === 'Escape') { $('overlay').classList.remove('open'); $('overlay').innerHTML = ''; memoryListener = null; } });
 const kfmt = n => n >= 10000 ? Math.round(n / 1000) + 'k' : n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n);
-const planName = u => !u ? 'Guest' : u.plan === 'plus' ? 'Plus' : u.signedIn === false ? 'Guest' : 'Free';
+const planName = u => !u ? 'Guest' : u.plan === 'plus' ? 'oeper+' : u.signedIn === false ? 'Guest' : 'Free';
 
 async function refreshUsage() {
   usage = await api.usage();

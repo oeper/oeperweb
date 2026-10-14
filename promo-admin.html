@@ -147,17 +147,17 @@
 
   <div class="card">
     <h2><span class="material-symbols-rounded">speed</span>Usage limits (tokens per day)</h2>
-    <p class="sub">What the model reads plus writes (its thinking counts too), per person per day, resetting at midnight UTC. Guests are counted per network address. "Plus" is what a product key unlocks. Bonus tokens from codes are used after the daily allowance runs out. A typical turn is about 3,000 to 4,000 tokens because the whole chat is read again every message.</p>
+    <p class="sub">What the model reads plus writes (its thinking counts too), per person per day, resetting at midnight UTC. Guests are counted per network address. "oeper+" is what a product key unlocks. Bonus tokens from codes are used after the daily allowance runs out. A typical turn is about 3,000 to 4,000 tokens because the whole chat is read again every message.</p>
     <div class="grid">
       <div class="field"><label>Guests (not signed in)</label><input type="number" id="limGuest" min="0" step="1000"></div>
       <div class="field"><label>Guest messages a day</label><input type="number" id="limGuestMsgs" min="0" step="1"></div>
       <div class="field"><label>Free (signed in)</label><input type="number" id="limFree" min="0" step="1000"></div>
-      <div class="field"><label>epic AI Plus</label><input type="number" id="limPlus" min="0" step="1000"></div>
+      <div class="field"><label>oeper+</label><input type="number" id="limPlus" min="0" step="1000"></div>
     </div>
-    <p class="sub" style="margin-top:6px"><b>Shared daily pool.</b> Cloudflare's free plan gives your whole account 10,000 neurons a day, and the One suite, study tools and moderation use the same ones. epic AI stops for everyone when it has spent its share. The last part of the pool is kept for Plus people.</p>
+    <p class="sub" style="margin-top:6px"><b>Shared daily pool.</b> Cloudflare's free plan gives your whole account 10,000 neurons a day, and the One suite, study tools and moderation use the same ones. epic AI stops for everyone when it has spent its share. The last part of the pool is kept for oeper+ members.</p>
     <div class="grid">
       <div class="field"><label>epic AI pool (neurons/day)</label><input type="number" id="poolNeurons" min="0" step="500"></div>
-      <div class="field"><label>Kept for Plus (%)</label><input type="number" id="poolReserve" min="0" max="100"></div>
+      <div class="field"><label>Kept for oeper+ (%)</label><input type="number" id="poolReserve" min="0" max="100"></div>
       <div class="field"><label>Input price (neurons per 1M tokens)</label><input type="number" id="rateIn" min="1"></div>
       <div class="field"><label>Output price (neurons per 1M tokens)</label><input type="number" id="rateOut" min="1"></div>
     </div>
@@ -166,13 +166,27 @@
   </div>
 
   <div class="card">
+    <h2><span class="material-symbols-rounded">image</span>Pictures &amp; oeper+ price</h2>
+    <p class="sub">Pictures per person per day, in epic AI and the One suite. Standard pictures (FLUX.2 klein) cost about 104 neurons each and come out of their own daily neuron budget, which also counts in the shared pool above. "Best" pictures (Nano Banana 2.1) cost real money on your Cloudflare bill (about 3 to 4 cents each), only oeper+ members get them, and everyone together is capped; set that cap to 0 to switch them off. Best pictures are part of a person's daily number, not extra.</p>
+    <div class="grid">
+      <div class="field"><label>Pictures a day: free</label><input type="number" id="imgFree" min="0" step="1"></div>
+      <div class="field"><label>Pictures a day: oeper+</label><input type="number" id="imgPlus" min="0" step="1"></div>
+      <div class="field"><label>Best pictures a day per member</label><input type="number" id="imgBest" min="0" step="1"></div>
+      <div class="field"><label>Best pictures a day, everyone</label><input type="number" id="imgBestAll" min="0" step="1"></div>
+      <div class="field"><label>Picture neuron budget (per day)</label><input type="number" id="imgBudget" min="0" step="100"></div>
+      <div class="field"><label>oeper+ price per month (RM)</label><input type="number" id="priceMonth" min="0" step="0.01"></div>
+      <div class="field"><label>oeper+ price per year (RM)</label><input type="number" id="priceYear" min="0" step="0.01"></div>
+    </div>
+    <div class="actions"><button class="btn primary" id="saveImages"><span class="material-symbols-rounded">save</span>Save</button></div>
+  </div>
+
+  <div class="card">
     <h2><span class="material-symbols-rounded">sell</span>Create a promo code</h2>
     <p class="sub">A word you choose, usable by many people (once each). Promo codes can't use a product prefix, so they never get mixed up with keys.</p>
     <div class="grid">
       <div class="field"><label>Code</label><input type="text" id="pCode" placeholder="WELCOME" maxlength="32" style="text-transform:uppercase"></div>
       <div class="field"><label>Bonus tokens</label><input type="number" id="pBonus" min="0" value="50000" step="1000"></div>
-      <div class="field"><label>oeper.dev credits</label><input type="number" id="pCredits" min="0" value="0" step="10"></div>
-      <div class="field"><label>Plus days (−1 = for life)</label><input type="number" id="pDays" min="-1" value="0"></div>
+      <div class="field"><label>oeper+ days (−1 = for life)</label><input type="number" id="pDays" min="-1" value="0"></div>
       <div class="field"><label>More daily usage (%)</label><input type="number" id="pBoost" min="0" max="1000" value="0"></div>
       <div class="field"><label>…for how many days</label><input type="number" id="pBoostDays" min="1" max="3650" value="30"></div>
       <div class="field"><label>Max uses (0 = no limit)</label><input type="number" id="pMax" min="0" value="100"></div>
@@ -189,9 +203,8 @@
     <div class="grid">
       <div class="field" id="kProductField" hidden><label>Product</label><select id="kProduct"></select></div>
       <div class="field"><label>How many</label><input type="number" id="kCount" min="1" max="200" value="5"></div>
-      <div class="field"><label>Plus days (−1 = for life)</label><input type="number" id="kDays" min="-1" value="30"></div>
+      <div class="field"><label>oeper+ days (−1 = for life)</label><input type="number" id="kDays" min="-1" value="30"></div>
       <div class="field"><label>Bonus tokens</label><input type="number" id="kBonus" min="0" value="0" step="1000"></div>
-      <div class="field"><label>oeper.dev credits</label><input type="number" id="kCredits" min="0" value="0" step="10"></div>
       <div class="field"><label>More daily usage (%)</label><input type="number" id="kBoost" min="0" max="1000" value="0"></div>
       <div class="field"><label>…for how many days</label><input type="number" id="kBoostDays" min="1" max="3650" value="30"></div>
       <div class="field"><label>Uses per key</label><input type="number" id="kMax" min="1" value="1"></div>
@@ -237,13 +250,12 @@
 
   <div class="card">
     <h2><span class="material-symbols-rounded">person_search</span>Look up a person</h2>
-    <p class="sub">See someone's plan and usage, or give them Plus, bonus tokens or oeper.dev credits directly.</p>
+    <p class="sub">See someone's plan and usage, or give them oeper+ or bonus tokens directly.</p>
     <div class="toolbar"><input type="text" id="uEmail" placeholder="email@example.com" style="text-transform:none"><button class="btn" id="uFind"><span class="material-symbols-rounded">search</span>Look up</button></div>
     <div class="person" id="person"></div>
     <div class="grid person" id="grantRow" style="margin-top:14px">
-      <div class="field"><label>Plus days (−1 = for life)</label><input type="number" id="gDays" min="-1" value="30"></div>
+      <div class="field"><label>oeper+ days (−1 = for life)</label><input type="number" id="gDays" min="-1" value="30"></div>
       <div class="field"><label>Bonus tokens</label><input type="number" id="gBonus" min="0" value="0" step="1000"></div>
-      <div class="field"><label>oeper.dev credits</label><input type="number" id="gCredits" min="0" value="0" step="10"></div>
       <div class="field"><label>&nbsp;</label><div class="actions"><button class="btn primary" id="gGo"><span class="material-symbols-rounded">card_giftcard</span>Give</button><button class="btn danger" id="gRevoke">Remove Plus</button></div></div>
     </div>
   </div>
@@ -252,8 +264,8 @@
 <div class="toast" id="toast"></div>
 
 <script type="module" data-cfasync="false">
-import { onAccountChange, mountAccountBar } from './shared/account.js?v=42';
-import { mountTopNav } from './shared/topnav.js?v=43';
+import { onAccountChange, mountAccountBar } from './shared/account.js?v=43';
+import { mountTopNav } from './shared/topnav.js?v=44';
 import { mountFooter } from './shared/footer.js?v=7';
 import { oeConfirm } from './shared/dialog.js?v=4';
 import { call, who, isOwner, fmtDate, DEV_AS } from './shared/codes-api.js?v=2';
@@ -278,7 +290,7 @@ async function run(button, fn) {
 }
 const dateToMs = v => v ? new Date(v + 'T23:59:59').getTime() : 0;
 const kfmt = n => n >= 1e6 ? (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + 'M' : n >= 1000 ? (n / 1000).toFixed(n % 1000 ? 1 : 0) + 'k' : String(n);
-const grantText = g => [g.plusDays === -1 ? 'Plus for life' : g.plusDays > 0 ? `${g.plusDays}d Plus` : '', g.bonusTokens ? `+${kfmt(g.bonusTokens)} tokens` : '', g.credits ? `+${kfmt(g.credits)} credits` : '', g.boostPercent ? `+${g.boostPercent}% usage ${g.boostDays}d` : ''].filter(Boolean).join(' · ') || '—';
+const grantText = g => [g.plusDays === -1 ? 'oeper+ for life' : g.plusDays > 0 ? `${g.plusDays}d oeper+` : '', g.bonusTokens ? `+${kfmt(g.bonusTokens)} tokens` : '', g.boostPercent ? `+${g.boostPercent}% usage ${g.boostDays}d` : ''].filter(Boolean).join(' · ') || '—';
 
 // every oeper.dev product code starts with OPD-: make sure the worker's product list says so (done once, by the first owner who opens this page)
 const OPD_PRODUCT = { opd: { name: 'oeper.dev product code', prefix: 'OPD' } };
@@ -291,11 +303,14 @@ async function load() {
   const s = data.stats, t = s.today;
   $('stats').innerHTML = [
     [t.requests, 'epic AI turns today'], [kfmt(t.tokensIn + t.tokensOut), 'tokens used today'], [Math.round(t.neurons) + ' / ' + s.pool.neurons, 'pool neurons used'],
-    [t.signedIn + ' / ' + t.guests, 'signed in / guest turns'], [t.denied, 'blocked by a limit'], [s.codes, 'codes & keys'], [s.redemptions, 'redemptions'],
+    [t.signedIn + ' / ' + t.guests, 'signed in / guest turns'], [(t.images || 0) + ' / ' + (t.bestImages || 0), 'pictures / best today'], [t.denied, 'blocked by a limit'], [s.codes, 'codes & keys'], [s.redemptions, 'redemptions'],
   ].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
   const lim = data.config.limits;
   $('limGuest').value = lim.guest.tokens; $('limGuestMsgs').value = lim.guest.messages != null ? lim.guest.messages : 5; $('limFree').value = lim.free.tokens; $('limPlus').value = lim.plus.tokens;
   const cfg = data.config;
+  const im = cfg.images || {}, shop = cfg.shop || {};
+  $('imgFree').value = im.free; $('imgPlus').value = im.plus; $('imgBest').value = im.plusPremium; $('imgBestAll').value = im.premiumGlobal; $('imgBudget').value = im.budget;
+  $('priceMonth').value = shop.month ? shop.month.priceMYR : ''; $('priceYear').value = shop.year ? shop.year.priceMYR : '';
   $('poolNeurons').value = cfg.pool.neurons; $('poolReserve').value = cfg.pool.reservePct; $('rateIn').value = cfg.rates.inPerM; $('rateOut').value = cfg.rates.outPerM;
   updatePoolHint();
   const prods = Object.entries(data.config.products);
@@ -389,10 +404,18 @@ $('saveLimits').addEventListener('click', e => run(e.currentTarget, async () => 
   await load(); toast('Limits saved');
 }));
 
+$('saveImages').addEventListener('click', e => run(e.currentTarget, async () => {
+  await call('PUT', '/api/admin/config', {
+    images: { free: +$('imgFree').value, plus: +$('imgPlus').value, plusPremium: +$('imgBest').value, premiumGlobal: +$('imgBestAll').value, budget: +$('imgBudget').value },
+    shop: { month: { days: 30, priceMYR: +$('priceMonth').value }, year: { days: 365, priceMYR: +$('priceYear').value } },
+  });
+  await load(); toast('Saved');
+}));
+
 $('makePromo').addEventListener('click', e => run(e.currentTarget, async () => {
   const r = await call('POST', '/api/admin/promo', {
     code: $('pCode').value, scope: $('pScope').value, maxUses: +$('pMax').value, expiresAt: dateToMs($('pExp').value), note: $('pNote').value,
-    grant: { plusDays: +$('pDays').value, bonusTokens: +$('pBonus').value, credits: +$('pCredits').value, boostPercent: +$('pBoost').value, boostDays: +$('pBoostDays').value },
+    grant: { plusDays: +$('pDays').value, bonusTokens: +$('pBonus').value, boostPercent: +$('pBoost').value, boostDays: +$('pBoostDays').value },
   });
   $('pCode').value = ''; $('pNote').value = '';
   await load(); toast('Created ' + r.code);
@@ -402,7 +425,7 @@ let lastKeys = [];
 $('makeKeys').addEventListener('click', e => run(e.currentTarget, async () => {
   const r = await call('POST', '/api/admin/keys', {
     product: $('kProduct').value, count: +$('kCount').value, scope: $('kScope').value, maxUses: +$('kMax').value, expiresAt: dateToMs($('kExp').value), note: $('kNote').value,
-    grant: { plusDays: +$('kDays').value, bonusTokens: +$('kBonus').value, credits: +$('kCredits').value, boostPercent: +$('kBoost').value, boostDays: +$('kBoostDays').value },
+    grant: { plusDays: +$('kDays').value, bonusTokens: +$('kBonus').value, boostPercent: +$('kBoost').value, boostDays: +$('kBoostDays').value },
   });
   lastKeys = r.keys;
   // the codes themselves are never written on the page: a hidden row each, with its own Copy
@@ -457,7 +480,7 @@ $('fbList').addEventListener('click', e => {
 async function showPerson(email) {
   const p = await call('GET', '/api/admin/user?email=' + encodeURIComponent(email));
   person = p.email;
-  const plus = p.plan === 'plus' ? (p.plusUntil === -1 ? 'epic AI Plus, for life' : 'epic AI Plus until ' + fmtDate(p.plusUntil)) : 'Free plan';
+  const plus = p.plan === 'plus' ? (p.plusUntil === -1 ? 'oeper+, for life' : 'oeper+ until ' + fmtDate(p.plusUntil)) : 'Free plan';
   $('person').innerHTML = `<b>${esc(p.email)}</b><br>${plus} · ${kfmt(p.usedToday)} tokens used today · ${kfmt(p.bonus)} bonus tokens` +
     (p.history.length ? '<ul>' + p.history.slice(0, 8).map(h => `<li>${esc(h.code)} — ${fmtDate(h.at)} (${esc(h.source)})</li>`).join('') + '</ul>' : '');
   $('person').classList.add('show'); $('grantRow').classList.add('show');
@@ -465,12 +488,12 @@ async function showPerson(email) {
 $('uFind').addEventListener('click', e => run(e.currentTarget, () => showPerson($('uEmail').value.trim())));
 $('uEmail').addEventListener('keydown', e => { if (e.key === 'Enter') $('uFind').click(); });
 $('gGo').addEventListener('click', e => run(e.currentTarget, async () => {
-  await call('POST', '/api/admin/user/grant', { email: person, grant: { plusDays: +$('gDays').value, bonusTokens: +$('gBonus').value, credits: +$('gCredits').value } });
+  await call('POST', '/api/admin/user/grant', { email: person, grant: { plusDays: +$('gDays').value, bonusTokens: +$('gBonus').value } });
   await showPerson(person); toast('Given');
 }));
 $('gRevoke').addEventListener('click', async e => {
-  if (!(await oeConfirm('Remove Plus from ' + person + '?'))) return;
-  run(e.currentTarget, async () => { await call('POST', '/api/admin/user/revoke', { email: person }); await showPerson(person); toast('Plus removed'); });
+  if (!(await oeConfirm('Remove oeper+ from ' + person + '?'))) return;
+  run(e.currentTarget, async () => { await call('POST', '/api/admin/user/revoke', { email: person }); await showPerson(person); toast('oeper+ removed'); });
 });
 
 function gate() {

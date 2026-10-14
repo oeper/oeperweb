@@ -1,6 +1,7 @@
 import { userFromRequest, isOwner } from './auth.js';
 import { Ledger } from './ledger.js';
-import { addCredits } from './firestore-admin.js';
+import { setPlusUntil, serviceAccountConfigured } from './firestore-admin.js';
+import { makeImage } from './images.js';
 import { readWebpage } from './webpage.js';
 export { Ledger };
 
@@ -135,6 +136,7 @@ function toolStatus(name, args) {
     case 'search_web': return args && args.query ? `Searching the web for "${clip(args.query)}"` : 'Searching the web';
     case 'read_webpage': { let host = ''; try { host = new URL(String(args && args.url)).hostname.replace(/^www\./, ''); } catch {} return host ? `Reading ${clip(host)}` : 'Reading a web page'; }
     case 'lookup_oeper_user': return args && args.handle ? `Looking up @${clip(String(args.handle).replace(/^@/, ''))}` : 'Looking up a profile';
+    case 'generate_image': return 'Drawing a picture';
     case 'create_document': return 'Writing a document';
     case 'create_discord_bot': return args && args.name ? `Coding the Discord bot "${clip(args.name)}"` : 'Coding a Discord bot';
     case 'remember_fact': case 'update_memory': case 'forget_fact': case 'update_profile': return 'Updating memory';
@@ -330,7 +332,7 @@ function wantsThinking(messages, quiet, force) {
   return THINK_HINT.test(t);
 }
 
-function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce) {
+function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce, who) {
   const encoder = new TextEncoder();
   return new ReadableStream({
     async start(controller) {
@@ -400,6 +402,22 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce) {
               if (spec) send({ createBot: spec });
             } else if (call.function.name === 'set_follow' && args.handle && typeof args.follow === 'boolean') {
               send({ setFollow: { handle: String(args.handle).replace(/^@/, '').trim().slice(0, 50), follow: args.follow } });
+            }
+            if (call.function.name === 'generate_image') {
+              // the picture itself goes to the page as its own event (far too big for the model to read); the model only hears how it went
+              let r;
+              // drawing takes up to a minute with nothing to send: keep the connection (and the clients' 45 second watchdogs) awake
+              const keepAlive = setInterval(() => { try { controller.enqueue(encoder.encode(': drawing\n\n')); } catch {} }, 8000);
+              try { r = await makeImage(env, ledgerOf(env), who, args, text => moderateText(env, text)); } catch (err) { r = { ok: false, error: 'The picture could not be made right now.' }; }
+              finally { clearInterval(keepAlive); }
+              if (r.ok) {
+                send({ image: { mime: r.mime, data: r.data, w: r.w, h: r.h, best: r.best, prompt: r.prompt, used: r.used, limit: r.limit } });
+                toolResult = JSON.stringify({ ok: true, shown: true, quality: r.best ? 'best' : 'standard', note: `The picture is now shown to the user under your message. Say in one short sentence what you made; never paste a link or code for it. They have made ${r.used} of ${r.limit} pictures today.` + (r.wantedBest && !r.best ? ' (The best-quality model is only for oeper+ and has a daily limit, so the standard one was used.)' : '') });
+              } else {
+                toolResult = JSON.stringify({ ok: false, error: r.error || 'The picture could not be made.', note: 'Tell the user this in your own words, kindly and briefly. Do not try again.' });
+              }
+              workingMessages.push({ role: 'tool', tool_call_id: call.id, name: call.function.name, content: toolResult });
+              continue;
             }
             if (!fn) {
               toolResult = JSON.stringify({ error: 'unknown tool' });
@@ -669,6 +687,22 @@ const BOT_TOOLS = [
     },
   },
 ];
+// Offered only when the client says it can show pictures (imageTools: true) and the person is signed in. The picture is made and counted by images.js + ledger.js.
+const IMAGE_TOOLS = [
+  {
+    name: 'generate_image',
+    description: "Draw a picture from a description and show it to the user. Use it when they ask you to draw, make, generate, design or illustrate an image, picture, logo, wallpaper, poster, icon, art, a character, a scene... Never use it for charts, diagrams or maths (write those out instead) or when they only want to talk about pictures. Write the prompt in English as one rich, concrete description: subject, setting, style (photo, watercolour, flat vector, 3D render, pixel art...), lighting, colours, mood, composition; if they want words inside the picture, put the exact words in quotes. They only get a few pictures a day, so make one good picture per request (never several in a row) and don't call it again after it succeeded or failed. quality 'best' uses a stronger model that is only for oeper+ members and limited to a few a day: choose it only when they ask for the best / highest quality, photorealism, or text inside the picture; otherwise leave it out.",
+    parameters: {
+      type: 'object',
+      properties: {
+        prompt: { type: 'string', description: 'The full description of the picture, in English' },
+        shape: { type: 'string', enum: ['square', 'wide', 'tall', 'landscape', 'portrait'], description: 'square 1:1 (default), wide 16:9 (wallpapers, slides, banners), tall 9:16 (phone wallpapers, stories), landscape 4:3, portrait 3:4' },
+        quality: { type: 'string', enum: ['standard', 'best'], description: 'Leave out for standard' },
+      },
+      required: ['prompt'],
+    },
+  },
+];
 // Keeps only sane file paths/sizes before anything is streamed to the page (which is the one that actually writes them).
 function cleanBotSpec(args) {
   const name = String((args && args.name) || '').trim().slice(0, 40);
@@ -707,6 +741,7 @@ const TOOL_FUNCTIONS = {
   set_follow: setFollow,
   create_document: createDocument,
   create_discord_bot: createDiscordBot,
+  generate_image: async () => JSON.stringify({ error: 'pictures are not available here' }),
 };
 const MAX_TOOL_ROUNDS = 3;
 
@@ -751,10 +786,11 @@ async function handleChat(request, env) {
 
   // epic AI's own chat (the site's ai page and the Android app say so with app:"epicai") has a daily token allowance per person.
   // The other clients (the One suite, study tools) are not counted. If the ledger itself breaks, the chat still works.
-  let meter = null;
+  let meter = null, who = null;
   if (body.app === 'epicai' && env.LEDGER) {
     try {
       const user = await userFromRequest(request, env);
+      if (user) who = { email: user.email, owner: isOwner(user) };
       // the site's owners have no limit at all (and are not counted)
       if (!isOwner(user)) {
         const r = await ledgerOf(env).check(user ? user.email : null, ip, body.quiet !== true);
@@ -766,7 +802,7 @@ async function handleChat(request, env) {
     }
   }
 
-  const stream = streamToolLoop(env, messages, [...TOOLS, ...(body.oneTools === true ? ONE_TOOLS : []), ...(body.botTools === true ? BOT_TOOLS : [])], body.quiet === true, meter, body.think === true ? true : body.think === false ? false : undefined);
+  const stream = streamToolLoop(env, messages, [...TOOLS, ...(body.oneTools === true ? ONE_TOOLS : []), ...(body.botTools === true ? BOT_TOOLS : []), ...(body.imageTools === true && who && body.quiet !== true ? IMAGE_TOOLS : [])], body.quiet === true, meter, body.think === true ? true : body.think === false ? false : undefined, who);
 
   return new Response(stream, {
     status: 200,
@@ -787,7 +823,7 @@ function limitMessage(r) {
   const when = 'It resets at midnight UTC.';
   if (r.reason === 'pool') return r.plan === 'plus'
     ? `epic AI has used all of today's capacity. ${when}`
-    : `epic AI is busy: everyone together has used up most of today's capacity, and what is left is kept for Plus. ${when}`;
+    : `epic AI is busy: everyone together has used up most of today's capacity, and what is left is kept for oeper+. ${when}`;
   if (r.reason === 'messages') return `You've used today's ${r.messageLimit} free messages. Sign in to keep chatting. ${when}`;
   if (r.plan === 'guest') return `You've used today's ${tokensText(r.limit)} tokens for guests. Sign in for more. ${when}`;
   if (r.plan === 'plus') return `You've used today's ${tokensText(r.limit)} tokens. ${when}`;
@@ -801,19 +837,32 @@ async function handleUsage(request, env) {
   const user = await userFromRequest(request, env);
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const me = await ledgerOf(env).me(user ? user.email : null, ip);
-  if (user && me.pendingCredits > 0) { try { me.pendingCredits = (await flushCredits(env, user.email)).pending; } catch {} }
+  if (user) await syncPlusMarker(env, user.email, me);
   // owners are never limited: show them as unlimited Plus
   if (isOwner(user)) Object.assign(me, { plan: 'plus', limit: 1_000_000_000, used: 0, unlimited: true });
   return json(me, 200, request);
 }
 
-/** Moves any credits a person has earned from codes into their oeper.dev balance. Whatever can't be delivered stays pending in the ledger. */
-async function flushCredits(env, email) {
-  const L = ledgerOf(env);
-  const n = await L.takePendingCredits(email);
-  if (!n) return { added: 0, pending: 0 };
-  try { await addCredits(env, email, n); return { added: n, pending: 0 }; }
-  catch (e) { await L.restorePendingCredits(email, n); console.log('credits not delivered:', e && e.message); return { added: 0, pending: n }; }
+/** Keeps users/{email}.plusUntil (public, read by the site to show the + badge) in step with the ledger. Best effort: it never breaks the request it rides on. */
+async function syncPlusMarker(env, email, view) {
+  if (!serviceAccountConfigured(env)) return;
+  try {
+    const L = ledgerOf(env);
+    const v = view || await L.adminUser(email);
+    if ((v.plusUntil || 0) === (v.marker || 0)) return;
+    await setPlusUntil(env, email, v.plusUntil || 0);
+    await L.setMarker(email, v.plusUntil || 0);
+  } catch (e) { console.log('oeper+ marker not published:', e && e.message); }
+}
+
+// A picture for the One suite (and anything else on oeper.dev): same limits as epic AI's own pictures. Signed-in people only.
+async function handleImage(request, env) {
+  const user = await userFromRequest(request, env);
+  if (!user) return json({ error: 'Sign in to make pictures.', reason: 'signin' }, 401, request);
+  const body = await readBody(request);
+  const r = await makeImage(env, ledgerOf(env), { email: user.email, owner: isOwner(user) }, { prompt: body.prompt, shape: body.shape, best: body.quality === 'best' }, text => moderateText(env, text));
+  if (!r.ok) return json({ error: r.error, reason: r.reason, limit: r.limit, used: r.used }, r.reason === 'prompt' ? 400 : r.reason === 'refused' ? 422 : r.reason === 'failed' ? 502 : 429, request);
+  return json({ ok: true, mime: r.mime, data: r.data, w: r.w, h: r.h, best: r.best, used: r.used, limit: r.limit }, 200, request);
 }
 
 async function handleRedeem(request, env) {
@@ -822,11 +871,7 @@ async function handleRedeem(request, env) {
   const body = await readBody(request);
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const r = await ledgerOf(env).redeem(user.email, body.code, body.source === 'app' ? 'app' : 'site', ip);
-  if (r.ok && r.pendingCredits > 0) {
-    const f = await flushCredits(env, user.email);
-    r.credits = f.added; r.pendingCredits = f.pending;
-    if (f.pending > 0) r.summary += ' (the credits could not be added right now; they are saved and will arrive on their own shortly)';
-  }
+  if (r.ok) await syncPlusMarker(env, user.email);
   return json(r, r.ok ? 200 : (r.reason === 'locked' ? 429 : 400), request);
 }
 
@@ -884,8 +929,8 @@ async function handleAdmin(request, env, url) {
     if (path.startsWith('feedback/') && m === 'PATCH') return json(await L.adminFeedbackUpdate(decodeURIComponent(path.slice(9)), await readBody(request)), 200, request);
     if (path.startsWith('feedback/') && m === 'DELETE') { await L.adminFeedbackDelete(decodeURIComponent(path.slice(9))); return json({ ok: true }, 200, request); }
     if (path === 'user' && m === 'GET') return json(await L.adminUser(url.searchParams.get('email')), 200, request);
-    if (path === 'user/grant' && m === 'POST') { const b = await readBody(request); const r = await L.adminGrantUser(b.email, b.grant, user.email); if (r.pendingCredits > 0) { const f = await flushCredits(env, r.email); r.credits = f.added; r.pendingCredits = f.pending; } return json(r, 200, request); }
-    if (path === 'user/revoke' && m === 'POST') { const b = await readBody(request); return json(await L.adminRevokePlus(b.email), 200, request); }
+    if (path === 'user/grant' && m === 'POST') { const b = await readBody(request); const r = await L.adminGrantUser(b.email, b.grant, user.email); await syncPlusMarker(env, r.email); return json(r, 200, request); }
+    if (path === 'user/revoke' && m === 'POST') { const b = await readBody(request); const r = await L.adminRevokePlus(b.email); await syncPlusMarker(env, r.email); return json(r, 200, request); }
   } catch (err) {
     return asError(err, request);
   }
@@ -1061,6 +1106,7 @@ export default {
     if (env.LEDGER) {
       if (url.pathname === '/api/usage' && request.method === 'GET') return handleUsage(request, env);
       if (url.pathname === '/api/redeem' && request.method === 'POST') return handleRedeem(request, env);
+      if (url.pathname === '/api/image' && request.method === 'POST') return handleImage(request, env);
       if (url.pathname === '/api/feedback' && request.method === 'POST') return handleFeedback(request, env);
       if (url.pathname.startsWith('/api/admin/')) return handleAdmin(request, env, url);
     }

@@ -154,6 +154,16 @@
   .one-menu-empty a { color: var(--md-sys-color-primary); }
   .msg-doc-chip { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 4px 10px 4px 8px; border-radius: 100px; background: rgba(127,127,127,0.22); font-size: 12px; }
   .msg-doc-chip .material-symbols-rounded { font-size: 16px; }
+  .pic { margin-top: 10px; position: relative; display: inline-block; max-width: min(100%, 520px); }
+  .pic img { display: block; max-width: 100%; height: auto; border-radius: 18px; background: var(--md-sys-color-surface-variant, #2f353d); cursor: zoom-in; }
+  .pic-bar { display: flex; gap: 8px; margin-top: 8px; align-items: center; flex-wrap: wrap; }
+  .pic-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 100px; border: none; background: var(--md-sys-color-secondary-container, #33485d); color: var(--md-sys-color-on-secondary-container, #d2e4ff); font: inherit; font-size: 12px; cursor: pointer; text-decoration: none; }
+  .pic-btn .material-symbols-rounded { font-size: 16px; }
+  .pic-tag { font-size: 11px; color: var(--md-sys-color-on-surface-variant); }
+  .pic-missing { margin-top: 10px; padding: 14px 16px; border-radius: 18px; background: var(--md-sys-color-surface-variant, #2f353d); color: var(--md-sys-color-on-surface-variant); font-size: 13px; max-width: 420px; }
+  .pic-loading { margin-top: 10px; width: min(100%, 320px); aspect-ratio: 1; border-radius: 18px; background: var(--md-sys-color-surface-variant, #2f353d); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .pic-lightbox { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,0.88); display: flex; align-items: center; justify-content: center; padding: 20px; cursor: zoom-out; }
+  .pic-lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; }
   .doc-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   .doc-link-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 100px; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-size: 13px; font-weight: 500; text-decoration: none; }
   .doc-link-chip .material-symbols-rounded { font-size: 18px; }
@@ -581,8 +591,8 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification } from './shared/account.js?v=42';
-import { mountTopNav } from './shared/topnav.js?v=43';
+import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification } from './shared/account.js?v=43';
+import { mountTopNav } from './shared/topnav.js?v=44';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { applySection, profilePrompt, PROFILE_MAX, GET_TO_KNOW } from './shared/ai-memory.js?v=1';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
@@ -635,7 +645,7 @@ Here's what's on oeper.dev, so you can actually help people navigate or use it i
 - Videos (/videos) — longer-form video uploads, with comments and voting.
 - Files (/files) — personal file storage: upload and organize files into folders, share links, or browse public downloads other users have shared.
 - Messages (/messages) — direct messages and group chats, supporting image/video/file attachments, voice messages (DMs only), replies, and message reactions.
-- You (epic AI, at /ai) — this chat. If they're signed in, you're told who you're talking to at the start of the conversation (their name, @handle, bio, and recent post titles) — you already know this, don't ask them to introduce themselves. You have these tools: search_web for current information on the live web; read_webpage to open and read any web page the user links to (or one you found with search_web), so never say you cannot open links, just read it; lookup_oeper_user for real, live data about a specific oeper.dev user by their @handle (display name, bio, badge, member-since date) — use it whenever someone asks about a handle other than their own, don't guess; remember_fact to save something worth recalling in future conversations — call it fairly often, for anything that would make a future conversation feel like a continuation rather than starting over (has no effect if they're not signed in — see the tool's own description for what's worth remembering); update_memory to correct something you already remember instead of leaving both the old and new versions saved; forget_fact to remove something that's no longer true or that they've asked you to forget; and set_follow to follow or unfollow another user on their behalf — only when they've clearly asked for it (e.g. "follow @x for me"), never on your own initiative. Keep what you remember accurate — if the user corrects something, use update_memory or forget_fact rather than just adding a new, conflicting fact on top. You can't create or post any content on their behalf (no posts, comments, or messages) — for those, tell them how to do it themselves rather than offering to do it for them.
+- You (epic AI, at /ai) — this chat. If they're signed in, you're told who you're talking to at the start of the conversation (their name, @handle, bio, and recent post titles) — you already know this, don't ask them to introduce themselves. You have these tools: search_web for current information on the live web; read_webpage to open and read any web page the user links to (or one you found with search_web), so never say you cannot open links, just read it; lookup_oeper_user for real, live data about a specific oeper.dev user by their @handle (display name, bio, badge, member-since date) — use it whenever someone asks about a handle other than their own, don't guess; remember_fact to save something worth recalling in future conversations — call it fairly often, for anything that would make a future conversation feel like a continuation rather than starting over (has no effect if they're not signed in — see the tool's own description for what's worth remembering); update_memory to correct something you already remember instead of leaving both the old and new versions saved; forget_fact to remove something that's no longer true or that they've asked you to forget; generate_image to draw a picture from a description (only offered to signed-in people; they get a few a day, so make one good picture per request and tell them briefly what you made); and set_follow to follow or unfollow another user on their behalf — only when they've clearly asked for it (e.g. "follow @x for me"), never on your own initiative. Keep what you remember accurate — if the user corrects something, use update_memory or forget_fact rather than just adding a new, conflicting fact on top. You can't create or post any content on their behalf (no posts, comments, or messages) — for those, tell them how to do it themselves rather than offering to do it for them.
 - Tools (/tools) — small standalone utilities: a Music Composer (melody grid), one (an in-browser office suite at /one: oneWord documents, oneSheet spreadsheets, oneSlide slides, oneIdea, and onePDF for splitting/merging/editing PDFs), a QR code maker, and Chess (full-rules chess — local pass-and-play, vs a built-in AI, or live against another oeper.dev user).
 - Articles (/articles) and Downloads (/downloads) — curated articles and downloadable resources.
 - Profiles (/profile?u=handle) — a user's posts, a saved-items tab, follower/following counts, and badges (an OFFICIAL badge marks the site's owners; anyone can also be granted a custom badge by an owner).
@@ -1239,12 +1249,59 @@ function splitDocMarker(content) {
   const m = ONE_DOC_RE.exec(content || '');
   return m ? { text: String(content).replace(ONE_DOC_RE, '').trim(), title: m[1] } : { text: content, title: null };
 }
+// ── Pictures epic AI drew ──
+// The picture itself is far too big for the synced chat (Firestore) or localStorage, so it is kept in this browser's IndexedDB; the chat message only
+// holds a small note about it ({id, w, h, best, prompt}). On another device the note shows, with a hint that the picture lives where it was made.
+const PicStore = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    const r = indexedDB.open('epic-pictures', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('p', { keyPath: 'id' });
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const run = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction('p', mode); const out = fn(t.objectStore('p')); t.oncomplete = () => res(out && out.result); t.onerror = () => rej(t.error); }); };
+  return {
+    put: async rec => {
+      try {
+        await run('readwrite', st => st.put(rec));
+        const keys = await run('readonly', st => st.getAllKeys());
+        if (keys.length > 80) await run('readwrite', st => { keys.sort().slice(0, keys.length - 80).forEach(k => st.delete(k)); });
+      } catch (e) { console.warn('picture not stored', e); }
+    },
+    get: async id => { try { return await run('readonly', st => st.get(id)); } catch { return null; } },
+  };
+})();
+function picSrc(rec) { return 'data:' + (rec.mime || 'image/jpeg') + ';base64,' + rec.data; }
+function picNode(p, rec) {
+  const box = document.createElement('div');
+  const src = picSrc(rec);
+  const ext = /png/.test(rec.mime || '') ? 'png' : /webp/.test(rec.mime || '') ? 'webp' : 'jpg';
+  box.innerHTML = '<div class="pic"><img alt=""></div>'
+    + '<div class="pic-bar"><a class="pic-btn" download="epic-ai-picture.' + ext + '"><span class="material-symbols-rounded">download</span>save</a>'
+    + (p.best ? '<span class="pic-tag">best quality</span>' : '') + '</div>';
+  const img = box.querySelector('img'); img.src = src; img.alt = p.prompt || 'picture epic AI drew';
+  box.querySelector('a').href = src;
+  img.addEventListener('click', () => {
+    const lb = document.createElement('div'); lb.className = 'pic-lightbox'; lb.innerHTML = '<img alt="">'; lb.querySelector('img').src = src;
+    lb.addEventListener('click', () => lb.remove()); document.body.appendChild(lb);
+  });
+  return box;
+}
+async function fillPicSlot(slot, p) {
+  if (!slot) return;
+  slot.innerHTML = '<div class="pic-loading">loading picture…</div>';
+  const rec = await PicStore.get(p.id);
+  if (!slot.isConnected) return;
+  if (rec) slot.replaceChildren(picNode(p, rec));
+  else slot.innerHTML = '<div class="pic-missing"><span class="material-symbols-rounded" style="vertical-align:-6px;margin-right:6px">image_not_supported</span>this picture is saved on the device where it was made' + (p.prompt ? '. it was drawn from: “' + escHtml(String(p.prompt).slice(0, 160)) + '”' : '') + '</div>';
+}
+
 // A chip under a reply for a Discord bot the model coded: opens bot hosting, or says why it couldn't be created.
 function botChipHtml(b) {
   if (b.ok) return `<a class="doc-link-chip" href="/dbhosting" target="_blank" rel="noopener"><span class="material-symbols-rounded">smart_toy</span>Open “${escHtml(b.name)}” in bot hosting</a>`;
   return `<span class="doc-link-chip" style="background:var(--md-sys-color-error-container,#8c1d18);color:var(--md-sys-color-on-error-container,#ffdad6);"><span class="material-symbols-rounded">error</span>Couldn’t create “${escHtml(b.name)}”: ${escHtml(b.error || 'failed')}</span>`;
 }
-function addMessageEl(role, content, imageUrl, index, docLinks, botLinks) {
+function addMessageEl(role, content, imageUrl, index, docLinks, botLinks, images) {
   document.getElementById('chatEmpty')?.remove();
   const wrap = document.createElement('div');
   wrap.className = 'msg ' + role;
@@ -1258,6 +1315,7 @@ function addMessageEl(role, content, imageUrl, index, docLinks, botLinks) {
       <div class="msg-bubble"></div>
       ${docLinks && docLinks.length ? `<div class="doc-links">${docLinks.map(d => `<a class="doc-link-chip" href="${escHtml(oneDocUrl(d.id))}" target="_blank" rel="noopener"><span class="material-symbols-rounded">description</span>Open “${escHtml(d.title)}” in oneWord</a>`).join('')}</div>` : ''}
       ${botLinks && botLinks.length ? `<div class="doc-links">${botLinks.map(botChipHtml).join('')}</div>` : ''}
+      ${images && images.length ? images.map(p => `<div class="pic-slot" data-pic="${escHtml(p.id)}"></div>`).join('') : ''}
       ${actionsHtml}
     </div>
   `;
@@ -1275,6 +1333,7 @@ function addMessageEl(role, content, imageUrl, index, docLinks, botLinks) {
     }
   }
   else if (content) renderAssistantContent(bubble, '', content, true);
+  if (images && images.length) images.forEach(p => fillPicSlot(wrap.querySelector(`[data-pic="${CSS.escape(p.id)}"]`), p));
   wrap.querySelector('[data-save-one]')?.addEventListener('click', () => saveReplyToOne(index));
   wrap.querySelector('[data-edit-msg]')?.addEventListener('click', () => editMessage(index));
   wrap.querySelector('[data-regen-msg]')?.addEventListener('click', () => regenerateResponse(index));
@@ -1289,7 +1348,7 @@ function renderChatFromHistory() {
   if (!chat.messages.length) {
     messagesEl.innerHTML = EMPTY_STATE_HTML;
   } else {
-    chat.messages.forEach((m, i) => addMessageEl(m.role, m.content, m.imageUrl, i, m.docLinks, m.botLinks));
+    chat.messages.forEach((m, i) => addMessageEl(m.role, m.content, m.imageUrl, i, m.docLinks, m.botLinks, m.images));
   }
   requestAnimationFrame(() => { messagesEl.style.opacity = '1'; });
 }
@@ -1995,6 +2054,7 @@ async function toWireMessages(msgs, summary) {
         { type: 'image_url', image_url: { url: dataUrl } },
       ] };
     }
+    if (m.images && m.images.length) return { role: m.role, content: shortenForWire((m.content || '') + '\n[you drew ' + m.images.length + ' picture' + (m.images.length > 1 ? 's' : '') + ' here: ' + m.images.map(p => '"' + String(p.prompt || '').slice(0, 200) + '"').join(' ; ') + ']') };
     return { role: m.role, content: shortenForWire(m.content) };
   }));
   let systemContent = SYSTEM_PROMPT;
@@ -2109,6 +2169,7 @@ async function sendToModel(chat) {
   let contentBuf = '';
   const createdDocs = []; // documents the model wrote into oneWord this turn (create_document)
   const createdBots = []; // promises for Discord bots the model coded this turn (create_discord_bot)
+  const madePics = []; // pictures epic AI drew this turn (generate_image): small notes saved in the chat, the picture itself in PicStore
   // Nothing here ever times out on its own — a fetch/ReadableStream can
   // hang forever if the connection drops without a clean close (very
   // plausible over a home network + Cloudflare Tunnel), leaving `controller`
@@ -2141,7 +2202,7 @@ async function sendToModel(chat) {
     const me = getCurrentUser();
     const counted = await workerCountsUsage();
     const authHeaders = counted && me ? { Authorization: 'Bearer ' + await me.getIdToken() } : undefined;
-    const res = await chatFetch(AI_ENDPOINT, { ...(counted ? { app: 'epicai' } : {}), messages: wireMessages, model: modelDropdown.getValue() || undefined, oneTools: aiFeaturesEnabled() || undefined, botTools: aiFeaturesEnabled() || undefined }, controller.signal, authHeaders);
+    const res = await chatFetch(AI_ENDPOINT, { ...(counted ? { app: 'epicai' } : {}), messages: wireMessages, model: modelDropdown.getValue() || undefined, oneTools: aiFeaturesEnabled() || undefined, botTools: aiFeaturesEnabled() || undefined, imageTools: (counted && me) ? true : undefined }, controller.signal, authHeaders);
     if (!res.ok || !res.body) {
       let msg = `Server error (${res.status})`;
       try { msg = (await res.json()).error || msg; } catch {}
@@ -2173,6 +2234,16 @@ async function sendToModel(chat) {
           if (json.setFollow) { aiSetFollow(json.setFollow.handle, json.setFollow.follow); continue; }
           if (json.createBot) {
             if (aiFeaturesEnabled()) createdBots.push(aiCreateBot(json.createBot));
+            continue;
+          }
+          if (json.image) {
+            const im = json.image, id = 'pic_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+            const note = { id, w: im.w || 0, h: im.h || 0, best: !!im.best, prompt: String(im.prompt || '').slice(0, 400) };
+            madePics.push(note);
+            PicStore.put({ id, mime: im.mime, data: im.data, w: note.w, h: note.h, best: note.best, prompt: note.prompt });
+            const fig = picNode(note, { mime: im.mime, data: im.data });
+            bubble.classList.remove('thinking'); first = false;
+            bubble.insertAdjacentElement('afterend', fig); scheduleScroll();
             continue;
           }
           if (json.createDoc) {
@@ -2229,8 +2300,9 @@ async function sendToModel(chat) {
     const { answer } = splitThinking(reasoningBuf, contentBuf, true);
     const botResults = createdBots.length ? await Promise.all(createdBots) : [];
     if (botResults.length) bubble.insertAdjacentHTML('afterend', `<div class="doc-links">${botResults.map(botChipHtml).join('')}</div>`);
-    if (answer || createdDocs.length || botResults.length) {
+    if (answer || createdDocs.length || botResults.length || madePics.length) {
       const reply = { role: 'assistant', content: answer || '' };
+      if (madePics.length) reply.images = madePics;
       if (createdDocs.length) reply.docLinks = createdDocs;
       if (botResults.length) reply.botLinks = botResults;
       chat.messages.push(reply);

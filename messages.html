@@ -497,11 +497,11 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=43';
+import { mountTopNav } from './shared/topnav.js?v=44';
 import {
   getCurrentUser, onAccountChange, auth, db, getProfile, handleOf, SERVER_ENDPOINT, officialBadgeHtml, uploadFile, ensureProfileLoaded,
-  loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions, CREDITS_ICON,
-} from './shared/account.js?v=42';
+  loadFollowRelationships, MAX_IMAGE_BYTES, linkifyMentions,
+} from './shared/account.js?v=43';
 import { attachMentionAutocomplete } from './shared/mention-autocomplete.js?v=10';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { reportContent } from './shared/report.js?v=9';
@@ -1581,7 +1581,6 @@ async function openThread(otherEmail, user) {
           ? `<a href="/profile?u=${encodeURIComponent(otherHandle)}"><img src="${otherProfile.photo || ''}" alt=""></a>`
           : `<img src="${otherProfile.photo || ''}" alt="">`}
         <span class="name" style="flex:1;">${escHtml(otherProfile.name)}${officialBadgeHtml(otherEmail)}</span>
-        ${otherHandle ? `<a class="thread-header-info-btn" href="/credits?to=${encodeURIComponent(otherHandle)}" title="send credits"><span class="material-symbols-rounded">${CREDITS_ICON}</span></a>` : ''}
       </div>
       <div class="msg-list" id="msgList"></div>
       <div class="edit-indicator" id="replyIndicator" style="display:none;">

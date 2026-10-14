@@ -125,8 +125,8 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { onAccountChange, mountAccountBar } from './shared/account.js?v=42';
-import { mountTopNav } from './shared/topnav.js?v=43';
+import { onAccountChange, mountAccountBar } from './shared/account.js?v=43';
+import { mountTopNav } from './shared/topnav.js?v=44';
 import { mountFooter } from './shared/footer.js?v=7';
 import { call, who, planLine, DEV_AS } from './shared/codes-api.js?v=2';
 
@@ -140,7 +140,7 @@ async function refresh() {
   let me;
   try { me = await call('GET', '/api/usage'); } catch (e) { $('planLine').textContent = e.message; return; }
   const plus = me.plan === 'plus';
-  $('planBadge').textContent = plus ? 'PLUS' : (me.signedIn ? 'FREE' : 'GUEST');
+  $('planBadge').textContent = plus ? 'oeper+' : (me.signedIn ? 'FREE' : 'GUEST');
   $('planBadge').classList.toggle('plus', plus);
   $('planLine').textContent = planLine(me);
   const pct = me.limit ? Math.min(100, Math.round(me.used / me.limit * 100)) : 100;
@@ -150,6 +150,7 @@ async function refresh() {
   const k = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M' : n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n);
   $('facts').innerHTML = `<b>${k(Math.min(me.used, me.limit))} of ${k(me.limit)}</b> tokens used today · resets at ${reset}` +
     (me.bonus ? `<br><b>${k(me.bonus)}</b> bonus tokens saved up (used after the daily allowance)` : '') +
+    (me.images && me.images.limit ? `<br><b>${me.images.used} of ${me.images.limit}</b> pictures made today${plus ? '' : ' · <a href="/plus" style="color:var(--md-sys-color-primary)">get more with oeper+</a>'}` : '') +
     (me.poolPct >= 80 ? '<br>epic AI is busy today: everyone together has used most of its capacity.' : '');
 }
 

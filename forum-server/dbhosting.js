@@ -56,22 +56,18 @@ const NODE_ENTRIES = ['index.js', 'bot.js', 'main.js', 'app.js', 'src/index.js',
 const PY_ENTRIES = ['main.py', 'bot.py', 'index.py', 'app.py', 'src/main.py', 'src/bot.py'];
 
 module.exports = function setupDbHosting(app, ctx) {
-  const { verifyFirebaseToken, isOwner, loadJson, saveJson, dataDir, billingEmail, firebaseProjectId } = ctx;
+  const { verifyFirebaseToken, isOwner, loadJson, saveJson, dataDir } = ctx;
   const allowed = (process.env.DBHOSTING_ALLOWED_EMAILS || '')
     .split(',').map(s => s.trim()).filter(Boolean);
 
-  // Hosting credits are tracked here, not in Firestore: this server has no
-  // Firebase admin access, so it can't spend a user's oeper.dev balance. A
-  // user "tops up" by sending oeper.dev credits to billingEmail; /credits/claim
-  // verifies that transfer and adds it to their ledger entry. Owners can also
-  // allocate credits directly. `added - used` is the account's remaining
-  // quota — when it runs out their bots are stopped.
-  //   { [email]: { approved, added, used, lastClaimKey, history: [...] } }
+  // Hosting credits are this feature's own quota unit, tracked here (oeper.dev itself has no currency). Owners allocate them
+  // to an account from the page. `added - used` is the account's remaining quota — when it runs out their bots are stopped.
+  //   { [email]: { approved, added, used, history: [...] } }
   const ledgerFile = path.join(dataDir, 'dbhosting-credits.json');
   const loadLedger = () => loadJson(ledgerFile);
   const saveLedger = l => saveJson(ledgerFile, l);
   const round4 = n => Math.round(n * 10000) / 10000;
-  const acctOf = (led, email) => led[email] || (led[email] = { approved: false, added: 0, used: 0, lastClaimKey: null, history: [] });
+  const acctOf = (led, email) => led[email] || (led[email] = { approved: false, added: 0, used: 0, history: [] });
   const remainingOf = a => round4(((a && a.added) || 0) - ((a && a.used) || 0));
   const slotsOf = st => (st && SIZES.includes(st.slots) ? st.slots : 1);
   const perDayOf = st => slotsOf(st) * SLOT_CREDITS_PER_DAY;
@@ -241,7 +237,7 @@ module.exports = function setupDbHosting(app, ctx) {
         const st = loadState();
         if (st[id]) { st[id].desired = false; st[id].autoResume = true; delete st[id].pid; saveState(st); }
         appendLog(id, `[host] ${new Date().toISOString()} not started: out of hosting credits\n`);
-        return { ok: false, error: 'Not enough hosting credits. Top up and it will start automatically.' };
+        return { ok: false, error: 'Not enough hosting credits. Ask an owner for more and it will start automatically.' };
       }
     }
     let slotsRunning = 0;
@@ -455,7 +451,6 @@ module.exports = function setupDbHosting(app, ctx) {
       usedSlots,
       account: accountInfo(email),
       isOwner: all,
-      billingEmail: billingEmail || null,
       rates: { slotPerDay: SLOT_CREDITS_PER_DAY, slotMemoryMB: NODE_MEMORY_MB, sizes: SIZES },
       system: { uptime: Math.round(os.uptime()), freeMem: os.freemem(), totalMem: os.totalmem(), load: os.loadavg()[0] },
     });
@@ -544,50 +539,6 @@ module.exports = function setupDbHosting(app, ctx) {
     saveState(st);
     writePresence(req.botId);
     res.json({ name: entry.name, settings: settingsOf(entry), applied: appliedPresence(req.botId), running: !!rt(req.botId).child });
-  });
-
-  // ── hosting credits ──────────────────────────────────────────────
-  // Verifies the caller's latest oeper.dev credit transfer to billingEmail and
-  // adds it to their hosting balance. Trust comes from firestore.rules: the
-  // sender's users/{email} doc can only gain lastTransfer* fields in the same
-  // atomic write that actually moves the credits, so (unlike the
-  // creditTransfers log) they can't be forged. Only the latest transfer is
-  // visible there, so the page claims right after every top-up.
-  router.post('/credits/claim', async (req, res) => {
-    const email = req.user.email;
-    if (!billingEmail) return res.status(503).json({ error: 'Top-ups are not configured on this server.' });
-    let doc;
-    try {
-      const r = await fetch(
-        `https://firestore.googleapis.com/v1/projects/${firebaseProjectId}/databases/(default)/documents/users/${encodeURIComponent(email)}`,
-        { headers: { Authorization: req.headers.authorization }, signal: AbortSignal.timeout(10000) });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      doc = await r.json();
-    } catch (e) {
-      return res.status(502).json({ error: "Couldn't check your transfers: " + e.message });
-    }
-    const f = doc.fields || {};
-    const num = v => (v ? Number(v.integerValue != null ? v.integerValue : v.doubleValue) : NaN);
-    const to = f.lastTransferTo && f.lastTransferTo.stringValue;
-    const net = num(f.lastTransferNet);
-    const at = f.lastTransferAt && f.lastTransferAt.timestampValue;
-    // Everything from here to the save is synchronous, so two claims for the
-    // same transfer can't both pass the key check.
-    const led = loadLedger();
-    const a = acctOf(led, email);
-    let added = 0;
-    if (to === billingEmail && Number.isFinite(net) && net > 0 && at) {
-      const key = `${at}|${net}`;
-      if (a.lastClaimKey !== key) {
-        a.lastClaimKey = key;
-        a.added = round4((a.added || 0) + net);
-        pushHistory(a, { type: 'top-up', amount: net });
-        saveLedger(led);
-        added = net;
-      }
-    }
-    res.json({ added, remaining: remainingOf(a) });
-    if (added) resumeCredited(email);
   });
 
   // Owner-only: allocate (or take back) hosting credits and approve accounts.

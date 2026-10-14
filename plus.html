@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>oeper+ — oeper.dev</title>
+<meta name="description" content="oeper+ gives you more epic AI, more pictures and a + beside your name across oeper.dev.">
+<meta property="og:title" content="oeper+ — oeper.dev">
+<meta property="og:description" content="More epic AI, more pictures and a + beside your name across oeper.dev.">
+<meta property="og:image" content="https://oeper.dev/icon.png">
+<meta property="og:url" content="https://oeper.dev/plus">
+<meta property="og:type" content="website">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
+<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./shared/fonts.css?v=1">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-outline-variant: #8c9199;
+    --md-sys-color-error: #ffb4ab;
+    --plus-a: #f7d774; --plus-b: #e8a33d; --plus-ink: #3b2300;
+  }
+
+  body {
+    min-height: 100vh; background-color: var(--md-sys-color-background);
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    background-image: var(--oe-bg-image, none); color: var(--md-sys-color-on-surface);
+    overflow-x: hidden; -webkit-font-smoothing: antialiased;
+  }
+  .page { position: relative; max-width: 620px; margin: 0 auto; padding: 56px 24px 100px; }
+  .header { margin-bottom: 28px; }
+  .header h1 {
+    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2.2rem, 6vw, 3rem); font-weight: 400;
+    margin-bottom: 8px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 12px;
+  }
+  .mark {
+    display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--plus-a), var(--plus-b)); color: var(--plus-ink); font-weight: 800; font-size: 0.8em; line-height: 1;
+  }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 15px; line-height: 1.5; }
+
+  .card { background: var(--md-sys-color-surface); border-radius: 24px; padding: 24px; margin-bottom: 20px; }
+  .section-heading { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 16px; font-weight: 500; margin-bottom: 16px; }
+  .note { font-size: 12px; color: var(--md-sys-color-on-surface-variant); line-height: 1.55; margin-top: 12px; }
+  .note a { color: var(--md-sys-color-primary); }
+
+  .status { display: flex; align-items: center; gap: 16px; }
+  .status .mark { font-size: 28px; }
+  .status b { display: block; font-size: 17px; font-weight: 500; }
+  .status span { font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
+  .status.member { background: linear-gradient(135deg, rgba(247,215,116,0.16), rgba(232,163,61,0.1)); }
+
+  .perk { display: flex; gap: 14px; padding: 13px 0; border-bottom: 1px solid var(--md-sys-color-outline); }
+  .perk:last-child { border-bottom: none; padding-bottom: 0; }
+  .perk:first-of-type { padding-top: 0; }
+  .perk .ic { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .perk b { display: block; font-size: 15px; font-weight: 500; margin-bottom: 2px; }
+  .perk span.d { font-size: 13px; color: var(--md-sys-color-on-surface-variant); line-height: 1.45; }
+
+  .plan { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--md-sys-color-outline); }
+  .plan:last-of-type { border-bottom: none; }
+  .plan .main { flex: 1; min-width: 0; }
+  .plan .name { font-size: 16px; font-weight: 500; }
+  .plan .save { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 100px; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant); }
+  .plan .sub { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 500; padding: 11px 20px;
+    border-radius: 100px; border: none; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container);
+    cursor: pointer; font-family: inherit; text-decoration: none; flex-shrink: 0;
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.primary { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .btn.full { width: 100%; }
+
+  .switch-row { display: flex; align-items: center; gap: 14px; }
+  .switch-row .t { flex: 1; font-size: 14px; line-height: 1.4; }
+  .switch-row .t span { display: block; font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
+  .switch { position: relative; width: 48px; height: 28px; flex-shrink: 0; }
+  .switch input { position: absolute; inset: 0; opacity: 0; cursor: pointer; margin: 0; z-index: 1; }
+  .switch .track { position: absolute; inset: 0; border-radius: 100px; background: var(--md-sys-color-surface-variant); transition: background 0.15s; }
+  .switch .track::after { content: ''; position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: 50%; background: var(--md-sys-color-on-surface-variant); transition: transform 0.15s, background 0.15s; }
+  .switch input:checked + .track { background: var(--md-sys-color-primary); }
+  .switch input:checked + .track::after { transform: translateX(20px); background: var(--md-sys-color-on-primary); }
+  .preview { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; margin-top: 14px; }
+  .preview .b { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; background: linear-gradient(135deg, var(--plus-a), var(--plus-b)); color: var(--plus-ink); font-size: 13px; font-weight: 800; line-height: 1; }
+
+  .meter { margin-top: 14px; }
+  .meter .row { display: flex; justify-content: space-between; font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 6px; }
+  .meter .bar { height: 8px; border-radius: 100px; background: var(--md-sys-color-surface-variant); overflow: hidden; }
+  .meter .bar i { display: block; height: 100%; border-radius: 100px; background: var(--md-sys-color-primary); }
+
+  .empty { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 8px 0; }
+  .toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background-color: #303034;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4); border-radius: 16px; padding: 14px 24px; font-size: 14px; color: #e3e2e6;
+    opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 100; max-width: 90vw;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  @media (max-width: 600px) { .toast { bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 32px); } }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <h1><span class="mark">+</span>oeper+</h1>
+    <p>more epic AI, more pictures, and a + beside your name across oeper.dev.</p>
+  </header>
+  <div id="content"><div class="card"><div class="empty">loading…</div></div></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module" data-cfasync="false">
+import { mountTopNav } from './shared/topnav.js?v=44';
+import { mountFooter } from './shared/footer.js?v=7';
+import { getCurrentUser, onAccountChange, ensureProfileLoaded, hasPlus, plusBadgeShown, setOwnPlusBadge, signIn } from './shared/account.js?v=43';
+import { call, fmtDate } from './shared/codes-api.js?v=2';
+
+mountTopNav();
+mountFooter();
+
+const $content = document.getElementById('content');
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2800); }
+
+// Prices are really in Malaysian ringgit (what will be charged once billing exists); other currencies are only an approximate preview.
+const MYR_RATES = { MYR: 1, USD: 0.21, EUR: 0.20, GBP: 0.17, SGD: 0.29, AUD: 0.33, CAD: 0.30, INR: 18.0, IDR: 3400, PHP: 12.4, THB: 7.7, VND: 5500, JPY: 33, CNY: 1.55, KRW: 300, NZD: 0.36, HKD: 1.66, BRL: 1.28, MXN: 4.3, ZAR: 3.9 };
+const REGION_CURRENCY = { MY: 'MYR', US: 'USD', GB: 'GBP', SG: 'SGD', AU: 'AUD', CA: 'CAD', IN: 'INR', ID: 'IDR', PH: 'PHP', TH: 'THB', VN: 'VND', JP: 'JPY', CN: 'CNY', KR: 'KRW', NZ: 'NZD', HK: 'HKD', BR: 'BRL', MX: 'MXN', ZA: 'ZAR', DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', NL: 'EUR', IE: 'EUR', PT: 'EUR', AT: 'EUR', FI: 'EUR', BE: 'EUR', GR: 'EUR' };
+const TZ_REGION = { 'Asia/Kuala_Lumpur': 'MY', 'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Los_Angeles': 'US', 'Europe/London': 'GB', 'Asia/Singapore': 'SG', 'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU', 'America/Toronto': 'CA', 'America/Vancouver': 'CA', 'Asia/Kolkata': 'IN', 'Asia/Calcutta': 'IN', 'Asia/Jakarta': 'ID', 'Asia/Manila': 'PH', 'Asia/Bangkok': 'TH', 'Asia/Ho_Chi_Minh': 'VN', 'Asia/Tokyo': 'JP', 'Asia/Shanghai': 'CN', 'Asia/Seoul': 'KR', 'Pacific/Auckland': 'NZ', 'Asia/Hong_Kong': 'HK', 'America/Sao_Paulo': 'BR', 'America/Mexico_City': 'MX', 'Africa/Johannesburg': 'ZA', 'Europe/Berlin': 'DE', 'Europe/Paris': 'FR', 'Europe/Madrid': 'ES', 'Europe/Rome': 'IT', 'Europe/Amsterdam': 'NL' };
+function currency() {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz && TZ_REGION[tz]) return REGION_CURRENCY[TZ_REGION[tz]] || 'USD';
+    if (tz && tz.startsWith('Europe/')) return 'EUR';
+  } catch {}
+  const region = (navigator.language || 'en-US').split('-')[1];
+  return REGION_CURRENCY[(region || 'US').toUpperCase()] || 'USD';
+}
+function price(myr) {
+  const cur = currency(), rate = MYR_RATES[cur] != null ? MYR_RATES[cur] : MYR_RATES.USD;
+  try { return new Intl.NumberFormat(navigator.language || 'en-US', { style: 'currency', currency: cur }).format(myr * rate); } catch { return 'RM' + myr.toFixed(2); }
+}
+
+let me = null, loadedFor = null;
+async function load() {
+  const user = getCurrentUser();
+  if (!user) { me = null; loadedFor = null; return render(); }
+  if (loadedFor === user.email) return render();
+  loadedFor = user.email;
+  await ensureProfileLoaded(user.email);
+  try { me = await call('GET', '/api/usage'); } catch { me = null; }
+  render();
+}
+
+function perks() {
+  const pl = (me && me.plans) || { free: { tokens: 50000, images: 4 }, plus: { tokens: 240000, images: 15, best: 3 } };
+  const times = Math.max(2, Math.round(pl.plus.tokens / Math.max(1, pl.free.tokens)));
+  return [
+    ['chat', `about ${times}× the daily epic AI usage`, `${Math.round(pl.plus.tokens / 1000)}k tokens a day instead of ${Math.round(pl.free.tokens / 1000)}k, plus the first claim on epic AI when everyone is busy.`],
+    ['image', `${pl.plus.images} pictures a day instead of ${pl.free.images}`, `ask epic AI to draw anything, or make pictures in the One suite.${pl.plus.best ? ` ${pl.plus.best} of them a day come from our best-quality picture model.` : ''}`],
+    ['add_circle', 'a + beside your name', 'shows on your posts, comments and messages across oeper.dev. you choose whether to show it.'],
+  ].map(([ic, t, d]) => `<div class="perk"><div class="ic"><span class="material-symbols-rounded">${ic}</span></div><div><b>${esc(t)}</b><span class="d">${esc(d)}</span></div></div>`).join('');
+}
+
+function render() {
+  const user = getCurrentUser();
+  const member = !!user && hasPlus(user.email);
+  const until = member ? ((me && me.plusUntil) || 0) : 0;
+  const shop = (me && me.shop) || { month: { priceMYR: 12.99 }, year: { priceMYR: 119 } };
+  const yearSave = Math.max(0, Math.round((1 - shop.year.priceMYR / (shop.month.priceMYR * 12)) * 100));
+
+  let status;
+  if (!user) status = `<div class="card"><div class="status"><span class="mark">+</span><div><b>sign in to see your plan</b><span>oeper+ belongs to your oeper.dev account.</span></div></div><div style="margin-top:16px"><button class="btn primary full" id="signInBtn">sign in</button></div></div>`;
+  else if (member) status = `<div class="card status member"><span class="mark">+</span><div><b>you're an oeper+ member</b><span>${until === -1 || (me && me.plusUntil === -1) ? 'for life' : (until ? 'until ' + esc(fmtDate(until)) : 'thank you for supporting oeper.dev')}</span></div></div>`;
+  else status = `<div class="card status"><span class="mark">+</span><div><b>you're on the free plan</b><span>oeper+ adds everything below.</span></div></div>`;
+
+  let badge = '';
+  if (member) {
+    const on = plusBadgeShown(user.email);
+    badge = `<div class="card">
+      <div class="switch-row"><div class="t">show the + beside my name<span>everyone sees it on your posts, comments and messages.</span></div>
+        <label class="switch"><input type="checkbox" id="badgeToggle" ${on ? 'checked' : ''}><span class="track"></span></label></div>
+      <div class="preview" id="badgePreview" style="${on ? '' : 'opacity:.4'}">${esc(user.displayName || 'you')}<span class="b">+</span></div>
+    </div>`;
+  }
+
+  let meter = '';
+  if (user && me && me.images && me.images.limit) {
+    const pct = Math.min(100, Math.round(me.images.used / me.images.limit * 100));
+    meter = `<div class="card"><div class="section-heading">your pictures today</div><div class="meter"><div class="row"><span>${me.images.used} of ${me.images.limit} made</span><span>resets at midnight UTC</span></div><div class="bar"><i style="width:${pct}%"></i></div></div></div>`;
+  }
+
+  const buy = member ? '' : `<div class="card">
+      <div class="section-heading">get oeper+</div>
+      <div class="plan"><div class="main"><div class="name">monthly</div><div class="sub">${esc(price(shop.month.priceMYR))} a month</div></div><button class="btn" id="buyMonth">${esc(price(shop.month.priceMYR))}</button></div>
+      <div class="plan"><div class="main"><div class="name">yearly${yearSave ? `<span class="save">save ${yearSave}%</span>` : ''}</div><div class="sub">${esc(price(shop.year.priceMYR))} a year</div></div><button class="btn" id="buyYear">${esc(price(shop.year.priceMYR))}</button></div>
+      <div class="note">payments aren't set up yet, so nothing can be bought here for now. if you have a product code or promo code, <a href="/redeem">redeem it</a> to get oeper+ today. prices are really in RM; other currencies are an approximate preview, your bank may add a conversion fee, and the full price including any tax will be shown before you pay. see the <a href="/refunds">refund policy</a> and <a href="/terms">terms</a>.</div>
+    </div>`;
+
+  $content.innerHTML = status + `<div class="card"><div class="section-heading">what you get</div>${perks()}</div>` + badge + meter + buy +
+    (member ? `<div class="card"><div class="note" style="margin-top:0">have another code? <a href="/redeem">redeem it</a> to add more time. <a href="/usage">see your usage</a>.</div></div>` : '');
+
+  const si = document.getElementById('signInBtn'); if (si) si.addEventListener('click', () => signIn());
+  ['buyMonth', 'buyYear'].forEach(id => { const b = document.getElementById(id); if (b) b.addEventListener('click', () => toast("payments aren't set up yet. redeem a code to get oeper+ now.")); });
+  const tg = document.getElementById('badgeToggle');
+  if (tg) tg.addEventListener('change', async () => {
+    tg.disabled = true;
+    try { await setOwnPlusBadge(tg.checked); document.getElementById('badgePreview').style.opacity = tg.checked ? '' : '.4'; toast(tg.checked ? 'the + is showing' : 'the + is hidden'); }
+    catch (e) { tg.checked = !tg.checked; toast('could not save: ' + e.message); }
+    finally { tg.disabled = false; }
+  });
+}
+
+onAccountChange(() => { load(); });
+</script>
+</body>
+</html>

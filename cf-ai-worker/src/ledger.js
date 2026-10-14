@@ -5,8 +5,10 @@
 //   product key  OPD-XXXX-XXXX-XXXX   a random key with a product prefix, made in bulk, normally one use. Unlocks a product (epic AI Plus).
 //   promo code   WELCOME50            a word the owner picks, can be used many times (cap, expiry, once per person). Gives a bonus.
 // Where a code may be redeemed (scope): "epicai" works on oeper.dev/redeem AND inside the epic AI app, "site" only on oeper.dev.
-// What a code gives (grant): plusDays (-1 = for life) of epic AI Plus and/or bonusTokens (extra tokens, used after the daily allowance runs out)
-// and/or credits (oeper.dev's site currency: the ledger only remembers them as pending, index.js adds them to users/{email}.credits, see firestore-admin.js).
+// What a code gives (grant): plusDays (-1 = for life) of oeper+ and/or bonusTokens (extra tokens, used after the daily allowance runs out)
+//
+// oeper+ is what people see as the name of the paid plan (in this file it is still called 'plus'): more tokens, more pictures a day, a bigger share of the pool.
+// It is given by a code or product key for now (there is no payment processor yet); index.js publishes who has it as users/{email}.plusUntil for the + badge.
 //
 // Limits are in TOKENS (what the model reads + writes, reasoning included), because that is what Cloudflare bills. Cloudflare's free plan allows 10,000
 // "neurons" a day for the whole account; on the Gemma 4 model that is 9,091 neurons per million input tokens and 27,273 per million output tokens, so
@@ -26,6 +28,13 @@ export const DEFAULT_CONFIG = {
   // Everyone together: how many neurons epic AI may spend per day (Cloudflare's free plan is 10,000 for the whole account, shared with the
   // One suite, study tools and moderation). The last reservePct of the pool is kept for Plus people.
   pool: { neurons: 7000, reservePct: 20 },
+  // Pictures. Standard pictures come from FLUX.2 klein 4B on Workers AI, which costs neurons (about 104 for a 1024x1024 one), so they have their own small
+  // daily neuron budget (also counted in the shared pool above; the last reservePct of it is kept for oeper+). "Best" pictures come from Google's
+  // Nano Banana 2.1 through Cloudflare's billing: they cost real money instead of neurons, so only oeper+ gets them, a few a day, and everyone together
+  // is capped (premiumGlobal; 0 turns them off). free / plus = pictures per person per day (the best ones are part of those, not extra).
+  images: { free: 4, plus: 15, plusPremium: 3, budget: 2000, premiumGlobal: 20 },
+  // What oeper+ costs, in Malaysian ringgit, for plus.html to show (nothing can be bought yet: it is given out with codes and keys).
+  shop: { month: { days: 30, priceMYR: 12.99 }, year: { days: 365, priceMYR: 119 } },
   // What the model costs, in neurons per million tokens (Cloudflare's price list for @cf/google/gemma-4-26b-a4b-it).
   rates: { inPerM: 9091, outPerM: 27273 },
   // Product keys: each product has a prefix. A promo code can never look like "<prefix>-xxxx-xxxx-xxxx".
@@ -45,16 +54,14 @@ function cleanGrant(g) {
   // boost: this many percent more daily tokens for boostDays days ("10% more usage for a month")
   const boostPercent = clampInt(g.boostPercent, 0, 1000);
   const boostDays = boostPercent > 0 ? clampInt(g.boostDays || 30, 1, 3650) : 0;
-  const credits = clampInt(g.credits, 0, 1_000_000_000);
-  return { plusDays, bonusTokens, boostPercent, boostDays, credits };
+  return { plusDays, bonusTokens, boostPercent, boostDays };
 }
-const grantEmpty = g => g.plusDays === 0 && g.bonusTokens === 0 && !g.boostPercent && !g.credits;
+const grantEmpty = g => g.plusDays === 0 && g.bonusTokens === 0 && !g.boostPercent;
 export function describeGrant(g) {
   const parts = [];
-  if (g.plusDays === -1) parts.push('epic AI Plus for life');
-  else if (g.plusDays > 0) parts.push(`${g.plusDays} day${g.plusDays === 1 ? '' : 's'} of epic AI Plus`);
+  if (g.plusDays === -1) parts.push('oeper+ for life');
+  else if (g.plusDays > 0) parts.push(`${g.plusDays} day${g.plusDays === 1 ? '' : 's'} of oeper+`);
   if (g.bonusTokens > 0) parts.push(`${g.bonusTokens.toLocaleString('en-US')} extra tokens`);
-  if (g.credits > 0) parts.push(`${g.credits.toLocaleString('en-US')} oeper.dev credits`);
   if (g.boostPercent > 0) parts.push(`${g.boostPercent}% more usage for ${g.boostDays % 30 === 0 ? (g.boostDays / 30) + ' month' + (g.boostDays === 30 ? '' : 's') : g.boostDays + ' days'}`);
   return parts.join(' + ') || 'nothing';
 }
@@ -80,7 +87,7 @@ function planOf(user, now = Date.now()) {
 }
 function userView(user, now = Date.now()) {
   const u = user || { plusUntil: 0, bonus: 0 };
-  return { plan: planOf(u, now), plusUntil: u.plusUntil === -1 ? -1 : (u.plusUntil > now ? u.plusUntil : 0), bonus: u.bonus || 0, pendingCredits: u.pendingCredits || 0 };
+  return { plan: planOf(u, now), plusUntil: u.plusUntil === -1 ? -1 : (u.plusUntil > now ? u.plusUntil : 0), bonus: u.bonus || 0, marker: u.marker || 0 };
 }
 
 export class Ledger extends DurableObject {
@@ -90,6 +97,8 @@ export class Ledger extends DurableObject {
       limits: { ...DEFAULT_CONFIG.limits, ...(c.limits || {}) },
       pool: { ...DEFAULT_CONFIG.pool, ...(c.pool || {}) },
       rates: { ...DEFAULT_CONFIG.rates, ...(c.rates || {}) },
+      images: { ...DEFAULT_CONFIG.images, ...(c.images || {}) },
+      shop: { ...DEFAULT_CONFIG.shop, ...(c.shop || {}) },
       products: Object.keys(c.products || {}).length ? c.products : DEFAULT_CONFIG.products,
     };
   }
@@ -101,7 +110,6 @@ export class Ledger extends DurableObject {
     if (grant.plusDays === -1) user.plusUntil = -1;
     else if (grant.plusDays > 0 && user.plusUntil !== -1) user.plusUntil = Math.max(now, user.plusUntil || 0) + grant.plusDays * DAY_MS;
     user.bonus = (user.bonus || 0) + grant.bonusTokens;
-    user.pendingCredits = (user.pendingCredits || 0) + (grant.credits || 0);
     if (grant.boostPercent > 0) {
       const live = user.boostUntil > now;
       user.boostPct = live ? Math.max(user.boostPct || 0, grant.boostPercent) : grant.boostPercent;
@@ -120,7 +128,9 @@ export class Ledger extends DurableObject {
     const old = await this.ctx.storage.list({ prefix: 'use:' });
     const dead = [...old.keys()].filter(k => !k.startsWith('use:' + day + ':'));
     if (dead.length) await this.ctx.storage.delete(dead.slice(0, 120));
-    if (prev) await this.ctx.storage.delete('pool:' + prev);
+    const oldImg = [...(await this.ctx.storage.list({ prefix: 'img:' })).keys()].filter(k => !k.startsWith('img:' + day + ':'));
+    if (oldImg.length) await this.ctx.storage.delete(oldImg.slice(0, 120));
+    if (prev) await this.ctx.storage.delete(['pool:' + prev, 'imgpool:' + prev, 'imgprem:' + prev]);
     await this.ctx.storage.put('meta:day', day);
   }
   #subject(email, ip) { return email ? 'u:' + email : 'g:' + ip; }
@@ -178,6 +188,59 @@ export class Ledger extends DurableObject {
     await this.ctx.storage.put('stat:' + day, stat);
   }
 
+  // ── pictures ──
+  // A picture is reserved BEFORE it is made (so two at once can't both slip under the limit) and released again if making it fails.
+
+  /** May this person make a picture now? wantBest asks for the Nano Banana one (oeper+ only). Returns what was reserved, or why not. */
+  async imageReserve(email, wantBest, owner, neurons) {
+    if (!email) return { ok: false, reason: 'signin' };
+    const now = Date.now(), day = dayOf(now), cfg = await this.#config(), im = cfg.images;
+    await this.#rollDay(day);
+    const user = await this.#user(email);
+    const plan = owner ? 'plus' : planOf(user, now);
+    const max = plan === 'plus' ? im.plus : im.free;
+    const key = 'img:' + day + ':' + email;
+    const mine = (await this.ctx.storage.get(key)) || { n: 0, best: 0 };
+    const base = { plan, limit: max, used: mine.n, bestLimit: plan === 'plus' ? im.plusPremium : 0, bestUsed: mine.best, resetsAt: nextMidnight(now) };
+    if (!owner && mine.n >= max) return { ok: false, reason: 'limit', ...base };
+    // best (Nano Banana): oeper+ only, a few per person, and a cap for everyone together; costs money, not neurons
+    const premKey = 'imgprem:' + day;
+    const premUsed = (await this.ctx.storage.get(premKey)) || 0;
+    const best = !!wantBest && plan === 'plus' && im.premiumGlobal > 0 && (owner || mine.best < im.plusPremium) && premUsed < im.premiumGlobal;
+    let spent = 0;
+    if (best) await this.ctx.storage.put(premKey, premUsed + 1);
+    else {
+      const used = (await this.ctx.storage.get('imgpool:' + day)) || 0;
+      const cap = im.budget * (plan === 'plus' ? 1 : (100 - cfg.pool.reservePct) / 100);
+      const poolUsed = (await this.ctx.storage.get('pool:' + day)) || 0;
+      // never take the chat's own allowance dry: stop when the whole pool is used
+      if (used + neurons > cap || poolUsed + neurons > cfg.pool.neurons) return { ok: false, reason: 'busy', ...base };
+      spent = neurons;
+      await this.ctx.storage.put({ ['imgpool:' + day]: used + neurons, ['pool:' + day]: poolUsed + neurons });
+    }
+    mine.n++; if (best) mine.best++;
+    await this.ctx.storage.put(key, mine);
+    const stat = (await this.ctx.storage.get('stat:' + day)) || {};
+    stat.images = (stat.images || 0) + 1; if (best) stat.bestImages = (stat.bestImages || 0) + 1; stat.neurons = (stat.neurons || 0) + spent;
+    await this.ctx.storage.put('stat:' + day, stat);
+    return { ok: true, best, spent, wantedBest: !!wantBest, ...base, used: mine.n, bestUsed: mine.best };
+  }
+  /** Gives back what imageReserve took, when the picture could not be made. */
+  async imageRelease(email, r) {
+    const day = dayOf();
+    const key = 'img:' + day + ':' + email;
+    const mine = await this.ctx.storage.get(key);
+    if (mine) { mine.n = Math.max(0, mine.n - 1); if (r.best) mine.best = Math.max(0, mine.best - 1); await this.ctx.storage.put(key, mine); }
+    if (r.best) await this.ctx.storage.put('imgprem:' + day, Math.max(0, ((await this.ctx.storage.get('imgprem:' + day)) || 0) - 1));
+    else if (r.spent) await this.ctx.storage.put({
+      ['imgpool:' + day]: Math.max(0, ((await this.ctx.storage.get('imgpool:' + day)) || 0) - r.spent),
+      ['pool:' + day]: Math.max(0, ((await this.ctx.storage.get('pool:' + day)) || 0) - r.spent),
+    });
+    const stat = (await this.ctx.storage.get('stat:' + day)) || {};
+    stat.images = Math.max(0, (stat.images || 0) - 1); if (r.best) stat.bestImages = Math.max(0, (stat.bestImages || 0) - 1); stat.neurons = Math.max(0, (stat.neurons || 0) - (r.spent || 0));
+    await this.ctx.storage.put('stat:' + day, stat);
+  }
+
   async me(email, ip) {
     const now = Date.now(), day = dayOf(now), cfg = await this.#config();
     const user = email ? await this.#user(email) : null;
@@ -187,10 +250,14 @@ export class Ledger extends DurableObject {
     const poolUsed = (await this.ctx.storage.get('pool:' + day)) || 0;
     const msgLimit = plan === 'guest' ? (cfg.limits.guest && cfg.limits.guest.messages != null ? cfg.limits.guest.messages : 5) : 0;
     const msgUsed = plan === 'guest' ? ((await this.ctx.storage.get('msgs:' + day + ':' + this.#subject(email, ip))) || 0) : 0;
+    const im = cfg.images, mine = email ? (await this.ctx.storage.get('img:' + day + ':' + email)) || { n: 0, best: 0 } : { n: 0, best: 0 };
     return {
+      images: { used: mine.n, limit: plan === 'plus' ? im.plus : plan === 'guest' ? 0 : im.free, bestUsed: mine.best, bestLimit: plan === 'plus' && im.premiumGlobal > 0 ? im.plusPremium : 0 },
+      shop: cfg.shop,
+      plans: { free: { tokens: (cfg.limits.free || {}).tokens || 0, images: im.free }, plus: { tokens: (cfg.limits.plus || {}).tokens || 0, images: im.plus, best: im.premiumGlobal > 0 ? im.plusPremium : 0 } },
       messageLimit: msgLimit, messagesUsed: msgUsed,
-      plan, used, limit: limitFor(cfg, plan, user, now), bonus: v.bonus, pendingCredits: v.pendingCredits || 0,
-      boostPercent: user && user.boostUntil > now ? user.boostPct || 0 : 0, boostUntil: user && user.boostUntil > now ? user.boostUntil : 0, plusUntil: v.plusUntil, resetsAt: nextMidnight(now), signedIn: !!email,
+      plan, used, limit: limitFor(cfg, plan, user, now), bonus: v.bonus,
+      boostPercent: user && user.boostUntil > now ? user.boostPct || 0 : 0, boostUntil: user && user.boostUntil > now ? user.boostUntil : 0, plusUntil: v.plusUntil, marker: v.marker || 0, resetsAt: nextMidnight(now), signedIn: !!email,
       poolPct: cfg.pool.neurons ? Math.min(100, Math.round(poolUsed / cfg.pool.neurons * 100)) : 100, history: user ? (user.history || []).slice(0, 10) : [],
     };
   }
@@ -227,17 +294,8 @@ export class Ledger extends DurableObject {
     return { ok: true, kind: rec.kind, grant: rec.grant, summary: describeGrant(rec.grant), ...userView(user, now) };
   }
 
-  /** Credits a person has earned from codes that are not yet in their oeper.dev balance. The caller adds them to Firestore, and puts them back if that fails. */
-  async takePendingCredits(email) {
-    const user = await this.#user(email), n = user.pendingCredits || 0;
-    if (n > 0) { user.pendingCredits = 0; await this.ctx.storage.put('user:' + email, user); }
-    return n;
-  }
-  async restorePendingCredits(email, n) {
-    const user = await this.#user(email);
-    user.pendingCredits = (user.pendingCredits || 0) + n;
-    await this.ctx.storage.put('user:' + email, user);
-  }
+  /** Remembers which oeper+ time was last published to the person's public profile (users/{email}.plusUntil), so it is only written when it changes. */
+  async setMarker(email, value) { const user = await this.#user(email); user.marker = value; await this.ctx.storage.put('user:' + email, user); }
 
   // ── owner tools ──
 
@@ -250,6 +308,18 @@ export class Ledger extends DurableObject {
     const cfg = await this.#config();
     if (patch.limits) for (const plan of ['guest', 'free', 'plus']) if (patch.limits[plan]) cfg.limits[plan] = { tokens: clampInt(patch.limits[plan].tokens, 0, 1_000_000_000), ...(plan === 'guest' ? { messages: clampInt(patch.limits[plan].messages, 0, 100_000) } : {}) };
     if (patch.pool) cfg.pool = { neurons: clampInt(patch.pool.neurons, 0, 100_000_000), reservePct: clampInt(patch.pool.reservePct, 0, 100) };
+    if (patch.images) {
+      const p = patch.images, im = cfg.images;
+      cfg.images = {
+        free: clampInt(p.free ?? im.free, 0, 1000), plus: clampInt(p.plus ?? im.plus, 0, 1000), plusPremium: clampInt(p.plusPremium ?? im.plusPremium, 0, 1000),
+        budget: clampInt(p.budget ?? im.budget, 0, 1_000_000), premiumGlobal: clampInt(p.premiumGlobal ?? im.premiumGlobal, 0, 100_000),
+      };
+    }
+    if (patch.shop) {
+      const out = {};
+      for (const k of ['month', 'year']) { const o = patch.shop[k] || cfg.shop[k]; out[k] = { days: clampInt(o.days, 1, 3650), priceMYR: Math.max(0, Math.min(100000, Math.round(Number(o.priceMYR) * 100) / 100 || 0)) }; }
+      cfg.shop = out;
+    }
     if (patch.rates) cfg.rates = { inPerM: clampInt(patch.rates.inPerM, 1, 10_000_000), outPerM: clampInt(patch.rates.outPerM, 1, 10_000_000) };
     if (patch.products) {
       const products = {};
@@ -274,7 +344,7 @@ export class Ledger extends DurableObject {
     if (looksLikeKey(code, cfg)) throw new Error('That looks like a product key. Promo codes must not use a product prefix.');
     if (await this.ctx.storage.get('code:' + code)) throw new Error('That code already exists.');
     const grant = cleanGrant(spec.grant);
-    if (grantEmpty(grant)) throw new Error('Give it something: Plus days, bonus tokens, a boost or credits.');
+    if (grantEmpty(grant)) throw new Error('Give it something: Plus days, bonus tokens, or a boost.');
     const rec = {
       code, kind: 'promo', scope: spec.scope === 'site' ? 'site' : 'epicai', grant, maxUses: clampInt(spec.maxUses, 0, 10_000_000), uses: 0,
       startsAt: spec.startsAt ? Number(spec.startsAt) : 0, expiresAt: spec.expiresAt ? Number(spec.expiresAt) : 0,
@@ -290,7 +360,7 @@ export class Ledger extends DurableObject {
     if (!product) throw new Error('Unknown product.');
     const count = clampInt(spec.count, 1, 200);
     const grant = cleanGrant(spec.grant);
-    if (grantEmpty(grant)) throw new Error('Give the key something: Plus days, bonus tokens, a boost or credits.');
+    if (grantEmpty(grant)) throw new Error('Give the key something: oeper+ days, bonus tokens or a boost.');
     const keys = [], now = Date.now();
     while (keys.length < count) {
       const code = randomKey(product.prefix);
@@ -330,7 +400,7 @@ export class Ledger extends DurableObject {
     const email = String(rawEmail || '').trim().toLowerCase();
     if (!email.includes('@')) throw new Error('Give an email.');
     const grant = cleanGrant(grantIn);
-    if (grantEmpty(grant)) throw new Error('Give it something: Plus days, bonus tokens, a boost or credits.');
+    if (grantEmpty(grant)) throw new Error('Give it something: oeper+ days, bonus tokens or a boost.');
     const user = await this.#applyGrant(email, grant, 'by ' + by, 'admin');
     return { email, ...userView(user) };
   }
@@ -378,7 +448,7 @@ export class Ledger extends DurableObject {
     const day = dayOf();
     const codes = [...(await this.ctx.storage.list({ prefix: 'code:' })).values()];
     return {
-      day, today: { requests: 0, signedIn: 0, guests: 0, denied: 0, tokensIn: 0, tokensOut: 0, neurons: 0, ...((await this.ctx.storage.get('stat:' + day)) || {}) },
+      day, today: { requests: 0, signedIn: 0, guests: 0, denied: 0, tokensIn: 0, tokensOut: 0, neurons: 0, images: 0, bestImages: 0, ...((await this.ctx.storage.get('stat:' + day)) || {}) },
       pool: (await this.#config()).pool,
       codes: codes.length, keys: codes.filter(c => c.kind === 'key').length, redemptions: codes.reduce((n, c) => n + c.uses, 0),
     };
