@@ -335,7 +335,7 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce) {
       let workingMessages = initialMessages;
       const think = wantsThinking(initialMessages, quiet, thinkForce);
       const thinkParams = think ? {} : { chat_template_kwargs: { enable_thinking: false } };
-      let tokensIn = 0, tokensOut = 0;
+      let tokensIn = 0, tokensOut = 0, exactRounds = 0, roundsRun = 0;
       try {
         for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
           // The last round gets no tools at all. Otherwise a model that keeps
@@ -356,6 +356,7 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce) {
             // counted even when the viewer closes the page mid-answer: the model still did the work
             if (tally.usage && tally.usage.prompt_tokens) tokensIn += tally.usage.prompt_tokens - estimateInputTokens(workingMessages, roundTools);
             tokensOut += tally.usage && tally.usage.completion_tokens ? tally.usage.completion_tokens : Math.ceil(tally.outChars / CHARS_PER_TOKEN);
+            roundsRun++; if (tally.usage && tally.usage.completion_tokens) exactRounds++;
           }
           const { finishedWithToolCalls, toolCalls, assistantContent } = round_;
           if (!finishedWithToolCalls || round === MAX_TOOL_ROUNDS) break;
@@ -406,6 +407,9 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce) {
       } catch (err) {
         try { send({ choices: [{ delta: { content: `\n\n[error: ${err.message}]` } }] }); } catch { /* the viewer is gone */ }
       }
+      // what this turn cost, for the "response details" in the apps (ignored by clients that don't know the event). `exact`: every round's
+      // numbers came from the model itself instead of being estimated from the text.
+      try { send({ usage: { in: tokensIn, out: tokensOut, exact: roundsRun > 0 && exactRounds === roundsRun } }); } catch { /* the viewer is gone */ }
       if (meter && env.LEDGER) {
         try { await env.LEDGER.get(env.LEDGER.idFromName('main')).record(meter.email, meter.ip, tokensIn, tokensOut); }
         catch (err) { console.log('ledger could not record usage:', err && err.message); }
