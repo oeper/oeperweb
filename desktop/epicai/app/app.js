@@ -247,7 +247,7 @@ async function sendToModel(c, { retried = false } = {}) {
   try {
     const compact = await compactChat(c, () => save());
     const extra = sessionNote() + (canLook ? ' ' + SCREEN_HINT : '');
-    const wire = await toWireMessages(compact.msgs, { summary: compact.summary, selfContext, memoryFacts: memory, memoryProfile: memProfile, memoryLearn: memLearn, extra, shots });
+    const wire = await toWireMessages(compact.msgs, { summary: compact.summary, selfContext, memoryFacts: memory, memoryProfile: memProfile, memoryLearn: memLearn, extra, shots, chats, curId });
     await api.streamChat({
       messages: wire, signal: controller.signal,
       onActivity: () => { lastActivity = Date.now(); },

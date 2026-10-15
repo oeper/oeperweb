@@ -614,6 +614,7 @@ import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoad
 import { mountTopNav } from './shared/topnav.js?v=44';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { applySection, profilePrompt, PROFILE_MAX, GET_TO_KNOW } from './shared/ai-memory.js?v=1';
+import { recallPrompt } from './shared/ai-recall.js?v=1';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=3';
 import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=3';
@@ -1997,6 +1998,11 @@ async function toWireMessages(msgs, summary) {
     systemContent += `\n\nThings you remember about this user from past conversations. This is real context about who you're talking to, not trivia — actually use it: tailor examples, suggestions and explanations to it, connect it to what they're asking now, and bring it up yourself when it's genuinely relevant (a follow-up on a project or goal they mentioned, a preference they've stated, something due soon) instead of only using it when directly asked. Don't just recite the list back at them, and don't force a mention into every reply — use it the way someone who actually remembers you would, naturally and only when it fits:\n${recentFacts.map(f => '- ' + f).join('\n')}`;
   }
   if (getCurrentUser()) systemContent += profilePrompt(memoryProfile, memoryLearn);
+  // remembering other chats follows the same "let epic AI learn about me" switch; it only reads this browser's own chat list
+  if (memoryLearn) {
+    const lastAsk = [...msgs].reverse().find(m => m.role === 'user');
+    try { systemContent += recallPrompt(chats, currentChatId, String((lastAsk && lastAsk.content) || '').replace(/<<one:[^>]*>>[\s\S]*?<<\/one>>/g, ' ').slice(0, 600)); } catch { /* recall is a bonus: never block a reply */ }
+  }
   return [{ role: 'system', content: systemContent }, ...wire];
 }
 
