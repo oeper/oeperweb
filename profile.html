@@ -78,7 +78,8 @@
   .profile-bio a.md-btn:hover { opacity: 0.9; }
   .profile-bio a.md-btn .material-symbols-rounded { font-size: 16px; }
 
-  .profile-actions { display: flex; gap: 10px; flex-shrink: 0; }
+  /* wraps instead of spilling out of the card when the name column is narrow (the wide layout puts the card in a 340px column) */
+  .profile-actions { display: flex; flex-wrap: wrap; gap: 10px; min-width: 0; max-width: 100%; }
 
   .kebab-wrap { position: relative; }
   .kebab-btn {
