@@ -34,7 +34,7 @@ export const DEFAULT_CONFIG = {
   // is capped (premiumGlobal; 0 turns them off). free / plus = pictures per person per day (the best ones are part of those, not extra).
   images: { free: 4, plus: 15, plusPremium: 3, budget: 2000, premiumGlobal: 20 },
   // What oeper+ costs, in Malaysian ringgit, for plus.html to show (nothing can be bought yet: it is given out with codes and keys).
-  shop: { month: { days: 30, priceMYR: 12.99 }, year: { days: 365, priceMYR: 119 } },
+  shop: { month: { days: 30, priceMYR: 20.99 }, year: { days: 365, priceMYR: 189 } },
   // What the model costs, in neurons per million tokens (Cloudflare's price list for @cf/google/gemma-4-26b-a4b-it).
   rates: { inPerM: 9091, outPerM: 27273 },
   // Product keys: each product has a prefix. A promo code can never look like "<prefix>-xxxx-xxxx-xxxx".
