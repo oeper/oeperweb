@@ -517,6 +517,24 @@
   .ig-vote-btn.downvoted .material-symbols-rounded { color: var(--md-sys-color-error); }
   .ig-vote-btn.saved .material-symbols-rounded { color: var(--md-sys-color-primary); }
   .ig-vote-score { font-size: 13px; font-weight: 600; min-width: 16px; text-align: center; margin: 0 2px; }
+  /* the like count / "N likes" opens the list of who liked and disliked */
+  [data-voters] { cursor: pointer; }
+  .ig-vote-score[data-voters]:hover, .ig-likes[data-voters]:hover { text-decoration: underline; }
+  .ig-voters-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 240; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .ig-voters-overlay.open { opacity: 1; pointer-events: all; }
+  .ig-voters-modal { position: fixed; left: 50%; top: 50%; z-index: 241; width: min(360px, 92vw); transform: translate(-50%, -50%) scale(0.95); opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+    background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); border-radius: 24px; padding: 22px 20px 18px; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+  .ig-voters-modal.open { opacity: 1; pointer-events: all; transform: translate(-50%, -50%) scale(1); }
+  .ig-voters-modal h3 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: 20px; font-weight: 400; margin-bottom: 16px; }
+  .ig-voters-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+  .ig-voters-tab { flex: 1; background: var(--md-sys-color-surface-variant); border: none; border-radius: 100px; padding: 8px 14px; font: inherit; font-size: 13px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .ig-voters-tab.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+  .ig-voters-tab .material-symbols-rounded { font-size: 16px; }
+  .ig-voters-list { display: flex; flex-direction: column; gap: 2px; max-height: 50vh; overflow-y: auto; }
+  .ig-voter-row { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 12px; text-decoration: none; color: inherit; font-size: 14px; }
+  a.ig-voter-row:hover { background: var(--md-sys-state-hover); }
+  .ig-voter-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--md-sys-color-surface-variant); flex-shrink: 0; }
+  .ig-voters-empty { color: var(--md-sys-color-on-surface-variant); font-size: 13px; text-align: center; padding: 24px 0; }
   .ig-comment-btn { margin-left: 6px; }
   .ig-likes { padding: 4px 14px 0; font-size: 13px; font-weight: 600; }
   .ig-caption { padding: 6px 14px 0; font-size: 13px; line-height: 1.4; }
@@ -720,6 +738,16 @@
 
   <div class="page-container" id="pageContainer"></div>
 
+  <div class="ig-voters-overlay" id="igVotersOverlay"></div>
+  <div class="ig-voters-modal" id="igVotersModal" role="dialog" aria-label="Reactions">
+    <h3>Reactions</h3>
+    <div class="ig-voters-tabs">
+      <button type="button" class="ig-voters-tab active" id="igVotersLikeTab"><span class="material-symbols-rounded">favorite</span> <span id="igVotersLikeCount">0</span></button>
+      <button type="button" class="ig-voters-tab" id="igVotersDislikeTab"><span class="material-symbols-rounded">heart_broken</span> <span id="igVotersDislikeCount">0</span></button>
+    </div>
+    <div class="ig-voters-list" id="igVotersList"></div>
+  </div>
+
   <div class="ig-comment-overlay" id="igCommentOverlay"></div>
   <div class="ig-comment-modal" id="igCommentModal">
     <div class="ig-comment-modal-header">
@@ -782,7 +810,7 @@
 <script type="module" data-cfasync="false">
   import {
     db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser, sendNotification,
-    onAccountChange, SERVER_ENDPOINT, MAX_IMAGE_BYTES, uploadFile, linkifyMentions,
+    onAccountChange, SERVER_ENDPOINT, MAX_IMAGE_BYTES, uploadFile, linkifyMentions, resolveUidsToEmails,
   } from './shared/account.js?v=43';
   import { mountTopNav } from './shared/topnav.js?v=44';
   import { mountFooter } from './shared/footer.js?v=7';
@@ -1414,7 +1442,7 @@
         <button type="button" class="ig-vote-btn ${up ? 'upvoted' : ''}" data-vote-up data-kind="${kind}" data-id="${item.id}" title="Like">
           <span class="material-symbols-rounded">${up ? 'favorite' : 'favorite_border'}</span>
         </button>
-        <span class="ig-vote-score">${score}</span>
+        <span class="ig-vote-score" data-voters data-kind="${kind}" data-id="${item.id}" title="See who liked and disliked">${score}</span>
         <button type="button" class="ig-vote-btn ${down ? 'downvoted' : ''}" data-vote-down data-kind="${kind}" data-id="${item.id}" title="Dislike">
           <span class="material-symbols-rounded">heart_broken</span>
         </button>
@@ -1526,7 +1554,7 @@
           ${vid ? `<div class="ig-media"><video src="${vid}" muted preload="metadata"></video></div>` : ''}
           ${aud ? `<div class="ig-audio-attach" onclick="event.stopPropagation()"><span class="material-symbols-rounded">music_note</span><audio controls preload="metadata" src="${aud}"></audio></div>` : ''}
           ${actionsHtml}
-          <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
+          <div class="ig-likes" data-voters data-kind="post" data-id="${p.id}" title="See who liked and disliked">${score} like${score === 1 ? '' : 's'}</div>
           <div class="ig-caption"><strong>${authorNameHtml(p.authorEmail, profile)}</strong>${linkify(p.title)}</div>
           ${bodyHtml}
           ${viewCommentsHtml}
@@ -1553,7 +1581,7 @@
             ${saveBtnHtml(v, 'video')}
             ${reportBtnHtml(v, 'video')}
           </div>
-          <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
+          <div class="ig-likes" data-voters data-kind="video" data-id="${v.id}" title="See who liked and disliked">${score} like${score === 1 ? '' : 's'}</div>
           <div class="ig-caption"><strong>${authorNameHtml(v.authorEmail, profile)}</strong>${linkify(v.title)}</div>
           ${v.description ? `<div class="ig-description">${renderExcerptMarkdown(v.description, 220)}</div>` : ''}
           <button type="button" class="ig-view-comments" data-open-comments data-kind="video" data-id="${v.id}">${v.commentCount ? `view all ${v.commentCount} comments` : 'add a comment…'}</button>
@@ -1561,6 +1589,49 @@
         </div>
       `;
     }
+
+    // ── who liked / disliked (tap the count on a card or in an open post) ──
+    const votersOverlay = document.getElementById('igVotersOverlay'), votersModal = document.getElementById('igVotersModal'), votersList = document.getElementById('igVotersList');
+    const votersTabs = { likes: document.getElementById('igVotersLikeTab'), dislikes: document.getElementById('igVotersDislikeTab') };
+    let votersData = { likes: [], dislikes: [] }, votersTab = 'likes', votersToken = 0;
+    function renderVoters() {
+      Object.entries(votersTabs).forEach(([k, b]) => b.classList.toggle('active', k === votersTab));
+      const rows = votersData[votersTab];
+      votersList.innerHTML = rows.length ? rows.map(r => {
+        const inner = `<img class="ig-voter-avatar" src="${escHtml(r.photo || '')}" alt="">${escHtml(r.name)}${r.email ? officialBadgeHtml(r.email) : ''}`;
+        return r.handle ? `<a class="ig-voter-row" href="/profile?u=${encodeURIComponent(r.handle)}">${inner}</a>` : `<div class="ig-voter-row">${inner}</div>`;
+      }).join('') : `<div class="ig-voters-empty">no ${votersTab === 'likes' ? 'likes' : 'dislikes'} yet</div>`;
+    }
+    votersTabs.likes.addEventListener('click', () => { votersTab = 'likes'; renderVoters(); });
+    votersTabs.dislikes.addEventListener('click', () => { votersTab = 'dislikes'; renderVoters(); });
+    function closeVoters() { votersToken++; votersOverlay.classList.remove('open'); votersModal.classList.remove('open'); }
+    votersOverlay.addEventListener('click', closeVoters);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && votersModal.classList.contains('open')) closeVoters(); });
+    async function openVoters(kind, id) {
+      const item = (kind === 'video' ? latestVideos : latestPosts).find(x => x.id === id); if (!item) return;
+      const up = item.upvoters || [], down = item.downvoters || [], token = ++votersToken;
+      votersData = { likes: [], dislikes: [] }; votersTab = up.length || !down.length ? 'likes' : 'dislikes';
+      document.getElementById('igVotersLikeCount').textContent = up.length; document.getElementById('igVotersDislikeCount').textContent = down.length;
+      votersList.innerHTML = '<div class="ig-voters-empty">loading…</div>';
+      votersOverlay.classList.add('open'); votersModal.classList.add('open');
+      try {
+        const emailMap = await resolveUidsToEmails([...up, ...down]);
+        await Promise.all([...new Set(Object.values(emailMap).filter(Boolean))].map(ensureProfileLoaded));
+        if (token !== votersToken) return; // closed or reopened for another post meanwhile
+        const rowFor = uid => {
+          const email = emailMap[uid]; if (!email) return { name: 'Unknown user', photo: '', handle: null, email: null };
+          const p = getProfile(email, null, null);
+          return { name: p.name, photo: p.photo, handle: handleOf(email), email };
+        };
+        votersData = { likes: up.map(rowFor), dislikes: down.map(rowFor) };
+      } catch (err) { if (token === votersToken) votersList.innerHTML = '<div class="ig-voters-empty">couldn\'t load the list. try again.</div>'; return; }
+      renderVoters();
+    }
+    // capture phase: the count sits inside a card whose click would otherwise open the post
+    document.addEventListener('click', e => {
+      const el = e.target.closest('[data-voters]'); if (!el) return;
+      e.stopPropagation(); e.preventDefault(); openVoters(el.dataset.kind, el.dataset.id);
+    }, true);
 
     async function toggleVote(kind, id, direction) {
       const user = getCurrentUser();
@@ -1678,14 +1749,14 @@
           <button type="button" class="ig-vote-btn ${up ? 'upvoted' : ''}" data-modal-vote-up title="Like">
             <span class="material-symbols-rounded">${up ? 'favorite' : 'favorite_border'}</span>
           </button>
-          <span class="ig-vote-score">${score}</span>
+          <span class="ig-vote-score" data-voters data-kind="${kind}" data-id="${item.id}" title="See who liked and disliked">${score}</span>
           <button type="button" class="ig-vote-btn ${down ? 'downvoted' : ''}" data-modal-vote-down title="Dislike">
             <span class="material-symbols-rounded">heart_broken</span>
           </button>
           ${saveBtnHtml(item, kind)}
           ${reportBtnHtml(item, kind)}
         </div>
-        <div class="ig-likes">${score} like${score === 1 ? '' : 's'}</div>
+        <div class="ig-likes" data-voters data-kind="${kind}" data-id="${item.id}" title="See who liked and disliked">${score} like${score === 1 ? '' : 's'}</div>
         <div class="ig-caption"><strong>${authorNameHtml(item.authorEmail, profile)}</strong>${linkify(item.title)}</div>
         ${body ? `<div class="ig-modal-full-body">${parseMarkdown(body)}</div>` : ''}
         ${pollHtml(item)}
