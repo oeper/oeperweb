@@ -567,7 +567,7 @@ async function workerCall(method, path, body) {
 }
 const makePicture = o => workerCall('POST', '/api/image', { prompt:o.prompt, shape:o.shape, quality:o.best ? 'best' : undefined });
 const pictureInfo = () => getCurrentUser() ? workerCall('GET', '/api/usage') : Promise.resolve({ signedIn:false });
-window.ONE_CLOUD = { token:async () => { const u = getCurrentUser(); return u ? u.getIdToken() : null; }, makePicture, pictureInfo, ready, syncAll, publishSite, fetchOne, share, openShared, openSettings, enabled:() => settings().enabled, isSynced:(app, id) => app + ':' + id in store.get(STATE, {}),
+window.ONE_CLOUD = { server:SERVER_ENDPOINT, token:async () => { const u = getCurrentUser(); return u ? u.getIdToken() : null; }, makePicture, pictureInfo, ready, syncAll, publishSite, fetchOne, share, openShared, openSettings, enabled:() => settings().enabled, isSynced:(app, id) => app + ':' + id in store.get(STATE, {}),
   collaborate, openCollabLink, isCollab, collabInfo,
   account:() => acct,
   onAccount:cb => { acctListeners.add(cb); cb(acct); return () => acctListeners.delete(cb); },

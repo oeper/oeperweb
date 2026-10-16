@@ -7,7 +7,9 @@ ONE.boot('ol', 'lang');
 /* ---------- state ---------- */
 const KEY = 'ol-state';
 const defTo = (() => { const n = LANG.norm((navigator.language || 'en').split('-')[0]); return n && n !== 'en' ? n : 'es'; })();
-const S = Object.assign({ from:LANG.AUTO, to:defTo, tone:'standard', instant:true, recent:[], hist:[], saved:[], talkVoice:true }, store.get(KEY, {}));
+const S = Object.assign({ from:LANG.AUTO, to:defTo, tone:'standard', engine:'auto', instant:true, recent:[], hist:[], saved:[], talkVoice:true }, store.get(KEY, {}));
+if (!['auto', 'ai', 'server'].includes(S.engine)) S.engine = 'auto';
+ENG.mode = S.engine;
 if (S.from !== LANG.AUTO && !LANG.by[S.from]) S.from = LANG.AUTO;
 if (!LANG.by[S.to]) S.to = defTo;
 const keep = () => { S.hist = S.hist.slice(0, 200); S.saved = S.saved.slice(0, 1000); S.recent = S.recent.slice(0, 6); store.set(KEY, S); };
@@ -71,6 +73,18 @@ $('#pkClose').onclick = closePicker;
 $('#picker').addEventListener('mousedown', e => { if (e.target === $('#picker')) closePicker(); });
 $('#fromBtn').onclick = () => openPicker('from'); $('#toBtn').onclick = () => openPicker('to'); $('#swapBtn').onclick = swap;
 $('#tone').onchange = e => { S.tone = e.target.value; keep(); retranslate(); };
+/* translator: auto / epic AI / the free server (NLLB on oeper's own machine) */
+const serverLikely = () => S.engine !== 'ai' && ENG.srvCan(S.from, S.to);
+async function checkServer(force){
+  await ENG.srvCheck(force);
+  const sel = $('#engine'); if (!sel) return;
+  const off = !ENG.srv.online, o = sel.options;
+  o[0].text = 'Auto' + (off ? '' : ' (free server for documents)'); o[1].text = 'epic AI (best quality)'; o[2].text = 'Free server (unlimited)' + (off ? ' – offline' : '');
+  sel.value = S.engine;
+}
+$('#engine').value = S.engine;
+$('#engine').onchange = e => { S.engine = e.target.value; ENG.mode = S.engine; keep(); if (S.engine !== 'ai') checkServer(true).then(() => { if (S.engine === 'server' && !ENG.srv.online) say('The free translator is offline right now, so epic AI will be used.'); }); retranslate(); };
+const byNote = r => { if (!r) return ''; const a = r.byServer || 0, b = r.byAI || 0; return a && b ? a.toLocaleString() + ' pieces by the free translator, ' + b.toLocaleString() + ' by epic AI.' : a ? 'Translated by the free translator (no epic AI usage).' : ''; };
 
 /* ---------- tabs ---------- */
 function showTab(t){
@@ -107,7 +121,7 @@ async function run(){
     if (my !== seq) return;
     lastResult = { text:r.text, from:S.from === LANG.AUTO ? (r.lang || detected) : S.from, to:S.to, src:text };
     if (S.from === LANG.AUTO && r.lang) { detected = r.lang; }
-    outEl.textContent = r.text; outEl.classList.remove('streaming'); $('#busy').hidden = true; ctl = null;
+    outEl.textContent = r.text; outEl.classList.remove('streaming'); $('#busy').hidden = true; ctl = null; $('#outLabel').textContent = LANG.name(S.to) + (r.by === 'server' ? ' · free translator' : '');
     renderLangs(); showFix(r.fix, text); markSaved(); scheduleHistory(); loadExtras(text, r.text, my);
   } catch (err) {
     if (err.name === 'AbortError') return;
@@ -303,7 +317,7 @@ const Cache = (() => {
 })();
 /* translate many pieces: what was translated before comes from the cache, the rest goes to the translator (which waits out "too many requests" by itself) */
 async function translateAll(segs, { signal, onProgress, onWait } = {}) {
-  const from = S.from, to = S.to, tone = S.tone, kf = c => from + '|' + to + '|' + tone + '|' + c;
+  const from = S.from, to = S.to, tone = S.tone, kf = c => from + '|' + to + '|' + tone + '|' + S.engine + '|' + c;
   const cores = [...new Set(segs.map(s => ENG.splitSpace(s).core).filter(c => c && /\p{L}/u.test(c)))];
   const have = await Cache.getMany(cores.map(kf)), map = new Map(), todo = [];
   cores.forEach(c => { const v = have.get(kf(c)); if (v != null) map.set(c, v); else todo.push(c); });
@@ -344,11 +358,11 @@ function showDoc(doc){
   if (!doc.segs.length) { docJob.append(el('div', { class:'warnbox', text:'I couldn’t find any text to translate in this file.' })); return; }
   if (doc.note) docJob.append(el('div', { class:'okbox', text:doc.note }));
   if (over) { docJob.append(el('div', { class:'warnbox', text:'This document has ' + doc.chars.toLocaleString() + ' characters. One translation can handle up to ' + DOC.MAX_CHARS.toLocaleString() + '. Split it into parts and translate each.' })); return; }
-  docJob.append(el('div', { class:'muted', text:'Translating into ' + LANG.name(S.to) + ' takes about ' + reqs + ' request' + (reqs === 1 ? '' : 's') + ' to epic AI and counts toward your daily epic AI usage (roughly ' + tokensFor(doc.chars).toLocaleString() + ' tokens). Change the languages above first if you need to.' }));
+  docJob.append(el('div', { class:'muted', text:serverLikely() ? 'Translating into ' + LANG.name(S.to) + ' with the free translator: no epic AI usage, but it is one machine, so a long document takes a while. Change the languages above first if you need to.' : 'Translating into ' + LANG.name(S.to) + ' takes about ' + reqs + ' request' + (reqs === 1 ? '' : 's') + ' to epic AI and counts toward your daily epic AI usage (roughly ' + tokensFor(doc.chars).toLocaleString() + ' tokens). Change the languages above first if you need to.' }));
   docJob.append(el('div', { class:'job-actions' }, el('button', { class:'btn filled', html:icon('translate') + 'Translate to ' + esc(LANG.name(S.to)), onclick:() => runDoc(doc) }), el('button', { class:'btn text', text:'Choose another file', onclick:() => $('#docPick').click() })));
 }
 async function runDoc(doc){
-  if (doc.chars > 150000 && !doc.confirmed) { if (!await confirmBox('A long document', '<p>This is about <b>' + doc.chars.toLocaleString() + '</b> characters, roughly <b>' + tokensFor(doc.chars).toLocaleString() + ' tokens</b> of your daily epic AI allowance. If you run out, what is done is kept and you can continue later (or tomorrow).</p>', 'Translate')) return; doc.confirmed = true; }
+  if (doc.chars > 150000 && !doc.confirmed && !serverLikely()) { if (!await confirmBox('A long document', '<p>This is about <b>' + doc.chars.toLocaleString() + '</b> characters, roughly <b>' + tokensFor(doc.chars).toLocaleString() + ' tokens</b> of your daily epic AI allowance. If you run out, what is done is kept and you can continue later (or tomorrow).</p>', 'Translate')) return; doc.confirmed = true; }
   docCtl = new AbortController(); const to = S.to;
   const bar = el('i'), label = el('small', { text:'Starting…' });
   docJob.innerHTML = ''; docJob.append(el('div', { class:'job-head' }, el('span', { class:'fileicon', text:doc.kind }), el('div', { class:'grow' }, el('b', { text:doc.name }), label)), el('div', { class:'prog' }, bar),
@@ -366,6 +380,7 @@ async function runDoc(doc){
   const partial = map.size < total;
   if (partial) docJob.append(el('div', { class:'warnbox', text:(res.limited ? errText({ limit:true, message:'The daily limit was reached, so the rest was left in the original language. Everything done so far is remembered: press “Translate the rest” later and it continues from here.' }) : 'Some pieces could not be translated and were left as they were.') }));
   else docJob.append(el('div', { class:'okbox', text:'Done. The layout, styles and pictures of the original are kept.' }));
+  if (byNote(res) || res.serverNote) docJob.append(el('div', { class:'muted', text:[byNote(res), res.serverNote].filter(Boolean).join(' ') }));
   const pv = el('div', { class:'preview' }); let n = 0;
   for (const s of doc.segs) { const { core } = ENG.splitSpace(s); if (!map.has(core)) continue; pv.append(el('div', { text:core }), el('div', { class:'t', dir:LANG.rtl(to) ? 'rtl' : 'auto', text:map.get(core) })); if (++n >= 6) break; }
   if (n) docJob.append(pv);
@@ -400,7 +415,7 @@ async function runPdf(doc, info){
     if (!info) {
       info = await PDFT.analyze(doc.file, pages, { signal:sig, onProgress:(i, n) => { bar.style.width = Math.round(i / n * 20) + '%'; label.textContent = 'Reading the text… page ' + i + ' of ' + n; } });
       if (!info.texts.length) { docCtl = null; return showPdf(doc, 'I couldn’t find any text on ' + (pages.length === 1 ? 'that page' : 'those pages') + '. If this PDF is a scan (a picture of each page), there is no text to replace.'); }
-      if (info.chars > 150000 && !await confirmBox('A long document', '<p>About <b>' + info.chars.toLocaleString() + '</b> characters of text on <b>' + pages.length + '</b> pages, roughly <b>' + tokensFor(info.chars) .toLocaleString() + ' tokens</b> of your daily epic AI allowance. If you run out, what is done is kept and you can continue later.</p><p class="muted">It takes a while: a few minutes per hundred pages.</p>', 'Translate')) { docCtl = null; return showPdf(doc); }
+      if (info.chars > 150000 && !serverLikely() && !await confirmBox('A long document', '<p>About <b>' + info.chars.toLocaleString() + '</b> characters of text on <b>' + pages.length + '</b> pages, roughly <b>' + tokensFor(info.chars) .toLocaleString() + ' tokens</b> of your daily epic AI allowance. If you run out, what is done is kept and you can continue later.</p><p class="muted">It takes a while: a few minutes per hundred pages.</p>', 'Translate')) { docCtl = null; return showPdf(doc); }
     }
     bar.style.width = '20%';
     const tr = await translateAll(info.texts, { signal:sig, onWait:s => { label.textContent = waitText(s); }, onProgress:r => { bar.style.width = (20 + Math.round((r.total ? r.done / r.total : 1) * 60)) + '%'; label.textContent = progressText(r, 'paragraphs'); } });
@@ -413,6 +428,7 @@ async function runPdf(doc, info){
     docJob.innerHTML = ''; docJob.append(jobHead({ name }, sizeOf(built.blob.size) + ' · ' + built.stats.blocks.toLocaleString() + ' paragraphs on ' + built.stats.pages + ' page' + (built.stats.pages === 1 ? '' : 's')));
     if (partial) docJob.append(el('div', { class:'warnbox', text:(tr.res.limited ? errText({ limit:true, message:'The daily limit was reached, so the rest of the text was left in the original language. Everything done so far is remembered: press “Translate the rest” later and it continues from here.' }) : 'Some paragraphs could not be translated and were left as they were.') }));
     else docJob.append(el('div', { class:'okbox', text:'Done. Check the pages below, then download.' }));
+    if (byNote(tr.res) || tr.res.serverNote) docJob.append(el('div', { class:'muted', text:[byNote(tr.res), tr.res.serverNote].filter(Boolean).join(' ') }));
     if (info.textless) docJob.append(el('div', { class:'muted', text:info.textless + ' of ' + pages.length + ' page' + (pages.length === 1 ? ' has' : 's have') + ' no text I could translate (pictures, scans or maths only) and ' + (info.textless === 1 ? 'was' : 'were') + ' left as is.' }));
     const prev = el('div', { class:'pvpages' }); docJob.append(prev);
     docJob.append(el('div', { class:'job-actions' },
@@ -556,4 +572,5 @@ addEventListener('keydown', e => {
 });
 addEventListener('pagehide', () => { VOICE.stop(); });
 syncTv(); renderLangs(); drawRecent(); autosize(); showTab('text');
+checkServer(true); setInterval(() => checkServer(), 60000);
 })();

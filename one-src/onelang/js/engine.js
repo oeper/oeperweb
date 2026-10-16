@@ -40,6 +40,39 @@ E.ask = async (messages, { signal, onText } = {}) => {
 const TONE = { formal:' Use a formal, polite register.', informal:' Use a casual, friendly register.', standard:'' };
 const langLine = (from, to) => (from === LANG.AUTO ? 'from whatever language it is written in' : 'from ' + LANG.name(from)) + ' into ' + LANG.name(to);
 
+/* ---------- the free translator on oeper's own server (NLLB-200, forum-server/translator) ----------
+   E.mode: 'auto' (epic AI for typed text, the server for documents/websites when it is online), 'ai' (epic AI only), 'server' (server whenever it can).
+   The server needs a signed-in person; when it is offline, doesn't know a language or fails, epic AI does the work instead. */
+E.mode = 'auto';
+const SRV = E.srv = { online:false, langs:new Set(), at:0, info:null };
+const host = () => { try { return ONE.accountHost(); } catch { return null; } };
+E.srvCheck = async force => {
+  if (!force && Date.now() - SRV.at < 45000) return SRV.online;
+  SRV.at = Date.now(); const h = host();
+  if (!h || !h.server) { SRV.online = false; return false; }
+  try { const j = await (await fetch(h.server + '/translate/health', { cache:'no-store' })).json(); SRV.online = !!j.online; SRV.langs = new Set(j.languages || []); SRV.info = j; } catch { SRV.online = false; }
+  return SRV.online;
+};
+E.srvCan = (from, to) => SRV.online && SRV.langs.has(to) && (from === LANG.AUTO || SRV.langs.has(from)) && !!(host() && host().account && host().account());
+const wantServer = (bulk, from, to) => E.mode !== 'ai' && (E.mode === 'server' || bulk) && E.srvCan(from, to);
+/* one request to the server. Returns { translations:[…], detected:[…] }. */
+E.srvCall = async (texts, from, to, { signal } = {}) => {
+  const h = host(), token = h && h.token ? await h.token() : null;
+  if (!token) { const e = new Error('Sign in to use the free translator.'); e.srvSkip = true; throw e; }
+  for (let attempt = 0; ; attempt++) {
+    let res; try { res = await fetch(h.server + '/translate/api', { method:'POST', signal, headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + token }, body:JSON.stringify({ texts, from, to }) }); }
+    catch (err) { if (err.name === 'AbortError') throw err; SRV.online = false; SRV.at = Date.now(); const e = new Error('The free translator isn’t reachable.'); e.srvSkip = true; throw e; }
+    let j = {}; try { j = await res.json(); } catch {}
+    if (res.ok) return j;
+    const e = new Error(j.error || 'The free translator had a problem (' + res.status + ').'); e.status = res.status;
+    if (res.status === 503 && attempt < 8) { await new Promise((ok, bad) => { const t = setTimeout(ok, 8000); if (signal) signal.addEventListener('abort', () => { clearTimeout(t); bad(new DOMException('Aborted', 'AbortError')); }, { once:true }); }); continue; }   // busy: wait in line
+    if (res.status === 429 && j.code === 'daily') { e.srvDaily = true; e.srvSkip = true; }
+    if (res.status === 502 || res.status === 503 || res.status === 404 || res.status === 400) { e.srvSkip = true; if (res.status !== 400) { SRV.online = false; SRV.at = Date.now(); } }
+    if (res.status === 401) e.srvSkip = true;
+    throw e;
+  }
+};
+
 /* ---------- text: one piece of text, live ---------- */
 /* In auto-detect mode the first lines of the answer name the language (and offer a spelling fix); parse them as they stream in. */
 const HEAD = /^LANG:[ \t]*([^\n]*)\n(?:FIX:[ \t]*([^\n]*)\n)?---[ \t]*\n?/;
@@ -55,9 +88,15 @@ E.cacheKey = (text, from, to, tone) => from + '|' + to + '|' + tone + '|' + text
 E.cached = k => cache.get(k);
 E.forget = k => cache.delete(k);
 
-E.translate = async (text, from, to, { tone = 'standard', signal, onPartial } = {}) => {
-  const key = E.cacheKey(text, from, to, tone);
+E.translate = async (text, from, to, { tone = 'standard', signal, onPartial, ai = false } = {}) => {
+  const key = E.cacheKey(text, from, to, tone) + (ai ? '|ai' : '|' + E.mode);
   if (cache.has(key)) { const c = cache.get(key); if (onPartial) onPartial(c); return c; }
+  if (!ai && wantServer(false, from, to)) {
+    try {
+      const j = await E.srvCall([text], from, to, { signal }), r = { text:(j.translations[0] || '').trim(), lang:from === LANG.AUTO ? (j.detected && j.detected[0]) || null : from, fix:'', by:'server' };
+      if (r.text) { if (onPartial) onPartial(r); cache.set(key, r); return r; }
+    } catch (err) { if (err.name === 'AbortError' || !err.srvSkip) { if (err.name === 'AbortError') throw err; } }   // anything else: epic AI does it
+  }
   const auto = from === LANG.AUTO, wantFix = auto && text.length <= 600;
   const sys = 'You are a professional translation engine. Translate the text ' + langLine(from, to) + '.' + TONE[tone] +
     ' Keep the meaning, tone, line breaks, lists, markdown, numbers, names, URLs, emoji and code exactly as they are, and translate nothing that is already in the target language. Add no notes, explanations or quotation marks.' +
@@ -70,6 +109,7 @@ E.translate = async (text, from, to, { tone = 'standard', signal, onPartial } = 
     result = { text:h.body.replace(/^\s+/, ''), lang:h.lang, fix:h.fix }; if (onPartial) onPartial(result);
   } });
   if (auto) { const h = E.parseHead(raw) || { lang:null, fix:'', body:raw }; result = { text:h.body.trim(), lang:h.lang, fix:h.fix }; } else result = { text:raw.trim(), lang:from, fix:'' };
+  result.by = 'ai';
   if (result.text) { cache.set(key, result); if (cache.size > 300) cache.delete(cache.keys().next().value); }
   return result;
 };
@@ -124,12 +164,34 @@ E.splitSpace = s => { const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(s); return { lead:
 /* segs: array of strings. Returns { map: Map(core text -> translation), done, total, limited, failed } and keeps what it has if the daily limit stops it. */
 E.segments = async (segs, from, to, { tone = 'standard', signal, onProgress, onWait, concurrency = 3, map:into } = {}) => {
   const uniq = [...new Set(segs.map(s => E.splitSpace(s).core).filter(s => s && hasLetters(s)))];
-  const map = into || new Map(), res = { map, done:0, total:uniq.length, limited:false, failed:0, chars:uniq.reduce((n, s) => n + s.length, 0), requests:0, message:'' };
+  const map = into || new Map(), res = { map, done:0, total:uniq.length, limited:false, failed:0, chars:uniq.reduce((n, s) => n + s.length, 0), requests:0, message:'', byServer:0, byAI:0, serverNote:'' };
   let pauseUntil = 0, rateHits = 0;
   const nap = ms => new Promise((ok, bad) => { const t = setTimeout(ok, ms); if (signal) signal.addEventListener('abort', () => { clearTimeout(t); bad(new DOMException('Aborted', 'AbortError')); }, { once:true }); });
+  // the free server first (when it can): groups of up to 40 pieces, two at a time; whatever it could not do goes on to epic AI below
+  let todoAI = uniq;
+  if (uniq.length && wantServer(true, from, to)) {
+    const groups = []; let g = [], n = 0;
+    uniq.forEach(t => { if (g.length && (g.length >= 40 || n + t.length > 7000)) { groups.push(g); g = []; n = 0; } g.push(t); n += t.length; });
+    if (g.length) groups.push(g);
+    let gi = 0, stop = false;
+    const sw = async () => {
+      while (gi < groups.length && !stop) {
+        const grp = groups[gi++];
+        while (Date.now() < pauseUntil) await nap(500);
+        try {
+          const j = await E.srvCall(grp, from, to, { signal });
+          grp.forEach((t, i) => { const v = (j.translations && j.translations[i] || '').trim(); if (v) { map.set(t, v); res.done++; res.byServer++; } });
+        } catch (err) { if (err.name === 'AbortError') throw err; stop = true; res.serverNote = err.srvDaily ? 'The free translator’s daily limit is used up; epic AI did the rest.' : err.srvSkip ? '' : ''; }
+        if (onProgress) onProgress(res);
+      }
+    };
+    if (onProgress) onProgress(res);
+    await Promise.all([sw(), sw()]);
+    todoAI = uniq.filter(t => !map.has(t));
+  }
   // chunks of whole segments, each under the size the worker accepts (a very long single segment is cut at sentences)
   const pieces = [];
-  uniq.forEach(s => { if (s.length <= SEG_CHARS) pieces.push({ text:s, parts:null }); else { const parts = s.match(/[^.!?。！？\n]+[.!?。！？]*\s*|\n+/g) || [s]; const chunks = []; let cur = ''; parts.forEach(p => { if ((cur + p).length > SEG_CHARS && cur) { chunks.push(cur); cur = ''; } cur += p; }); if (cur) chunks.push(cur); pieces.push({ text:s, parts:chunks }); } });
+  todoAI.forEach(s => { if (s.length <= SEG_CHARS) pieces.push({ text:s, parts:null }); else { const parts = s.match(/[^.!?。！？\n]+[.!?。！？]*\s*|\n+/g) || [s]; const chunks = []; let cur = ''; parts.forEach(p => { if ((cur + p).length > SEG_CHARS && cur) { chunks.push(cur); cur = ''; } cur += p; }); if (cur) chunks.push(cur); pieces.push({ text:s, parts:chunks }); } });
   const jobs = []; let cur = [], n = 0;
   const flush = () => { if (cur.length) jobs.push(cur); cur = []; n = 0; };
   pieces.forEach(p => { if (p.parts) { flush(); p.parts.forEach(c => jobs.push([{ text:c, whole:p, part:true }])); } else { if (n + p.text.length > SEG_CHARS || cur.length >= 40) flush(); cur.push(p); n += p.text.length + 12; } });
@@ -137,7 +199,7 @@ E.segments = async (segs, from, to, { tone = 'standard', signal, onProgress, onW
   const sysFor = (marked) => 'You are a professional translation engine. Translate ' + langLine(from, to) + '.' + TONE[tone] + ' Keep numbers, names, URLs, emoji, markdown and placeholders such as {name} or %s exactly. Add no notes or quotation marks.' +
     (marked ? ' The message holds numbered segments, each introduced by a line like <<1>>. Reply with every segment translated, each introduced by the SAME <<n>> line, in the same order, nothing else.' : ' Reply with ONLY the translation.') + ' ' + GUARD;
   const partial = new Map();
-  const one = async text => { const r = await E.translate(text, from, to, { tone, signal }); return r.text; };
+  const one = async text => { const r = await E.translate(text, from, to, { tone, signal, ai:true }); return r.text; };
   const run = async job => {
     for (let attempt = 0; ; attempt++) {
       try {
@@ -171,6 +233,7 @@ E.segments = async (segs, from, to, { tone = 'standard', signal, onProgress, onW
   const worker = async () => { while (next < jobs.length && !res.limited) { const j = jobs[next++]; await run(j); if (onProgress) onProgress(res); } };
   if (onProgress) onProgress(res);
   await Promise.all(Array.from({ length:Math.min(concurrency, jobs.length) }, worker));
+  res.byAI = Math.max(0, res.done - res.byServer);
   return res;
 };
 /* put the translations back around each segment's own spacing */

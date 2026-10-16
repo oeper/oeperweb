@@ -33,6 +33,8 @@
         <button class="icon-btn swap" id="swapBtn" title="Swap languages (Ctrl+Shift+S)" aria-label="Swap languages"><span class="ms" aria-hidden="true">swap_horiz</span></button>
         <button class="lang-btn" id="toBtn" aria-haspopup="dialog"><span id="toName">Spanish</span><span class="ms" aria-hidden="true">expand_more</span></button>
         <span class="grow"></span>
+        <label class="tonesel" title="Which translator does the work"><span class="ms" aria-hidden="true">memory</span>
+          <select id="engine" aria-label="Translator"><option value="auto">Auto</option><option value="ai">epic AI (best quality)</option><option value="server">Free server (unlimited)</option></select></label>
         <label class="tonesel" title="How formal the translation sounds"><span class="ms" aria-hidden="true">record_voice_over</span>
           <select id="tone" aria-label="Tone"><option value="standard">Standard</option><option value="formal">Formal</option><option value="informal">Casual</option></select></label>
       </div>
@@ -158,8 +160,8 @@
 
 <script src="shared/core.js?v=5"></script>
 <script src="js/langs.js?v=1"></script>
-<script src="js/engine.js?v=2"></script>
+<script src="js/engine.js?v=3"></script>
 <script src="js/docs.js?v=2"></script>
 <script src="js/pdfedit.js?v=1"></script>
 <script src="js/voice.js?v=1"></script>
-<script src="js/app.js?v=2"></script>
+<script src="js/app.js?v=3"></script>

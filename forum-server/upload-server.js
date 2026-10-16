@@ -228,7 +228,9 @@ app.set('trust proxy', true); // needed so req.ip reflects the real visitor thro
 // Searver app remote control (before the body parsers) — see remote-proxy.js.
 require('./remote-proxy')(app);
 app.use(cors({ origin: ALLOWED_ORIGINS }));
-app.use(express.json({ limit: '10kb' }));
+// small JSON bodies everywhere except the routes that bring their own (bigger) parser
+const jsonSmall = express.json({ limit: '10kb' });
+app.use((req, res, next) => /^\/(file-access|translate)(\/|$)/.test(req.path) ? next() : jsonSmall(req, res, next));
 
 // Verifies Firebase Auth ID tokens without needing the Admin SDK or any
 // service-account secret on the device — just checks the signature against
@@ -321,6 +323,9 @@ const dbhosting = require('./dbhosting')(app, {
   verifyFirebaseToken, isOwner, loadJson, saveJson,
   dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname,
 });
+
+// oneLang's own translator (NLLB on this machine, see translator/) — see translate-proxy.js.
+require('./translate-proxy')(app, { verifyFirebaseToken, isOwner, dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname });
 
 // New Searver Android builds pushed from the developer's PC (needs RELEASE_KEY in .env) — see app-release.js.
 require('./app-release')(app, { dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname });

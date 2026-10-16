@@ -17,3 +17,7 @@ dbhosting-state.json
 dbhosting-credits.json
 app-releases/
 file-link-secret.txt
+translate-usage.json
+translator/model/
+translator/venv/
+translator/__pycache__/
