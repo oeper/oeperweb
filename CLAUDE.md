@@ -70,4 +70,5 @@ No build step for the site: plain HTML/CSS/JS, one `.html` per page.
 - Fix every problem mentioned in a message; pay attention to detail.
 - In chat, only say what I want them to do or what I know; keep it short.
 - Always push changes directly to `main` (standing permission); PR tools are unavailable in this repo's sessions.
+- Run `cd cf-ai-worker; npx wrangler deploy` yourself after worker changes (standing permission, 2026-10-16); don't ask the user to. Wherever this file says the user must deploy the worker, that is outdated.
 - Keep this file updated so the repo doesn't need re-reading.
