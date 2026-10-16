@@ -21,7 +21,7 @@ E.ask = async (messages, { signal, onText } = {}) => {
   catch (err) { if (err.name === 'AbortError') throw err; const e = new Error(navigator.onLine === false ? 'You’re offline.' : 'Translation works at oeper.dev/one. This copy couldn’t reach the translator.'); e.net = true; throw e; }
   if (!res.ok || !res.body) {
     let m = 'The translator had a problem (' + res.status + ').', j = {}; try { j = await res.json(); m = j.error || m; } catch {}
-    const e = new Error(m); e.limit = res.status === 429; e.status = res.status; throw e;
+    const e = new Error(m); e.limit = res.status === 429 && !!j.limit; e.rate = res.status === 429 && !j.limit; e.status = res.status; throw e;   // limit = today's allowance is used up, rate = too many requests in a few minutes (wait and retry)
   }
   const rd = res.body.getReader(), dec = new TextDecoder(); let buf = '', text = '';
   for (;;) {
@@ -122,9 +122,11 @@ const hasLetters = s => /\p{L}/u.test(s);
 E.splitSpace = s => { const m = /^(\s*)([\s\S]*?)(\s*)$/.exec(s); return { lead:m[1], core:m[2], trail:m[3] }; };
 
 /* segs: array of strings. Returns { map: Map(core text -> translation), done, total, limited, failed } and keeps what it has if the daily limit stops it. */
-E.segments = async (segs, from, to, { tone = 'standard', signal, onProgress, concurrency = 3 } = {}) => {
+E.segments = async (segs, from, to, { tone = 'standard', signal, onProgress, onWait, concurrency = 3, map:into } = {}) => {
   const uniq = [...new Set(segs.map(s => E.splitSpace(s).core).filter(s => s && hasLetters(s)))];
-  const map = new Map(), res = { map, done:0, total:uniq.length, limited:false, failed:0, chars:uniq.reduce((n, s) => n + s.length, 0), requests:0, message:'' };
+  const map = into || new Map(), res = { map, done:0, total:uniq.length, limited:false, failed:0, chars:uniq.reduce((n, s) => n + s.length, 0), requests:0, message:'' };
+  let pauseUntil = 0, rateHits = 0;
+  const nap = ms => new Promise((ok, bad) => { const t = setTimeout(ok, ms); if (signal) signal.addEventListener('abort', () => { clearTimeout(t); bad(new DOMException('Aborted', 'AbortError')); }, { once:true }); });
   // chunks of whole segments, each under the size the worker accepts (a very long single segment is cut at sentences)
   const pieces = [];
   uniq.forEach(s => { if (s.length <= SEG_CHARS) pieces.push({ text:s, parts:null }); else { const parts = s.match(/[^.!?。！？\n]+[.!?。！？]*\s*|\n+/g) || [s]; const chunks = []; let cur = ''; parts.forEach(p => { if ((cur + p).length > SEG_CHARS && cur) { chunks.push(cur); cur = ''; } cur += p; }); if (cur) chunks.push(cur); pieces.push({ text:s, parts:chunks }); } });
@@ -139,12 +141,13 @@ E.segments = async (segs, from, to, { tone = 'standard', signal, onProgress, con
   const run = async job => {
     for (let attempt = 0; ; attempt++) {
       try {
+        while (Date.now() < pauseUntil) { if (onWait) onWait(Math.ceil((pauseUntil - Date.now()) / 1000)); await nap(1000); }
         res.requests++;
         if (job.length === 1) {
           const j = job[0]; const out = await E.ask([{ role:'system', content:sysFor(false) }, { role:'user', content:j.text }], { signal });
           if (j.part) { const w = j.whole; const a = partial.get(w) || []; a[w.parts.indexOf(j.text)] = out.trim(); partial.set(w, a); if (a.filter(Boolean).length === w.parts.length) { map.set(w.text, a.join(' ')); res.done++; } }
           else { map.set(j.text, out.trim()); res.done++; }
-          return;
+          rateHits = 0; return;
         }
         const out = await E.ask([{ role:'system', content:sysFor(true) }, { role:'user', content:job.map((p, i) => '<<' + (i + 1) + '>>\n' + p.text).join('\n') }], { signal });
         const got = new Map(); const re = /^<<(\d+)>>[ \t]*\n?/gm; let m, last = null, lastIdx = 0;
@@ -152,11 +155,13 @@ E.segments = async (segs, from, to, { tone = 'standard', signal, onProgress, con
         if (last != null) got.set(last, out.slice(lastIdx).trim());
         const redo = [];
         job.forEach((p, i) => { const t = got.get(i + 1); if (t) { map.set(p.text, t); res.done++; } else redo.push(p); });
+        rateHits = 0;
         for (const p of redo) { if (signal && signal.aborted) throw new DOMException('Aborted', 'AbortError'); res.requests++; const t = await one(p.text); if (t) { map.set(p.text, t); res.done++; } else res.failed++; }
         return;
       } catch (err) {
         if (err.name === 'AbortError') throw err;
         if (err.limit) { res.limited = true; res.message = err.message; return; }
+        if (err.rate && rateHits < 30) { rateHits++; pauseUntil = Math.max(pauseUntil, Date.now() + Math.min(90, 15 + 10 * rateHits) * 1000); attempt--; continue; }
         if (attempt >= 2 || err.status === 400) { res.failed += job.length; res.message = err.message; return; }
         await new Promise(ok => setTimeout(ok, 900 * (attempt + 1)));
       }

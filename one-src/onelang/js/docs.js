@@ -13,14 +13,16 @@ const tr = (map, s) => { const { lead, core, trail } = sp(s); return core && map
 
 D.EXTS = ['txt','md','markdown','srt','vtt','csv','tsv','json','html','htm','docx','pptx','xlsx','pdf'];
 D.accept = D.EXTS.map(e => '.' + e).join(',');
-D.MAX_BYTES = 12 * 1024 * 1024;
-D.MAX_CHARS = 150000;   // a lot of text is a lot of requests (the worker allows about 150 per 10 minutes), so keep a document within one afternoon of limits
+D.MAX_BYTES = 12 * 1024 * 1024; D.MAX_PDF_BYTES = 200 * 1024 * 1024;
+D.MAX_CHARS = 1000000;  // a long book is a few hundred requests; finished pieces are remembered (app.js), so a daily limit only pauses it
 const ext = n => (String(n).split('.').pop() || '').toLowerCase();
 const baseName = n => String(n).replace(/\.[^.]+$/, '');
 
 let zipP, pdfP;
 const loadZip = () => zipP || (zipP = ONE.loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js').then(() => window.JSZip));
 const loadPdf = () => pdfP || (pdfP = ONE.loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js').then(() => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'; return window.pdfjsLib; }));
+
+D.loadZip = loadZip; D.loadPdf = loadPdf;
 
 /* ---------- plain text, Markdown ---------- */
 function readText(text, name, kind) {
@@ -187,10 +189,15 @@ async function readPdf(file) {
 }
 
 /* ---------- entry ---------- */
-D.read = async file => {
+D.read = async (file, opt = {}) => {
   const k = ext(file.name);
   if (!D.EXTS.includes(k)) throw new Error('That kind of file (.' + k + ') isn’t supported yet. Try ' + D.EXTS.map(e => '.' + e).join(', ') + '.');
-  if (file.size > D.MAX_BYTES) throw new Error('That file is over ' + Math.round(D.MAX_BYTES / 1048576) + ' MB. Try a smaller one or split it.');
+  const cap = k === 'pdf' ? D.MAX_PDF_BYTES : D.MAX_BYTES;
+  if (file.size > cap) throw new Error('That file is over ' + Math.round(cap / 1048576) + ' MB. Try a smaller one or split it.');
+  if (k === 'pdf' && !opt.word) {   // PDFs are translated in place (pdfedit.js); nothing is read until the person chooses the pages
+    const lib = await loadPdf(); const pdf = await lib.getDocument({ data:new Uint8Array(await file.arrayBuffer()) }).promise; const pages = pdf.numPages; try { pdf.destroy(); } catch {}
+    return { kind:'pdf', pdf:true, name:file.name, size:file.size, file, pages, segs:[], chars:0, note:'', outExt:'pdf', toWord:() => D.read(file, { word:true }) };
+  }
   let r, outExt = k, mime = 'text/plain';
   if (['docx', 'pptx', 'xlsx'].includes(k)) r = await readOffice(file, k);
   else if (k === 'pdf') { r = await readPdf(file); outExt = 'docx'; }

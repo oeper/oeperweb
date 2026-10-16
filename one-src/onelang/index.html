@@ -80,11 +80,11 @@
         <div class="drop" id="docDrop" tabindex="0" role="button" aria-label="Choose a document to translate">
           <span class="ms big" aria-hidden="true">upload_file</span>
           <b>Drop a document here, or choose one</b>
-          <span class="muted">Word (.docx), PowerPoint (.pptx), Excel (.xlsx), PDF, text, Markdown, HTML, CSV, JSON, subtitles (.srt, .vtt)</span>
+          <span class="muted">PDF (translated in place, whole textbooks too), Word, PowerPoint, Excel, text, Markdown, HTML, CSV, JSON, subtitles (.srt, .vtt)</span>
           <button class="btn filled" id="docPick"><span class="ms" aria-hidden="true">folder_open</span>Browse files</button>
         </div>
         <div class="docjob" id="docJob" hidden></div>
-        <p class="note"><span class="ms" aria-hidden="true">lock</span><span>The file is read in your browser. Only its text is sent to epic AI for translation; the file itself is never uploaded. Layout, styles and pictures stay as they are.</span></p>
+        <p class="note"><span class="ms" aria-hidden="true">lock</span><span>The file is read in your browser. Only its text is sent to epic AI for translation; the file itself is never uploaded. Layout, styles and pictures stay as they are. Finished pieces are remembered, so a long book can be continued later.</span></p>
       </section>
 
       <!-- IMAGES -->
@@ -158,7 +158,8 @@
 
 <script src="shared/core.js?v=5"></script>
 <script src="js/langs.js?v=1"></script>
-<script src="js/engine.js?v=1"></script>
-<script src="js/docs.js?v=1"></script>
+<script src="js/engine.js?v=2"></script>
+<script src="js/docs.js?v=2"></script>
+<script src="js/pdfedit.js?v=1"></script>
 <script src="js/voice.js?v=1"></script>
-<script src="js/app.js?v=1"></script>
+<script src="js/app.js?v=2"></script>

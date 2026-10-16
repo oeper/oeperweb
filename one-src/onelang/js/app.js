@@ -284,13 +284,54 @@ function wireDrop(zone, cb){
   ['dragleave', 'drop'].forEach(n => zone.addEventListener(n, e => { e.preventDefault(); zone.classList.remove('over'); }));
   zone.addEventListener('drop', e => { const fs = [...(e.dataTransfer && e.dataTransfer.files || [])]; if (fs.length) cb(fs); });
 }
+/* remembered translations: a document stopped by the daily limit (or cancelled) picks up where it left off, and the same sentence is never paid for twice */
+const Cache = (() => {
+  let dbp;
+  const open = () => dbp || (dbp = new Promise(ok => { try { const r = indexedDB.open('onelang', 1); r.onupgradeneeded = () => r.result.createObjectStore('tr'); r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); } catch { ok(null); } }));
+  return {
+    async getMany(keys) {
+      const db = await open(), out = new Map(); if (!db || !keys.length) return out;
+      await new Promise(done => { const st = db.transaction('tr').objectStore('tr'); let left = keys.length; keys.forEach(k => { const q = st.get(k); q.onsuccess = () => { if (q.result != null) out.set(k, q.result); if (!--left) done(); }; q.onerror = () => { if (!--left) done(); }; }); });
+      return out;
+    },
+    async putMany(entries) {
+      const db = await open(); if (!db || !entries.length) return;
+      await new Promise(done => { const tx = db.transaction('tr', 'readwrite'), st = tx.objectStore('tr'); entries.forEach(([k, v]) => st.put(v, k)); tx.oncomplete = tx.onerror = tx.onabort = () => done(); });
+    },
+    async clear() { const db = await open(); if (!db) return; await new Promise(done => { const tx = db.transaction('tr', 'readwrite'); tx.objectStore('tr').clear(); tx.oncomplete = tx.onerror = () => done(); }); },
+  };
+})();
+/* translate many pieces: what was translated before comes from the cache, the rest goes to the translator (which waits out "too many requests" by itself) */
+async function translateAll(segs, { signal, onProgress, onWait } = {}) {
+  const from = S.from, to = S.to, tone = S.tone, kf = c => from + '|' + to + '|' + tone + '|' + c;
+  const cores = [...new Set(segs.map(s => ENG.splitSpace(s).core).filter(c => c && /\p{L}/u.test(c)))];
+  const have = await Cache.getMany(cores.map(kf)), map = new Map(), todo = [];
+  cores.forEach(c => { const v = have.get(kf(c)); if (v != null) map.set(c, v); else todo.push(c); });
+  const cached = map.size, saved = new Set(map.keys());
+  const flush = async () => { const add = []; for (const [c, v] of map) if (!saved.has(c)) { saved.add(c); add.push([kf(c), v]); } if (add.length) await Cache.putMany(add); };
+  if (onProgress) onProgress({ done:cached, total:cores.length, cached, failed:0 });
+  let res = { limited:false, failed:0, message:'' };
+  try {
+    res = await ENG.segments(todo, from, to, { tone, signal, map, concurrency:4, onWait, onProgress:r => { if (onProgress) onProgress({ done:cached + r.done, total:cores.length, cached, failed:r.failed }); if (map.size - saved.size >= 15) flush(); } });
+  } catch (err) { await flush(); throw err; }
+  await flush();
+  return { map, res, total:cores.length, cached };
+}
+const confirmBox = (title, html, okLabel) => new Promise(ok => ONE.modal({ title, body:html, width:460, actions:[{ label:'Cancel', on:() => ok(false) }, { label:okLabel, kind:'filled', on:() => ok(true) }], onClose:() => ok(false) }));
+const tokensFor = chars => Math.round(chars / 1.6 / 1000) * 1000;
+const waitText = s => 'Too many requests at once. Waiting ' + s + ' s, then carrying on…';
+const progressText = (r, unit) => 'Translated ' + r.done.toLocaleString() + ' of ' + r.total.toLocaleString() + ' ' + unit + (r.cached ? ' · ' + r.cached.toLocaleString() + ' remembered from before' : '') + (r.failed ? ' · ' + r.failed + ' skipped' : '');
+
 async function loadDoc(file){
   if (docCtl) docCtl.abort();
   docJob.hidden = false; docJob.className = 'job';
   docJob.innerHTML = ''; docJob.append(jobHead(file, 'Reading…'), el('div', { class:'prog ind' }, el('i')));
   let doc;
-  try { doc = await DOC.read(file); } catch (err) { docJob.innerHTML = ''; docJob.append(jobHead(file, 'Can’t open this file'), el('div', { class:'warnbox', text:err.message || String(err) }), el('div', { class:'job-actions' }, el('button', { class:'btn tonal', text:'Choose another file', onclick:() => $('#docPick').click() }))); return; }
-  showDoc(doc);
+  try { doc = await DOC.read(file); } catch (err) {
+    const msg = err && err.name === 'PasswordException' ? 'This PDF is password-protected. Remove the password first, then try again.' : (err.message || String(err));
+    docJob.innerHTML = ''; docJob.append(jobHead(file, 'Can’t open this file'), el('div', { class:'warnbox', text:msg }), el('div', { class:'job-actions' }, el('button', { class:'btn tonal', text:'Choose another file', onclick:() => $('#docPick').click() }))); return;
+  }
+  doc.pdf ? showPdf(doc) : showDoc(doc);
 }
 function jobHead(file, sub){
   const e = (String(file.name).split('.').pop() || '').slice(0, 5);
@@ -302,37 +343,100 @@ function showDoc(doc){
   docJob.append(jobHead(doc, sizeOf(doc.size) + ' · ' + doc.segs.length.toLocaleString() + ' pieces of text · ' + doc.chars.toLocaleString() + ' characters' + (doc.pages ? ' · ' + doc.pages + ' pages' : '')));
   if (!doc.segs.length) { docJob.append(el('div', { class:'warnbox', text:'I couldn’t find any text to translate in this file.' })); return; }
   if (doc.note) docJob.append(el('div', { class:'okbox', text:doc.note }));
-  if (over) { docJob.append(el('div', { class:'warnbox', text:'This document has ' + doc.chars.toLocaleString() + ' characters. One translation can handle up to ' + DOC.MAX_CHARS.toLocaleString() + ' (a few hundred pages is fine, a whole book is not). Split it into parts and translate each.' })); return; }
-  docJob.append(el('div', { class:'muted', text:'Translating into ' + LANG.name(S.to) + ' takes about ' + reqs + ' request' + (reqs === 1 ? '' : 's') + ' to epic AI and counts toward your daily epic AI usage. Change the languages above first if you need to.' }));
+  if (over) { docJob.append(el('div', { class:'warnbox', text:'This document has ' + doc.chars.toLocaleString() + ' characters. One translation can handle up to ' + DOC.MAX_CHARS.toLocaleString() + '. Split it into parts and translate each.' })); return; }
+  docJob.append(el('div', { class:'muted', text:'Translating into ' + LANG.name(S.to) + ' takes about ' + reqs + ' request' + (reqs === 1 ? '' : 's') + ' to epic AI and counts toward your daily epic AI usage (roughly ' + tokensFor(doc.chars).toLocaleString() + ' tokens). Change the languages above first if you need to.' }));
   docJob.append(el('div', { class:'job-actions' }, el('button', { class:'btn filled', html:icon('translate') + 'Translate to ' + esc(LANG.name(S.to)), onclick:() => runDoc(doc) }), el('button', { class:'btn text', text:'Choose another file', onclick:() => $('#docPick').click() })));
 }
 async function runDoc(doc){
-  docCtl = new AbortController(); const to = S.to, from = S.from;
+  if (doc.chars > 150000 && !doc.confirmed) { if (!await confirmBox('A long document', '<p>This is about <b>' + doc.chars.toLocaleString() + '</b> characters, roughly <b>' + tokensFor(doc.chars).toLocaleString() + ' tokens</b> of your daily epic AI allowance. If you run out, what is done is kept and you can continue later (or tomorrow).</p>', 'Translate')) return; doc.confirmed = true; }
+  docCtl = new AbortController(); const to = S.to;
   const bar = el('i'), label = el('small', { text:'Starting…' });
   docJob.innerHTML = ''; docJob.append(el('div', { class:'job-head' }, el('span', { class:'fileicon', text:doc.kind }), el('div', { class:'grow' }, el('b', { text:doc.name }), label)), el('div', { class:'prog' }, bar),
     el('div', { class:'job-actions' }, el('button', { class:'btn tonal', text:'Cancel', onclick:() => docCtl && docCtl.abort() })));
-  let res;
+  let tr;
   try {
-    res = await ENG.segments(doc.segs, from, to, { tone:S.tone, signal:docCtl.signal, onProgress:r => { const p = r.total ? r.done / r.total : 1; bar.style.width = Math.round(p * 100) + '%'; label.textContent = 'Translated ' + r.done.toLocaleString() + ' of ' + r.total.toLocaleString() + ' pieces' + (r.failed ? ' · ' + r.failed + ' skipped' : ''); } });
-  } catch (err) { if (err.name === 'AbortError') { showDoc(doc); say('Cancelled.'); return; } docJob.append(el('div', { class:'warnbox', text:errText(err) })); return; }
-  docCtl = null;
-  if (!res.done) { docJob.innerHTML = ''; docJob.append(jobHead(doc, 'Nothing was translated'), el('div', { class:'warnbox', text:(res.limited ? errText({ limit:true, message:res.message || 'You’ve used today’s epic AI allowance.' }) : res.message || 'The translator didn’t answer.') }), el('div', { class:'job-actions' }, el('button', { class:'btn filled', text:'Try again', onclick:() => runDoc(doc) }))); return; }
+    tr = await translateAll(doc.segs, { signal:docCtl.signal, onWait:s => { label.textContent = waitText(s); }, onProgress:r => { bar.style.width = Math.round((r.total ? r.done / r.total : 1) * 100) + '%'; label.textContent = progressText(r, 'pieces'); } });
+  } catch (err) { if (err.name === 'AbortError') { showDoc(doc); say('Cancelled. What was translated is remembered.'); return; } docJob.append(el('div', { class:'warnbox', text:errText(err) })); return; }
+  docCtl = null; const { map, res, total } = tr;
+  if (!map.size) { docJob.innerHTML = ''; docJob.append(jobHead(doc, 'Nothing was translated'), el('div', { class:'warnbox', text:(res.limited ? errText({ limit:true, message:res.message || 'You’ve used today’s epic AI allowance.' }) : res.message || 'The translator didn’t answer.') }), el('div', { class:'job-actions' }, el('button', { class:'btn filled', text:'Try again', onclick:() => runDoc(doc) }))); return; }
   let out;
-  try { out = await doc.build(res.map, to); } catch (err) { docJob.append(el('div', { class:'warnbox', text:'The translated file couldn’t be put together: ' + (err.message || err) })); return; }
+  try { out = await doc.build(map, to); } catch (err) { docJob.append(el('div', { class:'warnbox', text:'The translated file couldn’t be put together: ' + (err.message || err) })); return; }
   docJob.innerHTML = '';
-  docJob.append(jobHead({ name:out.name }, sizeOf(out.blob.size) + ' · ' + res.done.toLocaleString() + ' of ' + res.total.toLocaleString() + ' pieces translated'));
-  const partial = res.done < res.total;
-  if (partial) docJob.append(el('div', { class:'warnbox', text:(res.limited ? errText({ limit:true, message:'The daily limit was reached, so the rest was left in the original language.' }) : 'Some pieces could not be translated and were left as they were.') }));
+  docJob.append(jobHead({ name:out.name }, sizeOf(out.blob.size) + ' · ' + map.size.toLocaleString() + ' of ' + total.toLocaleString() + ' pieces translated'));
+  const partial = map.size < total;
+  if (partial) docJob.append(el('div', { class:'warnbox', text:(res.limited ? errText({ limit:true, message:'The daily limit was reached, so the rest was left in the original language. Everything done so far is remembered: press “Translate the rest” later and it continues from here.' }) : 'Some pieces could not be translated and were left as they were.') }));
   else docJob.append(el('div', { class:'okbox', text:'Done. The layout, styles and pictures of the original are kept.' }));
   const pv = el('div', { class:'preview' }); let n = 0;
-  for (const s of doc.segs) { const { core } = ENG.splitSpace(s); if (!res.map.has(core)) continue; pv.append(el('div', { text:core }), el('div', { class:'t', dir:LANG.rtl(to) ? 'rtl' : 'auto', text:res.map.get(core) })); if (++n >= 6) break; }
+  for (const s of doc.segs) { const { core } = ENG.splitSpace(s); if (!map.has(core)) continue; pv.append(el('div', { text:core }), el('div', { class:'t', dir:LANG.rtl(to) ? 'rtl' : 'auto', text:map.get(core) })); if (++n >= 6) break; }
   if (n) docJob.append(pv);
   docJob.append(el('div', { class:'job-actions' },
     el('button', { class:'btn filled', html:icon('download') + 'Download', onclick:() => ONE.download(out.name, out.blob, out.mime) }),
-    doc.text ? el('button', { class:'btn tonal', html:icon('content_copy') + 'Copy text', onclick:async () => say(await copyText(doc.text(res.map)) ? 'Text copied.' : 'Couldn’t copy.') }) : null,
+    doc.text ? el('button', { class:'btn tonal', html:icon('content_copy') + 'Copy text', onclick:async () => say(await copyText(doc.text(map)) ? 'Text copied.' : 'Couldn’t copy.') }) : null,
     partial ? el('button', { class:'btn tonal', text:'Translate the rest', onclick:() => runDoc(doc) }) : null,
     el('button', { class:'btn text', text:'Another document', onclick:() => $('#docPick').click() })));
 }
+
+/* ---------- PDFs: translated in place ---------- */
+function showPdf(doc, problem){
+  docJob.innerHTML = '';
+  docJob.append(jobHead(doc, sizeOf(doc.size) + ' · ' + doc.pages.toLocaleString() + ' page' + (doc.pages === 1 ? '' : 's')));
+  if (problem) docJob.append(el('div', { class:'warnbox', text:problem }));
+  const range = el('input', { class:'tf', placeholder:'All pages', 'aria-label':'Pages to translate', value:doc.range || '', autocomplete:'off' });
+  const keep = ONE.check('Keep only the translated pages in the new PDF', doc.keepOnly !== false);
+  docJob.append(el('div', { class:'rangebox' }, ONE.field('Pages', range, doc.pages > 40 ? 'Like 1-30, 45. A whole textbook is fine, but a chapter at a time is gentler on your daily allowance.' : 'Leave empty for every page, or type something like 1-5, 8.'), keep.wrap));
+  docJob.append(el('div', { class:'okbox', text:'Each page keeps its layout, pictures and colours. The old text is painted over and the translation is written in the same place, size and colour. Scanned pages (a picture of text) have no text to translate.' }));
+  docJob.append(el('div', { class:'job-actions' },
+    el('button', { class:'btn filled', html:icon('translate') + 'Translate to ' + esc(LANG.name(S.to)), onclick:() => { doc.range = range.value; doc.keepOnly = keep.input.checked; runPdf(doc); } }),
+    el('button', { class:'btn tonal', html:icon('description') + 'Editable Word copy instead', title:'Pulls the text out into a .docx you can edit', onclick:async () => { docJob.innerHTML = ''; docJob.append(jobHead(doc, 'Reading the text…'), el('div', { class:'prog ind' }, el('i'))); try { const w = await doc.toWord(); showDoc(w); } catch (err) { showPdf(doc, err.message || String(err)); } } }),
+    el('button', { class:'btn text', text:'Choose another file', onclick:() => $('#docPick').click() })));
+}
+async function runPdf(doc, info){
+  let pages; try { pages = PDFT.parseRange(doc.range, doc.pages); } catch (err) { return showPdf(doc, err.message); }
+  docCtl = new AbortController(); const sig = docCtl.signal, to = S.to;
+  const bar = el('i'), label = el('small', { text:'Starting…' });
+  const frame = () => { docJob.innerHTML = ''; docJob.append(el('div', { class:'job-head' }, el('span', { class:'fileicon', text:'pdf' }), el('div', { class:'grow' }, el('b', { text:doc.name }), label)), el('div', { class:'prog' }, bar), el('div', { class:'job-actions' }, el('button', { class:'btn tonal', text:'Cancel', onclick:() => docCtl && docCtl.abort() }))); };
+  frame();
+  try {
+    if (!info) {
+      info = await PDFT.analyze(doc.file, pages, { signal:sig, onProgress:(i, n) => { bar.style.width = Math.round(i / n * 20) + '%'; label.textContent = 'Reading the text… page ' + i + ' of ' + n; } });
+      if (!info.texts.length) { docCtl = null; return showPdf(doc, 'I couldn’t find any text on ' + (pages.length === 1 ? 'that page' : 'those pages') + '. If this PDF is a scan (a picture of each page), there is no text to replace.'); }
+      if (info.chars > 150000 && !await confirmBox('A long document', '<p>About <b>' + info.chars.toLocaleString() + '</b> characters of text on <b>' + pages.length + '</b> pages, roughly <b>' + tokensFor(info.chars) .toLocaleString() + ' tokens</b> of your daily epic AI allowance. If you run out, what is done is kept and you can continue later.</p><p class="muted">It takes a while: a few minutes per hundred pages.</p>', 'Translate')) { docCtl = null; return showPdf(doc); }
+    }
+    bar.style.width = '20%';
+    const tr = await translateAll(info.texts, { signal:sig, onWait:s => { label.textContent = waitText(s); }, onProgress:r => { bar.style.width = (20 + Math.round((r.total ? r.done / r.total : 1) * 60)) + '%'; label.textContent = progressText(r, 'paragraphs'); } });
+    if (!tr.map.size) { docCtl = null; return showPdf(doc, tr.res.limited ? errText({ limit:true, message:tr.res.message || 'You’ve used today’s epic AI allowance.' }) : tr.res.message || 'The translator didn’t answer.'); }
+    label.textContent = 'Putting the translation into the PDF…'; bar.style.width = '82%';
+    const keepOnly = !!doc.keepOnly && pages.length < doc.pages;
+    const built = await PDFT.build(doc.file, info, tr.map, to, { keepOnly, signal:sig, onProgress:(i, n) => { bar.style.width = (82 + Math.round(i / n * 18)) + '%'; label.textContent = 'Writing page ' + i + ' of ' + n + '…'; } });
+    docCtl = null;
+    const name = String(doc.name).replace(/\.[^.]+$/, '') + ' (' + LANG.name(to) + ').pdf', partial = tr.map.size < tr.total;
+    docJob.innerHTML = ''; docJob.append(jobHead({ name }, sizeOf(built.blob.size) + ' · ' + built.stats.blocks.toLocaleString() + ' paragraphs on ' + built.stats.pages + ' page' + (built.stats.pages === 1 ? '' : 's')));
+    if (partial) docJob.append(el('div', { class:'warnbox', text:(tr.res.limited ? errText({ limit:true, message:'The daily limit was reached, so the rest of the text was left in the original language. Everything done so far is remembered: press “Translate the rest” later and it continues from here.' }) : 'Some paragraphs could not be translated and were left as they were.') }));
+    else docJob.append(el('div', { class:'okbox', text:'Done. Check the pages below, then download.' }));
+    if (info.textless) docJob.append(el('div', { class:'muted', text:info.textless + ' of ' + pages.length + ' page' + (pages.length === 1 ? ' has' : 's have') + ' no text I could translate (pictures, scans or maths only) and ' + (info.textless === 1 ? 'was' : 'were') + ' left as is.' }));
+    const prev = el('div', { class:'pvpages' }); docJob.append(prev);
+    docJob.append(el('div', { class:'job-actions' },
+      el('button', { class:'btn filled', html:icon('download') + 'Download PDF', onclick:() => ONE.download(name, built.blob, 'application/pdf') }),
+      partial ? el('button', { class:'btn tonal', text:'Translate the rest', onclick:() => runPdf(doc, info) }) : null,
+      el('button', { class:'btn text', text:'Another document', onclick:() => $('#docPick').click() })));
+    previewPdf(built.blob, prev, keepOnly ? 1 : (info.pages.find(p => p.blocks.length) || info.pages[0]).n);
+  } catch (err) {
+    docCtl = null;
+    if (err.name === 'AbortError') { showPdf(doc); say('Cancelled. What was translated is remembered.'); return; }
+    showPdf(doc, errText(err));
+  }
+}
+/* show a page of the result so the person can check it before downloading */
+async function previewPdf(blob, box, n){
+  try {
+    const lib = await DOC.loadPdf(), pdf = await lib.getDocument({ data:new Uint8Array(await blob.arrayBuffer()) }).promise;
+    const pg = await pdf.getPage(clampN(n, pdf.numPages)), base = pg.getViewport({ scale:1 }), sc = Math.min(1.6, 760 / base.width), vp = pg.getViewport({ scale:sc });
+    const c = el('canvas', { class:'pvcanvas', width:Math.ceil(vp.width), height:Math.ceil(vp.height), 'aria-label':'Preview of a translated page' });
+    c.getContext('2d').fillStyle = '#fff'; c.getContext('2d').fillRect(0, 0, c.width, c.height);
+    await pg.render({ canvasContext:c.getContext('2d'), viewport:vp }).promise; box.append(c); try { pdf.destroy(); } catch {}
+  } catch {}
+}
+const clampN = (n, max) => Math.min(max, Math.max(1, n));
 
 /* ---------- pictures ---------- */
 const imgJob = $('#imgJob'); let imgCtl = null;
