@@ -1,0 +1,164 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>oneLang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&family=Roboto+Flex:opsz,wght@8..144,300..800&display=swap">
+<link rel="stylesheet" href="shared/m3.css?v=5">
+<link rel="stylesheet" href="lang.css?v=1">
+
+<div class="app" id="app">
+  <header class="titlebar">
+    <div class="logo" aria-hidden="true">文</div>
+    <span class="appname">oneLang</span>
+    <span class="grow"></span>
+    <button class="tb-btn" data-act="history" title="History and saved"><span class="ms" aria-hidden="true">history</span></button>
+    <button class="tb-btn" data-act="apps" title="Apps and Home"><span class="ms" aria-hidden="true">apps</span></button>
+    <button class="tb-btn" data-act="seed" title="App color"><span class="ms" aria-hidden="true">palette</span></button>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Translate">
+    <button class="tab active" role="tab" data-tab="text"><span class="ms" aria-hidden="true">translate</span>Text</button>
+    <button class="tab" role="tab" data-tab="docs"><span class="ms" aria-hidden="true">description</span>Documents</button>
+    <button class="tab" role="tab" data-tab="image"><span class="ms" aria-hidden="true">image</span>Images</button>
+    <button class="tab" role="tab" data-tab="web"><span class="ms" aria-hidden="true">language</span>Websites</button>
+    <button class="tab" role="tab" data-tab="talk"><span class="ms" aria-hidden="true">forum</span>Conversation</button>
+  </nav>
+
+  <div class="work">
+    <main class="stage">
+      <!-- the language bar is shared by every tab -->
+      <div class="langbar" id="langbar">
+        <button class="lang-btn" id="fromBtn" aria-haspopup="dialog"><span id="fromName">Detect language</span><span class="ms" aria-hidden="true">expand_more</span></button>
+        <button class="icon-btn swap" id="swapBtn" title="Swap languages (Ctrl+Shift+S)" aria-label="Swap languages"><span class="ms" aria-hidden="true">swap_horiz</span></button>
+        <button class="lang-btn" id="toBtn" aria-haspopup="dialog"><span id="toName">Spanish</span><span class="ms" aria-hidden="true">expand_more</span></button>
+        <span class="grow"></span>
+        <label class="tonesel" title="How formal the translation sounds"><span class="ms" aria-hidden="true">record_voice_over</span>
+          <select id="tone" aria-label="Tone"><option value="standard">Standard</option><option value="formal">Formal</option><option value="informal">Casual</option></select></label>
+      </div>
+
+      <!-- TEXT -->
+      <section class="pane" id="p-text">
+        <div class="cards">
+          <div class="card in">
+            <div class="card-top"><span class="detected" id="detected" hidden></span></div>
+            <textarea id="src" class="area" placeholder="Enter text" maxlength="5000" spellcheck="true" aria-label="Text to translate" autofocus></textarea>
+            <div class="didyou" id="didyou" hidden></div>
+            <div class="rom" id="srcRom" hidden></div>
+            <div class="card-bar">
+              <button class="icon-btn" id="micBtn" title="Translate by voice" aria-label="Translate by voice"><span class="ms" aria-hidden="true">mic</span></button>
+              <button class="icon-btn" id="hwBtn" title="Handwriting" aria-label="Handwriting"><span class="ms" aria-hidden="true">draw</span></button>
+              <button class="icon-btn" id="srcListen" title="Listen" aria-label="Listen to the original"><span class="ms" aria-hidden="true">volume_up</span></button>
+              <button class="icon-btn" id="clearBtn" title="Clear" aria-label="Clear" hidden><span class="ms" aria-hidden="true">close</span></button>
+              <span class="grow"></span>
+              <span class="count" id="count">0 / 5000</span>
+            </div>
+          </div>
+          <div class="card out" id="outCard">
+            <div class="card-top"><span class="detected" id="outLabel"></span><span class="busy" id="busy" hidden><i></i><i></i><i></i></span></div>
+            <div class="area outtext" id="out" dir="auto" aria-live="polite" tabindex="0" data-ph="Translation"></div>
+            <div class="rom" id="outRom" hidden></div>
+            <div class="errline" id="err" hidden></div>
+            <div class="card-bar">
+              <button class="icon-btn" id="outListen" title="Listen" aria-label="Listen to the translation"><span class="ms" aria-hidden="true">volume_up</span></button>
+              <button class="icon-btn" id="copyBtn" title="Copy translation" aria-label="Copy translation"><span class="ms" aria-hidden="true">content_copy</span></button>
+              <button class="icon-btn" id="saveBtn" title="Save translation" aria-label="Save translation"><span class="ms" aria-hidden="true">star</span></button>
+              <button class="icon-btn" id="shareBtn" title="Share translation" aria-label="Share translation"><span class="ms" aria-hidden="true">share</span></button>
+              <button class="icon-btn" id="redoBtn" title="Translate again" aria-label="Translate again"><span class="ms" aria-hidden="true">refresh</span></button>
+              <span class="grow"></span>
+              <label class="instant" title="Translate while you type"><input type="checkbox" class="switch" id="instant" checked><span>Instant</span></label>
+              <button class="btn filled go" id="goBtn" hidden><span class="ms" aria-hidden="true">translate</span>Translate</button>
+            </div>
+          </div>
+        </div>
+        <div class="extras" id="extras" hidden></div>
+        <div class="recent" id="recentText"></div>
+      </section>
+
+      <!-- DOCUMENTS -->
+      <section class="pane" id="p-docs" hidden>
+        <div class="drop" id="docDrop" tabindex="0" role="button" aria-label="Choose a document to translate">
+          <span class="ms big" aria-hidden="true">upload_file</span>
+          <b>Drop a document here, or choose one</b>
+          <span class="muted">Word (.docx), PowerPoint (.pptx), Excel (.xlsx), PDF, text, Markdown, HTML, CSV, JSON, subtitles (.srt, .vtt)</span>
+          <button class="btn filled" id="docPick"><span class="ms" aria-hidden="true">folder_open</span>Browse files</button>
+        </div>
+        <div class="docjob" id="docJob" hidden></div>
+        <p class="note"><span class="ms" aria-hidden="true">lock</span><span>The file is read in your browser. Only its text is sent to epic AI for translation; the file itself is never uploaded. Layout, styles and pictures stay as they are.</span></p>
+      </section>
+
+      <!-- IMAGES -->
+      <section class="pane" id="p-image" hidden>
+        <div class="drop" id="imgDrop" tabindex="0" role="button" aria-label="Choose a picture to translate">
+          <span class="ms big" aria-hidden="true">add_photo_alternate</span>
+          <b>Drop, paste or choose a picture</b>
+          <span class="muted">Signs, menus, screenshots, notes. The text in the picture is read, then translated.</span>
+          <span class="row"><button class="btn filled" id="imgPick"><span class="ms" aria-hidden="true">image</span>Choose picture</button>
+            <button class="btn tonal" id="imgCam"><span class="ms" aria-hidden="true">photo_camera</span>Take photo</button></span>
+        </div>
+        <div class="imgjob" id="imgJob" hidden></div>
+      </section>
+
+      <!-- WEBSITES -->
+      <section class="pane" id="p-web" hidden>
+        <form class="urlbar" id="urlForm">
+          <span class="ms" aria-hidden="true">link</span>
+          <input id="urlIn" type="url" placeholder="Paste a web page address" aria-label="Web page address" autocomplete="off" inputmode="url">
+          <button class="btn filled" type="submit">Translate</button>
+        </form>
+        <div class="webjob" id="webJob" hidden></div>
+        <p class="note"><span class="ms" aria-hidden="true">info</span><span>Public pages only, text only (no pictures, scripts or logins). Needs an oeper.dev account.</span></p>
+      </section>
+
+      <!-- CONVERSATION -->
+      <section class="pane" id="p-talk" hidden>
+        <div class="talk" id="talkLog" aria-live="polite"></div>
+        <div class="talkbar">
+          <button class="mic-big a" id="micA" aria-label="Speak the first language"><span class="ms" aria-hidden="true">mic</span><b id="micAName"></b></button>
+          <button class="icon-btn" id="talkAuto" title="Listen automatically to the translation" aria-pressed="true"><span class="ms" aria-hidden="true">volume_up</span></button>
+          <button class="icon-btn" id="talkClear" title="Clear conversation"><span class="ms" aria-hidden="true">delete</span></button>
+          <button class="mic-big b" id="micB" aria-label="Speak the second language"><span class="ms" aria-hidden="true">mic</span><b id="micBName"></b></button>
+        </div>
+        <form class="talktype" id="talkForm"><input id="talkIn" class="tf" placeholder="Or type here" aria-label="Type a message" autocomplete="off">
+          <button class="btn tonal" type="submit" id="talkSendA">Send as <span id="talkSendAName"></span></button></form>
+      </section>
+    </main>
+
+    <aside class="side" id="side" hidden>
+      <div class="sp-head"><div class="seg" id="sideTabs"><button class="on" data-s="hist">History</button><button data-s="saved">Saved</button></div>
+        <button class="icon-btn" id="sideClose" title="Close"><span class="ms" aria-hidden="true">close</span></button></div>
+      <div class="sp-tools"><label class="tsearch"><span class="ms" aria-hidden="true">search</span><input id="sideSearch" placeholder="Search" aria-label="Search" autocomplete="off"></label>
+        <button class="icon-btn" id="sideMenu" title="More"><span class="ms" aria-hidden="true">more_vert</span></button></div>
+      <div class="sp-body" id="sideBody"></div>
+    </aside>
+  </div>
+</div>
+
+<!-- language picker -->
+<div class="picker" id="picker" hidden role="dialog" aria-modal="true" aria-label="Choose a language">
+  <div class="pk-box">
+    <div class="pk-head"><label class="pk-search"><span class="ms" aria-hidden="true">search</span><input id="pkIn" placeholder="Search languages" autocomplete="off" aria-label="Search languages"></label>
+      <button class="icon-btn" id="pkClose" title="Close"><span class="ms" aria-hidden="true">close</span></button></div>
+    <div class="pk-body" id="pkBody"></div>
+  </div>
+</div>
+
+<!-- handwriting -->
+<div class="picker" id="hw" hidden role="dialog" aria-modal="true" aria-label="Handwriting">
+  <div class="pk-box hw-box">
+    <div class="pk-head"><b>Write here</b><span class="grow"></span><button class="btn text" id="hwClear">Clear</button><button class="icon-btn" id="hwClose" title="Close"><span class="ms" aria-hidden="true">close</span></button></div>
+    <canvas id="hwCanvas" width="900" height="360" aria-label="Handwriting area"></canvas>
+    <div class="pk-foot"><span class="muted" id="hwHint">Write with your finger, a pen or the mouse. It is read when you stop.</span><span class="grow"></span><button class="btn filled" id="hwUse" disabled>Use text</button></div>
+  </div>
+</div>
+
+<input type="file" id="docInput" hidden>
+<input type="file" id="imgInput" accept="image/*" hidden>
+<input type="file" id="camInput" accept="image/*" capture="environment" hidden>
+
+<script src="shared/core.js?v=5"></script>
+<script src="js/langs.js?v=1"></script>
+<script src="js/engine.js?v=1"></script>
+<script src="js/docs.js?v=1"></script>
+<script src="js/voice.js?v=1"></script>
+<script src="js/app.js?v=1"></script>

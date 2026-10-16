@@ -1082,6 +1082,21 @@ async function moderateImage(env, dataUrl) {
 
 // Voice input for the desktop app: a short recording in, text out (Workers AI Whisper). Signed-in people only, capped per hour.
 const transcribeHits = new Map(); // email -> timestamps
+// oneLang "Websites": the browser can't fetch other sites (CORS), so the Worker reads the page for a signed-in person.
+const readPageHits = new Map();
+async function handleReadPage(request, env) {
+  const user = await userFromRequest(request, env);
+  if (!user) return json({ error: 'Sign in to your oeper.dev account to translate websites.' }, 401, request);
+  if (!isOwner(user)) {
+    const now = Date.now(), hits = (readPageHits.get(user.email) || []).filter(t => now - t < 3600000);
+    if (hits.length >= 60) return json({ error: 'That is a lot of pages for one hour. Try again later.' }, 429, request);
+    hits.push(now); readPageHits.set(user.email, hits);
+  }
+  let body; try { body = await request.json(); } catch { return json({ error: 'Invalid request.' }, 400, request); }
+  const out = JSON.parse(await readWebpage({ url: body && body.url, offset: body && body.offset }));
+  return json(out, out.error ? 422 : 200, request);
+}
+
 async function handleTranscribe(request, env) {
   const user = await userFromRequest(request, env);
   if (!user) return json({ error: 'Sign in to use voice.' }, 401, request);
@@ -1151,6 +1166,7 @@ export default {
     }
 
     if (url.pathname === '/api/transcribe' && request.method === 'POST') return handleTranscribe(request, env);
+    if (url.pathname === '/api/readpage' && request.method === 'POST') return handleReadPage(request, env);
 
     if (url.pathname === '/api/chat' && request.method === 'POST') {
       return handleChat(request, env);

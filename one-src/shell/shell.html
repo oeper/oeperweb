@@ -135,7 +135,7 @@ const { $, el, esc, icon, store } = { $:s => document.querySelector(s), el:ONE.e
 ONE.boot('one', 'home');
 const APPS = ONE.APPS, byId = Object.fromEntries(APPS.map(a => [a.id, a]));
 const LIBS = { word:['ow-lib', 'description'], sheet:['os-lib', 'table_chart'], slide:['op-lib', 'slideshow'], idea:['oi-lib', 'book_2'], site:['ob-lib', 'web'], draw:['od-lib', 'draw'] };
-const NEW_LABEL = { word:'Blank document', sheet:'Blank workbook', slide:'New presentation', idea:'New notebook', site:'New website', draw:'New whiteboard', pdf:'Open a PDF' };
+const NEW_LABEL = { word:'Blank document', sheet:'Blank workbook', slide:'New presentation', idea:'New notebook', site:'New website', draw:'New whiteboard', pdf:'Open a PDF', lang:'Open oneLang' };
 const logo = a => a.icon ? icon(a.icon) : esc(a.letter);
 let filter = 'all', files = [];
 
@@ -173,8 +173,8 @@ function renderApps(){
   APPS.forEach((a, i) => {
     const n = files.filter(f => f.app === a.id).length;
     const card = el('div', { class:'appcard', role:'button', tabindex:0, style:{ '--c':a.color, animationDelay:i * 60 + 'ms' }, 'aria-label':`Open ${a.name}` },
-      el('span', { class:'al', html:logo(a) }), el('span', {}, el('b', { text:a.name }), el('small', { text:`${a.what} · ${n} file${n === 1 ? '' : 's'}` })),
-      el('div', { class:'row' }, el('button', { class:'btn tonal', html:`${icon(a.id === 'pdf' ? 'upload_file' : 'add')}${a.id === 'pdf' ? 'Open' : 'New'}`, title:NEW_LABEL[a.id], onclick:e => { e.stopPropagation(); a.id === 'pdf' ? openApp('pdf') : openApp(a.id, { type:'new', template:'blank' }); } }),
+      el('span', { class:'al', html:logo(a) }), el('span', {}, el('b', { text:a.name }), el('small', { text:a.id === 'lang' ? 'Text, documents, pictures, websites' : `${a.what} · ${n} file${n === 1 ? '' : 's'}` })),
+      el('div', { class:'row' }, el('button', { class:'btn tonal', html:`${icon(a.id === 'pdf' ? 'upload_file' : a.id === 'lang' ? 'translate' : 'add')}${a.id === 'pdf' || a.id === 'lang' ? 'Open' : 'New'}`, title:NEW_LABEL[a.id], onclick:e => { e.stopPropagation(); a.id === 'pdf' || a.id === 'lang' ? openApp(a.id) : openApp(a.id, { type:'new', template:'blank' }); } }),
         shareBtn(() => ({ kind:'tool', app:a.id, title:a.name }), `Share ${a.name}`)));
     card.onclick = () => openApp(a.id); card.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openApp(a.id); } };
     box.append(card);
@@ -183,7 +183,7 @@ function renderApps(){
 function renderFiles(){
   const q = $('#q').value.trim().toLowerCase();
   const chips = $('#chips'); chips.innerHTML = '';
-  [['all', 'All', null], ...APPS.map(a => [a.id, a.what, a.color])].forEach(([k, t, c]) => { const n = k === 'all' ? files.length : files.filter(f => f.app === k).length; chips.append(el('button', { class:'fchip' + (filter === k ? ' on' : ''), style:c ? { '--c':c } : null, html:`${c ? '<i></i>' : ''}${esc(t)} <small>${n}</small>`, onclick:() => { filter = k; renderFiles(); } })); });
+  [['all', 'All', null], ...APPS.filter(a => a.id !== 'lang').map(a => [a.id, a.what, a.color])].forEach(([k, t, c]) => { const n = k === 'all' ? files.length : files.filter(f => f.app === k).length; chips.append(el('button', { class:'fchip' + (filter === k ? ' on' : ''), style:c ? { '--c':c } : null, html:`${c ? '<i></i>' : ''}${esc(t)} <small>${n}</small>`, onclick:() => { filter = k; renderFiles(); } })); });
   const list = files.filter(f => (filter === 'all' || f.app === filter) && (!q || f.title.toLowerCase().includes(q)));
   const box = $('#files'); box.innerHTML = '';
   if (!list.length) box.append(el('div', { class:'empty', text:q ? 'No files match that search.' : files.length ? 'Nothing here yet.' : 'No files yet. Start one from an app above.' }));

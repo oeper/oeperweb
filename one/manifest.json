@@ -2,7 +2,7 @@
   "id": "/one/",
   "name": "one: documents, spreadsheets, slides, notes and whiteboards",
   "short_name": "one",
-  "description": "oneWord, oneSheet, oneSlide, oneIdea, oneSite, oneDraw and onePDF in one app. Works offline; saving to your oeper.dev account is optional.",
+  "description": "oneWord, oneSheet, oneSlide, oneIdea, oneSite, oneDraw, onePDF and oneLang in one app. Works offline; saving to your oeper.dev account is optional.",
   "start_url": "/one/?source=app",
   "scope": "/one/",
   "display": "standalone",

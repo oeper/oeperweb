@@ -503,7 +503,8 @@ ONE.APPS = [
   { id:'idea', name:'oneIdea', letter:'I', color:'#7719aa', what:'Notebooks' },
   { id:'site', name:'oneSite', icon:'web', color:'#00838f', what:'Websites' },
   { id:'draw', name:'oneDraw', icon:'draw', color:'#e8710a', what:'Whiteboards' },
-  { id:'pdf', name:'onePDF', icon:'picture_as_pdf', color:'#c5221f', what:'PDFs' }
+  { id:'pdf', name:'onePDF', icon:'picture_as_pdf', color:'#c5221f', what:'PDFs' },
+  { id:'lang', name:'oneLang', icon:'translate', color:'#1a73e8', what:'Translation' }
 ];
 ONE.post = msg => { if (ONE.embedded) window.parent.postMessage(Object.assign({ one:true, from:ONE.appId }, msg), '*'); };
 /* The app switcher lives in the one.html shell; a standalone copy of an app has no sibling apps to link to, so its button is hidden. */
