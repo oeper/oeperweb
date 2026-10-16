@@ -1705,7 +1705,8 @@ async function share(t) {
     if (!getCurrentUser()) { body.replaceChildren(el('p', { class:'muted', text:'Sign in to your oeper.dev account to share files.' })); return; }
     body.replaceChildren(el('p', { class:'muted', text:'Making a shareable copy…' }));
     const file = await snapshot(t.app, t.id, t.title);
-    const url = await uploadFile(file, '/upload-file', undefined, undefined, 'Sharing ' + t.title);
+    // a share link has to open for whoever gets it, so this copy is public on purpose (everything else the suite saves stays private)
+    const url = await uploadFile(file, '/upload-file', { access: 'public' }, undefined, 'Sharing ' + t.title);
     if (!url) throw new Error('The upload didn’t return a link');
     link = SHARE_BASE + '#shared=' + t.app + ':' + encodeURIComponent(url);
     showLink();

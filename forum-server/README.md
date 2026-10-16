@@ -339,6 +339,19 @@ sequence as `aio.sh`'s Restart, without opening a terminal at all.
 settings, and the same upload log with clickable links, from any browser,
 not just on the phone.
 
+## Private and public files (`file-access.js`)
+
+Everything under `/docs` (oeper.dev/files, USER_FILES_DIR) is **private by default**. `file-owners.json` entries carry `access: 'private' | 'public'`.
+A private file only opens through a signed link, `/docs/<name>?exp=<ms>&sig=<hmac>` (HMAC-SHA256 of name+exp with the server's secret; `FILE_LINK_SECRET` in
+`.env`, otherwise a random one is created once in `file-link-secret.txt`, gitignored; changing it invalidates every link), because an `<img>`/`<video>`
+can't send an Authorization header. The server hands those links out: `/my-files` (12 h), the `/upload-file` answer, `/admin/*` (owner console previews) and
+`POST /file-link {filename, hours}` (a link to give to someone, default 7 days, max 30; the plain link when the file is public). Public files keep the plain link.
+Rules: new signed-in uploads are private unless the form field `access=public` is sent (files.html sends the person's `oe-files-default-access`
+setting, synced; the One suite's "share a copy" sends public on purpose); entries with no `access` field (uploaded before this) stay public so shared links keep
+working; anonymous uploads are public; One suite documents (`oneApp`) and any file in the folder that was never recorded (a stray file in Documents) are ALWAYS private.
+`POST /file-access {filenames:[…] | all:true, access}` switches the caller's own files (settings has "make all my existing files private"). Private files are
+served with `Cache-Control: private`. The posts/video/message routes (`/files`, `/videos`, `/projects`, `/messages-media`) are unchanged and public by link.
+
 ## Not storing the same file twice
 
 Every upload endpoint (`/upload`, `/upload-video`, `/upload-project`,

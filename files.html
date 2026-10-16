@@ -320,6 +320,8 @@
   .upload-progress .oe-loading-bar { height: 6px; }
 
   .temp-tag { color: var(--md-sys-color-error); font-weight: 500; }
+  .access-tag { color: var(--md-sys-color-on-surface-variant); font-weight: 500; }
+  .access-tag.public { color: var(--md-sys-color-tertiary, var(--md-sys-color-primary)); }
 
   .empty { text-align: center; padding: 80px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
   .empty .material-symbols-rounded { font-size: 48px; opacity: 0.5; margin-bottom: 16px; }
@@ -402,6 +404,8 @@
   <div class="bulk-bar" id="bulkBar">
     <span class="bulk-bar-count" id="bulkBarCount"></span>
     <button type="button" id="bulkMoveBtn"><span class="material-symbols-rounded">drive_file_move</span>move</button>
+    <button type="button" id="bulkPrivateBtn"><span class="material-symbols-rounded">lock</span>private</button>
+    <button type="button" id="bulkPublicBtn"><span class="material-symbols-rounded">public</span>public</button>
     <button type="button" id="bulkDownloadBtn"><span class="material-symbols-rounded">download</span>download</button>
     <button type="button" class="dangerous" id="bulkDeleteBtn"><span class="material-symbols-rounded">delete</span>delete</button>
     <button type="button" id="bulkCancelBtn"><span class="material-symbols-rounded">close</span></button>
@@ -573,13 +577,45 @@ function updateUploadProgress(prefix, frac) {
 function hideUploadProgress(prefix) {
   document.getElementById(prefix + 'Progress').style.display = 'none';
 }
-function copyToClipboard(text) {
+function copyToClipboard(text, message) {
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(() => showToast('link copied')).catch(() => showToast('copy failed — copy manually: ' + text));
+    navigator.clipboard.writeText(text).then(() => showToast(message || 'link copied')).catch(() => showToast('copy failed — copy manually: ' + text));
   } else {
     showToast('copy manually: ' + text);
   }
 }
+
+// ── private / public files ─────────────────────────────────
+// New uploads are private unless this setting (settings.html › files, synced) says public. A private file only opens through a
+// signed link the server puts on this page (valid for hours); "copy link" asks for a longer one to share, or the plain link if public.
+const defaultAccess = () => (localStorage.getItem('oe-files-default-access') === 'public' ? 'public' : 'private');
+async function fileApi(path, body) {
+  const user = getCurrentUser();
+  if (!user) throw new Error('sign in first');
+  const res = await fetch(SERVER_ENDPOINT + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await user.getIdToken() }, body: JSON.stringify(body) });
+  let data = {}; try { data = await res.json(); } catch {}
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+const canSetAccess = f => { const u = getCurrentUser(); return !!(u && f.email === u.email && !f.openUrl && !f.untracked); };
+const accessTag = f => (f.access === 'private'
+  ? ' · <span class="access-tag" title="only you can open this; a link you copy stops working after a while">private</span>'
+  : ' · <span class="access-tag public" title="anyone with the link can open this">public link</span>');
+async function copyFileLink(f) {
+  if (f.access !== 'private') { copyToClipboard(f.url); return; }
+  try {
+    const r = await fileApi('/file-link', { filename: f.filename, hours: 168 });
+    copyToClipboard(r.url, 'link copied: this file is private, so the link works for 7 days');
+  } catch (err) { showToast('could not make a link: ' + err.message); }
+}
+async function setAccess(filenames, access) {
+  try {
+    const r = await fileApi('/file-access', { filenames, access });
+    showToast(r.changed ? `${r.changed} file${r.changed === 1 ? ' is' : 's are'} now ${access}` : `nothing to change${r.skipped ? ' (suite documents and other people’s files stay as they are)' : ''}`);
+    loadList();
+  } catch (err) { showToast('could not change that: ' + err.message); }
+}
+const accessItem = f => ({ label: f.access === 'private' ? 'make public' : 'make private', icon: f.access === 'private' ? 'public' : 'lock', onClick: () => setAccess([f.filename], f.access === 'private' ? 'public' : 'private') });
 
 function currentIsOwner() {
   const u = getCurrentUser();
@@ -1128,7 +1164,7 @@ function buildFileTile(f) {
     </div>
     <div class="file-tile-info">
       <div class="file-tile-name" title="${escHtml(f.name)}">${escHtml(f.name)}</div>
-      <div class="file-tile-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.quarantined ? ' · <span class="temp-tag">under review</span>' : ''}${f.expiresAt ?` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
+      <div class="file-tile-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${accessTag(f)}${f.quarantined ? ' · <span class="temp-tag">under review</span>' : ''}${f.expiresAt ?` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
     </div>
   `;
 
@@ -1162,7 +1198,8 @@ function buildFileTile(f) {
   // buttons, the tile only has room for one kebab — copy link and download
   // move in as menu items instead (still available to everyone, not just
   // mineOrOwner, matching the row view's permission model).
-  const menuItems = [{ label: 'copy link', icon: 'link', onClick: () => copyToClipboard(f.url) }];
+  const menuItems = [{ label: 'copy link', icon: 'link', onClick: () => copyFileLink(f) }];
+  if (canSetAccess(f)) menuItems.push(accessItem(f));
   if (mineOrOwner) menuItems.push({ label: 'rename', icon: 'edit', onClick: () => openRenameModal(f) });
   if (mineOrOwner && !f.untracked && f.email !== ANON_OWNER) menuItems.push({ label: 'move to folder', icon: 'drive_file_move', onClick: () => openMoveModal(f) });
   menuItems.push({ label: 'download', icon: 'download', onClick: () => {
@@ -1200,7 +1237,7 @@ function buildCard(f) {
     ${thumbHtml}
     <div class="file-main">
       <div class="file-name">${escHtml(f.name)}</div>
-      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${f.untracked ? ' · unknown owner' : f.anonymous ? ' · uploaded without signing in' : ''}${f.quarantined ? ' · <span class="temp-tag" title="an automatic check flagged this file, so it isn\'t publicly viewable until an owner reviews it">under review</span>' : ''}${f.expiresAt ?` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
+      <div class="file-meta">${formatSize(f.size)} · ${timeAgo(f.mtime)}${accessTag(f)}${f.untracked ? ' · unknown owner' : f.anonymous ? ' · uploaded without signing in' : ''}${f.quarantined ? ' · <span class="temp-tag" title="an automatic check flagged this file, so it isn\'t publicly viewable until an owner reviews it">under review</span>' : ''}${f.expiresAt ?` · <span class="temp-tag">${expiryLabel(f.expiresAt)}</span>` : ''}</div>
       ${isAudio(f.name) ? `<audio class="file-audio-player" controls preload="metadata" src="${f.url}"></audio>` : ''}
     </div>
     <div class="file-actions" draggable="false">
@@ -1209,7 +1246,7 @@ function buildCard(f) {
     </div>
   `;
 
-  card.querySelector('[data-copy]').addEventListener('click', () => copyToClipboard(f.url));
+  card.querySelector('[data-copy]').addEventListener('click', () => copyFileLink(f));
 
   const checkbox = card.querySelector('[data-checkbox]');
   if (checkbox) {
@@ -1241,6 +1278,7 @@ function buildCard(f) {
     const menuItems = [
       { label: 'rename', icon: 'edit', onClick: () => openRenameModal(f) },
     ];
+    if (canSetAccess(f)) menuItems.unshift(accessItem(f));
     if (!f.untracked && f.email !== ANON_OWNER) menuItems.push({ label: 'move to folder', icon: 'drive_file_move', onClick: () => openMoveModal(f) });
     menuItems.push({ label: 'delete', icon: 'delete', dangerous: true, onClick: () => deleteFile(f.filename) });
     const kebab = buildKebabMenu(menuItems);
@@ -1324,6 +1362,15 @@ document.getElementById('bulkDownloadBtn').addEventListener('click', () => {
   });
   showToast(`downloading ${urls.length} file${urls.length === 1 ? '' : 's'} — your browser may ask to allow multiple downloads`);
 });
+for (const [id, access] of [['bulkPrivateBtn', 'private'], ['bulkPublicBtn', 'public']]) {
+  document.getElementById(id).addEventListener('click', async () => {
+    const filenames = [...selectedFiles];
+    if (!filenames.length) return;
+    if (access === 'public' && !(await oeConfirm(`make ${filenames.length} file${filenames.length === 1 ? '' : 's'} public? anyone with the link will be able to open ${filenames.length === 1 ? 'it' : 'them'}.`))) return;
+    selectedFiles.clear();
+    await setAccess(filenames, access);
+  });
+}
 document.getElementById('bulkMoveBtn').addEventListener('click', () => {
   const filenames = [...selectedFiles];
   if (!filenames.length) return;
@@ -1379,7 +1426,7 @@ async function uploadFilesTo(picked) {
     }
     showUploadProgress('upload', picked.length > 1 ? `uploading ${file.name} (${i + 1}/${picked.length})…` : `uploading ${file.name}…`);
     try {
-      await uploadFile(file, '/upload-file', currentFolder ? { folder: currentFolder } : undefined, frac => updateUploadProgress('upload', frac), file.name);
+      await uploadFile(file, '/upload-file', Object.assign(currentFolder ? { folder: currentFolder } : {}, { access: defaultAccess() }), frac => updateUploadProgress('upload', frac), file.name);
       uploaded++;
       if (usage) usage.used += file.size;
       if (!owner && file.size > SIGNED_IN_PERMANENT_BYTES) temporaryCount++;

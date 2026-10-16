@@ -300,9 +300,14 @@ function makeFilename(originalname) {
 // /admin/* API behind storage.html — see storage-admin.js. Must be set up
 // before the /docs static route at the bottom of this file, since it
 // registers the middleware that hides quarantined files from it.
+// Private / public files and the signed links that open private ones — see file-access.js.
+const fileAccess = require('./file-access')({
+  dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname, loadMeta, publicBaseUrl: PUBLIC_BASE_URL,
+});
 const storage = require('./storage-admin')(app, {
   verifyFirebaseToken, isOwner, USER_FILES_DIR, loadMeta, saveMeta, loadFolders, loadJson, saveJson,
   publicBaseUrl: PUBLIC_BASE_URL, dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname,
+  fileAccess,
 });
 
 // Cloud saves for the one office suite (oeper.dev/one) — see one-sync.js.
@@ -460,6 +465,8 @@ app.post('/upload-file', optionalAuth, storage.uploadGate, (req, res) => {
       // Owners' own uploads are also exempt from the temporary-file expiry —
       // "unlimited" means unlimited, not "unlimited but still gets deleted".
       const expiresAt = owner ? null : expiryFor(req.file.size, SIGNED_IN_PERMANENT_BYTES);
+      // private unless the page asked for public (its "new uploads are…" setting, or sharing a One document on purpose)
+      const access = req.body && req.body.access === 'public' ? 'public' : 'private';
       const meta = loadMeta();
       meta[req.file.filename] = {
         email: req.user.email,
@@ -468,10 +475,12 @@ app.post('/upload-file', optionalAuth, storage.uploadGate, (req, res) => {
         mtime: Date.now(),
         folder,
         expiresAt,
+        access,
       };
       saveMeta(meta);
+      fileAccess.invalidate();
       storage.afterUpload(req.file.filename);
-      res.json({ url: `${PUBLIC_BASE_URL}/docs/${req.file.filename}`, expiresAt });
+      res.json({ url: fileAccess.urlFor(req.file.filename, meta[req.file.filename]), expiresAt, access });
     });
     return;
   }
@@ -523,7 +532,8 @@ app.get('/my-files', verifyFirebaseToken, (req, res) => {
         expiresAt: m.expiresAt || null,
         quarantined: !!m.quarantined,
         modStatus: m.mod ? m.mod.status : null,
-        url: `${PUBLIC_BASE_URL}/docs/${encodeURIComponent(filename)}`,
+        access: fileAccess.accessOf(m),
+        url: fileAccess.urlFor(filename, m),
         openUrl: m.email === req.user.email ? oneSync.openUrlFor(m, filename) : null,
       };
     });
@@ -548,7 +558,8 @@ app.get('/my-files', verifyFirebaseToken, (req, res) => {
           mtime: stat.mtimeMs,
           email: null,
           folder: '',
-          url: `${PUBLIC_BASE_URL}/docs/${encodeURIComponent(filename)}`,
+          access: 'private',
+          url: fileAccess.signedUrl(filename),
           untracked: true,
         });
       }
@@ -569,6 +580,39 @@ app.get('/my-files', verifyFirebaseToken, (req, res) => {
   // everyone's files — it's what the quota bar in files.html shows.
   const usage = { used: storage.usageFor(req.user.email, meta), limit: mine ? null : storage.quotaFor(req.user.email) };
   res.json({ files: entries, folders, usage });
+});
+
+// Switch files between private and public. Body: { filenames: [...] | all: true, access: 'private' | 'public' }.
+// Only the person's own files (an owner account can't flip other people's here either), and never One suite documents
+// or anonymous uploads, whose access is fixed. `all` is how someone makes everything uploaded before access existed private.
+app.post('/file-access', verifyFirebaseToken, express.json({ limit: '200kb' }), (req, res) => {
+  const access = req.body && req.body.access;
+  if (access !== 'private' && access !== 'public') return res.status(400).json({ error: 'access must be private or public' });
+  const meta = loadMeta();
+  const names = req.body.all === true
+    ? Object.keys(meta).filter(f => meta[f].email === req.user.email)
+    : (Array.isArray(req.body.filenames) ? req.body.filenames.slice(0, 2000).map(String) : []);
+  let changed = 0, skipped = 0;
+  for (const f of names) {
+    const m = meta[f];
+    if (!m || m.email !== req.user.email || m.oneApp) { skipped++; continue; }
+    if (fileAccess.accessOf(m) !== access || m.access !== access) { m.access = access; changed++; }
+  }
+  if (changed) saveMeta(meta);
+  fileAccess.invalidate();
+  res.json({ ok: true, changed, skipped });
+});
+
+// A link to one of the person's files that others can open: a private file gets a signed link that stops working after
+// `hours` (default 7 days, at most 30); a public file just gets its normal link.
+app.post('/file-link', verifyFirebaseToken, express.json({ limit: '10kb' }), (req, res) => {
+  const filename = String((req.body && req.body.filename) || '');
+  const m = loadMeta()[filename];
+  if (!m || (m.email !== req.user.email && !isOwner(req.user.email))) return res.status(404).json({ error: 'File not found' });
+  if (m.quarantined) return res.status(451).json({ error: 'This file is under review.' });
+  const hours = Math.min(Math.max(Number(req.body.hours) || 168, 1), 720);
+  const access = fileAccess.accessOf(m);
+  res.json({ url: access === 'public' ? fileAccess.plainUrl(filename) : fileAccess.signedUrl(filename, hours * 3600 * 1000), access, expiresAt: access === 'public' ? null : Date.now() + hours * 3600 * 1000 });
 });
 
 // Create a folder (and any missing ancestors) for the requesting account.
@@ -784,7 +828,7 @@ function asDownload(req, res, next) {
   next();
 }
 app.use('/files', asDownload, express.static(UPLOAD_DIR, { maxAge: '30d' }));
-app.use('/docs', asDownload, express.static(USER_FILES_DIR, { maxAge: '30d' }));
+app.use('/docs', fileAccess.gate, asDownload, express.static(USER_FILES_DIR, { maxAge: '30d', setHeaders: fileAccess.setHeaders }));
 app.use('/videos', asDownload, express.static(VIDEO_DIR, { maxAge: '30d' }));
 app.use('/projects', asDownload, express.static(PROJECT_DIR, { maxAge: '30d' }));
 app.use('/messages-media', asDownload, express.static(MESSAGE_DIR, { maxAge: '30d' }));

@@ -411,7 +411,9 @@ module.exports = function setupStorageAdmin(app, ctx) {
     mod: m.mod || null,
     sha256: m.sha256 || null,
     expiresAt: m.expiresAt || null,
-    url: `${publicBaseUrl}/docs/${encodeURIComponent(filename)}`,
+    // a private file's link is a signed one, so the owner console can still preview it
+    access: ctx.fileAccess ? ctx.fileAccess.accessOf(m) : 'public',
+    url: ctx.fileAccess ? ctx.fileAccess.urlFor(filename, m) : `${publicBaseUrl}/docs/${encodeURIComponent(filename)}`,
   });
 
   app.get('/admin/overview', ...admin, (req, res) => {

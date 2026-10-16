@@ -15,7 +15,7 @@ import { doc, onSnapshot, setDoc, serverTimestamp } from 'https://www.gstatic.co
 
 export const SYNCED_KEYS = [
   'oe-theme', 'oe-theme-flip', 'oe-ai-features', 'oe-search-engine',
-  'oe-files-view', 'oe-files-sort', 'oe-files-sort-dir', 'oePlayerVolume', 'oe-pinned-chats',
+  'oe-files-view', 'oe-files-sort', 'oe-files-sort-dir', 'oe-files-default-access', 'oePlayerVolume', 'oe-pinned-chats',
   // the one suite: whether it follows the site theme, and each app's accent colour (stored as JSON by ONE.store)
   'one-site-look', 'one-seed', 'ow-seed', 'os-seed', 'op-seed', 'oi-seed', 'ob-seed',
 ];

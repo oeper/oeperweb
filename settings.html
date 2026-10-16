@@ -184,6 +184,28 @@
   </div>
 
   <div class="settings-section">
+    <h2>files</h2>
+    <p class="section-desc">files you upload to <a href="/files">oeper.dev/files</a> are private by default: only you can open them, and a link you copy for one stops working after a while. you can make single files public from that page, or change the default here. uploads made without signing in, and files shared from the one suite, are always public links.</p>
+    <div class="group">
+      <label class="row" for="filesPublicToggle" style="cursor:pointer;">
+        <div class="row-icon"><span class="material-symbols-rounded">lock</span></div>
+        <div class="row-text">
+          <div class="row-title">new uploads are public</div>
+          <div class="row-sub" id="filesPublicSub">off: new files are private</div>
+        </div>
+        <span class="switch"><input type="checkbox" id="filesPublicToggle"><span class="switch-track"></span></span>
+      </label>
+      <button type="button" class="row" id="filesAllPrivate" style="width:100%; text-align:left; cursor:pointer; background:none; border:none; font:inherit; color:inherit;">
+        <div class="row-icon"><span class="material-symbols-rounded">visibility_off</span></div>
+        <div class="row-text">
+          <div class="row-title">make all my existing files private</div>
+          <div class="row-sub" id="filesAllPrivateSub">files uploaded before this was added are still public links. old links to them will stop working.</div>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <div class="settings-section">
     <h2>epic AI</h2>
     <p class="section-desc">lets epic AI work with the rest of the site. it's off by default — nothing below happens until you turn it on, and it only affects this browser (unless you sync settings across your devices, under appearance).</p>
     <div class="group">
@@ -340,7 +362,7 @@
 import {
   onAccountChange, handleOf, signIn, signOutUser,
   isOwnerEmail, listSessions, removeSession, getCurrentDeviceId,
-  getCurrentUser, isHandleAvailable, setMyHandle,
+  getCurrentUser, isHandleAvailable, setMyHandle, SERVER_ENDPOINT,
 } from './shared/account.js?v=43';
 import { mountTopNav } from './shared/topnav.js?v=44';
 import { mountThemePicker } from './shared/theme-picker.js?v=4';
@@ -367,6 +389,29 @@ mountFooter();
       : st === 'error' ? 'on, but it could not reach your account just now'
       : st === 'syncing' ? 'on. checking your account...'
       : 'on. changes here appear on your other devices';
+  });
+}
+
+// files: are new uploads public (default: no, private). The choice is read by files.html when it uploads (oe-files-default-access, synced).
+{
+  const toggle = document.getElementById('filesPublicToggle'), sub = document.getElementById('filesPublicSub');
+  const KEY = 'oe-files-default-access';
+  const paint = () => { sub.textContent = toggle.checked ? 'on: new files can be opened by anyone with the link' : 'off: new files are private'; };
+  try { toggle.checked = localStorage.getItem(KEY) === 'public'; } catch {}
+  paint();
+  toggle.addEventListener('change', () => { try { localStorage.setItem(KEY, toggle.checked ? 'public' : 'private'); } catch {} paint(); });
+  const btn = document.getElementById('filesAllPrivate'), btnSub = document.getElementById('filesAllPrivateSub'), keep = btnSub.textContent;
+  btn.addEventListener('click', async () => {
+    const user = getCurrentUser();
+    if (!user) { oeAlert('sign in to change your files.'); return; }
+    if (!(await oeConfirm('make every file you uploaded private? links you already shared for them will stop working.', { danger: true }))) return;
+    btnSub.textContent = 'working…';
+    try {
+      const res = await fetch(SERVER_ENDPOINT + '/file-access', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await user.getIdToken() }, body: JSON.stringify({ all: true, access: 'private' }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'HTTP ' + res.status);
+      btnSub.textContent = data.changed ? `done: ${data.changed} file${data.changed === 1 ? ' is' : 's are'} now private` : 'all your files were already private';
+    } catch (err) { btnSub.textContent = 'could not do that: ' + err.message; setTimeout(() => { btnSub.textContent = keep; }, 5000); }
   });
 }
 
