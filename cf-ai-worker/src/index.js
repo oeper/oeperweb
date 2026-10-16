@@ -332,6 +332,21 @@ function wantsThinking(messages, quiet, force) {
   return THINK_HINT.test(t);
 }
 
+// Looking things up. The apps (site, desktop, Android) all go through this Worker, so the rule lives here and every client gets it without an update.
+// Part 1: a standing instruction added to the system message. Part 2: if the answer still sounds unsure and nothing was searched, one more round is forced with a nudge to check.
+const SEARCH_POLICY = `Searching (this rule is not optional): you have search_web and read_webpage. Whenever you are not sure of a fact you MUST call search_web before you answer, and read_webpage when the snippets are not enough. That includes names, dates, numbers, prices, versions, rules, who/what/when/where questions, anything about a specific person, product, company, place, show, game or event, anything recent or that may have changed since your training, and anything you could only answer by guessing. Never guess and never invent facts, links, quotes or sources: a search costs almost nothing, a wrong answer costs trust. Do not say "I don't know", "I'm not sure" or that something doesn't exist before you have searched. After searching, answer from what you found and mention the source when it matters; if the search fails or finds nothing useful, say plainly that you could not confirm it. Do not search for greetings, small talk, opinions, creative writing, maths or code you can do yourself, or things already in the conversation or on the user's screen.`;
+const HEDGE = /\b(i('| a)?m not (sure|certain|aware)|i (do not|don'?t) (know|have (any |specific )?(information|details|data))|i (could not|couldn'?t|can'?t|cannot) (confirm|verify|find)|not (entirely |completely |100% )?(sure|certain)|as of my (last |latest )?(knowledge|training|update)|my (knowledge|training data)( cut-?off| ends)|if i recall|i may be (wrong|mistaken|outdated)|(might|could|may) be (wrong|outdated|inaccurate)|i (believe|think) (that )?(it|this|that|he|she|they) (is|was|are|were|has|had))\b/i;
+const SEARCH_NUDGE = 'System reminder: your last answer sounded unsure. Do not guess. Call search_web now to check it (and read_webpage if needed), then give the corrected final answer. If it truly needs no lookup, just restate it briefly with confidence.';
+// Also for every normal chat: a change of subject is a new subject. (A person mentioned earlier, e.g. a friend being helped, was once treated as the source of something said later.)
+const TOPIC_RULES = `Staying on topic (this rule is not optional): when the user changes the subject, treat it as a new topic. Do not carry people, details or problems over from an earlier topic, and never assume that something the user says came from a person mentioned earlier (for example a friend they were helping) unless they say so. Only attribute information to a person when the user explicitly said it came from them. If you cannot tell whether two things are connected, treat them as separate or ask one short question. What the user shares about public figures or events is just something they are telling you; they may have read it anywhere.`;
+function withPolicies(messages, search) {
+  const add = TOPIC_RULES + (search ? '\n\n' + SEARCH_POLICY : '');
+  const out = messages.map(m => m), i = out.findIndex(m => m && m.role === 'system' && typeof m.content === 'string');
+  if (i >= 0) out[i] = { ...out[i], content: out[i].content + '\n\n' + add };
+  else out.unshift({ role: 'system', content: add });
+  return out;
+}
+
 function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce, who) {
   const encoder = new TextEncoder();
   return new ReadableStream({
@@ -341,6 +356,8 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce, w
       const think = wantsThinking(initialMessages, quiet, thinkForce);
       const thinkParams = think ? {} : { chat_template_kwargs: { enable_thinking: false } };
       let tokensIn = 0, tokensOut = 0, exactRounds = 0, roundsRun = 0;
+      let searched = false, nudged = false;
+      const canSearch = !quiet && !!env.BRAVE_API_KEY && (tools || TOOLS).some(t => t.name === 'search_web');
       try {
         for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
           // The last round gets no tools at all. Otherwise a model that keeps
@@ -364,6 +381,13 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce, w
             roundsRun++; if (tally.usage && tally.usage.completion_tokens) exactRounds++;
           }
           const { finishedWithToolCalls, toolCalls, assistantContent } = round_;
+          // an answer that admits doubt, with nothing looked up this turn: say so and make it check (once)
+          if (!finishedWithToolCalls && canSearch && !searched && !nudged && round < MAX_TOOL_ROUNDS - 1 && HEDGE.test(assistantContent)) {
+            nudged = true;
+            workingMessages = [...workingMessages, { role: 'assistant', content: assistantContent }, { role: 'user', content: SEARCH_NUDGE }];
+            send({ choices: [{ delta: { content: '\n\n*Let me check that…*\n\n' } }] });
+            continue;
+          }
           if (!finishedWithToolCalls || round === MAX_TOOL_ROUNDS) break;
 
           workingMessages = [...workingMessages, { role: 'assistant', content: assistantContent, tool_calls: toolCalls }];
@@ -375,6 +399,7 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce, w
             // Tell the browser what is happening during the gap while a tool runs
             // (clients that don't know about `status` events just ignore them).
             send({ status: toolStatus(call.function.name, args) });
+            if (call.function.name === 'search_web' || call.function.name === 'read_webpage') searched = true;
             // None of the memory tools have anywhere to actually persist to
             // — this Worker has no Firestore write credentials, deliberately
             // (see the firestoreGetDoc comment above: reads work
@@ -552,7 +577,7 @@ async function lookupOeperUser(args) {
 const TOOLS = [
   {
     name: 'search_web',
-    description: 'Search the live web for current information — news, recent events, facts that may have changed since training, or anything the user explicitly asks to look up. Returns up to 5 results, each with a title, url, and short snippet.',
+    description: 'Search the live web. You MUST call this before answering whenever you are not sure of a fact (names, dates, numbers, prices, versions, specific people, products, places or events), for anything recent or that may have changed since training, and whenever the user asks you to look something up. Never guess instead of searching. Returns up to 5 results, each with a title, url, and short snippet.',
     parameters: {
       type: 'object',
       properties: {
@@ -802,7 +827,7 @@ async function handleChat(request, env) {
     }
   }
 
-  const stream = streamToolLoop(env, messages, [...TOOLS, ...(body.oneTools === true ? ONE_TOOLS : []), ...(body.botTools === true ? BOT_TOOLS : []), ...(body.imageTools === true && who && body.quiet !== true ? IMAGE_TOOLS : [])], body.quiet === true, meter, body.think === true ? true : body.think === false ? false : undefined, who);
+  const stream = streamToolLoop(env, body.quiet !== true ? withPolicies(messages, !!env.BRAVE_API_KEY) : messages, [...TOOLS, ...(body.oneTools === true ? ONE_TOOLS : []), ...(body.botTools === true ? BOT_TOOLS : []), ...(body.imageTools === true && who && body.quiet !== true ? IMAGE_TOOLS : [])], body.quiet === true, meter, body.think === true ? true : body.think === false ? false : undefined, who);
 
   return new Response(stream, {
     status: 200,
