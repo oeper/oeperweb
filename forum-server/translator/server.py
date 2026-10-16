@@ -24,7 +24,16 @@ QUEUE_WAIT = 180          # seconds a request may wait for its turn
 import ctranslate2, sentencepiece as spm, langid
 
 sp = spm.SentencePieceProcessor(model_file=os.path.join(MODEL_DIR, 'sentencepiece.bpe.model'))
-translator = ctranslate2.Translator(MODEL_DIR, device='cpu', compute_type='int8', inter_threads=1, intra_threads=THREADS)
+DEVICE = os.environ.get('TRANSLATOR_DEVICE', 'cpu').lower()    # cpu (default), cuda (NVIDIA only, experimental: hung on a GTX 1070 here), or auto
+def make_translator():
+    want_gpu = DEVICE == 'cuda' or (DEVICE == 'auto' and ctranslate2.get_cuda_device_count() > 0)
+    if want_gpu:
+        try: return ctranslate2.Translator(MODEL_DIR, device='cuda', compute_type='auto', inter_threads=1), 'cuda'
+        except Exception as e:
+            print('GPU not usable, using the CPU:', str(e)[:200], file=sys.stderr, flush=True)
+            if DEVICE == 'cuda': raise
+    return ctranslate2.Translator(MODEL_DIR, device='cpu', compute_type='int8', inter_threads=1, intra_threads=THREADS), 'cpu'
+translator, USED_DEVICE = make_translator()
 vocab = set(open(os.path.join(MODEL_DIR, 'shared_vocabulary.txt'), encoding='utf-8').read().split('\n'))
 SUPPORTED = {c: n for c, n in NLLB.items() if n in vocab}
 BY_NLLB = {n: c for c, n in SUPPORTED.items()}
@@ -119,7 +128,7 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.split('?')[0] == '/health':
             with state_lock: s = dict(state)
-            return self._send(200, {'ok': True, 'model': os.path.basename(MODEL_DIR.rstrip('/\\')), 'threads': THREADS, 'beam': BEAM, **s, 'languages': sorted(SUPPORTED)})
+            return self._send(200, {'ok': True, 'model': os.path.basename(MODEL_DIR.rstrip('/\\')), 'threads': THREADS, 'device': USED_DEVICE, 'beam': BEAM, **s, 'languages': sorted(SUPPORTED)})
         self._send(404, {'error': 'not found'})
     def do_POST(self):
         try: body = self._body()
@@ -141,5 +150,5 @@ class H(BaseHTTPRequestHandler):
         self._send(200, {'translations': out, 'detected': det, 'ms': int((time.time() - t0) * 1000)})
 
 if __name__ == '__main__':
-    print(f'translator: {len(SUPPORTED)} languages, {THREADS} threads, beam {BEAM}, listening on {HOST}:{PORT}', flush=True)
+    print(f'translator: {len(SUPPORTED)} languages, {USED_DEVICE}' + (f', {THREADS} threads' if USED_DEVICE == 'cpu' else '') + f', beam {BEAM}, listening on {HOST}:{PORT}', flush=True)
     ThreadingHTTPServer((HOST, PORT), H).serve_forever()

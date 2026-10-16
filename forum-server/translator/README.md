@@ -17,6 +17,7 @@ and `POST /translate/api` (Firebase sign-in, daily character limit per person, o
 | `TRANSLATE_DAILY_CHARS` (forum-server) | 1000000 | characters per person per day |
 | `TRANSLATOR_PORT`, `TRANSLATOR_HOST` | 8790, 127.0.0.1 | |
 | `TRANSLATOR_THREADS` | all cores | CPU threads |
+| `TRANSLATOR_DEVICE` | cpu | `cuda` tries an NVIDIA GPU (CTranslate2 supports nothing else: no AMD, no Android/Adreno). Experimental: it hung on a GTX 1070 in testing, so the CPU stays the default |
 | `TRANSLATOR_BEAM` | 2 | beam size: 1 faster, 4 a little better |
 | `TRANSLATOR_MODEL` | `./model` | model folder |
 
