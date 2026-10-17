@@ -222,3 +222,23 @@ select, .dialog input[type=text] { background: var(--surface-3); color: var(--te
   .pill-btn .label { display: none; } .pill-btn { padding: 0 10px; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ── notebooks, pins, chat menu, share ── */
+.side-heading { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 500; color: var(--muted); padding: 10px 6px 0 10px; letter-spacing: 0.3px; }
+.side-heading .icon-btn { width: 28px; height: 28px; } .side-heading .icon-btn .ms { font-size: 18px; }
+.notebook-list { margin: 2px -4px 0; padding: 0 4px; max-height: 26vh; overflow-y: auto; }
+.notebook-list:empty { display: none; }
+.chat-item .nb-ic { font-size: 18px; opacity: 0.8; }
+.chat-item .nb-count { font-size: 12px; color: var(--muted); }
+.chat-item.active .nb-count { color: inherit; opacity: 0.8; }
+.chat-item .pin-ind { font-size: 15px; opacity: 0.65; }
+.nb-filter { display: flex; align-items: center; gap: 6px; margin: 4px 0; padding: 4px 4px 4px 10px; border-radius: 12px; background: var(--surface-2); font-size: 13px; color: var(--muted); }
+.nb-filter .ms { font-size: 17px; } .nb-filter .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.act.on { color: var(--primary); }
+.share-link { width: 100%; }
+.oe-menu { position: fixed; z-index: 200; min-width: 210px; max-width: 280px; background: var(--surface-2); border-radius: 14px; padding: 6px; box-shadow: 0 10px 36px rgba(0,0,0,0.45); animation: fade 0.12s; }
+.oe-menu .menu-title { padding: 8px 10px 6px; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.oe-menu button { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 9px 10px; border-radius: 10px; font-size: 14px; color: var(--text); }
+.oe-menu button:hover { background: var(--hover); }
+.oe-menu button .ms { font-size: 19px; color: var(--muted); }
+.oe-menu button.danger, .oe-menu button.danger .ms { color: var(--error); }

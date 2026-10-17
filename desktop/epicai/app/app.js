@@ -6,6 +6,7 @@ import { injectCodeBlockStyles, wireCodeBlockCopy, copyToClipboard } from './cod
 import { compactChat, toWireMessages, SCREEN_HINT } from './prompt.js';
 import { readFileForAI, isImage } from './ai-files.js';
 import { applySection, PROFILE_MAX, GET_TO_KNOW } from './ai-memory.js';
+import * as sh from './shelf.js';
 
 const D = window.epicDesktop;
 const $ = id => document.getElementById(id);
@@ -43,6 +44,11 @@ function save() {
   if (!applyingCloud) acct.pushChats(chats);
 }
 function toast(msg, ms = 2600) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), ms); }
+
+sh.init({
+  dialog: html => dialog(html), toast, user: () => user, picGet: id => PicStore.get(id), copy: copyToClipboard,
+  openExternal: url => D.openExternal(url), onChange: () => renderList(),
+});
 
 // ── theme and window chrome ──
 function applyTheme() {
@@ -154,10 +160,35 @@ function assistantEl(m, i, last) {
   if (m.error) { bubble.classList.add('error'); bubble.textContent = m.content; } else if (m.content) renderAnswer(bubble, '', m.content || '', true); else bubble.remove();
   for (const p of (m.images || [])) { const slot = el('div'); wrap.querySelector('.col').appendChild(slot); fillPic(slot, p); }
   const btns = [['content_copy', 'Copy', () => copyToClipboard(m.content || '').then(() => toast('Copied'))]];
+  if (!m.error && m.content) {
+    btns.push(['volume_up', 'Read aloud', () => readAloud(m.content)]);
+    btns.push(['ios_share', 'Share this answer', () => { const c = cur(); sh.openShare(c, i > 0 && c.messages[i - 1].role === 'user' ? i - 1 : i, i + 1); }]);
+    btns.push(['thumb_up', 'Good answer', () => rate(m, 1)]);
+    btns.push(['thumb_down', 'Not good', () => rate(m, -1)]);
+  }
   if (last) btns.push(['refresh', 'Try again', () => regenerate(i)]);
-  wrap.querySelector('.col').appendChild(actions(...btns));
+  const row = actions(...btns);
+  const marks = row.querySelectorAll('.act');
+  btns.forEach((b, k) => { if ((b[0] === 'thumb_up' && m.rating === 1) || (b[0] === 'thumb_down' && m.rating === -1)) marks[k].classList.add('on'); });
+  wrap.querySelector('.col').appendChild(row);
   return wrap;
 }
+// ── read aloud and thumbs ──
+function readAloud(text) {
+  const s = window.speechSynthesis; if (!s) { toast('This computer has no speech voice.'); return; }
+  if (s.speaking) { s.cancel(); return; }
+  const plain = String(text || '').replace(/```[\s\S]*?```/g, ' ').replace(/<think>[\s\S]*?<\/think>/g, ' ').replace(/[*_`#>|]+/g, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\s+/g, ' ').trim();
+  if (!plain) return;
+  const u = new SpeechSynthesisUtterance(plain.slice(0, 4000)); u.lang = navigator.language || 'en-US';
+  s.speak(u);
+}
+function rate(m, v) {
+  m.rating = m.rating === v ? 0 : v;
+  const c = cur(); if (c) { c.updatedAt = Date.now(); save(); }
+  renderChat(true);
+  if (m.rating === 1) api.sendRating(info.version);
+}
+
 function renderChat(keepScroll) {
   const was = scroller.scrollTop;
   const box = $('messages'); box.innerHTML = '';
@@ -414,33 +445,68 @@ function newChat() {
 }
 
 // ── chat list ──
+let activeNotebook = null;
+function renderNotebooks() {
+  const box = $('notebookList'); box.innerHTML = '';
+  for (const n of sh.shelf.notebooks) {
+    const it = el('button', 'chat-item' + (n.id === activeNotebook ? ' active' : ''), `<span class="ms nb-ic">menu_book</span><span class="name">${escHtml(n.name)}</span><span class="nb-count">${n.chats.length}</span><span class="del" title="More"><span class="ms">more_vert</span></span>`);
+    const gone = id => { if (activeNotebook === id) activeNotebook = null; };
+    it.addEventListener('click', e => {
+      if (e.target.closest('.del')) { sh.openNotebookMenu(n.id, e.target.closest('.del'), gone); return; }
+      activeNotebook = activeNotebook === n.id ? null : n.id; renderList();
+    });
+    it.addEventListener('contextmenu', e => { e.preventDefault(); sh.openNotebookMenu(n.id, { x: e.clientX, y: e.clientY }, gone); });
+    box.appendChild(it);
+  }
+}
+function openChatMenu(c, anchor) {
+  const pinned = sh.shelf.pinned.includes(c.id);
+  sh.showMenu(anchor, c.title, [
+    { icon: 'ios_share', label: 'Share conversation', fn: () => sh.openShare(c) },
+    { icon: 'push_pin', label: pinned ? 'Unpin' : 'Pin', fn: () => { sh.shelf.pinned = pinned ? sh.shelf.pinned.filter(x => x !== c.id) : [...sh.shelf.pinned, c.id]; sh.saveShelf(); renderList(); } },
+    { icon: 'menu_book', label: 'Add to notebook', keepOpen: true, fn: () => sh.openNotebookPicker(c, anchor) },
+    { icon: 'edit', label: 'Rename', fn: async () => { if (await sh.renameChat(c)) { save(); renderChat(true); renderList(); } } },
+    { icon: 'delete', label: 'Delete', danger: true, fn: () => deleteChat(c.id) },
+  ]);
+}
 function renderList() {
+  renderNotebooks();
+  const nb = sh.shelf.notebooks.find(n => n.id === activeNotebook); if (!nb) activeNotebook = null;
   const box = $('chatList'), q = $('search').value.trim().toLowerCase();
   box.innerHTML = '';
-  const list = chats.filter(c => c.messages.length && (!q || (c.title || '').toLowerCase().includes(q) || c.messages.some(m => (m.content || '').toLowerCase().includes(q))))
-    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-  if (!list.length) { box.appendChild(el('div', 'empty-list', q ? 'No chats match.' : 'Your chats show up here.')); return; }
+  if (nb) {
+    const bar = el('div', 'nb-filter', `<span class="ms">menu_book</span><span class="name">In ${escHtml(nb.name)}</span><button class="act" title="Show all chats"><span class="ms">close</span></button>`);
+    bar.querySelector('button').addEventListener('click', () => { activeNotebook = null; renderList(); });
+    box.appendChild(bar);
+  }
+  const isPinned = c => sh.shelf.pinned.includes(c.id);
+  const list = chats.filter(c => c.messages.length && (!nb || nb.chats.includes(c.id)) && (!q || (c.title || '').toLowerCase().includes(q) || c.messages.some(m => (m.content || '').toLowerCase().includes(q))))
+    .sort((a, b) => (isPinned(b) - isPinned(a)) || (b.updatedAt || 0) - (a.updatedAt || 0));
+  if (!list.length) { box.appendChild(el('div', 'empty-list', q ? 'No chats match.' : nb ? "Open a chat's menu and choose Add to notebook." : 'Your chats show up here.')); return; }
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const day = 86400000; let group = '';
   for (const c of list) {
     const t = c.updatedAt || 0;
-    const g = t >= today.getTime() ? 'Today' : t >= today.getTime() - day ? 'Yesterday' : t >= today.getTime() - 7 * day ? 'Previous 7 days' : 'Older';
+    const g = isPinned(c) ? 'Pinned' : t >= today.getTime() ? 'Today' : t >= today.getTime() - day ? 'Yesterday' : t >= today.getTime() - 7 * day ? 'Previous 7 days' : 'Older';
     if (g !== group) { group = g; box.appendChild(el('div', 'chat-group', g)); }
-    const it = el('button', 'chat-item' + (c.id === curId ? ' active' : ''), `<span class="name">${escHtml(c.title || 'new chat')}</span><span class="del" title="Delete"><span class="ms">delete</span></span>`);
+    const it = el('button', 'chat-item' + (c.id === curId ? ' active' : ''), `<span class="name">${escHtml(c.title || 'new chat')}</span>${isPinned(c) ? '<span class="ms pin-ind" title="Pinned">push_pin</span>' : ''}<span class="del" title="More"><span class="ms">more_vert</span></span>`);
     it.addEventListener('click', e => {
-      if (e.target.closest('.del')) { deleteChat(c.id); return; }
+      if (e.target.closest('.del')) { openChatMenu(c, e.target.closest('.del')); return; }
       if (controller) controller.abort();
       curId = c.id; save(); renderChat(); renderList();
       if (innerWidth < 760) document.body.classList.add('side-closed');
     });
+    it.addEventListener('contextmenu', e => { e.preventDefault(); openChatMenu(c, { x: e.clientX, y: e.clientY }); });
     box.appendChild(it);
   }
 }
 function deleteChat(id) {
+  sh.forgetChat(id);
   chats = chats.filter(c => c.id !== id);
   if (curId === id) { curId = chats[0] ? chats[0].id : null; }
   save(); renderChat(); renderList();
 }
+$('newNotebook').addEventListener('click', () => sh.newNotebook(null));
 $('search').addEventListener('input', renderList);
 
 // ── dialogs ──

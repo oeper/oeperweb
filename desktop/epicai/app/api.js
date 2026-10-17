@@ -116,3 +116,19 @@ export async function dataUrlToFile(dataUrl, name) {
   const blob = await (await fetch(dataUrl)).blob();
   return new File([blob], name || 'image.jpg', { type: blob.type || 'image/jpeg' });
 }
+
+/** A call to one of the worker's own JSON routes (share links...), signed in. Errors carry .status. */
+export async function workerCall(method, path, body) {
+  let res;
+  try {
+    res = await fetch(AI + path, { method, headers: await authHeaders(body ? { 'Content-Type': 'application/json' } : undefined), body: body ? JSON.stringify(body) : undefined });
+  } catch { throw new Error("Couldn't reach the server. Check your connection and try again."); }
+  let data = null; try { data = await res.json(); } catch {}
+  if (!res.ok) { const e = new Error((data && data.error) || `Server answered ${res.status}`); e.status = res.status; throw e; }
+  return data;
+}
+
+/** The thumbs-up on an answer (the worker allows only a few of these an hour, so the thumbs-down stays on the device). */
+export function sendRating(version) {
+  return workerCall('POST', '/api/feedback', { kind: 'rating', message: '👍 Helpful answer', app: 'desktop', version: version || '' }).catch(() => {});
+}

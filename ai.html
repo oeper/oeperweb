@@ -174,6 +174,7 @@
     color: var(--md-sys-color-on-surface-variant); display: flex; align-items: center; justify-content: center;
   }
   .msg-action-btn:hover { background: var(--md-sys-state-hover); color: var(--md-sys-color-on-surface); }
+  .msg-action-btn.on { color: var(--md-sys-color-primary); }
   .msg-action-btn .material-symbols-rounded { font-size: 16px; }
   .msg-bubble.thinking::after {
     content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%;
@@ -1030,13 +1031,35 @@ function botChipHtml(b) {
   if (b.ok) return `<a class="doc-link-chip" href="/dbhosting" target="_blank" rel="noopener"><span class="material-symbols-rounded">smart_toy</span>Open “${escHtml(b.name)}” in bot hosting</a>`;
   return `<span class="doc-link-chip" style="background:var(--md-sys-color-error-container,#8c1d18);color:var(--md-sys-color-on-error-container,#ffdad6);"><span class="material-symbols-rounded">error</span>Couldn’t create “${escHtml(b.name)}”: ${escHtml(b.error || 'failed')}</span>`;
 }
+// ── read an answer aloud, and thumbs up / down (the thumbs-up is sent as feedback; the worker allows only a few an hour, so the thumbs-down stays in this browser) ──
+function ratingBtnsHtml(index) {
+  const c = getCurrentChat(), r = c && c.messages[index] ? c.messages[index].rating : 0;
+  const b = (v, icon, t) => `<button type="button" class="msg-action-btn${r === v ? ' on' : ''}" data-rate-msg="${v}" title="${t}"><span class="material-symbols-rounded">${icon}</span></button>`;
+  return b(1, 'thumb_up', 'good answer') + b(-1, 'thumb_down', 'not good');
+}
+function readAloud(index) {
+  const s = window.speechSynthesis; if (!s) { oeAlert('this browser has no speech voice.'); return; }
+  if (s.speaking) { s.cancel(); return; }
+  const c = getCurrentChat(), m = c && c.messages[index]; if (!m) return;
+  const plain = splitThinking('', String(m.content || ''), true).answer.replace(/```[\s\S]*?```/g, ' ').replace(/[*_`#>|]+/g, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\s+/g, ' ').trim();
+  if (!plain) return;
+  const u = new SpeechSynthesisUtterance(plain.slice(0, 4000)); u.lang = document.documentElement.lang || navigator.language || 'en-US';
+  s.speak(u);
+}
+function rateMessage(index, v, wrap) {
+  const c = getCurrentChat(), m = c && c.messages[index]; if (!m) return;
+  m.rating = m.rating === v ? 0 : v;
+  saveChats();
+  wrap.querySelectorAll('[data-rate-msg]').forEach(b => b.classList.toggle('on', +b.dataset.rateMsg === m.rating));
+  if (m.rating === 1 && getCurrentUser()) workerCall('POST', '/api/feedback', { kind: 'rating', message: '👍 Helpful answer', app: 'site' }).catch(() => {});
+}
 function addMessageEl(role, content, imageUrl, index, docLinks, botLinks, images) {
   document.getElementById('chatEmpty')?.remove();
   const wrap = document.createElement('div');
   wrap.className = 'msg ' + role;
   const actionsHtml = index === undefined ? '' : role === 'user'
     ? `<div class="msg-actions"><button type="button" class="msg-action-btn" data-edit-msg="${index}" title="edit"><span class="material-symbols-rounded">edit</span></button></div>`
-    : `<div class="msg-actions"><button type="button" class="msg-action-btn" data-regen-msg="${index}" title="regenerate"><span class="material-symbols-rounded">refresh</span></button><button type="button" class="msg-action-btn" data-share-msg="${index}" title="share this answer"><span class="material-symbols-rounded">ios_share</span></button>${aiFeaturesEnabled() ? `<button type="button" class="msg-action-btn" data-save-one="${index}" title="save to oneWord"><span class="material-symbols-rounded">note_add</span></button>` : ''}</div>`;
+    : `<div class="msg-actions"><button type="button" class="msg-action-btn" data-regen-msg="${index}" title="regenerate"><span class="material-symbols-rounded">refresh</span></button><button type="button" class="msg-action-btn" data-speak-msg="${index}" title="read aloud"><span class="material-symbols-rounded">volume_up</span></button><button type="button" class="msg-action-btn" data-share-msg="${index}" title="share this answer"><span class="material-symbols-rounded">ios_share</span></button>${ratingBtnsHtml(index)}${aiFeaturesEnabled() ? `<button type="button" class="msg-action-btn" data-save-one="${index}" title="save to oneWord"><span class="material-symbols-rounded">note_add</span></button>` : ''}</div>`;
   wrap.innerHTML = `
     ${role === 'user' ? '' : `<div class="msg-avatar">${EPIC_MARK_SVG}</div>`}
     <div class="msg-col">
@@ -1067,6 +1090,8 @@ function addMessageEl(role, content, imageUrl, index, docLinks, botLinks, images
   wrap.querySelector('[data-edit-msg]')?.addEventListener('click', () => editMessage(index));
   wrap.querySelector('[data-regen-msg]')?.addEventListener('click', () => regenerateResponse(index));
   wrap.querySelector('[data-share-msg]')?.addEventListener('click', () => shareMessage(index));
+  wrap.querySelector('[data-speak-msg]')?.addEventListener('click', () => readAloud(index));
+  wrap.querySelectorAll('[data-rate-msg]').forEach(b => b.addEventListener('click', () => rateMessage(index, +b.dataset.rateMsg, wrap)));
   followNow();
   return bubble;
 }
@@ -1995,7 +2020,7 @@ async function toWireMessages(msgs, summary) {
     // gracefully — old facts quietly age out of the prompt instead of
     // the whole chat breaking.
     const recentFacts = memoryFacts.slice(-MAX_MEMORY_FACTS_IN_PROMPT);
-    systemContent += `\n\nThings you remember about this user from past conversations. This is real context about who you're talking to, not trivia — actually use it: tailor examples, suggestions and explanations to it, connect it to what they're asking now, and bring it up yourself when it's genuinely relevant (a follow-up on a project or goal they mentioned, a preference they've stated, something due soon) instead of only using it when directly asked. Don't just recite the list back at them, and don't force a mention into every reply — use it the way someone who actually remembers you would, naturally and only when it fits:\n${recentFacts.map(f => '- ' + f).join('\n')}`;
+    systemContent += `\n\nThings you remember about this user from past conversations. This is real context about who they are: use it to tailor your answers, and bring it up yourself when it is genuinely relevant (a project or goal they mentioned, a stated preference, something due soon). Don't recite the list or force a mention into every reply; use it the way someone who actually remembers them would:\n${recentFacts.map(f => '- ' + f).join('\n')}`;
   }
   if (getCurrentUser()) systemContent += profilePrompt(memoryProfile, memoryLearn);
   // remembering other chats follows the same "let epic AI learn about me" switch; it only reads this browser's own chat list
