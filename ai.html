@@ -68,14 +68,14 @@
      doesn't participate in flex layout, so .page fills the width either way. */
   .ai-shell { display: flex; align-items: flex-start; }
 
-  .page { position: relative; flex: 1; min-width: 0; max-width: 760px; margin: 0 auto; padding: 40px 24px 24px; min-height: 100vh; display: flex; flex-direction: column; }
+  .page { position: relative; flex: 1; min-width: 0; max-width: 760px; margin: 0 auto; padding: 12px 24px 24px; min-height: 100vh; display: flex; flex-direction: column; }
 
   /* Sticky so the sidebar toggle/new-chat shortcut stay reachable without
      scrolling back to the top of a long conversation — this is what "i
      dont wanna have to scroll all the way up to look at my chats" was
      about. Sticks right below the sitewide topnav (72px, see topnav.js). */
   .header {
-    position: sticky; top: 72px; z-index: 90; margin: -10px -24px 10px; padding: 10px 24px;
+    position: sticky; top: 0; z-index: 90; margin: -10px -24px 10px; padding: 10px 24px;
     background: var(--md-sys-color-background);
   }
   .header-row { display: flex; align-items: center; gap: 12px; }
@@ -306,7 +306,7 @@
      fixed at the very bottom of the screen below 600px — without this,
      it covers this sticky input bar instead of sitting below it. */
   @media (max-width: 600px) {
-    .chat-input-area { bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 16px); }
+    .chat-input-area { bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); }
   }
   .model-bar { display: flex; justify-content: flex-end; margin-bottom: 8px; padding: 0 4px; }
   .model-bar .oe-dropdown-btn { font-size: 12px; font-weight: 500; padding: 5px 12px; }
@@ -324,7 +324,7 @@
   }
   /* one-time "get the app" card, Android only (see epicAppPrompt in the script) */
   .app-prompt {
-    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 76px); left: 50%; z-index: 5000;
+    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 64px); left: 50%; z-index: 5000;
     width: min(440px, calc(100vw - 24px)); box-sizing: border-box; padding: 14px 16px;
     display: flex; gap: 14px; align-items: center;
     background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface);
@@ -434,12 +434,12 @@
 
   @media (min-width: 900px) {
     .chats-panel {
-      position: sticky; top: 72px; height: calc(100vh - 72px); flex-shrink: 0;
+      position: sticky; top: 0; height: 100vh; flex-shrink: 0;
       transform: none; box-shadow: none; border-right: 1px solid var(--md-sys-color-outline-variant);
     }
     .chats-overlay { display: none; }
     .chats-panel-header, #chatsCloseBtn { display: none; }
-    .sidebar-toggle-group { display: none; }
+    #chatsBtn { display: none; }
   }
 
   /* Memory viewer — a centered modal (not a drawer like the chats sidebar
@@ -520,6 +520,37 @@
   .chat-row { border-radius: 24px; padding: 11px 14px; }
   .chat-row > .material-symbols-rounded:first-child { display: none; }
   .chat-row.active { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); }
+  /* ── epic AI's own top bar, drawer footer and motion (same as the app) ── */
+  .header { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); background: color-mix(in srgb, var(--md-sys-color-background) 88%, transparent); }
+  .header-row { gap: 4px; }
+  .header h1 { flex: 1; font-size: 1.4rem; font-weight: 500; letter-spacing: -0.2px; margin-left: 4px; }
+  .header-icon-btn { transition: background .15s, transform .12s; }
+  .header-icon-btn:active { transform: scale(.9); }
+  .header-avatar { width: 38px; height: 38px; border-radius: 50%; margin-left: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden;
+    background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant); text-decoration: none; transition: transform .12s; }
+  .header-avatar:active { transform: scale(.92); }
+  .header-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .header-avatar .material-symbols-rounded { font-size: 22px; }
+  #chatsList { flex: 1; min-height: 0; overflow-y: auto; }
+  .drawer-foot { display: flex; flex-direction: column; gap: 2px; padding-top: 8px; border-top: 1px solid var(--md-sys-color-outline-variant); margin-top: 4px; }
+  .drawer-row { display: flex; align-items: center; gap: 14px; width: 100%; padding: 10px 14px; border: none; border-radius: 24px; background: none; color: var(--md-sys-color-on-surface-variant);
+    font: inherit; font-size: 14px; text-align: left; text-decoration: none; cursor: pointer; transition: background .15s, transform .12s; }
+  .drawer-row:hover { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); }
+  .drawer-row:active { transform: scale(.98); }
+  .drawer-row .material-symbols-rounded { font-size: 20px; }
+  .msg-action-btn { transition: background .15s, color .15s, transform .12s; }
+  .msg-action-btn:active { transform: scale(.88); }
+  /* the greeting and the suggestions rise in one after the other, like the app's */
+  @keyframes riseIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .chat-empty .hello { animation: riseIn .5s cubic-bezier(.2,.8,.2,1) both; }
+  .chat-empty .hello-sub { animation: riseIn .5s .07s cubic-bezier(.2,.8,.2,1) both; }
+  .chip-row .sugg { animation: riseIn .45s cubic-bezier(.2,.8,.2,1) both; }
+  .chip-row .sugg:nth-child(1) { animation-delay: .15s; } .chip-row .sugg:nth-child(2) { animation-delay: .22s; }
+  .chip-row .sugg:nth-child(3) { animation-delay: .29s; } .chip-row .sugg:nth-child(4) { animation-delay: .36s; }
+  .chats-panel { transition: transform .32s cubic-bezier(.2,.8,.2,1); }
+  .chats-panel.open .new-chat-btn, .chats-panel.open .chats-search, .chats-panel.open .chat-row, .chats-panel.open .drawer-row { animation: riseIn .35s cubic-bezier(.2,.8,.2,1) both; }
+  @media (min-width: 900px) { .chats-panel .chat-row, .chats-panel .drawer-row, .chats-panel .new-chat-btn, .chats-panel .chats-search { animation: none !important; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001s !important; animation-delay: 0s !important; transition-duration: .001s !important; } }
 </style>
 </head>
 <body>
@@ -536,18 +567,22 @@
     <div class="chats-list nbs" id="notebooksList"></div>
     <div class="chats-heading" id="chatsHeading">Recent</div>
     <div class="chats-list" id="chatsList"></div>
+    <div class="drawer-foot">
+      <button type="button" id="memoryBtn" class="drawer-row"><span class="material-symbols-rounded">psychology</span>Your memory file</button>
+      <a class="drawer-row" href="/usage"><span class="material-symbols-rounded">bar_chart</span>Usage</a>
+      <a class="drawer-row" href="/redeem"><span class="material-symbols-rounded">redeem</span>Codes</a>
+      <a class="drawer-row" href="/settings"><span class="material-symbols-rounded">settings</span>Settings</a>
+      <a class="drawer-row" href="https://oeper.dev/"><span class="material-symbols-rounded">arrow_back</span>Back to oeper.dev</a>
+    </div>
   </div>
 
   <div class="page">
     <header class="header">
       <div class="header-row">
-        <div class="sidebar-toggle-group">
-          <button id="chatsBtn" class="header-icon-btn" title="chats"><span class="material-symbols-rounded">menu</span></button>
-          <button id="newChatHeaderBtn" class="header-icon-btn" title="new chat"><span class="material-symbols-rounded">add</span></button>
-        </div>
-        <h1><svg class="epic-mark" viewBox="0 0 381 486" aria-hidden="true"><g fill="currentColor"><rect x="2" width="80" height="300" rx="40"/><rect x="297" width="80" height="300" rx="40"/></g><path d="M40 421C140 454.333 240 454.333 340 421" fill="none" stroke="currentColor" stroke-width="80" stroke-linecap="round"/></svg>epic AI</h1>
-        <button id="shareChatBtn" class="header-icon-btn" title="share this conversation"><span class="material-symbols-rounded">ios_share</span></button>
-        <button id="memoryBtn" class="header-icon-btn" title="what epic AI remembers about you"><span class="material-symbols-rounded">psychology</span></button>
+        <button id="chatsBtn" class="header-icon-btn" title="chats"><span class="material-symbols-rounded">menu</span></button>
+        <h1>epic AI</h1>
+        <button id="newChatHeaderBtn" class="header-icon-btn" title="new chat"><span class="material-symbols-rounded">edit</span></button>
+        <a id="acctBtn" class="header-avatar" href="/settings" title="account"><span class="material-symbols-rounded">person</span></a>
       </div>
     </header>
 
@@ -611,8 +646,8 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification } from './shared/account.js?v=43';
-import { mountTopNav } from './shared/topnav.js?v=44';
+import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification, signIn } from './shared/account.js?v=43';
+import { showStorageNotice } from './shared/topnav.js?v=45';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { applySection, profilePrompt, PROFILE_MAX, GET_TO_KNOW } from './shared/ai-memory.js?v=1';
 import { recallPrompt } from './shared/ai-recall.js?v=1';
@@ -626,7 +661,7 @@ import { readFileForAI, FILE_ACCEPT, isImage } from './shared/ai-files.js?v=1';
 import { chatFetch, providerLabel } from './shared/ai-provider.js?v=4';
 import { askAI, aiFeaturesEnabled, onAiFeaturesChange, listOneDocs, readOneDocText, sanitizeForOne, createWordDoc, oneDocUrl } from './shared/ai-features.js?v=6';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, serverTimestamp, arrayUnion, arrayRemove, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
-mountTopNav();
+showStorageNotice();
 injectCodeBlockStyles();
 
 const AI_ENDPOINT = 'https://oeper-ai.oeper.workers.dev';
@@ -1059,7 +1094,7 @@ function addMessageEl(role, content, imageUrl, index, docLinks, botLinks, images
   wrap.className = 'msg ' + role;
   const actionsHtml = index === undefined ? '' : role === 'user'
     ? `<div class="msg-actions"><button type="button" class="msg-action-btn" data-edit-msg="${index}" title="edit"><span class="material-symbols-rounded">edit</span></button></div>`
-    : `<div class="msg-actions"><button type="button" class="msg-action-btn" data-regen-msg="${index}" title="regenerate"><span class="material-symbols-rounded">refresh</span></button><button type="button" class="msg-action-btn" data-speak-msg="${index}" title="read aloud"><span class="material-symbols-rounded">volume_up</span></button><button type="button" class="msg-action-btn" data-share-msg="${index}" title="share this answer"><span class="material-symbols-rounded">ios_share</span></button>${ratingBtnsHtml(index)}${aiFeaturesEnabled() ? `<button type="button" class="msg-action-btn" data-save-one="${index}" title="save to oneWord"><span class="material-symbols-rounded">note_add</span></button>` : ''}</div>`;
+    : `<div class="msg-actions">${ratingBtnsHtml(index)}<button type="button" class="msg-action-btn" data-share-msg="${index}" title="share this answer"><span class="material-symbols-rounded">ios_share</span></button><button type="button" class="msg-action-btn" data-copy-msg title="copy"><span class="material-symbols-rounded">content_copy</span></button><button type="button" class="msg-action-btn" data-speak-msg="${index}" title="read aloud"><span class="material-symbols-rounded">volume_up</span></button><button type="button" class="msg-action-btn" data-regen-msg="${index}" title="try again"><span class="material-symbols-rounded">refresh</span></button>${aiFeaturesEnabled() ? `<button type="button" class="msg-action-btn" data-save-one="${index}" title="save to oneWord"><span class="material-symbols-rounded">note_add</span></button>` : ''}</div>`;
   wrap.innerHTML = `
     ${role === 'user' ? '' : `<div class="msg-avatar">${EPIC_MARK_SVG}</div>`}
     <div class="msg-col">
@@ -1091,6 +1126,10 @@ function addMessageEl(role, content, imageUrl, index, docLinks, botLinks, images
   wrap.querySelector('[data-regen-msg]')?.addEventListener('click', () => regenerateResponse(index));
   wrap.querySelector('[data-share-msg]')?.addEventListener('click', () => shareMessage(index));
   wrap.querySelector('[data-speak-msg]')?.addEventListener('click', () => readAloud(index));
+  wrap.querySelector('[data-copy-msg]')?.addEventListener('click', async e => {
+    const b = e.currentTarget, c = getCurrentChat(), m = c && c.messages[index];
+    if (await copyToClipboard(m ? m.content : content)) { const ic = b.querySelector('.material-symbols-rounded'); ic.textContent = 'check'; setTimeout(() => { ic.textContent = 'content_copy'; }, 1200); }
+  });
   wrap.querySelectorAll('[data-rate-msg]').forEach(b => b.addEventListener('click', () => rateMessage(index, +b.dataset.rateMsg, wrap)));
   followNow();
   return bubble;
@@ -1451,6 +1490,15 @@ document.getElementById('memoryList').addEventListener('click', e => {
   if (btn) forgetFact(btn.dataset.fact);
 });
 document.getElementById('newChatHeaderBtn').addEventListener('click', startNewChat);
+// the round account button in the top bar: your picture when signed in (opens settings), a person icon to sign in when not
+const acctBtn = document.getElementById('acctBtn');
+function paintAcct() {
+  const u = getCurrentUser();
+  if (u) { const pr = getProfile(u.email, u.displayName, u.photoURL); acctBtn.innerHTML = pr.photo ? '<img alt="" referrerpolicy="no-referrer">' : '<span class="material-symbols-rounded">person</span>'; const im = acctBtn.querySelector('img'); if (im) im.src = pr.photo; acctBtn.title = pr.name; }
+  else { acctBtn.innerHTML = '<span class="material-symbols-rounded">person</span>'; acctBtn.title = 'sign in'; }
+}
+onAccountChange(paintAcct); paintAcct();
+acctBtn.addEventListener('click', e => { if (!getCurrentUser()) { e.preventDefault(); signIn().catch(err => { if (err && err.code !== 'oe/consent-declined') oeAlert('sign-in failed: ' + (err.message || err)); }); } });
 
 // ── Cross-device sync (Firestore, signed-in only) ──────────────────────
 // Last-write-wins per chat (by updatedAt), not a full CRDT merge — good

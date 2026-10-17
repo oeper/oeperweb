@@ -456,7 +456,7 @@ function injectStyles() {
 // One-time notice that the site only stores what it needs (see /cookies).
 // Not a consent banner: nothing optional is loaded, so there is nothing to
 // accept or refuse. Dismissal is remembered in localStorage.
-function showStorageNotice() {
+export function showStorageNotice() {
   try { if (localStorage.getItem('oe_notice_ok') === '1') return; } catch { return; }
   if (document.getElementById('oeStorageNotice')) return;
   const bar = document.createElement('div');
