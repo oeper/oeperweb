@@ -322,6 +322,8 @@ async function streamOneRound(upstream, send, quiet, tally) {
 // Reasoning makes an answer much slower to start, so it is only switched on when the question looks like it needs it
 // (maths, code, step-by-step work, comparisons, long or technical messages). Greetings, facts, chat and the phone agent's steps answer straight away.
 const THINK_HINT = /(solve|prove|proof|calculate|derive|debug|algorithm|optimi[sz]e|step[- ]by[- ]step|compare|analy[sz]e|strategy|why|equation|integral|derivative|probability|complexity|refactor|architecture|trade-?offs?|puzzle|riddle|logic|work out|figure out|reasoning|pros and cons)/i;
+// "Should I walk or drive?" is a short question that still needs a moment's thought (the car has to get to the car wash): choices between options and "is it better/worth" questions think too
+const THINK_CHOICE = /\bshould (i|we|you)\b[^?.!]*\bor\b|\b(walk|drive|go|take|buy|use|choose|pick|get|do|wait)\b[^?.!]{0,30}\bor\b[^?.!]{0,30}\?|\bwhich (one )?(is|should|would|do|of)\b|\bis it (better|worth|ok|okay|safe|smarter|faster|cheaper)\b|\b(trick|tricky) question\b/i;
 function wantsThinking(messages, quiet, force) {
   if (force === true) return true;
   if (force === false || quiet) return false;
@@ -329,7 +331,7 @@ function wantsThinking(messages, quiet, force) {
   const c = last && last.content;
   const t = typeof c === 'string' ? c : Array.isArray(c) ? c.map(p => (p && p.text) || '').join(' ') : '';
   if (t.length > 600 || /```/.test(t) || /\d\s*[-+*/^=×÷]\s*\d/.test(t)) return true;
-  return THINK_HINT.test(t);
+  return THINK_HINT.test(t) || THINK_CHOICE.test(t);
 }
 
 // Looking things up. The apps (site, desktop, Android) all go through this Worker, so the rule lives here and every client gets it without an update.
