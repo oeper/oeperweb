@@ -341,15 +341,28 @@ const HEDGE = /\b(i('| a)?m not (sure|certain|aware)|i (do not|don'?t) (know|hav
 const SEARCH_NUDGE = 'System reminder: your last answer sounded unsure. Do not guess. Call search_web now to check it (and read_webpage if needed), then give the corrected final answer. If it truly needs no lookup, just restate it briefly with confidence.';
 // Also for every normal chat: a change of subject is a new subject. (A person mentioned earlier, e.g. a friend being helped, was once treated as the source of something said later.)
 const TOPIC_RULES = `Staying on topic (this rule is not optional): when the user changes the subject, treat it as a new topic. Do not carry people, details or problems over from an earlier topic, and never assume that something the user says came from a person mentioned earlier (for example a friend they were helping) unless they say so. Only attribute information to a person when the user explicitly said it came from them. If you cannot tell whether two things are connected, treat them as separate or ask one short question. What the user shares about public figures or events is just something they are telling you; they may have read it anywhere.`;
-function withPolicies(messages, search) {
-  const add = TOPIC_RULES + (search ? '\n\n' + SEARCH_POLICY : '');
+// Where the person is, from the connection (Cloudflare's own country + time zone for the request; nothing is stored). It was answering a power-cost question with US prices
+// for someone in Malaysia. A VPN makes it wrong, so anything they said themselves wins.
+function regionOf(request) {
+  const cf = request && request.cf;
+  const cc = cf && typeof cf.country === 'string' ? cf.country.toUpperCase() : '';
+  if (!/^[A-Z]{2}$/.test(cc) || cc === 'XX' || cc === 'T1') return null;
+  let name = cc;
+  try { name = new Intl.DisplayNames(['en'], { type: 'region' }).of(cc) || cc; } catch {}
+  return { cc, name, tz: cf && typeof cf.timezone === 'string' ? cf.timezone : '' };
+}
+function regionRule(r) {
+  return r ? `The user's approximate location, from their internet connection: ${r.name} (${r.cc})${r.tz ? ', time zone ' + r.tz : ''}. Use it for anything that depends on where they are: prices and costs (give them in the local currency at local price levels: electricity, rent, food, phone plans, subscriptions, shops, delivery), taxes and laws, units and date formats, local services and holidays, and what "near me" or "here" means. Never default to US prices or the US as the example. If you give a price or rate you are not sure of for that country, say it is an estimate or look it up with search_web. If they say they are somewhere else, or memory says so, follow that instead (a VPN can make this line wrong). Don't mention this line or say you detected their location unless it matters.` : '';
+}
+function withPolicies(messages, search, region) {
+  const add = TOPIC_RULES + (search ? '\n\n' + SEARCH_POLICY : '') + (region ? '\n\n' + regionRule(region) : '');
   const out = messages.map(m => m), i = out.findIndex(m => m && m.role === 'system' && typeof m.content === 'string');
   if (i >= 0) out[i] = { ...out[i], content: out[i].content + '\n\n' + add };
   else out.unshift({ role: 'system', content: add });
   return out;
 }
 
-function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce, who) {
+function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce, who, region) {
   const encoder = new TextEncoder();
   return new ReadableStream({
     async start(controller) {
@@ -449,7 +462,7 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce, w
             if (!fn) {
               toolResult = JSON.stringify({ error: 'unknown tool' });
             } else {
-              try { toolResult = await fn(args, env); } catch (err) { toolResult = JSON.stringify({ error: err.message }); }
+              try { toolResult = await fn(args, env, { country: region && region.cc }); } catch (err) { toolResult = JSON.stringify({ error: err.message }); }
             }
             workingMessages.push({ role: 'tool', tool_call_id: call.id, name: call.function.name, content: toolResult });
           }
@@ -474,15 +487,19 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce, w
 
 const SEARCH_RESULT_COUNT = 5;
 
-async function searchWeb(args, env) {
+// Countries Brave can localise results for (anything else is searched without one)
+const BRAVE_COUNTRIES = new Set('AR AU AT BE BR CA CL DK FI FR DE HK IN ID IT JP KR MY MX NL NZ NO CN PL PT PH RU SA ZA ES SE CH TW TR GB US'.split(' '));
+async function searchWeb(args, env, ctx) {
   if (!env.BRAVE_API_KEY) return JSON.stringify({ error: 'web search is not configured on this deployment' });
   const query = (args && args.query || '').trim();
   if (!query) return JSON.stringify({ error: 'empty query' });
   try {
-    const res = await fetch(
-      `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${SEARCH_RESULT_COUNT}`,
-      { headers: { Accept: 'application/json', 'X-Subscription-Token': env.BRAVE_API_KEY } }
-    );
+    const base = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${SEARCH_RESULT_COUNT}`;
+    const init = { headers: { Accept: 'application/json', 'X-Subscription-Token': env.BRAVE_API_KEY } };
+    const cc = ctx && ctx.country && BRAVE_COUNTRIES.has(ctx.country) ? ctx.country : '';
+    // results from the person's own country first (prices, shops, local news); if Brave refuses the country, search without it
+    let res = await fetch(cc ? `${base}&country=${cc}` : base, init);
+    if (!res.ok && cc) res = await fetch(base, init);
     if (!res.ok) return JSON.stringify({ error: `search request failed (HTTP ${res.status})` });
     const data = await res.json();
     const results = ((data.web && data.web.results) || []).slice(0, SEARCH_RESULT_COUNT).map(r => ({
@@ -829,7 +846,8 @@ async function handleChat(request, env) {
     }
   }
 
-  const stream = streamToolLoop(env, body.quiet !== true ? withPolicies(messages, !!env.BRAVE_API_KEY) : messages, [...TOOLS, ...(body.oneTools === true ? ONE_TOOLS : []), ...(body.botTools === true ? BOT_TOOLS : []), ...(body.imageTools === true && who && body.quiet !== true ? IMAGE_TOOLS : [])], body.quiet === true, meter, body.think === true ? true : body.think === false ? false : undefined, who);
+  const region = regionOf(request);
+  const stream = streamToolLoop(env, body.quiet !== true ? withPolicies(messages, !!env.BRAVE_API_KEY, region) : messages, [...TOOLS, ...(body.oneTools === true ? ONE_TOOLS : []), ...(body.botTools === true ? BOT_TOOLS : []), ...(body.imageTools === true && who && body.quiet !== true ? IMAGE_TOOLS : [])], body.quiet === true, meter, body.think === true ? true : body.think === false ? false : undefined, who, region);
 
   return new Response(stream, {
     status: 200,
