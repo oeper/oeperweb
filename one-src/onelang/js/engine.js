@@ -100,7 +100,7 @@ E.translate = async (text, from, to, { tone = 'standard', signal, onPartial, ai 
   const auto = from === LANG.AUTO, wantFix = auto && text.length <= 600;
   const sys = 'You are a professional translation engine. Translate the text ' + langLine(from, to) + '.' + TONE[tone] +
     ' Keep the meaning, tone, line breaks, lists, markdown, numbers, names, URLs, emoji and code exactly as they are, and translate nothing that is already in the target language. Add no notes, explanations or quotation marks.' +
-    (auto ? (' Reply in exactly this form: first a line "LANG: <ISO 639 code of the source language, e.g. fr, ja, zh-CN>", then ' + (wantFix ? 'a line "FIX: <the source text with its spelling mistakes corrected, or - if it needs no correction>", then ' : '') + 'a line "---", then ONLY the translation.')
+    (auto ? (' Reply in exactly this form: first a line "LANG: <ISO 639 code of the source language, e.g. fr, ja, zh-CN>", then ' + (wantFix ? 'a line "FIX: <the source text with its spelling mistakes corrected, or - if it needs no correction>", then ' : '') + 'a line "---", then ONLY the translation into ' + LANG.name(to) + ' (never the original text again unless it is already in ' + LANG.name(to) + ').')
       : ' Reply with ONLY the translation.') + ' ' + GUARD;
   let result = { text:'', lang:auto ? null : from, fix:'' };
   const raw = await E.ask([{ role:'system', content:sys }, { role:'user', content:text }], { signal, onText:t => {
@@ -110,6 +110,15 @@ E.translate = async (text, from, to, { tone = 'standard', signal, onPartial, ai 
   } });
   if (auto) { const h = E.parseHead(raw) || { lang:null, fix:'', body:raw }; result = { text:h.body.trim(), lang:h.lang, fix:h.fix }; } else result = { text:raw.trim(), lang:from, fix:'' };
   result.by = 'ai';
+  // in auto-detect mode the model sometimes names the language and then hands the text back untouched ("hey its me" → "hey its me"): when that happens
+  // and the language it named is not the target, ask again with the source language spelled out, which always translates
+  const bare = s => String(s || '').toLowerCase().replace(/[\s\p{P}]+/gu, '');
+  if (auto && result.text && result.lang && result.lang !== to && !(signal && signal.aborted) && bare(result.text) === bare(text) && /\p{L}/u.test(text)) {
+    try {
+      const again = await E.translate(text, result.lang, to, { tone, signal, ai:true });
+      if (again.text && bare(again.text) !== bare(text)) { result = { text:again.text, lang:result.lang, fix:result.fix, by:'ai' }; if (onPartial) onPartial(result); }
+    } catch (err) { if (err.name === 'AbortError') throw err; }
+  }
   if (result.text) { cache.set(key, result); if (cache.size > 300) cache.delete(cache.keys().next().value); }
   return result;
 };
