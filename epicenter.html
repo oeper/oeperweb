@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Epicenter — oeper.dev</title>
+<meta name="description" content="Epicenter: the oeper.dev app store. Find, download and update apps for Android, Windows, macOS, Linux, iPhone and the web.">
+<meta property="og:title" content="Epicenter — oeper.dev">
+<meta property="og:description" content="The oeper.dev app store for every platform.">
+<meta property="og:image" content="https://oeper.dev/icon.png">
+<meta property="og:url" content="https://oeper.dev/epicenter">
+<meta property="og:type" content="website">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
+<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./shared/fonts.css?v=1">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--md-sys-color-primary, #a8c7fa); outline-offset: 2px; }
+
+  :root {
+    --md-sys-color-background: #111318;
+    --md-sys-color-surface: #1a1c22;
+    --md-sys-color-surface-variant: #2f353d;
+    --md-sys-color-primary: #a8c7fa;
+    --md-sys-color-on-primary: #062e6f;
+    --md-sys-color-secondary-container: #33485d;
+    --md-sys-color-on-secondary-container: #d2e4ff;
+    --md-sys-color-on-surface: #e2e2e6;
+    --md-sys-color-on-surface-variant: #c4c7c5;
+    --md-sys-color-outline: #43474e;
+    --md-sys-color-error: #f2b8b5;
+    --md-sys-color-success: #8fd9a8;
+  }
+
+  body {
+    min-height: 100vh; background-color: var(--md-sys-color-background);
+    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
+    background-image: var(--oe-bg-image, none); color: var(--md-sys-color-on-surface);
+    overflow-x: hidden; -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1040px; margin: 0 auto; padding: 56px 24px 100px; }
+
+  .header { margin-bottom: 28px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .header h1 { font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400; letter-spacing: -0.5px; display: flex; align-items: center; gap: 12px; }
+  .header h1 .material-symbols-rounded { font-size: 0.8em; color: var(--md-sys-color-primary); }
+  .header p { color: var(--md-sys-color-on-surface-variant); font-size: 16px; line-height: 1.5; max-width: 520px; margin-top: 8px; }
+  .head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; border: none; cursor: pointer; font: inherit; font-size: 14px; font-weight: 500; padding: 10px 18px; border-radius: 100px; text-decoration: none; transition: background-color .2s, transform .15s; white-space: nowrap; }
+  .btn .material-symbols-rounded { font-size: 18px; }
+  .btn.tonal { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+  .btn.filled { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .btn.text { background: transparent; color: var(--md-sys-color-primary); padding: 10px 12px; }
+  .btn.danger { background: transparent; color: var(--md-sys-color-error); }
+  .btn:hover { filter: brightness(1.1); } .btn:active { transform: scale(.97); }
+  .btn[disabled] { opacity: .5; cursor: default; }
+
+  .toolbar { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+  .search-wrap { position: relative; }
+  .search-wrap .material-symbols-rounded { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: var(--md-sys-color-on-surface-variant); font-size: 22px; pointer-events: none; }
+  .search-input { width: 100%; background: var(--md-sys-color-surface); border: none; border-radius: 28px; padding: 16px 20px 16px 56px; color: var(--md-sys-color-on-surface); font: inherit; font-size: 16px; }
+  .search-input:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; background: var(--md-sys-color-surface-variant); border: none; border-radius: 8px; padding: 8px 14px; font: inherit; font-size: 14px; font-weight: 500; color: var(--md-sys-color-on-surface-variant); cursor: pointer; transition: all .2s; white-space: nowrap; }
+  .pill .material-symbols-rounded { font-size: 18px; }
+  .pill:hover { color: var(--md-sys-color-on-surface); }
+  .pill.active { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+  .pills.small .pill { padding: 6px 12px; font-size: 13px; }
+
+  .banner { display: flex; align-items: center; gap: 14px; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-radius: 20px; padding: 14px 18px; margin-bottom: 20px; flex-wrap: wrap; }
+  .banner .material-symbols-rounded { font-size: 26px; }
+  .banner > div { flex: 1; min-width: 180px; font-size: 14px; line-height: 1.45; }
+  .stats { font-size: 14px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 18px; padding-left: 4px; }
+  .stats strong { color: var(--md-sys-color-primary); font-weight: 500; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); gap: 14px; }
+  .app-card { display: flex; gap: 16px; align-items: flex-start; background: var(--md-sys-color-surface); border-radius: 24px; padding: 18px; cursor: pointer; transition: background-color .2s, transform .2s; animation: rise .35s both; }
+  .app-card:hover { background: var(--md-sys-color-surface-variant); }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .app-card { animation: none; } }
+  .app-icon { width: 64px; height: 64px; border-radius: 16px; flex-shrink: 0; background: var(--md-sys-color-surface-variant); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 500; color: var(--md-sys-color-primary); overflow: hidden; }
+  .app-icon img { width: 100%; height: 100%; object-fit: cover; }
+  .app-main { flex: 1; min-width: 0; }
+  .app-main h3 { font-size: 18px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .app-by { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin: 2px 0 6px; flex-wrap: wrap; }
+  .app-main p { font-size: 14px; line-height: 1.45; color: var(--md-sys-color-on-surface-variant); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .plats { display: flex; gap: 6px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+  .plat { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 3px 9px; border-radius: 8px; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant); }
+  .app-card:hover .plat { background: var(--md-sys-color-surface); }
+  .plat.mine { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+  .plat .material-symbols-rounded { font-size: 15px; }
+  .badge { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; padding: 2px 8px; border-radius: 8px; }
+  .badge .material-symbols-rounded { font-size: 14px; }
+  .badge.oeper { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+  .badge.community { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant); }
+  .badge.custom { background: #5c3d00; color: #ffddb0; }
+  .badge.pending { background: #5c3d00; color: #ffddb0; } .badge.approved { background: #1e4a2b; color: #b9f0c9; } .badge.rejected { background: #5a1f1c; color: #ffdad6; }
+  .get { align-self: center; }
+
+  .empty { text-align: center; padding: 70px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
+  .empty .material-symbols-rounded { font-size: 48px; opacity: .5; margin-bottom: 12px; }
+
+  /* dialogs */
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 200; display: flex; align-items: flex-end; justify-content: center; animation: fade .2s; }
+  @keyframes fade { from { opacity: 0; } }
+  .sheet { background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); border-radius: 28px 28px 0 0; width: min(720px, 100%); max-height: 92vh; overflow-y: auto; padding: 24px; animation: up .28s cubic-bezier(.2,.8,.2,1); }
+  @keyframes up { from { transform: translateY(40px); opacity: 0; } }
+  @media (min-width: 760px) { .scrim { align-items: center; } .sheet { border-radius: 28px; } }
+  .sheet h2 { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+  .sheet h3 { font-size: 15px; font-weight: 500; margin: 20px 0 8px; color: var(--md-sys-color-primary); }
+  .sheet p, .sheet li { font-size: 14px; line-height: 1.55; color: var(--md-sys-color-on-surface-variant); }
+  .sheet .top { display: flex; gap: 16px; align-items: center; margin-bottom: 14px; }
+  .sheet .top .app-icon { width: 72px; height: 72px; font-size: 32px; }
+  .sheet .close { margin-left: auto; align-self: flex-start; }
+  .desc { white-space: pre-wrap; user-select: text; }
+  .shots { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 8px; }
+  .shots img { height: 180px; border-radius: 14px; flex-shrink: 0; background: var(--md-sys-color-surface-variant); }
+  .warn { display: flex; gap: 10px; align-items: flex-start; background: #3b2a00; color: #ffddb0; border-radius: 16px; padding: 12px 14px; font-size: 13px; line-height: 1.45; margin: 12px 0; }
+  .warn .material-symbols-rounded { font-size: 20px; }
+  .asset { display: flex; align-items: center; gap: 12px; background: var(--md-sys-color-background); border-radius: 16px; padding: 12px 14px; margin-bottom: 8px; flex-wrap: wrap; }
+  .asset.rec { outline: 2px solid var(--md-sys-color-primary); }
+  .asset .material-symbols-rounded.pi { color: var(--md-sys-color-primary); }
+  .asset .meta { flex: 1; min-width: 160px; }
+  .asset .meta b { font-weight: 500; font-size: 14px; color: var(--md-sys-color-on-surface); }
+  .asset .meta span { display: block; font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin-top: 2px; overflow-wrap: anywhere; }
+  .asset .acts { display: flex; gap: 6px; align-items: center; }
+  .ok { color: var(--md-sys-color-success); }
+  .mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .note { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin-top: 6px; line-height: 1.5; }
+  .note code { background: var(--md-sys-color-surface-variant); padding: 1px 6px; border-radius: 6px; font-size: 12px; }
+
+  .field { display: block; margin-bottom: 12px; }
+  .field > span { display: block; font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin: 0 0 4px 4px; }
+  .field input, .field textarea, .field select { width: 100%; background: var(--md-sys-color-background); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14px; }
+  .field textarea { min-height: 90px; resize: vertical; }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--md-sys-color-primary); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .arow { display: grid; grid-template-columns: 110px 120px 1fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .arow .sub { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 100px 1fr; gap: 8px; }
+  .arow input, .arow select { width: 100%; background: var(--md-sys-color-background); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline); border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 13px; }
+  @media (max-width: 560px) { .row2 { grid-template-columns: 1fr; } .arow { grid-template-columns: 1fr 1fr auto; } .arow .url { grid-column: 1 / -1; order: 5; } .arow .sub { grid-template-columns: 1fr 1fr; } }
+  .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+  .msg { font-size: 13px; margin-top: 10px; min-height: 18px; } .msg.err { color: var(--md-sys-color-error); } .msg.ok { color: var(--md-sys-color-success); }
+  .srcrow, .mine { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--md-sys-color-outline); flex-wrap: wrap; }
+  .srcrow:last-child, .mine:last-child { border-bottom: none; }
+  .srcrow .grow, .mine .grow { flex: 1; min-width: 160px; font-size: 14px; color: var(--md-sys-color-on-surface); overflow-wrap: anywhere; }
+  .srcrow .grow small, .mine .grow small { display: block; color: var(--md-sys-color-on-surface-variant); font-size: 12px; }
+
+  .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background: #303034; box-shadow: 0 4px 12px rgba(0,0,0,.4); border-radius: 16px; padding: 14px 24px; font-size: 14px; color: #e3e2e6; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 300; max-width: 90vw; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  @media (max-width: 480px) { .page { padding: 40px 16px 90px; } .app-card { padding: 14px; gap: 12px; } .get { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="header">
+    <div>
+      <h1><span class="material-symbols-rounded">storefront</span>epicenter</h1>
+      <p>apps from oeper.dev and the community, for Android, Windows, macOS, Linux, iPhone and the web. you can add other sources too.</p>
+    </div>
+    <div class="head-actions">
+      <button class="btn tonal" id="sourcesBtn"><span class="material-symbols-rounded">dns</span>sources</button>
+      <button class="btn tonal" id="mineBtn"><span class="material-symbols-rounded">inventory_2</span>my apps</button>
+      <button class="btn filled" id="submitBtn"><span class="material-symbols-rounded">add</span>submit an app</button>
+    </div>
+  </header>
+
+  <div id="bannerSlot"></div>
+
+  <div class="toolbar">
+    <div class="search-wrap"><span class="material-symbols-rounded">search</span><input class="search-input" type="search" id="q" placeholder="search apps…" autocomplete="off"></div>
+    <div class="pills" id="platPills"></div>
+    <div class="pills small" id="catPills"></div>
+  </div>
+
+  <div class="stats"><span id="count"><strong>0</strong> apps</span><span id="loading"> · loading…</span></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty"><span class="material-symbols-rounded">search_off</span><p>no apps match.</p></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script type="module" data-cfasync="false">
+import { mountTopNav } from './shared/topnav.js?v=46';
+import { mountFooter } from './shared/footer.js?v=7';
+import { getCurrentUser, onAccountChange, signIn, isOwnerEmail } from './shared/account.js?v=43';
+import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
+import {
+  WORKER, PLATFORMS, PLATFORM, FORMATS, CATEGORIES, CATEGORY, ANDROID_FORMATS, detectPlatform, githubToApp, parseRepo, isHttps,
+  normalizeCatalog, platformsOf, assetsFor, fmtSize, matches, resolveManifests,
+} from './shared/epicenter-core.js?v=1';
+mountTopNav();
+mountFooter();
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const me = detectPlatform();
+const SRC_KEY = 'epicenter-sources';
+const readSources = () => { try { const s = JSON.parse(localStorage.getItem(SRC_KEY) || '[]'); return Array.isArray(s) ? s : []; } catch { return []; } };
+const writeSources = s => { try { localStorage.setItem(SRC_KEY, JSON.stringify(s)); } catch { /* private window */ } };
+function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2800); }
+
+let apps = [];
+let platFilter = ['android', 'windows', 'macos', 'linux', 'ios'].includes(me) ? 'mine' : 'all';
+let catFilter = '';
+
+// ── loading catalogs ──
+async function getJson(url) { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(url + ' ' + r.status); return r.json(); }
+async function githubSource(repo) {
+  const info = await getJson('https://api.github.com/repos/' + repo);
+  let rel; try { rel = await getJson('https://api.github.com/repos/' + repo + '/releases/latest'); } catch { rel = { assets: [], tag_name: '', body: '' }; }
+  return { epicenter: 1, name: 'GitHub ' + repo, apps: [githubToApp(repo, rel, { ...info, homepage: info.homepage && isHttps(info.homepage) ? info.homepage : '' })] };
+}
+async function loadAll() {
+  const jobs = [
+    getJson('./epicenter/index.json').then(j => normalizeCatalog(j, 'oeper', 'oeper.dev')),
+    getJson(WORKER + '/api/epicenter/catalog').then(j => normalizeCatalog(j, 'community', 'Epicenter community')),
+    ...readSources().map(s => (s.kind === 'github' ? githubSource(s.value) : getJson(s.value)).then(j => normalizeCatalog(j, 'custom', s.name || (j && j.name) || s.value))),
+  ];
+  const results = await Promise.allSettled(jobs);
+  const seen = new Set(), out = [];
+  results.forEach((r, i) => {
+    if (r.status !== 'fulfilled') { if (i >= 2) toast('Could not load a source you added.'); return; }
+    for (const a of r.value) if (!seen.has(a.id)) { seen.add(a.id); out.push(a); }
+  });
+  apps = out;
+  $('loading').textContent = '';
+  render();
+  resolveManifests(apps).then(render);
+}
+
+// ── page ──
+function platPills() {
+  const items = [...(me !== 'web' ? [{ id: 'mine', label: 'for my device', icon: PLATFORM[me] ? PLATFORM[me].icon : 'devices' }] : []), { id: 'all', label: 'all', icon: 'clear_all' }, ...PLATFORMS];
+  $('platPills').innerHTML = items.map(p => `<button class="pill${platFilter === p.id ? ' active' : ''}" data-p="${p.id}"><span class="material-symbols-rounded">${p.icon}</span>${esc(p.label)}</button>`).join('');
+  $('catPills').innerHTML = [{ id: '', label: 'any category', icon: 'category' }, ...CATEGORIES].map(c => `<button class="pill${catFilter === c.id ? ' active' : ''}" data-c="${c.id}"><span class="material-symbols-rounded">${c.icon}</span>${esc(c.label)}</button>`).join('');
+}
+function trustBadge(a) {
+  return a._trust === 'oeper' ? '<span class="badge oeper"><span class="material-symbols-rounded">verified</span>oeper.dev</span>'
+    : a._trust === 'community' ? '<span class="badge community"><span class="material-symbols-rounded">how_to_reg</span>approved</span>'
+    : '<span class="badge custom"><span class="material-symbols-rounded">warning</span>unreviewed</span>';
+}
+const iconHtml = a => a.icon ? `<img src="${esc(a.icon)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('${esc(a.name.trim().charAt(0).toUpperCase() || '?').replace(/'/g, '')}'))">` : esc(a.name.trim().charAt(0).toUpperCase() || '?');
+
+function render() {
+  platPills();
+  const q = $('q').value;
+  const list = apps.filter(a => matches(a, q) && (!catFilter || (a.categories || []).includes(catFilter))
+    && (platFilter === 'all' || a.assets.some(x => x.platform === (platFilter === 'mine' ? me : platFilter))));
+  $('count').innerHTML = `<strong>${list.length}</strong> app${list.length === 1 ? '' : 's'}`;
+  $('empty').style.display = list.length ? 'none' : 'block';
+  $('grid').innerHTML = list.map(a => `
+    <article class="app-card" data-id="${esc(a.id)}">
+      <div class="app-icon">${iconHtml(a)}</div>
+      <div class="app-main">
+        <h3>${esc(a.name)}</h3>
+        <div class="app-by">${trustBadge(a)}${a.author ? esc(a.author) : ''}${a.version ? ' · v' + esc(a.version) : ''}</div>
+        <p>${esc(a.summary)}</p>
+        <div class="plats">${platformsOf(a).map(p => `<span class="plat${p === me ? ' mine' : ''}"><span class="material-symbols-rounded">${PLATFORM[p].icon}</span>${esc(PLATFORM[p].label)}</span>`).join('')}</div>
+      </div>
+      <button class="btn tonal get">get</button>
+    </article>`).join('');
+  // Android visitors get a pointer to the Epicenter app when there is one
+  const epi = apps.find(a => a.id === 'dev.oeper.epicenter'), apk = epi && assetsFor(epi, 'android')[0];
+  $('bannerSlot').innerHTML = me === 'android' && apk ? `<div class="banner"><span class="material-symbols-rounded">android</span><div><b>get the Epicenter app</b><br>install and update apps with one tap, with checksums checked for you.</div><a class="btn filled" href="${esc(apk.url)}" download rel="noopener">download</a></div>` : '';
+}
+$('platPills').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b) { platFilter = b.dataset.p; render(); } });
+$('catPills').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (b) { catFilter = b.dataset.c; render(); } });
+$('q').addEventListener('input', render);
+$('grid').addEventListener('click', e => { const c = e.target.closest('[data-id]'); if (c) showApp(apps.find(a => a.id === c.dataset.id)); });
+
+// ── dialogs ──
+function modal(html, onMount) {
+  const scrim = document.createElement('div'); scrim.className = 'scrim';
+  scrim.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
+  const close = () => { scrim.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  scrim.addEventListener('mousedown', e => { if (e.target === scrim) close(); });
+  scrim.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', close));
+  document.body.appendChild(scrim);
+  if (onMount) onMount(scrim.firstElementChild, close);
+  return { close, root: scrim.firstElementChild };
+}
+const OPEN_FORMATS = ['pwa', 'link', 'store', 'appstore', 'testflight', 'altstore'];
+const HASH_HELP = { windows: 'In PowerShell: <code>Get-FileHash file.exe -Algorithm SHA256</code>', macos: 'In Terminal: <code>shasum -a 256 file.dmg</code>', linux: 'In a terminal: <code>sha256sum file</code>', android: 'The Epicenter app checks this for you.', ios: '', web: '' };
+
+function assetRow(a, app) {
+  const open = OPEN_FORMATS.includes(a.format), rec = a.platform === me;
+  const what = a.label || FORMATS[a.format];
+  const bits = [a.label ? FORMATS[a.format] : '', a.arch, fmtSize(a.size), a.minSdk ? 'Android ' + a.minSdk + '+' : ''].filter(Boolean).join(' · ');
+  return `<div class="asset${rec ? ' rec' : ''}">
+    <span class="material-symbols-rounded pi">${PLATFORM[a.platform].icon}</span>
+    <div class="meta"><b>${esc(PLATFORM[a.platform].label)} — ${esc(what)}</b><span>${esc(bits)}${rec ? (bits ? ' · ' : '') + 'for your device' : ''}</span>
+      ${a.sha256 ? `<span class="mono"><span class="ok">SHA-256</span> ${esc(a.sha256.slice(0, 16))}…</span>` : (open ? '' : '<span>no checksum listed</span>')}</div>
+    <div class="acts">
+      ${a.sha256 ? `<button class="btn text" data-sha="${esc(a.sha256)}" title="copy the SHA-256 checksum"><span class="material-symbols-rounded">content_copy</span>sha</button>` : ''}
+      <button class="btn text" data-copy="${esc(a.url)}" title="copy the link"><span class="material-symbols-rounded">link</span></button>
+      <a class="btn ${rec ? 'filled' : 'tonal'}" href="${esc(a.url)}" rel="noopener noreferrer" ${open ? 'target="_blank"' : 'download'}><span class="material-symbols-rounded">${open ? 'open_in_new' : 'download'}</span>${open ? 'open' : 'download'}</a>
+    </div></div>`;
+}
+function showApp(app) {
+  if (!app) return;
+  const plats = platformsOf(app);
+  const warn = app._trust === 'custom' ? `<div class="warn"><span class="material-symbols-rounded">warning</span><div>This app comes from <b>${esc(app._source)}</b>, a source you added. oeper.dev has not reviewed it. Only install software you trust.</div></div>`
+    : app._trust === 'community' ? `<div class="warn" style="background:var(--md-sys-color-surface-variant);color:var(--md-sys-color-on-surface-variant)"><span class="material-symbols-rounded">how_to_reg</span><div>Submitted by the community and approved by oeper.dev. Approval is a quick check of the entry, not a security audit of the app.</div></div>` : '';
+  const androidNote = me === 'android' && app.assets.some(a => a.platform === 'android' && ANDROID_FORMATS.includes(a.format))
+    ? '<p class="note">On Android, open the downloaded file and allow your browser to install apps when asked. The Epicenter app does this and updates in one tap.</p>' : '';
+  const otherNote = me !== 'web' && !plats.includes(me) && !plats.includes('web') ? `<p class="note">There is no ${esc(PLATFORM[me] ? PLATFORM[me].label : 'version for this device')} version. Use the link button to send a link to the right device.</p>` : '';
+  const m = modal(`
+    <div class="top"><div class="app-icon">${iconHtml(app)}</div>
+      <div><h2>${esc(app.name)}</h2><div class="app-by">${trustBadge(app)}${app.author ? esc(app.author) : ''}${app.version ? ' · v' + esc(app.version) : ''}${app.license ? ' · ' + esc(app.license) : ''}</div></div>
+      <button class="btn text close" data-close aria-label="close"><span class="material-symbols-rounded">close</span></button></div>
+    <p>${esc(app.summary)}</p>
+    ${warn}
+    ${app.screenshots && app.screenshots.length ? `<div class="shots">${app.screenshots.map(s => `<img src="${esc(s)}" alt="" loading="lazy" referrerpolicy="no-referrer">`).join('')}</div>` : ''}
+    ${app.description ? `<h3>about</h3><p class="desc">${esc(app.description)}</p>` : ''}
+    ${app.notes ? `<h3>what's new${app.version ? ' in ' + esc(app.version) : ''}</h3><p class="desc">${esc(app.notes)}</p>` : ''}
+    <h3>get it</h3>
+    ${[...plats].sort((a, b) => (a === me ? -1 : 0) - (b === me ? -1 : 0)).map(p => assetsFor(app, p).map(a => assetRow(a, app)).join('')).join('')}
+    ${androidNote}${otherNote}
+    <p class="note">${Object.entries(HASH_HELP).filter(([k, v]) => v && plats.includes(k) && app.assets.some(a => a.platform === k && a.sha256)).map(([k, v]) => PLATFORM[k].label + ': ' + v).join('<br>')}</p>
+    <div class="actions">${app.homepage ? `<a class="btn text" href="${esc(app.homepage)}" target="_blank" rel="noopener"><span class="material-symbols-rounded">home</span>website</a>` : ''}${app.source ? `<a class="btn text" href="${esc(app.source)}" target="_blank" rel="noopener"><span class="material-symbols-rounded">code</span>source</a>` : ''}<button class="btn tonal" data-close>close</button></div>`);
+  m.root.addEventListener('click', async e => {
+    const c = e.target.closest('[data-copy],[data-sha]'); if (!c) return;
+    try { await navigator.clipboard.writeText(c.dataset.copy || c.dataset.sha); toast(c.dataset.sha ? 'Checksum copied' : 'Link copied'); } catch { toast('Could not copy'); }
+  });
+}
+
+// sources
+function showSources() {
+  let box = null;
+  const draw = () => {
+    const list = readSources();
+    box.querySelector('#srcList').innerHTML = `
+      <div class="srcrow"><span class="material-symbols-rounded">verified</span><div class="grow">oeper.dev<small>made by oeper</small></div></div>
+      <div class="srcrow"><span class="material-symbols-rounded">how_to_reg</span><div class="grow">Epicenter community<small>submitted by people, approved by oeper.dev</small></div></div>
+      ${list.map((s, i) => `<div class="srcrow"><span class="material-symbols-rounded">${s.kind === 'github' ? 'code' : 'dns'}</span><div class="grow">${esc(s.name || s.value)}<small>${esc(s.kind === 'github' ? 'GitHub ' + s.value : s.value)} · unreviewed</small></div><button class="btn danger" data-rm="${i}">remove</button></div>`).join('')}`;
+  };
+  const m = modal(`
+    <div class="top"><div><h2>sources</h2><p>where Epicenter looks for apps.</p></div><button class="btn text close" data-close aria-label="close"><span class="material-symbols-rounded">close</span></button></div>
+    <div id="srcList"></div>
+    <h3>add a source</h3>
+    <label class="field"><span>a GitHub repo (owner/repo or its link) or the link of an Epicenter catalog (https, format in epicenter/README.md)</span><input id="srcIn" placeholder="github:owner/repo  or  https://example.com/catalog.json"></label>
+    <div class="warn"><span class="material-symbols-rounded">warning</span><div>Apps from sources you add are not reviewed by oeper.dev. Anyone can publish anything there, so add only sources you trust.</div></div>
+    <div class="msg" id="srcMsg"></div>
+    <div class="actions"><button class="btn tonal" data-close>done</button><button class="btn filled" id="srcAdd">add</button></div>`, root => { box = root; draw(); });
+  m.root.addEventListener('click', e => { const r = e.target.closest('[data-rm]'); if (r) { const l = readSources(); l.splice(+r.dataset.rm, 1); writeSources(l); draw(); loadAll(); } });
+  m.root.querySelector('#srcAdd').addEventListener('click', async () => {
+    const v = m.root.querySelector('#srcIn').value.trim(), msg = m.root.querySelector('#srcMsg');
+    const set = (t, ok) => { msg.textContent = t; msg.className = 'msg ' + (ok ? 'ok' : 'err'); };
+    let src; const repo = !isHttps(v) && parseRepo(v) || (/^https:\/\/(www\.)?github\.com\//.test(v) ? parseRepo(v) : '');
+    if (repo) src = { kind: 'github', value: repo, name: repo };
+    else if (isHttps(v)) src = { kind: 'catalog', value: v };
+    else return set('Enter owner/repo, a GitHub link, or an https catalog link.', false);
+    if (readSources().some(s => s.value.toLowerCase() === src.value.toLowerCase())) return set('That source is already added.', false);
+    set('Checking…', true);
+    try {
+      const j = src.kind === 'github' ? await githubSource(src.value) : await getJson(src.value);
+      const found = normalizeCatalog(j, 'custom', '').length;
+      if (!found) return set(src.kind === 'github' ? 'That repo has no release files Epicenter can use.' : 'That catalog has no usable apps.', false);
+      src.name = (j && j.name) || src.value;
+      writeSources([...readSources(), src]); draw(); loadAll(); m.root.querySelector('#srcIn').value = ''; set(`Added: ${found} app${found === 1 ? '' : 's'}.`, true);
+    } catch (err) { set(src.kind === 'catalog' ? 'Could not read that catalog. It must be https, return the Epicenter format and allow requests from oeper.dev (CORS).' : 'Could not read that repo.', false); }
+  });
+}
+
+// account helpers
+async function authed(path, method, body) {
+  let u = getCurrentUser();
+  if (!u) { try { await signIn(); } catch { /* cancelled */ } u = getCurrentUser(); }
+  if (!u) throw new Error('Sign in first.');
+  const r = await fetch(WORKER + path, { method, headers: { Authorization: 'Bearer ' + await u.getIdToken(), ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Something went wrong (' + r.status + ').');
+  return j;
+}
+
+// submit (or edit) an app
+const FORMATS_BY = {
+  android: ['apk', 'apks', 'xapk', 'apkm'], ios: ['appstore', 'testflight', 'altstore', 'ipa'], windows: ['exe', 'msi', 'msix', 'appx', 'portable', 'zip'],
+  macos: ['dmg', 'pkg', 'app.zip', 'zip'], linux: ['appimage', 'deb', 'rpm', 'flatpak', 'snap', 'tar.gz', 'zip'], web: ['pwa', 'link', 'store'],
+};
+function showSubmit(existing) {
+  const e = existing || {};
+  const assetRowHtml = (a = {}) => `<div class="arow">
+      <select class="a-plat">${PLATFORMS.map(p => `<option value="${p.id}"${(a.platform || me) === p.id ? ' selected' : ''}>${esc(p.label)}</option>`).join('')}</select>
+      <select class="a-fmt"></select>
+      <input class="a-url url" placeholder="https://… download link" value="${esc(a.url || '')}">
+      <button class="btn danger a-rm" type="button" aria-label="remove"><span class="material-symbols-rounded">close</span></button>
+      <div class="sub"><input class="a-sha" placeholder="SHA-256 (optional, advised)" value="${esc(a.sha256 || '')}"><input class="a-arch" placeholder="arch" value="${esc(a.arch || '')}"><input class="a-label" placeholder="button label (optional)" value="${esc(a.label || '')}"></div></div>`;
+  const m = modal(`
+    <div class="top"><div><h2>${existing ? 'update your app' : 'submit an app'}</h2><p>an owner checks every entry before it shows up. your files stay where you host them: Epicenter only links to them.</p></div><button class="btn text close" data-close aria-label="close"><span class="material-symbols-rounded">close</span></button></div>
+    <div class="row2"><label class="field"><span>name</span><input id="f-name" maxlength="60" value="${esc(e.name || '')}"></label>
+      <label class="field"><span>id (lowercase; for Android apps the package name)</span><input id="f-id" maxlength="64" value="${esc(e.id || '')}" ${existing ? 'readonly' : ''} placeholder="com.example.app"></label></div>
+    <label class="field"><span>one-line summary</span><input id="f-sum" maxlength="140" value="${esc(e.summary || '')}"></label>
+    <label class="field"><span>description (optional)</span><textarea id="f-desc" maxlength="4000">${esc(e.description || '')}</textarea></label>
+    <div class="field"><span>categories (up to 3)</span><div class="pills small" id="f-cats">${CATEGORIES.map(c => `<button type="button" class="pill${(e.categories || []).includes(c.id) ? ' active' : ''}" data-c="${c.id}"><span class="material-symbols-rounded">${c.icon}</span>${esc(c.label)}</button>`).join('')}</div></div>
+    <div class="row2"><label class="field"><span>website (https)</span><input id="f-home" value="${esc(e.homepage || '')}"></label><label class="field"><span>icon image (https, optional)</span><input id="f-icon" value="${esc(e.icon || '')}"></label></div>
+    <div class="row2"><label class="field"><span>version (optional)</span><input id="f-ver" maxlength="32" value="${esc(e.version || '')}"></label><label class="field"><span>author (optional)</span><input id="f-author" maxlength="60" value="${esc(e.author || '')}"></label></div>
+    <h3>downloads</h3>
+    <div id="f-assets">${(e.assets && e.assets.length ? e.assets : [{}]).map(assetRowHtml).join('')}</div>
+    <button class="btn text" type="button" id="f-addasset"><span class="material-symbols-rounded">add</span>add a download</button>
+    <div class="warn"><span class="material-symbols-rounded">gpp_maybe</span><div>Only submit software you made or have the right to share. Entries that look harmful, misleading or pirated are rejected.</div></div>
+    <div class="msg" id="f-msg"></div>
+    <div class="actions"><button class="btn tonal" data-close>cancel</button><button class="btn filled" id="f-send">${existing ? 'resubmit' : 'submit'}</button></div>`);
+  const root = m.root, assets = root.querySelector('#f-assets');
+  const fillFormats = row => {
+    const p = row.querySelector('.a-plat').value, sel = row.querySelector('.a-fmt'), cur = sel.dataset.v || sel.value;
+    sel.innerHTML = FORMATS_BY[p].map(f => `<option value="${f}">${esc(FORMATS[f])}</option>`).join('');
+    if (FORMATS_BY[p].includes(cur)) sel.value = cur;
+  };
+  const wire = (row, a = {}) => { row.querySelector('.a-fmt').dataset.v = a.format || ''; fillFormats(row); row.querySelector('.a-plat').addEventListener('change', () => { row.querySelector('.a-fmt').dataset.v = ''; fillFormats(row); }); };
+  [...assets.children].forEach((row, i) => wire(row, (e.assets || [])[i]));
+  root.querySelector('#f-addasset').addEventListener('click', () => { assets.insertAdjacentHTML('beforeend', assetRowHtml()); wire(assets.lastElementChild); });
+  assets.addEventListener('click', ev => { const r = ev.target.closest('.a-rm'); if (r && assets.children.length > 1) r.closest('.arow').remove(); });
+  root.querySelector('#f-cats').addEventListener('click', ev => { const b = ev.target.closest('[data-c]'); if (!b) return; if (!b.classList.contains('active') && root.querySelectorAll('#f-cats .active').length >= 3) return; b.classList.toggle('active'); });
+  if (!existing) root.querySelector('#f-name').addEventListener('input', () => {
+    const idEl = root.querySelector('#f-id'); if (idEl.dataset.touched) return;
+    idEl.value = root.querySelector('#f-name').value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64);
+  });
+  root.querySelector('#f-id').addEventListener('input', ev => { ev.target.dataset.touched = '1'; });
+  root.querySelector('#f-send').addEventListener('click', async () => {
+    const msg = root.querySelector('#f-msg'), btn = root.querySelector('#f-send');
+    const v = s => root.querySelector(s).value.trim();
+    const app = {
+      id: v('#f-id'), name: v('#f-name'), summary: v('#f-sum'), description: v('#f-desc'), homepage: v('#f-home'), icon: v('#f-icon'), version: v('#f-ver'), author: v('#f-author'),
+      categories: [...root.querySelectorAll('#f-cats .active')].map(b => b.dataset.c),
+      assets: [...assets.children].map(r => ({ platform: r.querySelector('.a-plat').value, format: r.querySelector('.a-fmt').value, url: r.querySelector('.a-url').value.trim(), sha256: r.querySelector('.a-sha').value.trim(), arch: r.querySelector('.a-arch').value.trim(), label: r.querySelector('.a-label').value.trim() })).filter(a => a.url),
+    };
+    if (app.assets.some(a => a.platform === 'android')) app.package = app.id;
+    msg.className = 'msg'; msg.textContent = 'Sending…'; btn.disabled = true;
+    try {
+      const r = await authed('/api/epicenter/submit', 'POST', { app });
+      m.close(); toast(r.status === 'approved' ? 'Published.' : 'Submitted. An owner will look at it.');
+      if (r.status === 'approved') loadAll();
+    } catch (err) { msg.className = 'msg err'; msg.textContent = err.message; btn.disabled = false; }
+  });
+}
+
+// my apps (+ the review queue for owners)
+async function showMine() {
+  let mine, pending = [];
+  try {
+    mine = (await authed('/api/epicenter/mine', 'GET')).apps;
+    if (isOwnerEmail((getCurrentUser() || {}).email)) pending = (await authed('/api/epicenter/pending', 'GET')).pending;
+  } catch (err) { return toast(err.message); }
+  const row = x => `<div class="mine"><div class="grow">${esc(x.app.name)} <span class="badge ${esc(x.status)}">${esc(x.status)}${x.status === 'pending' && x.live ? ' update' : ''}</span><small>${esc(x.id)}${x.note ? ' · ' + esc(x.note) : ''}</small></div><button class="btn text" data-edit="${esc(x.id)}">edit</button><button class="btn danger" data-del="${esc(x.id)}">remove</button></div>`;
+  const prow = p => `<div class="mine"><div class="grow">${esc(p.app.name)} <span class="badge pending">${p.isUpdate ? 'update' : 'new'}</span><small>${esc(p.id)} · ${esc(p.owner)}<br>${esc(p.app.summary)}<br>${p.app.assets.map(a => `${esc(a.platform)} ${esc(a.format)}: <a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">${esc(a.url)}</a>${a.sha256 ? '' : ' (no checksum)'}`).join('<br>')}</small></div><button class="btn filled" data-ok="${esc(p.id)}">approve</button><button class="btn danger" data-no="${esc(p.id)}">reject</button></div>`;
+  const m = modal(`
+    <div class="top"><div><h2>my apps</h2><p>what you submitted to Epicenter.</p></div><button class="btn text close" data-close aria-label="close"><span class="material-symbols-rounded">close</span></button></div>
+    ${mine.length ? mine.map(row).join('') : '<p>You have not submitted anything yet.</p>'}
+    ${pending.length || isOwnerEmail((getCurrentUser() || {}).email) ? `<h3>review queue (${pending.length})</h3>${pending.length ? pending.map(prow).join('') : '<p>Nothing waiting.</p>'}` : ''}
+    <div class="actions"><button class="btn tonal" data-close>close</button></div>`);
+  m.root.addEventListener('click', async ev => {
+    const b = ev.target.closest('[data-edit],[data-del],[data-ok],[data-no]'); if (!b) return;
+    try {
+      if (b.dataset.edit) { const x = mine.find(y => y.id === b.dataset.edit); m.close(); showSubmit(x.app); }
+      else if (b.dataset.del) { if (await oeConfirm('Remove this app from Epicenter?', { danger: true, okLabel: 'remove' })) { await authed('/api/epicenter/remove', 'POST', { id: b.dataset.del }); m.close(); toast('Removed.'); loadAll(); } }
+      else if (b.dataset.ok) { await authed('/api/epicenter/review', 'POST', { id: b.dataset.ok, action: 'approve' }); m.close(); toast('Approved.'); loadAll(); }
+      else if (b.dataset.no) { const note = await oePrompt('Reason (shown to the submitter):', { maxLength: 300 }); if (note === null) return; await authed('/api/epicenter/review', 'POST', { id: b.dataset.no, action: 'reject', note }); m.close(); toast('Rejected.'); }
+    } catch (err) { toast(err.message); }
+  });
+}
+
+$('sourcesBtn').addEventListener('click', showSources);
+$('submitBtn').addEventListener('click', async () => { if (!getCurrentUser()) { try { await signIn(); } catch {} } if (getCurrentUser()) showSubmit(); else toast('Sign in to submit an app.'); });
+$('mineBtn').addEventListener('click', async () => { if (!getCurrentUser()) { try { await signIn(); } catch {} } if (getCurrentUser()) showMine(); else toast('Sign in to see your apps.'); });
+if (location.hash === '#submit') $('submitBtn').click();
+loadAll();
+</script>
+</body>
+</html>

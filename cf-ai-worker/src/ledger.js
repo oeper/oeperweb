@@ -96,8 +96,52 @@ export class Ledger extends DurableObject {
     // shared conversations (public read-only links). SQL rather than key/value because a conversation with pictures is bigger than a key/value entry may be
     ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS shares (id TEXT PRIMARY KEY, owner TEXT NOT NULL, title TEXT, body TEXT NOT NULL, created INTEGER, updated INTEGER, views INTEGER DEFAULT 0)');
     ctx.storage.sql.exec('CREATE INDEX IF NOT EXISTS shares_owner ON shares(owner)');
+    // Epicenter (the app store): one row per app id. data = the approved entry (what everyone sees), pending = a submitted change waiting for an owner
+    ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS epicenter (id TEXT PRIMARY KEY, owner TEXT NOT NULL, data TEXT, pending TEXT, status TEXT NOT NULL, note TEXT, created INTEGER, updated INTEGER)');
     // each person's sealed Google connection (see google.js); the worker encrypts it, this only stores the text
     ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS google (email TEXT PRIMARY KEY, data TEXT NOT NULL)');
+  }
+  /** [auto]: a site owner's own submission goes live straight away. */
+  epicSubmit(email, app, auto, ownerAny) {
+    const sql = this.ctx.storage.sql, now = Date.now();
+    const row = sql.exec('SELECT owner, data FROM epicenter WHERE id = ?', app.id).toArray()[0];
+    if (row && row.owner !== email && !ownerAny) return { ok: false, error: 'That app id already belongs to someone else.' };
+    if (!ownerAny) {
+      const mine = sql.exec('SELECT count(*) AS n FROM epicenter WHERE owner = ?', email).toArray()[0].n;
+      if (!row && mine >= 30) return { ok: false, error: 'You already have 30 apps in Epicenter.' };
+      const recent = sql.exec('SELECT count(*) AS n FROM epicenter WHERE owner = ? AND updated > ?', email, now - 86400_000).toArray()[0].n;
+      if (recent >= 8) return { ok: false, error: 'Too many submissions today. Try again tomorrow.' };
+    }
+    const json = JSON.stringify(app);
+    if (!row) sql.exec('INSERT INTO epicenter (id, owner, data, pending, status, note, created, updated) VALUES (?, ?, ?, ?, ?, NULL, ?, ?)', app.id, email, auto ? json : null, auto ? null : json, auto ? 'approved' : 'pending', now, now);
+    else sql.exec('UPDATE epicenter SET data = ?, pending = ?, status = ?, note = NULL, updated = ? WHERE id = ?', auto ? json : row.data, auto ? null : json, auto ? 'approved' : 'pending', now, app.id);
+    return { ok: true, status: auto ? 'approved' : 'pending' };
+  }
+  epicCatalog() {
+    return this.ctx.storage.sql.exec('SELECT id, data, updated FROM epicenter WHERE data IS NOT NULL ORDER BY updated DESC').toArray()
+      .map(r => { try { return { ...JSON.parse(r.data), updated: r.updated }; } catch { return null; } }).filter(Boolean);
+  }
+  epicMine(email) {
+    return this.ctx.storage.sql.exec('SELECT id, data, pending, status, note, updated FROM epicenter WHERE owner = ? ORDER BY updated DESC', email).toArray()
+      .map(r => ({ id: r.id, status: r.status, note: r.note, updated: r.updated, live: !!r.data, app: JSON.parse(r.pending || r.data) }));
+  }
+  epicPending() {
+    return this.ctx.storage.sql.exec("SELECT id, owner, data, pending, updated FROM epicenter WHERE pending IS NOT NULL ORDER BY updated ASC").toArray()
+      .map(r => ({ id: r.id, owner: r.owner, updated: r.updated, isUpdate: !!r.data, app: JSON.parse(r.pending) }));
+  }
+  epicReview(id, action, note) {
+    const sql = this.ctx.storage.sql, row = sql.exec('SELECT data, pending FROM epicenter WHERE id = ?', id).toArray()[0];
+    if (!row) return false;
+    if (action === 'approve' && row.pending) sql.exec("UPDATE epicenter SET data = pending, pending = NULL, status = 'approved', note = NULL, updated = ? WHERE id = ?", Date.now(), id);
+    else if (action === 'reject') sql.exec('UPDATE epicenter SET pending = NULL, status = ?, note = ?, updated = ? WHERE id = ?', row.data ? 'approved' : 'rejected', String(note || '').slice(0, 300), Date.now(), id);
+    else return false;
+    return true;
+  }
+  epicRemove(email, id, any) {
+    const sql = this.ctx.storage.sql, row = sql.exec('SELECT owner FROM epicenter WHERE id = ?', id).toArray()[0];
+    if (!row || (row.owner !== email && !any)) return false;
+    sql.exec('DELETE FROM epicenter WHERE id = ?', id);
+    return true;
   }
   googleGet(email) { const r = this.ctx.storage.sql.exec('SELECT data FROM google WHERE email = ?', email).toArray()[0]; return r ? r.data : null; }
   googleSet(email, data) { this.ctx.storage.sql.exec('INSERT INTO google (email, data) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET data = excluded.data', email, data); return true; }

@@ -3,6 +3,7 @@ import { Ledger } from './ledger.js';
 import { setPlusUntil, serviceAccountConfigured } from './firestore-admin.js';
 import { makeImage } from './images.js';
 import { readWebpage } from './webpage.js';
+import { cleanApp } from './epicenter.js';
 import { GOOGLE_TOOLS, googleToolStatus, runGoogleTool, googleConfigured, googleStartUrl, googleCallback, googleStatus, googleDisconnect } from './google.js';
 export { Ledger };
 
@@ -984,6 +985,41 @@ async function handleShareDelete(request, env, id) {
   return json(ok ? { ok: true } : { error: 'That link is not yours, or it is already gone.' }, ok ? 200 : 404, request);
 }
 
+// Epicenter, the app store. Public: the approved catalog. Signed in: submit an app, see your own. Owners: review the queue.
+async function handleEpicenter(request, env, route) {
+  const L = ledgerOf(env), get = request.method === 'GET', post = request.method === 'POST';
+  if (route === 'catalog' && get) {
+    return new Response(JSON.stringify({ epicenter: 1, name: 'Epicenter community', apps: await L.epicCatalog() }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', ...corsHeaders(request) } });
+  }
+  const user = await userFromRequest(request, env);
+  if (!user) return json({ error: 'Sign in first.' }, 401, request);
+  const owner = isOwner(user);
+  if (route === 'mine' && get) return json({ apps: await L.epicMine(user.email) }, 200, request);
+  if (route === 'submit' && post) {
+    const body = await readBody(request);
+    const r = cleanApp(body && body.app, owner);
+    if (r.error) return json({ error: r.error }, 400, request);
+    const out = await L.epicSubmit(user.email, r.app, owner, owner);
+    return json(out, out.ok ? 200 : 400, request);
+  }
+  if (route === 'remove' && post) {
+    const body = await readBody(request);
+    const ok = await L.epicRemove(user.email, String(body.id || ''), owner);
+    return json(ok ? { ok: true } : { error: 'That app is not yours, or is already gone.' }, ok ? 200 : 404, request);
+  }
+  if (route === 'pending' && get) {
+    if (!owner) return json({ error: 'Owners only.' }, 403, request);
+    return json({ pending: await L.epicPending() }, 200, request);
+  }
+  if (route === 'review' && post) {
+    if (!owner) return json({ error: 'Owners only.' }, 403, request);
+    const body = await readBody(request);
+    const ok = await L.epicReview(String(body.id || ''), String(body.action || ''), body.note);
+    return json(ok ? { ok: true } : { error: 'Nothing to review for that app.' }, ok ? 200 : 404, request);
+  }
+  return json({ error: 'Not found' }, 404, request);
+}
+
 async function handleGoogle(request, env, action) {
   const user = await userFromRequest(request, env);
   if (!user) return json({ error: 'Sign in to epic AI first.' }, 401, request);
@@ -1240,6 +1276,7 @@ export default {
       if (url.pathname === '/api/redeem' && request.method === 'POST') return handleRedeem(request, env);
       if (url.pathname === '/api/image' && request.method === 'POST') return handleImage(request, env);
       if (url.pathname === '/api/feedback' && request.method === 'POST') return handleFeedback(request, env);
+      if (url.pathname.startsWith('/api/epicenter/')) return handleEpicenter(request, env, url.pathname.slice('/api/epicenter/'.length));
       if (url.pathname === '/api/google/callback' && request.method === 'GET') return googleCallback(env, ledgerOf(env), url);
       if (url.pathname === '/api/google/status' && request.method === 'GET') return handleGoogle(request, env, 'status');
       if (url.pathname === '/api/google/connect' && request.method === 'POST') return handleGoogle(request, env, 'connect');
