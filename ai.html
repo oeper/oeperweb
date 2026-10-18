@@ -1795,7 +1795,13 @@ oneDocMenu.addEventListener('click', e => {
   docChip.style.display = 'flex';
   inputEl.focus();
 });
-document.getElementById('docChipRemove').addEventListener('click', () => { pendingDoc = null; docChip.style.display = 'none'; });
+// Shrinks and fades an attachment preview before it's hidden (the remove buttons used to just make it vanish).
+function animateOut(el, done) {
+  const anim = el.animate ? el.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.8)' }], { duration: 180, easing: 'ease-in' }) : null;
+  if (!anim) return done();
+  anim.onfinish = anim.oncancel = () => done();
+}
+document.getElementById('docChipRemove').addEventListener('click', () => { pendingDoc = null; animateOut(docChip, () => { if (!pendingDoc) docChip.style.display = 'none'; }); });
 
 // Markdown -> a oneWord document (rendered through the same pipeline as chat bubbles, then reduced to tags oneWord understands).
 // Uploads the files the model wrote to the user's own bot hosting (dbhosting), under their signed-in account, then installs
@@ -1908,8 +1914,7 @@ async function handleAttachedFile(file) {
 }
 document.getElementById('attachRemoveBtn').addEventListener('click', () => {
   pendingImageFile = null;
-  attachPreview.style.display = 'none';
-  attachPreviewImg.src = '';
+  animateOut(attachPreview, () => { if (pendingImageFile) return; attachPreview.style.display = 'none'; attachPreviewImg.src = ''; });
 });
 
 // Paste an image straight from the clipboard (screenshot, copied image,

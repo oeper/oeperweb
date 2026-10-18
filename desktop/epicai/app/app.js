@@ -371,7 +371,12 @@ function renderAttachments() {
   const row = $('attachRow'); row.innerHTML = '';
   const add = (thumb, name, sub, onRemove) => {
     const a = el('div', 'att', `${thumb ? `<img src="${thumb}">` : '<span class="ms">description</span>'}<div><div class="nm">${escHtml(name)}</div><div class="sub">${escHtml(sub || '')}</div></div><button class="x" title="Remove"><span class="ms">close</span></button>`);
-    a.querySelector('.x').addEventListener('click', () => { onRemove(); renderAttachments(); });
+    a.querySelector('.x').addEventListener('click', () => {
+      const go = () => { onRemove(); renderAttachments(); };
+      if (!a.animate) return go();
+      const anim = a.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.8)' }], { duration: 180, easing: 'ease-in', fill: 'forwards' });
+      anim.onfinish = go;
+    });
     row.appendChild(a);
   };
   if (pending.shot) add(pending.shot, 'My screen', 'sent once, not saved', () => { pending.shot = null; });
