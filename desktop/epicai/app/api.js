@@ -15,11 +15,29 @@ async function authHeaders(extra) {
  * Streams /api/chat. onDelta(content, reasoning) gets the whole text so far; onEvent(json) gets the worker's own events
  * (remember, updateMemory, forget, setFollow, profile, image). Resolves { content, reasoning, meta }. Errors carry .isLimit for a 429.
  */
+// Google Docs / Sheets (the worker holds the Google token, see cf-ai-worker/src/google.js). The flag decides whether the tools are offered.
+const googleOn = () => { try { return localStorage.getItem('epic-google') === '1'; } catch { return false; } };
+async function googleCall(path, method) {
+  const h = await authHeaders();
+  if (!h.Authorization) throw new Error('Sign in first.');
+  const r = await fetch(AI + path, { method, headers: h });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Something went wrong (' + r.status + ').');
+  return j;
+}
+export async function googleStatus() {
+  const s = await googleCall('/api/google/status', 'GET');
+  try { localStorage.setItem('epic-google', s.connected ? '1' : '0'); } catch {}
+  return s;
+}
+export const googleConnectUrl = async () => (await googleCall('/api/google/connect', 'POST')).url;
+export async function googleDisconnect() { await googleCall('/api/google/disconnect', 'POST'); try { localStorage.setItem('epic-google', '0'); } catch {} }
+
 export async function streamChat({ messages, signal, quiet, onDelta, onEvent, onActivity }) {
   const res = await fetch(AI + '/api/chat', {
     method: 'POST', signal,
     headers: await authHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ app: 'epicai', messages, quiet: quiet ? true : undefined, imageTools: quiet ? undefined : true }),
+    body: JSON.stringify({ app: 'epicai', messages, quiet: quiet ? true : undefined, imageTools: quiet ? undefined : true, googleTools: !quiet && googleOn() ? true : undefined }),
   });
   if (!res.ok || !res.body) {
     let msg = `Server error (${res.status})`;

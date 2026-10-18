@@ -96,7 +96,12 @@ export class Ledger extends DurableObject {
     // shared conversations (public read-only links). SQL rather than key/value because a conversation with pictures is bigger than a key/value entry may be
     ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS shares (id TEXT PRIMARY KEY, owner TEXT NOT NULL, title TEXT, body TEXT NOT NULL, created INTEGER, updated INTEGER, views INTEGER DEFAULT 0)');
     ctx.storage.sql.exec('CREATE INDEX IF NOT EXISTS shares_owner ON shares(owner)');
+    // each person's sealed Google connection (see google.js); the worker encrypts it, this only stores the text
+    ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS google (email TEXT PRIMARY KEY, data TEXT NOT NULL)');
   }
+  googleGet(email) { const r = this.ctx.storage.sql.exec('SELECT data FROM google WHERE email = ?', email).toArray()[0]; return r ? r.data : null; }
+  googleSet(email, data) { this.ctx.storage.sql.exec('INSERT INTO google (email, data) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET data = excluded.data', email, data); return true; }
+  googleDel(email) { this.ctx.storage.sql.exec('DELETE FROM google WHERE email = ?', email); return true; }
 
   // ── shared conversations ──
   /** Saves a snapshot. With an id the person already owns it is updated in place (same link); otherwise a new link is made. At most 100 links per person. */

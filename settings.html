@@ -223,6 +223,19 @@
         <div><span class="material-symbols-rounded">note_add</span><span>ask epic AI to write a document straight into oneWord</span></div>
       </div>
     </div>
+    <div class="group" id="googleGroup" style="margin-top:12px;">
+      <div class="row">
+        <div class="row-icon"><span class="material-symbols-rounded">description</span></div>
+        <div class="row-text">
+          <div class="row-title">Google Docs and Sheets</div>
+          <div class="row-sub" id="googleSub">sign in to connect</div>
+        </div>
+      </div>
+      <div class="row-block">
+        <div class="ai-feature-list"><div><span class="material-symbols-rounded">edit_document</span><span>epic AI can create Google Docs and Sheets, and read or add to ones you paste the link of. it can't browse the rest of your Drive. you can disconnect any time, here or at myaccount.google.com/permissions.</span></div></div>
+        <div class="pbtns"><button class="pbtn main" id="googleBtn" type="button" disabled>connect Google</button><span class="pmsg" id="googleMsg"></span></div>
+      </div>
+    </div>
   </div>
 
   <div class="settings-section" id="providerSection">
@@ -371,6 +384,7 @@ import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=3';
 import { aiFeaturesEnabled, setAiFeaturesEnabled, onAiFeaturesChange } from './shared/ai-features.js?v=6';
 import { isSyncEnabled, setSyncEnabled, onSyncStatus } from './shared/settings-sync.js?v=3';
+import { googleStatus, connectGoogle, disconnectGoogle } from './shared/google-link.js?v=1';
 import { PRESETS, readProviderSettings, saveProviderSettings, fetchModels, testProvider, getMcpServers, saveMcpServers, listMcpTools } from './shared/ai-provider.js?v=3';
 
 mountTopNav();
@@ -423,6 +437,34 @@ mountFooter();
   paint(aiFeaturesEnabled());
   toggle.addEventListener('change', () => setAiFeaturesEnabled(toggle.checked));
   onAiFeaturesChange(paint);
+}
+
+// Google Docs / Sheets (see shared/google-link.js)
+{
+  const btn = document.getElementById('googleBtn'), sub = document.getElementById('googleSub'), msg = document.getElementById('googleMsg');
+  let connected = false;
+  const say = (t, bad) => { msg.textContent = t || ''; msg.className = 'pmsg' + (bad ? ' err' : ''); };
+  async function refresh() {
+    if (!getCurrentUser()) { sub.textContent = 'sign in to connect'; btn.disabled = true; return; }
+    try {
+      const s = await googleStatus();
+      connected = !!s.connected;
+      sub.textContent = !s.configured ? 'not set up yet' : connected ? 'connected' + (s.googleEmail ? ' as ' + s.googleEmail : '') : 'not connected';
+      btn.textContent = connected ? 'disconnect' : 'connect Google'; btn.classList.toggle('danger', connected); btn.classList.toggle('main', !connected);
+      btn.disabled = !s.configured;
+    } catch (err) { sub.textContent = 'could not check'; say(err.message, true); }
+  }
+  btn.addEventListener('click', async () => {
+    btn.disabled = true; say('');
+    try {
+      if (connected) { await disconnectGoogle(); say('disconnected'); }
+      else { await connectGoogle(); say('finish in the tab that opened, then come back here'); }
+    } catch (err) { say(err.message, true); }
+    await refresh();
+  });
+  // coming back from Google's tab
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+  onAccountChange(() => refresh());
 }
 
 // your own AI model and MCP servers (see shared/ai-provider.js)

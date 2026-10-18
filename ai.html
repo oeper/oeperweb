@@ -656,6 +656,7 @@ import { observeList } from './shared/motion.js?v=3';
 import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=3';
 import { codeBlockHtml, copyToClipboard, injectCodeBlockStyles } from './shared/code-block.js?v=3';
 import { escHtml, parseAiMarkdown, splitThinking } from './shared/ai-markdown.js?v=1';
+import { googleConnectedCached, googleStatus } from './shared/google-link.js?v=1';
 import { call as workerCall } from './shared/codes-api.js?v=2';
 import { readFileForAI, FILE_ACCEPT, isImage } from './shared/ai-files.js?v=1';
 import { chatFetch, providerLabel } from './shared/ai-provider.js?v=4';
@@ -1498,6 +1499,8 @@ function paintAcct() {
   else { acctBtn.innerHTML = '<span class="material-symbols-rounded">person</span>'; acctBtn.title = 'sign in'; }
 }
 onAccountChange(paintAcct); paintAcct();
+// keeps the "Google is connected" flag fresh (it decides whether the Docs / Sheets tools are offered)
+onAccountChange(user => { if (user) googleStatus().catch(() => {}); });
 acctBtn.addEventListener('click', e => { if (!getCurrentUser()) { e.preventDefault(); signIn().catch(err => { if (err && err.code !== 'oe/consent-declined') oeAlert('sign-in failed: ' + (err.message || err)); }); } });
 
 // ── Cross-device sync (Firestore, signed-in only) ──────────────────────
@@ -2206,7 +2209,7 @@ async function sendToModel(chat) {
     const me = getCurrentUser();
     const counted = await workerCountsUsage();
     const authHeaders = counted && me ? { Authorization: 'Bearer ' + await me.getIdToken() } : undefined;
-    const res = await chatFetch(AI_ENDPOINT, { ...(counted ? { app: 'epicai' } : {}), messages: wireMessages, model: modelDropdown.getValue() || undefined, oneTools: aiFeaturesEnabled() || undefined, botTools: aiFeaturesEnabled() || undefined, imageTools: (counted && me) ? true : undefined }, controller.signal, authHeaders);
+    const res = await chatFetch(AI_ENDPOINT, { ...(counted ? { app: 'epicai' } : {}), messages: wireMessages, model: modelDropdown.getValue() || undefined, oneTools: aiFeaturesEnabled() || undefined, botTools: aiFeaturesEnabled() || undefined, imageTools: (counted && me) ? true : undefined, googleTools: (counted && me && googleConnectedCached()) ? true : undefined }, controller.signal, authHeaders);
     if (!res.ok || !res.body) {
       let msg = `Server error (${res.status})`;
       try { msg = (await res.json()).error || msg; } catch {}

@@ -3,6 +3,7 @@ import { Ledger } from './ledger.js';
 import { setPlusUntil, serviceAccountConfigured } from './firestore-admin.js';
 import { makeImage } from './images.js';
 import { readWebpage } from './webpage.js';
+import { GOOGLE_TOOLS, googleToolStatus, runGoogleTool, googleConfigured, googleStartUrl, googleCallback, googleStatus, googleDisconnect } from './google.js';
 export { Ledger };
 
 // Public proxy in front of Cloudflare Workers AI, replacing the old
@@ -133,6 +134,7 @@ function json(data, status, request) {
 function toolStatus(name, args) {
   const clip = s => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 60);
   switch (name) {
+    case 'google_doc_create': case 'google_doc_read': case 'google_doc_append': case 'google_sheet_read': case 'google_sheet_write': case 'google_sheet_create': return googleToolStatus(name);
     case 'search_web': return args && args.query ? `Searching the web for "${clip(args.query)}"` : 'Searching the web';
     case 'read_webpage': { let host = ''; try { host = new URL(String(args && args.url)).hostname.replace(/^www\./, ''); } catch {} return host ? `Reading ${clip(host)}` : 'Reading a web page'; }
     case 'lookup_oeper_user': return args && args.handle ? `Looking up @${clip(String(args.handle).replace(/^@/, ''))}` : 'Looking up a profile';
@@ -456,6 +458,11 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce, w
               } else {
                 toolResult = JSON.stringify({ ok: false, error: r.error || 'The picture could not be made.', note: 'Tell the user this in your own words, kindly and briefly. Do not try again.' });
               }
+              workingMessages.push({ role: 'tool', tool_call_id: call.id, name: call.function.name, content: toolResult });
+              continue;
+            }
+            if (call.function.name.startsWith('google_')) {
+              toolResult = await runGoogleTool(call.function.name, args, env, env.LEDGER.get(env.LEDGER.idFromName('main')), who);
               workingMessages.push({ role: 'tool', tool_call_id: call.id, name: call.function.name, content: toolResult });
               continue;
             }
@@ -848,7 +855,7 @@ async function handleChat(request, env) {
   }
 
   const region = regionOf(request);
-  const stream = streamToolLoop(env, body.quiet !== true ? withPolicies(messages, !!env.BRAVE_API_KEY, region) : messages, [...TOOLS, ...(body.oneTools === true ? ONE_TOOLS : []), ...(body.botTools === true ? BOT_TOOLS : []), ...(body.imageTools === true && who && body.quiet !== true ? IMAGE_TOOLS : [])], body.quiet === true, meter, body.think === true ? true : body.think === false ? false : undefined, who, region);
+  const stream = streamToolLoop(env, body.quiet !== true ? withPolicies(messages, !!env.BRAVE_API_KEY, region) : messages, [...TOOLS, ...(body.oneTools === true ? ONE_TOOLS : []), ...(body.botTools === true ? BOT_TOOLS : []), ...(body.imageTools === true && who && body.quiet !== true ? IMAGE_TOOLS : []), ...(body.googleTools === true && who && body.quiet !== true && googleConfigured(env) ? GOOGLE_TOOLS : [])], body.quiet === true, meter, body.think === true ? true : body.think === false ? false : undefined, who, region);
 
   return new Response(stream, {
     status: 200,
@@ -975,6 +982,16 @@ async function handleShareDelete(request, env, id) {
   if (!user) return json({ error: 'Sign in first.' }, 401, request);
   const ok = await ledgerOf(env).shareDelete(user.email, id, isOwner(user));
   return json(ok ? { ok: true } : { error: 'That link is not yours, or it is already gone.' }, ok ? 200 : 404, request);
+}
+
+async function handleGoogle(request, env, action) {
+  const user = await userFromRequest(request, env);
+  if (!user) return json({ error: 'Sign in to epic AI first.' }, 401, request);
+  const L = ledgerOf(env);
+  if (action === 'status') return json(await googleStatus(env, L, user.email), 200, request);
+  if (action === 'disconnect') return json(await googleDisconnect(env, L, user.email), 200, request);
+  if (!googleConfigured(env)) return json({ error: 'Google is not set up for epic AI yet.' }, 503, request);
+  return json({ url: await googleStartUrl(env, user.email) }, 200, request);
 }
 
 async function handleFeedback(request, env) {
@@ -1223,6 +1240,10 @@ export default {
       if (url.pathname === '/api/redeem' && request.method === 'POST') return handleRedeem(request, env);
       if (url.pathname === '/api/image' && request.method === 'POST') return handleImage(request, env);
       if (url.pathname === '/api/feedback' && request.method === 'POST') return handleFeedback(request, env);
+      if (url.pathname === '/api/google/callback' && request.method === 'GET') return googleCallback(env, ledgerOf(env), url);
+      if (url.pathname === '/api/google/status' && request.method === 'GET') return handleGoogle(request, env, 'status');
+      if (url.pathname === '/api/google/connect' && request.method === 'POST') return handleGoogle(request, env, 'connect');
+      if (url.pathname === '/api/google/disconnect' && request.method === 'POST') return handleGoogle(request, env, 'disconnect');
       if (url.pathname === '/api/share' && request.method === 'POST') return handleShareSave(request, env);
       if (url.pathname === '/api/shares' && request.method === 'GET') return handleShareList(request, env);
       const sm = /^\/api\/share\/([A-Za-z0-9_-]{6,24})$/.exec(url.pathname);

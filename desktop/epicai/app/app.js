@@ -601,6 +601,7 @@ async function openSettings() {
     <div class="row"><div><div class="t">Looking at your screen</div><div class="d">When a message points at something epic AI can't see ("this error", "that window"), it can ask to look at your screen. Screenshots are sent once and never stored.</div></div><select id="screenMode"><option value="ask">Ask me first</option><option value="auto">Look automatically</option><option value="off">Never</option></select></div>
     <div class="row"><div><div class="t">Notify me when an answer is ready</div><div class="d">Only when epic AI isn't the window you're looking at.</div></div>${sw('swNotify', settings.notify)}</div>
     <div class="row"><div><div class="t">Start epic AI when I sign in to my computer</div></div>${sw('swLogin', login)}</div>
+    <div class="row"><div><div class="t">Google Docs and Sheets</div><div class="d" id="gDesc">Sign in to connect.</div></div><button class="btn ghost" id="gBtn" disabled>Connect</button></div>
     <div class="row"><div><div class="t">Quick entry</div><div class="d">Press ${info.platform === 'darwin' ? '⌘⇧Space' : 'Ctrl+Shift+Space'} anywhere to ask without opening the app. In the box, the screen button adds a screenshot.</div></div></div>
     <div class="row"><div><div class="t">Help</div></div><div><button class="btn ghost" data-link="https://oeper.dev/feedback">Send feedback</button> <button class="btn ghost" data-link="https://oeper.dev/usage">Usage</button></div></div>
     <div class="actions"><button class="btn" data-close>Done</button></div>`);
@@ -611,6 +612,27 @@ async function openSettings() {
   const flip = (id, fn) => d.root.querySelector(id).addEventListener('click', e => { const on = !e.currentTarget.classList.contains('on'); e.currentTarget.classList.toggle('on', on); e.currentTarget.setAttribute('aria-checked', on); fn(on); });
   flip('#swNotify', on => { settings.notify = on; saveSettings(); if (on && Notification.permission === 'default') Notification.requestPermission(); });
   flip('#swLogin', on => D.setLogin(on));
+  // Google Docs / Sheets: connect opens Google's page in the browser; coming back to this window re-reads the status
+  const gBtn = d.root.querySelector('#gBtn'), gDesc = d.root.querySelector('#gDesc');
+  let gOn = false;
+  const gRefresh = async () => {
+    if (!user) { gDesc.textContent = 'Sign in to connect.'; gBtn.disabled = true; return; }
+    try {
+      const s = await api.googleStatus(); gOn = !!s.connected;
+      gDesc.textContent = !s.configured ? 'Not set up yet.' : gOn ? 'Connected' + (s.googleEmail ? ' as ' + s.googleEmail : '') + '. epic AI can create Docs and Sheets, and read or add to ones you paste the link of.' : "Lets epic AI create Google Docs and Sheets, and read or add to ones you paste the link of. It can't browse the rest of your Drive.";
+      gBtn.textContent = gOn ? 'Disconnect' : 'Connect'; gBtn.disabled = !s.configured;
+    } catch (err) { gDesc.textContent = err.message; }
+  };
+  gBtn.addEventListener('click', async () => {
+    gBtn.disabled = true;
+    try { if (gOn) await api.googleDisconnect(); else D.openExternal(await api.googleConnectUrl()); } catch (err) { gDesc.textContent = err.message; }
+    await gRefresh();
+  });
+  const gFocus = () => gRefresh();
+  addEventListener('focus', gFocus);
+  const gObs = new MutationObserver(() => { if (!document.body.contains(d.root)) { removeEventListener('focus', gFocus); gObs.disconnect(); } });
+  gObs.observe(document.body, { childList: true, subtree: true });
+  gRefresh();
 }
 
 // ── account state ──
