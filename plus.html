@@ -133,6 +133,7 @@
 import { mountTopNav } from './shared/topnav.js?v=46';
 import { mountFooter } from './shared/footer.js?v=7';
 import { getCurrentUser, onAccountChange, ensureProfileLoaded, hasPlus, plusBadgeShown, setOwnPlusBadge, signIn } from './shared/account.js?v=43';
+import { verifyPhone } from './shared/phone-verify.js?v=1';
 import { call, fmtDate } from './shared/codes-api.js?v=2';
 
 mountTopNav();
@@ -191,7 +192,8 @@ function render() {
   let status;
   if (!user) status = `<div class="card"><div class="status"><span class="mark">+</span><div><b>sign in to see your plan</b><span>oeper+ belongs to your oeper.dev account.</span></div></div><div style="margin-top:16px"><button class="btn primary full" id="signInBtn">sign in</button></div></div>`;
   else if (member) status = `<div class="card status member"><span class="mark">+</span><div><b>you're an oeper+ member</b><span>${until === -1 || (me && me.plusUntil === -1) ? 'for life' : (until ? 'until ' + esc(fmtDate(until)) : 'thank you for supporting oeper.dev')}</span></div></div>`;
-  else status = `<div class="card status"><span class="mark">+</span><div><b>you're on the free plan</b><span>oeper+ adds everything below.</span></div></div>`;
+  else status = `<div class="card status"><span class="mark">+</span><div><b>you're on the free plan</b><span>oeper+ adds everything below.</span></div></div>` +
+    (me && me.phoneVerified === false ? `<div class="card"><div class="note" style="margin-top:0"><b>oeper+ needs a verified phone number.</b> verify yours now so a code works when you redeem it.</div><div style="margin-top:12px"><button class="btn primary" id="verifyPhoneBtn">verify my phone</button></div></div>` : (me && me.phoneVerified ? `<div class="card"><div class="note" style="margin-top:0">phone number verified.</div></div>` : ''));
 
   let badge = '';
   if (member) {
@@ -220,6 +222,8 @@ function render() {
     (member ? `<div class="card"><div class="note" style="margin-top:0">have another code? <a href="/redeem">redeem it</a> to add more time. <a href="/usage">see your usage</a>.</div></div>` : '');
 
   const si = document.getElementById('signInBtn'); if (si) si.addEventListener('click', () => signIn());
+  const vp = document.getElementById('verifyPhoneBtn');
+  if (vp) vp.addEventListener('click', async () => { if (await verifyPhone()) { loadedFor = null; load(); toast('phone verified'); } });
   ['buyMonth', 'buyYear'].forEach(id => { const b = document.getElementById(id); if (b) b.addEventListener('click', () => toast("payments aren't set up yet. redeem a code to get oeper+ now.")); });
   const tg = document.getElementById('badgeToggle');
   if (tg) tg.addEventListener('change', async () => {

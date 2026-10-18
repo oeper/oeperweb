@@ -140,6 +140,7 @@ import { onAccountChange, mountAccountBar } from './shared/account.js?v=43';
 import { mountTopNav } from './shared/topnav.js?v=46';
 import { mountFooter } from './shared/footer.js?v=7';
 import { call, who, fmtDate, DEV_AS } from './shared/codes-api.js?v=2';
+import { verifyPhone } from './shared/phone-verify.js?v=1';
 
 mountTopNav();
 mountFooter();
@@ -168,7 +169,14 @@ $('form').addEventListener('submit', async e => {
   if (!who()) { show('bad', 'Sign in first, then redeem your code.'); return; }
   go.disabled = true; result.className = 'result';
   try {
-    const r = await call('POST', '/api/redeem', { code: value, source: 'site' });
+    let r;
+    try { r = await call('POST', '/api/redeem', { code: value, source: 'site' }); }
+    catch (err) {
+      // oeper+ is only for accounts with a verified phone: verify, then try the same code again
+      if (err.reason !== 'phone') throw err;
+      if (!(await verifyPhone())) throw new Error('Verify your phone number to get oeper+.');
+      r = await call('POST', '/api/redeem', { code: value, source: 'site' });
+    }
     show('ok', `Redeemed. You got ${r.summary}.`);
     code.value = '';
     refresh();

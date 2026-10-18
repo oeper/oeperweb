@@ -894,6 +894,7 @@ async function handleUsage(request, env) {
   if (user) await syncPlusMarker(env, user.email, me);
   // owners are never limited: show them as unlimited Plus
   if (isOwner(user)) Object.assign(me, { plan: 'plus', limit: 1_000_000_000, used: 0, unlimited: true });
+  if (user) me.phoneVerified = !!user.phone || isOwner(user);
   return json(me, 200, request);
 }
 
@@ -924,7 +925,7 @@ async function handleRedeem(request, env) {
   if (!user) return json({ error: 'Sign in first, then redeem your code.', reason: 'signin' }, 401, request);
   const body = await readBody(request);
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  const r = await ledgerOf(env).redeem(user.email, body.code, body.source === 'app' ? 'app' : 'site', ip);
+  const r = await ledgerOf(env).redeem(user.email, body.code, body.source === 'app' ? 'app' : 'site', ip, !!user.phone || isOwner(user));
   if (r.ok) await syncPlusMarker(env, user.email);
   return json(r, r.ok ? 200 : (r.reason === 'locked' ? 429 : 400), request);
 }

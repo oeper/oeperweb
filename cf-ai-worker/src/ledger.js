@@ -396,7 +396,8 @@ export class Ledger extends DurableObject {
 
   // ── redeeming ──
 
-  async redeem(email, rawCode, source, ip) {
+  /** [phoneOk]: the person has a verified phone (or is an owner); a code that gives oeper+ is refused without it. */
+  async redeem(email, rawCode, source, ip, phoneOk) {
     const now = Date.now(), day = dayOf(now);
     const failKeys = ['fail:' + day + ':u:' + email, 'fail:' + day + ':g:' + ip];
     const fails = await Promise.all(failKeys.map(k => this.ctx.storage.get(k)));
@@ -420,6 +421,7 @@ export class Ledger extends DurableObject {
     if (source === 'app' && rec.scope === 'site') return bad('wrong_place', "That's an oeper.dev code. Redeem it at oeper.dev/redeem instead of in the app.");
     if (rec.maxUses > 0 && rec.uses >= rec.maxUses) return bad('used_up', rec.kind === 'key' ? 'That key has already been used.' : 'That code has been used up.');
     if (await this.ctx.storage.get('redeem:' + email + ':' + code)) return bad('already', "You've already used that code.");
+    if (rec.grant.plusDays !== 0 && !phoneOk) return { ok: false, reason: 'phone', error: 'Verify your phone number to get oeper+.' };
     const user = await this.#applyGrant(email, rec.grant, rec.kind === 'key' ? rec.code.slice(0, -4) + '••••' : rec.code, source);
     rec.uses++;
     await this.ctx.storage.put({ ['code:' + code]: rec, ['redeem:' + email + ':' + code]: now });

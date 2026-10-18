@@ -51,7 +51,8 @@ export async function verifyIdToken(token, now = Date.now(), loadKey = getKey) {
     if (!ok) return null;
     const email = String(claims.email || '').toLowerCase();
     if (!email) return null;
-    return { email, uid: claims.sub };
+    // oeper+ needs a verified phone: Firebase puts phone_number in the token once a phone is linked (the number itself is not kept)
+    return { email, uid: claims.sub, phone: !!claims.phone_number };
   } catch {
     return null;
   }
@@ -63,7 +64,7 @@ export async function userFromRequest(request, env) {
   if (/^Bearer /i.test(h)) return verifyIdToken(h.slice(7).trim());
   if (/^Test /i.test(h) && env.TEST_AUTH === '1') {
     const host = new URL(request.url).hostname;
-    if (host === 'localhost' || host === '127.0.0.1') return { email: h.slice(5).trim().toLowerCase(), uid: 'test' };
+    if (host === 'localhost' || host === '127.0.0.1') { const [email, flag] = h.slice(5).trim().toLowerCase().split(/\s+/); return { email, uid: 'test', phone: flag === 'phone' }; }
   }
   return null;
 }
