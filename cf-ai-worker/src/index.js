@@ -815,7 +815,8 @@ async function handleChat(request, env) {
         return json({ error: `A message is too long (max ${limit} characters)` }, 400, request);
       }
     } else if (Array.isArray(m.content)) {
-      if (m.content.length > 4 || JSON.stringify(m.content).length > MAX_IMAGE_CONTENT_CHARS) {
+      // the text part plus up to 10 pictures (the Android app lets people attach 8 photos, or the pages of a PDF); the byte limit still applies
+      if (m.content.length > 11 || JSON.stringify(m.content).length > MAX_IMAGE_CONTENT_CHARS) {
         return json({ error: 'Message content is too large' }, 400, request);
       }
     } else {
