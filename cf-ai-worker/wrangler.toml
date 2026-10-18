@@ -24,3 +24,7 @@ class_name = "Ledger"
 [[migrations]]
 tag = "v1-ledger"
 new_sqlite_classes = ["Ledger"]
+
+# Epicenter: follow new app releases (update manifests) every 6 hours
+[triggers]
+crons = ["0 */6 * * *"]

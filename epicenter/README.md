@@ -50,3 +50,10 @@ Categories: ai, games, tools, productivity, media, social, developer, education,
 What installs where: the Android app installs the Android formats (Android asks the person to confirm each install). Everything else is
 shown for the visitor's own platform with a download link. Nothing is ever installed silently, and apps from sources other than oeper.dev are
 marked as unreviewed.
+
+## Updates
+
+- Every app has one current release (`version`, `versionCode`, `notes`). The Android app compares `versionCode` with the installed one (or `version` when there is no code) and offers the update; nothing installs without Android asking the person.
+- **Rolling links + `manifest`** is how a publisher releases without touching the catalog: keep the download link stable (for GitHub: `https://github.com/owner/repo/releases/latest/download/App.apk`) and put an `update.json` (`{versionCode, versionName, size, sha256, notes}`) next to it. Epicenter reads the manifest every time the page/app opens; for community apps the worker also follows it by itself every 6 hours (version, notes, size and checksum only, never a link) and the publisher can press "check for new versions" in "my apps". A new version without a checksum in the manifest drops the old checksum so a good download is never refused.
+- Changing a link, name or anything else in a community entry means resubmitting it (the old entry stays live until an owner approves the change).
+- `GET /api/epicenter/manifest?url=` (worker) returns a manifest's cleaned fields; the website uses it because GitHub sends no CORS headers.

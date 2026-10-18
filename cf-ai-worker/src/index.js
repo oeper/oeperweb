@@ -3,7 +3,7 @@ import { Ledger } from './ledger.js';
 import { setPlusUntil, serviceAccountConfigured } from './firestore-admin.js';
 import { makeImage } from './images.js';
 import { readWebpage } from './webpage.js';
-import { cleanApp } from './epicenter.js';
+import { cleanApp, cleanUrl, fetchManifest, applyManifests } from './epicenter.js';
 import { GOOGLE_TOOLS, googleToolStatus, runGoogleTool, googleConfigured, googleStartUrl, googleCallback, googleStatus, googleDisconnect } from './google.js';
 export { Ledger };
 
@@ -985,11 +985,31 @@ async function handleShareDelete(request, env, id) {
   return json(ok ? { ok: true } : { error: 'That link is not yours, or it is already gone.' }, ok ? 200 : 404, request);
 }
 
+// Follows new releases: every approved app whose files carry an update manifest gets its version, notes, size and checksum refreshed.
+// Only those fields move (never a download link), so no re-approval is needed. [email]: only that person's apps (the "check now" button).
+async function refreshEpicenter(env, email) {
+  const L = ledgerOf(env);
+  let checked = 0, changed = 0;
+  for (const t of await L.epicTrackable(email)) {
+    const results = [];
+    for (const m of t.manifests) { const parsed = await fetchManifest(m.url); if (parsed) results.push({ i: m.i, m: parsed }); }
+    checked++;
+    if (results.length && await L.epicApplyManifests(t.id, results, applyManifests)) changed++;
+  }
+  return { checked, changed };
+}
+
 // Epicenter, the app store. Public: the approved catalog. Signed in: submit an app, see your own. Owners: review the queue.
 async function handleEpicenter(request, env, route) {
   const L = ledgerOf(env), get = request.method === 'GET', post = request.method === 'POST';
   if (route === 'catalog' && get) {
     return new Response(JSON.stringify({ epicenter: 1, name: 'Epicenter community', apps: await L.epicCatalog() }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', ...corsHeaders(request) } });
+  }
+  if (route === 'manifest' && get) {
+    // the site cannot read a GitHub release's update.json itself (no CORS); the worker reads it and hands back only the cleaned fields
+    const target = cleanUrl(new URL(request.url).searchParams.get('url') || '');
+    const m = target ? await fetchManifest(target) : null;
+    return new Response(JSON.stringify(m || {}), { status: m ? 200 : 404, headers: { 'Content-Type': 'application/json', 'Cache-Control': m ? 'public, max-age=300' : 'no-store',...corsHeaders(request) } });
   }
   const user = await userFromRequest(request, env);
   if (!user) return json({ error: 'Sign in first.' }, 401, request);
@@ -1001,6 +1021,10 @@ async function handleEpicenter(request, env, route) {
     if (r.error) return json({ error: r.error }, 400, request);
     const out = await L.epicSubmit(user.email, r.app, owner, owner);
     return json(out, out.ok ? 200 : 400, request);
+  }
+  if (route === 'refresh' && post) {
+    // a publisher (or an owner, for everything) asks for the release check now instead of waiting for the next scheduled one
+    return json({ ok: true, ...(await refreshEpicenter(env, owner ? null : user.email)) }, 200, request);
   }
   if (route === 'remove' && post) {
     const body = await readBody(request);
@@ -1235,6 +1259,9 @@ async function handleModerate(request, env) {
 }
 
 export default {
+  async scheduled(event, env, ctx) {
+    if (env.LEDGER) ctx.waitUntil(refreshEpicenter(env, null).catch(() => {}));
+  },
   async fetch(request, env) {
     const url = new URL(request.url);
 

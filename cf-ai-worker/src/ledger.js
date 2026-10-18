@@ -143,6 +143,23 @@ export class Ledger extends DurableObject {
     sql.exec('DELETE FROM epicenter WHERE id = ?', id);
     return true;
   }
+  /** Approved apps that have a file with an update manifest (so the worker can follow new releases by itself). [email]: only that person's. */
+  epicTrackable(email) {
+    const q = email ? this.ctx.storage.sql.exec('SELECT id, data FROM epicenter WHERE data IS NOT NULL AND owner = ?', email) : this.ctx.storage.sql.exec('SELECT id, data FROM epicenter WHERE data IS NOT NULL');
+    const out = [];
+    for (const r of q.toArray()) {
+      try { const a = JSON.parse(r.data); const m = a.assets.map((x, i) => (x.manifest ? { i, url: x.manifest } : null)).filter(Boolean); if (m.length) out.push({ id: r.id, manifests: m }); } catch { /* skip a broken row */ }
+    }
+    return out;
+  }
+  /** Applies freshly fetched manifests to the stored entry (see applyManifests); the entry's "updated" time moves only when something really changed. */
+  epicApplyManifests(id, results, apply) {
+    const sql = this.ctx.storage.sql, row = sql.exec('SELECT data FROM epicenter WHERE id = ?', id).toArray()[0];
+    if (!row || !row.data) return false;
+    const { app, changed } = apply(JSON.parse(row.data), results);
+    if (changed) sql.exec('UPDATE epicenter SET data = ?, updated = ? WHERE id = ?', JSON.stringify(app), Date.now(), id);
+    return changed;
+  }
   googleGet(email) { const r = this.ctx.storage.sql.exec('SELECT data FROM google WHERE email = ?', email).toArray()[0]; return r ? r.data : null; }
   googleSet(email, data) { this.ctx.storage.sql.exec('INSERT INTO google (email, data) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET data = excluded.data', email, data); return true; }
   googleDel(email) { this.ctx.storage.sql.exec('DELETE FROM google WHERE email = ?', email); return true; }

@@ -80,9 +80,13 @@
   .stats { font-size: 14px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 18px; padding-left: 4px; }
   .stats strong { color: var(--md-sys-color-primary); font-weight: 500; }
 
+  .stats { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .sortbox { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; }
+  .sortbox select { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); border: none; border-radius: 10px; padding: 6px 10px; font: inherit; font-size: 13px; }
+  .badge.fresh { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); gap: 14px; }
   .app-card { display: flex; gap: 16px; align-items: flex-start; background: var(--md-sys-color-surface); border-radius: 24px; padding: 18px; cursor: pointer; transition: background-color .2s, transform .2s; animation: rise .35s both; }
-  .app-card:hover { background: var(--md-sys-color-surface-variant); }
+  .app-card:hover { background: var(--md-sys-color-hover-surface, var(--md-sys-color-surface-variant)); }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .app-card { animation: none; } }
   .app-icon { width: 64px; height: 64px; border-radius: 16px; flex-shrink: 0; background: var(--md-sys-color-surface-variant); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 500; color: var(--md-sys-color-primary); overflow: hidden; }
@@ -100,15 +104,20 @@
   .badge .material-symbols-rounded { font-size: 14px; }
   .badge.oeper { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
   .badge.community { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant); }
-  .badge.custom { background: #5c3d00; color: #ffddb0; }
-  .badge.pending { background: #5c3d00; color: #ffddb0; } .badge.approved { background: #1e4a2b; color: #b9f0c9; } .badge.rejected { background: #5a1f1c; color: #ffdad6; }
+  .badge.custom { background: transparent; color: var(--md-sys-color-error); box-shadow: inset 0 0 0 1px var(--md-sys-color-error); }
+  .badge.pending { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant); box-shadow: inset 0 0 0 1px var(--md-sys-color-outline); }
+  .badge.approved { background: color-mix(in srgb, var(--md-sys-color-success) 22%, transparent); color: var(--md-sys-color-success); }
+  .badge.rejected { background: color-mix(in srgb, var(--md-sys-color-error) 18%, transparent); color: var(--md-sys-color-error); }
   .get { align-self: center; }
 
+  .app-card, .sheet, .banner, .search-input, .asset, .toast, .pill, .btn.tonal, .field input, .field textarea, .field select, .warn {
+    backdrop-filter: var(--oe-glass-blur, none); -webkit-backdrop-filter: var(--oe-glass-blur, none);
+  }
   .empty { text-align: center; padding: 70px 0; color: var(--md-sys-color-on-surface-variant); display: none; }
   .empty .material-symbols-rounded { font-size: 48px; opacity: .5; margin-bottom: 12px; }
 
   /* dialogs */
-  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 200; display: flex; align-items: flex-end; justify-content: center; animation: fade .2s; }
+  .scrim { position: fixed; inset: 0; background: rgba(var(--md-sys-color-background-rgb, 0, 0, 0), .55); z-index: 200; display: flex; align-items: flex-end; justify-content: center; animation: fade .2s; }
   @keyframes fade { from { opacity: 0; } }
   .sheet { background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); border-radius: 28px 28px 0 0; width: min(720px, 100%); max-height: 92vh; overflow-y: auto; padding: 24px; animation: up .28s cubic-bezier(.2,.8,.2,1); }
   @keyframes up { from { transform: translateY(40px); opacity: 0; } }
@@ -122,9 +131,9 @@
   .desc { white-space: pre-wrap; user-select: text; }
   .shots { display: flex; gap: 10px; overflow-x: auto; padding: 4px 0 8px; }
   .shots img { height: 180px; border-radius: 14px; flex-shrink: 0; background: var(--md-sys-color-surface-variant); }
-  .warn { display: flex; gap: 10px; align-items: flex-start; background: #3b2a00; color: #ffddb0; border-radius: 16px; padding: 12px 14px; font-size: 13px; line-height: 1.45; margin: 12px 0; }
-  .warn .material-symbols-rounded { font-size: 20px; }
-  .asset { display: flex; align-items: center; gap: 12px; background: var(--md-sys-color-background); border-radius: 16px; padding: 12px 14px; margin-bottom: 8px; flex-wrap: wrap; }
+  .warn { display: flex; gap: 10px; align-items: flex-start; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); box-shadow: inset 0 0 0 1px var(--md-sys-color-outline); border-radius: 16px; padding: 12px 14px; font-size: 13px; line-height: 1.45; margin: 12px 0; }
+  .warn .material-symbols-rounded { font-size: 20px; color: var(--md-sys-color-error); }
+  .asset { display: flex; align-items: center; gap: 12px; background: var(--md-sys-color-surface-variant); border-radius: 16px; padding: 12px 14px; margin-bottom: 8px; flex-wrap: wrap; }
   .asset.rec { outline: 2px solid var(--md-sys-color-primary); }
   .asset .material-symbols-rounded.pi { color: var(--md-sys-color-primary); }
   .asset .meta { flex: 1; min-width: 160px; }
@@ -138,13 +147,13 @@
 
   .field { display: block; margin-bottom: 12px; }
   .field > span { display: block; font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin: 0 0 4px 4px; }
-  .field input, .field textarea, .field select { width: 100%; background: var(--md-sys-color-background); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14px; }
+  .field input, .field textarea, .field select { width: 100%; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14px; }
   .field textarea { min-height: 90px; resize: vertical; }
   .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--md-sys-color-primary); }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .arow { display: grid; grid-template-columns: 110px 120px 1fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
   .arow .sub { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 100px 1fr; gap: 8px; }
-  .arow input, .arow select { width: 100%; background: var(--md-sys-color-background); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline); border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 13px; }
+  .arow input, .arow select { width: 100%; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline); border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 13px; }
   @media (max-width: 560px) { .row2 { grid-template-columns: 1fr; } .arow { grid-template-columns: 1fr 1fr auto; } .arow .url { grid-column: 1 / -1; order: 5; } .arow .sub { grid-template-columns: 1fr 1fr; } }
   .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
   .msg { font-size: 13px; margin-top: 10px; min-height: 18px; } .msg.err { color: var(--md-sys-color-error); } .msg.ok { color: var(--md-sys-color-success); }
@@ -153,7 +162,7 @@
   .srcrow .grow, .mine .grow { flex: 1; min-width: 160px; font-size: 14px; color: var(--md-sys-color-on-surface); overflow-wrap: anywhere; }
   .srcrow .grow small, .mine .grow small { display: block; color: var(--md-sys-color-on-surface-variant); font-size: 12px; }
 
-  .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background: #303034; box-shadow: 0 4px 12px rgba(0,0,0,.4); border-radius: 16px; padding: 14px 24px; font-size: 14px; color: #e3e2e6; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 300; max-width: 90vw; }
+  .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--md-sys-color-on-surface); color: var(--md-sys-color-background); box-shadow: 0 4px 16px rgba(0,0,0,.25); border-radius: 16px; padding: 14px 24px; font-size: 14px;  opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 300; max-width: 90vw; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   @media (max-width: 480px) { .page { padding: 40px 16px 90px; } .app-card { padding: 14px; gap: 12px; } .get { display: none; } }
 </style>
@@ -181,7 +190,8 @@
     <div class="pills small" id="catPills"></div>
   </div>
 
-  <div class="stats"><span id="count"><strong>0</strong> apps</span><span id="loading"> · loading…</span></div>
+  <div class="stats"><span id="count"><strong>0</strong> apps</span><span id="loading"> · loading…</span>
+    <span class="sortbox">sort <select id="sort"><option value="updated">recently updated</option><option value="name">name</option></select></span></div>
   <div class="grid" id="grid"></div>
   <div class="empty" id="empty"><span class="material-symbols-rounded">search_off</span><p>no apps match.</p></div>
 </div>
@@ -195,7 +205,7 @@ import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import {
   WORKER, PLATFORMS, PLATFORM, FORMATS, CATEGORIES, CATEGORY, ANDROID_FORMATS, detectPlatform, githubToApp, parseRepo, isHttps,
   normalizeCatalog, platformsOf, assetsFor, fmtSize, matches, resolveManifests,
-} from './shared/epicenter-core.js?v=1';
+} from './shared/epicenter-core.js?v=2';
 mountTopNav();
 mountFooter();
 
@@ -207,6 +217,14 @@ const readSources = () => { try { const s = JSON.parse(localStorage.getItem(SRC_
 const writeSources = s => { try { localStorage.setItem(SRC_KEY, JSON.stringify(s)); } catch { /* private window */ } };
 function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2800); }
 
+const when = a => Number(a.releasedAt || a.updated || (a.date && Date.parse(a.date)) || 0);
+function ago(ms) {
+  if (!ms) return '';
+  const d = Math.floor((Date.now() - ms) / 86400000);
+  return d < 1 ? 'today' : d === 1 ? 'yesterday' : d < 30 ? d + ' days ago' : d < 365 ? Math.floor(d / 30) + ' mo ago' : Math.floor(d / 365) + ' y ago';
+}
+const fresh = a => when(a) && Date.now() - when(a) < 14 * 86400000;
+let sortBy = 'updated';
 let apps = [];
 let platFilter = ['android', 'windows', 'macos', 'linux', 'ios'].includes(me) ? 'mine' : 'all';
 let catFilter = '';
@@ -254,6 +272,7 @@ function render() {
   const q = $('q').value;
   const list = apps.filter(a => matches(a, q) && (!catFilter || (a.categories || []).includes(catFilter))
     && (platFilter === 'all' || a.assets.some(x => x.platform === (platFilter === 'mine' ? me : platFilter))));
+  list.sort((a, b) => sortBy === 'name' ? a.name.localeCompare(b.name) : (when(b) - when(a)) || a.name.localeCompare(b.name));
   $('count').innerHTML = `<strong>${list.length}</strong> app${list.length === 1 ? '' : 's'}`;
   $('empty').style.display = list.length ? 'none' : 'block';
   $('grid').innerHTML = list.map(a => `
@@ -261,7 +280,7 @@ function render() {
       <div class="app-icon">${iconHtml(a)}</div>
       <div class="app-main">
         <h3>${esc(a.name)}</h3>
-        <div class="app-by">${trustBadge(a)}${a.author ? esc(a.author) : ''}${a.version ? ' · v' + esc(a.version) : ''}</div>
+        <div class="app-by">${trustBadge(a)}${fresh(a) ? '<span class="badge fresh">updated</span>' : ''}${a.author ? esc(a.author) : ''}${a.version ? ' · v' + esc(a.version) : ''}${when(a) ? ' · ' + ago(when(a)) : ''}</div>
         <p>${esc(a.summary)}</p>
         <div class="plats">${platformsOf(a).map(p => `<span class="plat${p === me ? ' mine' : ''}"><span class="material-symbols-rounded">${PLATFORM[p].icon}</span>${esc(PLATFORM[p].label)}</span>`).join('')}</div>
       </div>
@@ -274,6 +293,7 @@ function render() {
 $('platPills').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b) { platFilter = b.dataset.p; render(); } });
 $('catPills').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (b) { catFilter = b.dataset.c; render(); } });
 $('q').addEventListener('input', render);
+$('sort').addEventListener('change', e => { sortBy = e.target.value; render(); });
 $('grid').addEventListener('click', e => { const c = e.target.closest('[data-id]'); if (c) showApp(apps.find(a => a.id === c.dataset.id)); });
 
 // ── dialogs ──
@@ -316,7 +336,7 @@ function showApp(app) {
   const otherNote = me !== 'web' && !plats.includes(me) && !plats.includes('web') ? `<p class="note">There is no ${esc(PLATFORM[me] ? PLATFORM[me].label : 'version for this device')} version. Use the link button to send a link to the right device.</p>` : '';
   const m = modal(`
     <div class="top"><div class="app-icon">${iconHtml(app)}</div>
-      <div><h2>${esc(app.name)}</h2><div class="app-by">${trustBadge(app)}${app.author ? esc(app.author) : ''}${app.version ? ' · v' + esc(app.version) : ''}${app.license ? ' · ' + esc(app.license) : ''}</div></div>
+      <div><h2>${esc(app.name)}</h2><div class="app-by">${trustBadge(app)}${app.author ? esc(app.author) : ''}${app.version ? ' · v' + esc(app.version) : ''}${when(app) ? ' · updated ' + ago(when(app)) : ''}${app.license ? ' · ' + esc(app.license) : ''}</div></div>
       <button class="btn text close" data-close aria-label="close"><span class="material-symbols-rounded">close</span></button></div>
     <p>${esc(app.summary)}</p>
     ${warn}
@@ -458,11 +478,13 @@ async function showMine() {
     <div class="top"><div><h2>my apps</h2><p>what you submitted to Epicenter.</p></div><button class="btn text close" data-close aria-label="close"><span class="material-symbols-rounded">close</span></button></div>
     ${mine.length ? mine.map(row).join('') : '<p>You have not submitted anything yet.</p>'}
     ${pending.length || isOwnerEmail((getCurrentUser() || {}).email) ? `<h3>review queue (${pending.length})</h3>${pending.length ? pending.map(prow).join('') : '<p>Nothing waiting.</p>'}` : ''}
-    <div class="actions"><button class="btn tonal" data-close>close</button></div>`);
+    <p class="note">New releases are picked up on their own every 6 hours when a download has a <code>manifest</code> (an update.json next to it). Check now to skip the wait.</p>
+    <div class="actions"><button class="btn text" data-refresh><span class="material-symbols-rounded">refresh</span>check for new versions</button><button class="btn tonal" data-close>close</button></div>`);
   m.root.addEventListener('click', async ev => {
-    const b = ev.target.closest('[data-edit],[data-del],[data-ok],[data-no]'); if (!b) return;
+    const b = ev.target.closest('[data-edit],[data-del],[data-ok],[data-no],[data-refresh]'); if (!b) return;
     try {
-      if (b.dataset.edit) { const x = mine.find(y => y.id === b.dataset.edit); m.close(); showSubmit(x.app); }
+      if (b.hasAttribute('data-refresh')) { const r = await authed('/api/epicenter/refresh', 'POST', {}); m.close(); toast(r.changed ? r.changed + ' updated.' : r.checked ? 'Everything is up to date.' : 'No download has a manifest to check.'); if (r.changed) loadAll(); }
+      else if (b.dataset.edit) { const x = mine.find(y => y.id === b.dataset.edit); m.close(); showSubmit(x.app); }
       else if (b.dataset.del) { if (await oeConfirm('Remove this app from Epicenter?', { danger: true, okLabel: 'remove' })) { await authed('/api/epicenter/remove', 'POST', { id: b.dataset.del }); m.close(); toast('Removed.'); loadAll(); } }
       else if (b.dataset.ok) { await authed('/api/epicenter/review', 'POST', { id: b.dataset.ok, action: 'approve' }); m.close(); toast('Approved.'); loadAll(); }
       else if (b.dataset.no) { const note = await oePrompt('Reason (shown to the submitter):', { maxLength: 300 }); if (note === null) return; await authed('/api/epicenter/review', 'POST', { id: b.dataset.no, action: 'reject', note }); m.close(); toast('Rejected.'); }

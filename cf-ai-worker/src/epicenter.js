@@ -84,3 +84,49 @@ export function cleanApp(input, owner) {
   }
   return { app };
 }
+
+/** A small update.json ({versionCode, versionName, size, sha256, notes}) next to a "latest" download link, cleaned. null when it is not one. */
+export function parseManifest(m) {
+  if (!m || typeof m !== 'object') return null;
+  const out = {};
+  const name = clip(m.versionName || m.version, 32); if (name) out.version = name;
+  const code = Math.floor(Number(m.versionCode)); if (code > 0 && code < 2 ** 31) out.versionCode = code;
+  const size = Math.floor(Number(m.size)); if (size > 0 && size < 20 * 1024 ** 3) out.size = size;
+  const sha = clip(m.sha256, 64).toLowerCase(); if (/^[0-9a-f]{64}$/.test(sha)) out.sha256 = sha;
+  const notes = clip(m.notes, 800); if (notes) out.notes = notes;
+  return out.version || out.versionCode ? out : null;
+}
+
+export async function fetchManifest(url) {
+  // GitHub release links redirect to a storage host and now and then answer slowly or with a 5xx: one more try before giving up
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetch(url, { headers: { 'User-Agent': 'oeper-epicenter/1', Accept: 'application/json' }, signal: AbortSignal.timeout(8000), cf: { cacheTtl: 0 } });
+      if (!r.ok) { if (r.status < 500) return null; continue; }
+      return parseManifest(JSON.parse((await r.text()).slice(0, 20000)));
+    } catch { /* retry */ }
+  }
+  return null;
+}
+
+/**
+ * Applies fetched manifests to a stored app entry: [results] = [{ i: asset index, m: parsed manifest }].
+ * Returns { app, changed }. A new version with no checksum drops the old checksum (it would not match the new file).
+ */
+export function applyManifests(app, results) {
+  const next = JSON.parse(JSON.stringify(app));
+  let changed = false;
+  const first = results.find(r => (next.assets[r.i] || {}).platform === 'android') || results[0];
+  if (!first) return { app: next, changed };
+  const set = (obj, key, val) => { if (val === undefined) { if (obj[key] !== undefined) { delete obj[key]; changed = true; } } else if (obj[key] !== val) { obj[key] = val; changed = true; } };
+  set(next, 'version', first.m.version);
+  if (first.m.versionCode !== undefined) set(next, 'versionCode', first.m.versionCode);
+  if (first.m.notes !== undefined) set(next, 'notes', first.m.notes);
+  for (const { i, m } of results) {
+    const a = next.assets[i]; if (!a) continue;
+    if (m.size !== undefined) set(a, 'size', m.size);
+    set(a, 'sha256', m.sha256);
+  }
+  if (changed) next.releasedAt = Date.now();
+  return { app: next, changed };
+}

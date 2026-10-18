@@ -145,19 +145,19 @@ export function matches(app, q) {
   return [app.name, app.summary, app.author, app.id, ...(app.categories || [])].some(s => String(s || '').toLowerCase().includes(t));
 }
 
-/** Overrides version / size / checksum from an asset's `manifest` (a small JSON next to a "latest" link). Best effort: a source that blocks the request is left as it is. */
+/** Overrides version / size / checksum from an asset's `manifest` (a small JSON next to a "latest" link, read through the worker because GitHub sends no CORS headers). Best effort. */
 export async function resolveManifests(apps) {
   await Promise.all(apps.flatMap(app => app.assets.filter(a => a.manifest).map(async a => {
     try {
-      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 4000);
-      const r = await fetch(a.manifest, { signal: ctl.signal, cache: 'no-store' }); clearTimeout(t);
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 8000);
+      const r = await fetch(WORKER + '/api/epicenter/manifest?url=' + encodeURIComponent(a.manifest), { signal: ctl.signal }); clearTimeout(t);
       if (!r.ok) return;
       const m = await r.json();
-      if (m.versionName) app.version = String(m.versionName);
+      if (m.version) app.version = String(m.version);
       if (m.versionCode) app.versionCode = Number(m.versionCode);
       if (m.size) a.size = Number(m.size);
-      if (/^[0-9a-f]{64}$/i.test(m.sha256 || '')) a.sha256 = m.sha256.toLowerCase();
-      if (m.notes) app.notes = String(m.notes).slice(0, 800);
+      if (m.sha256) a.sha256 = m.sha256;
+      if (m.notes) app.notes = m.notes;
     } catch { /* leave the catalog's own numbers */ }
   })));
 }
