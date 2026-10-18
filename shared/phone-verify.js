@@ -36,10 +36,15 @@ export function verifyPhone(reason) {
     if (!getCurrentUser() || !auth.currentUser) { resolve(false); return; }
     if (hasVerifiedPhone()) { resolve(true); return; }
     const scrim = document.createElement('div');
+    scrim.className = 'pv-scrim';
     scrim.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(var(--md-sys-color-background-rgb,0,0,0),.55);font-family:var(--oe-font-override,\'Google Sans\',\'Roboto Flex\',sans-serif)';
     scrim.innerHTML = `
       <style>
         .pv-box{background:var(--md-sys-color-surface);color:var(--md-sys-color-on-surface);border-radius:28px;padding:24px;width:min(420px,100%);backdrop-filter:var(--oe-glass-blur,none);-webkit-backdrop-filter:var(--oe-glass-blur,none);box-shadow:0 8px 32px rgba(0,0,0,.3)}
+        .pv-scrim{animation:pvfade .2s ease}.pv-box{animation:pvup .26s cubic-bezier(.2,.8,.2,1)}
+        .pv-scrim.out{animation:pvout .2s ease forwards;pointer-events:none}.pv-scrim.out .pv-box{animation:pvdown .22s cubic-bezier(.4,0,1,1) forwards}
+        @keyframes pvfade{from{opacity:0}}@keyframes pvup{from{transform:translateY(24px) scale(.97);opacity:0}}@keyframes pvout{to{opacity:0}}@keyframes pvdown{to{transform:translateY(24px) scale(.97);opacity:0}}
+        @media (prefers-reduced-motion:reduce){.pv-scrim,.pv-box,.pv-scrim.out,.pv-scrim.out .pv-box{animation:none!important}}
         .pv-box h2{font-size:22px;font-weight:500;margin:0 0 6px}
         .pv-box p{font-size:14px;line-height:1.5;color:var(--md-sys-color-on-surface-variant);margin:0 0 14px}
         .pv-box input{width:100%;box-sizing:border-box;background:var(--md-sys-color-surface-variant);color:var(--md-sys-color-on-surface);border:1px solid var(--md-sys-color-outline);border-radius:14px;padding:12px 14px;font:inherit;font-size:16px;letter-spacing:.5px}
@@ -63,7 +68,11 @@ export function verifyPhone(reason) {
     document.body.appendChild(scrim);
     const $ = id => scrim.querySelector('#' + id);
     const msg = (t, ok) => { $('pvMsg').textContent = t || ''; $('pvMsg').className = 'pv-msg' + (ok ? ' ok' : ''); };
-    const done = v => { scrim.remove(); resolve(v); };
+    const done = v => {
+      resolve(v);
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) { scrim.remove(); return; }
+      scrim.classList.add('out'); setTimeout(() => scrim.remove(), 230);
+    };
     let confirmation = null;
     $('pvCancel').addEventListener('click', () => done(false));
     scrim.addEventListener('mousedown', e => { if (e.target === scrim) done(false); });

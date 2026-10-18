@@ -85,10 +85,19 @@
   .sortbox select { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); border: none; border-radius: 10px; padding: 6px 10px; font: inherit; font-size: 13px; }
   .badge.fresh { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr)); gap: 14px; }
-  .app-card { display: flex; gap: 16px; align-items: flex-start; background: var(--md-sys-color-surface); border-radius: 24px; padding: 18px; cursor: pointer; transition: background-color .2s, transform .2s; animation: rise .35s both; }
+  .app-card { display: flex; gap: 16px; align-items: flex-start; background: var(--md-sys-color-surface); border-radius: 24px; padding: 18px; cursor: pointer; transition: background-color .2s, transform .2s;  }
   .app-card:hover { background: var(--md-sys-color-hover-surface, var(--md-sys-color-surface-variant)); }
+  .app-card.new, .rowin { animation: rise .35s both; }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-  @media (prefers-reduced-motion: reduce) { .app-card { animation: none; } }
+  .rowout { animation: rowout .22s ease forwards; overflow: hidden; }
+  @keyframes rowout { to { opacity: 0; transform: translateX(16px); max-height: 0; padding-top: 0; padding-bottom: 0; margin: 0; border-width: 0; } }
+  .scrim.closing { animation: fadeout .2s ease forwards; pointer-events: none; }
+  .scrim.closing .sheet { animation: down .22s cubic-bezier(.4, 0, 1, 1) forwards; }
+  @keyframes fadeout { to { opacity: 0; } }
+  @keyframes down { to { transform: translateY(32px) scale(.97); opacity: 0; } }
+  .sheet h3, .sheet .asset, .sheet .mine, .sheet .srcrow { animation: rise .3s both; }
+  .sheet .asset:nth-child(2) { animation-delay: .04s; } .sheet .asset:nth-child(3) { animation-delay: .08s; } .sheet .asset:nth-child(n+4) { animation-delay: .12s; }
+  @media (prefers-reduced-motion: reduce) { .app-card.new, .rowin, .rowout, .scrim, .sheet, .scrim.closing, .scrim.closing .sheet, .sheet h3, .sheet .asset, .sheet .mine, .sheet .srcrow { animation: none !important; } }
   .app-icon { width: 64px; height: 64px; border-radius: 16px; flex-shrink: 0; background: var(--md-sys-color-surface-variant); display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 500; color: var(--md-sys-color-primary); overflow: hidden; }
   .app-icon img { width: 100%; height: 100%; object-fit: cover; }
   .app-main { flex: 1; min-width: 0; }
@@ -225,6 +234,7 @@ function ago(ms) {
 }
 const fresh = a => when(a) && Date.now() - when(a) < 14 * 86400000;
 let sortBy = 'updated';
+const shownIds = new Set();
 let apps = [];
 let platFilter = ['android', 'windows', 'macos', 'linux', 'ios'].includes(me) ? 'mine' : 'all';
 let catFilter = '';
@@ -275,8 +285,9 @@ function render() {
   list.sort((a, b) => sortBy === 'name' ? a.name.localeCompare(b.name) : (when(b) - when(a)) || a.name.localeCompare(b.name));
   $('count').innerHTML = `<strong>${list.length}</strong> app${list.length === 1 ? '' : 's'}`;
   $('empty').style.display = list.length ? 'none' : 'block';
-  $('grid').innerHTML = list.map(a => `
-    <article class="app-card" data-id="${esc(a.id)}">
+  const fresh2 = new Set(list.map(a => a.id).filter(id => !shownIds.has(id)));
+  $('grid').innerHTML = list.map((a, i) => `
+    <article class="app-card${fresh2.has(a.id) ? ' new' : ''}" data-id="${esc(a.id)}" style="${fresh2.has(a.id) ? 'animation-delay:' + Math.min(i, 8) * 40 + 'ms' : ''}">
       <div class="app-icon">${iconHtml(a)}</div>
       <div class="app-main">
         <h3>${esc(a.name)}</h3>
@@ -286,6 +297,7 @@ function render() {
       </div>
       <button class="btn tonal get">get</button>
     </article>`).join('');
+  list.forEach(a => shownIds.add(a.id));
   // Android visitors get a pointer to the Epicenter app when there is one
   const epi = apps.find(a => a.id === 'dev.oeper.epicenter'), apk = epi && assetsFor(epi, 'android')[0];
   $('bannerSlot').innerHTML = me === 'android' && apk ? `<div class="banner"><span class="material-symbols-rounded">android</span><div><b>get the Epicenter app</b><br>install and update apps with one tap, with checksums checked for you.</div><a class="btn filled" href="${esc(apk.url)}" download rel="noopener">download</a></div>` : '';
@@ -300,7 +312,13 @@ $('grid').addEventListener('click', e => { const c = e.target.closest('[data-id]
 function modal(html, onMount) {
   const scrim = document.createElement('div'); scrim.className = 'scrim';
   scrim.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
-  const close = () => { scrim.remove(); document.removeEventListener('keydown', onKey); };
+  let closed = false;
+  const close = () => {
+    if (closed) return; closed = true;
+    document.removeEventListener('keydown', onKey);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { scrim.remove(); return; }
+    scrim.classList.add('closing'); setTimeout(() => scrim.remove(), 230);
+  };
   const onKey = e => { if (e.key === 'Escape') close(); };
   document.addEventListener('keydown', onKey);
   scrim.addEventListener('mousedown', e => { if (e.target === scrim) close(); });
@@ -467,16 +485,21 @@ function showSubmit(existing) {
 
 // my apps (+ the review queue for owners)
 async function showMine() {
+  // the dialog opens straight away; the three lists load side by side instead of one after the other
+  const head = `<div class="top"><div><h2>my apps</h2><p>what you submitted to Epicenter.</p></div><button class="btn text close" data-close aria-label="close"><span class="material-symbols-rounded">close</span></button></div>`;
+  const m = modal(head + `<p class="note" id="mineLoading">loading…</p>`);
   let mine, keys = [], pending = [];
+  const isOwn = isOwnerEmail((getCurrentUser() || {}).email);
   try {
-    mine = (await authed('/api/epicenter/mine', 'GET')).apps;
-    keys = (await authed('/api/epicenter/keys', 'GET')).keys;
-    if (isOwnerEmail((getCurrentUser() || {}).email)) pending = (await authed('/api/epicenter/pending', 'GET')).pending;
-  } catch (err) { return toast(err.message); }
+    [mine, keys, pending] = await Promise.all([
+      authed('/api/epicenter/mine', 'GET').then(r => r.apps),
+      authed('/api/epicenter/keys', 'GET').then(r => r.keys),
+      isOwn ? authed('/api/epicenter/pending', 'GET').then(r => r.pending) : [],
+    ]);
+  } catch (err) { m.close(); return toast(err.message); }
   const row = x => `<div class="mine"><div class="grow">${esc(x.app.name)} <span class="badge ${esc(x.status)}">${esc(x.status)}${x.status === 'pending' && x.live ? ' update' : ''}</span><small>${esc(x.id)}${x.note ? ' · ' + esc(x.note) : ''}</small></div><button class="btn text" data-edit="${esc(x.id)}">edit</button><button class="btn danger" data-del="${esc(x.id)}">remove</button></div>`;
   const prow = p => `<div class="mine"><div class="grow">${esc(p.app.name)} <span class="badge pending">${p.isUpdate ? 'update' : 'new'}</span><small>${esc(p.id)} · ${esc(p.owner)}<br>${esc(p.app.summary)}<br>${p.app.assets.map(a => `${esc(a.platform)} ${esc(a.format)}: <a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">${esc(a.url)}</a>${a.sha256 ? '' : ' (no checksum)'}`).join('<br>')}</small></div><button class="btn filled" data-ok="${esc(p.id)}">approve</button><button class="btn danger" data-no="${esc(p.id)}">reject</button></div>`;
-  const m = modal(`
-    <div class="top"><div><h2>my apps</h2><p>what you submitted to Epicenter.</p></div><button class="btn text close" data-close aria-label="close"><span class="material-symbols-rounded">close</span></button></div>
+  m.root.innerHTML = head + `
     ${mine.length ? mine.map(row).join('') : '<p>You have not submitted anything yet.</p>'}
     ${pending.length || isOwnerEmail((getCurrentUser() || {}).email) ? `<h3>review queue (${pending.length})</h3>${pending.length ? pending.map(prow).join('') : '<p>Nothing waiting.</p>'}` : ''}
     <h3>publish keys</h3>
@@ -484,8 +507,9 @@ async function showMine() {
     ${keys.map(k => `<div class="mine"><div class="grow">${esc(k.label || 'key')}<small>${esc(k.id)}… · made ${esc(ago(k.created))} · ${k.used ? 'used ' + esc(ago(k.used)) : 'never used'}</small></div><button class="btn danger" data-revoke="${esc(k.id)}">revoke</button></div>`).join('')}
     <button class="btn text" data-newkey><span class="material-symbols-rounded">key</span>make a publish key</button>
     <p class="note">New releases are picked up on their own every 6 hours when a download has a <code>manifest</code> (an update.json next to it). Check now to skip the wait.</p>
-    <div class="actions"><button class="btn text" data-refresh><span class="material-symbols-rounded">refresh</span>check for new versions</button><button class="btn tonal" data-close>close</button></div>`);
+    <div class="actions"><button class="btn text" data-refresh><span class="material-symbols-rounded">refresh</span>check for new versions</button><button class="btn tonal" data-close>close</button></div>`;
   m.root.addEventListener('click', async ev => {
+    if (ev.target.closest('[data-close]')) return m.close();
     const b = ev.target.closest('[data-edit],[data-del],[data-ok],[data-no],[data-refresh],[data-newkey],[data-revoke]'); if (!b) return;
     try {
       if (b.hasAttribute('data-newkey')) {
