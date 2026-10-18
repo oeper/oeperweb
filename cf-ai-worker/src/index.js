@@ -999,6 +999,27 @@ async function refreshEpicenter(env, email) {
   return { checked, changed };
 }
 
+const b64url = bytes => btoa(String.fromCharCode(...bytes)).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+async function sha256Hex(text) { return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map(b => b.toString(16).padStart(2, '0')).join(''); }
+
+// Publishing from a script: PUT /api/epicenter/publish with `Authorization: Bearer epk_…` (a key made in "my apps") and { app: {...} }.
+// For an app the key's owner already has, only the fields sent change (assets replace the whole list), so { app: { id, version, versionCode, notes } }
+// is a complete release. A new app needs the full entry. Goes through the same checks (and, for non-owners, the same approval) as the form.
+async function epicenterPublish(request, env, L) {
+  const m = /^Bearer (epk_[A-Za-z0-9_-]{20,64})$/.exec(request.headers.get('Authorization') || '');
+  const email = m ? await L.epicKeyOwner(await sha256Hex(m[1])) : null;
+  if (!email) return json({ error: 'Missing or unknown publish key.' }, 401, request);
+  const body = await readBody(request);
+  const given = body && body.app && typeof body.app === 'object' ? body.app : null;
+  if (!given) return json({ error: 'Send { "app": { ... } }.' }, 400, request);
+  const owner = OWNER_EMAILS.includes(email);
+  const current = await L.epicGetMine(email, String(given.id || '').toLowerCase());
+  const r = cleanApp(current ? { ...current, ...given, id: current.id } : given, owner);
+  if (r.error) return json({ error: r.error }, 400, request);
+  const out = await L.epicSubmit(email, r.app, owner, owner);
+  return json(out.ok ? { ...out, id: r.app.id } : { error: out.error }, out.ok ? 200 : 400, request);
+}
+
 // Epicenter, the app store. Public: the approved catalog. Signed in: submit an app, see your own. Owners: review the queue.
 async function handleEpicenter(request, env, route) {
   const L = ledgerOf(env), get = request.method === 'GET', post = request.method === 'POST';
@@ -1011,6 +1032,7 @@ async function handleEpicenter(request, env, route) {
     const m = target ? await fetchManifest(target) : null;
     return new Response(JSON.stringify(m || {}), { status: m ? 200 : 404, headers: { 'Content-Type': 'application/json', 'Cache-Control': m ? 'public, max-age=300' : 'no-store',...corsHeaders(request) } });
   }
+  if (route === 'publish' && (request.method === 'PUT' || post)) return epicenterPublish(request, env, L);
   const user = await userFromRequest(request, env);
   if (!user) return json({ error: 'Sign in first.' }, 401, request);
   const owner = isOwner(user);
@@ -1025,6 +1047,17 @@ async function handleEpicenter(request, env, route) {
   if (route === 'refresh' && post) {
     // a publisher (or an owner, for everything) asks for the release check now instead of waiting for the next scheduled one
     return json({ ok: true, ...(await refreshEpicenter(env, owner ? null : user.email)) }, 200, request);
+  }
+  if (route === 'keys' && get) return json({ keys: await L.epicKeyList(user.email) }, 200, request);
+  if (route === 'keys' && post) {
+    const body = await readBody(request);
+    const key = 'epk_' + b64url(crypto.getRandomValues(new Uint8Array(30)));
+    if (!await L.epicKeyAdd(user.email, await sha256Hex(key), body.label)) return json({ error: 'You already have 5 publish keys. Revoke one first.' }, 400, request);
+    return json({ ok: true, key }, 200, request);
+  }
+  if (route === 'keys/revoke' && post) {
+    const body = await readBody(request);
+    return json(await L.epicKeyRevoke(user.email, body.id) ? { ok: true } : { error: 'No such key.' }, 200, request);
   }
   if (route === 'remove' && post) {
     const body = await readBody(request);
@@ -1106,6 +1139,7 @@ async function handleAdmin(request, env, url) {
     if (path.startsWith('feedback/') && m === 'DELETE') { await L.adminFeedbackDelete(decodeURIComponent(path.slice(9))); return json({ ok: true }, 200, request); }
     if (path === 'user' && m === 'GET') return json(await L.adminUser(url.searchParams.get('email')), 200, request);
     if (path === 'user/grant' && m === 'POST') { const b = await readBody(request); const r = await L.adminGrantUser(b.email, b.grant, user.email); await syncPlusMarker(env, r.email); return json(r, 200, request); }
+    if (path === 'user/clear-bonus' && m === 'POST') { const b = await readBody(request); return json(await L.adminClearBonus(b.email), 200, request); }
     if (path === 'user/revoke' && m === 'POST') { const b = await readBody(request); const r = await L.adminRevokePlus(b.email); await syncPlusMarker(env, r.email); return json(r, 200, request); }
   } catch (err) {
     return asError(err, request);

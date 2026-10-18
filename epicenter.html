@@ -467,9 +467,10 @@ function showSubmit(existing) {
 
 // my apps (+ the review queue for owners)
 async function showMine() {
-  let mine, pending = [];
+  let mine, keys = [], pending = [];
   try {
     mine = (await authed('/api/epicenter/mine', 'GET')).apps;
+    keys = (await authed('/api/epicenter/keys', 'GET')).keys;
     if (isOwnerEmail((getCurrentUser() || {}).email)) pending = (await authed('/api/epicenter/pending', 'GET')).pending;
   } catch (err) { return toast(err.message); }
   const row = x => `<div class="mine"><div class="grow">${esc(x.app.name)} <span class="badge ${esc(x.status)}">${esc(x.status)}${x.status === 'pending' && x.live ? ' update' : ''}</span><small>${esc(x.id)}${x.note ? ' · ' + esc(x.note) : ''}</small></div><button class="btn text" data-edit="${esc(x.id)}">edit</button><button class="btn danger" data-del="${esc(x.id)}">remove</button></div>`;
@@ -478,11 +479,20 @@ async function showMine() {
     <div class="top"><div><h2>my apps</h2><p>what you submitted to Epicenter.</p></div><button class="btn text close" data-close aria-label="close"><span class="material-symbols-rounded">close</span></button></div>
     ${mine.length ? mine.map(row).join('') : '<p>You have not submitted anything yet.</p>'}
     ${pending.length || isOwnerEmail((getCurrentUser() || {}).email) ? `<h3>review queue (${pending.length})</h3>${pending.length ? pending.map(prow).join('') : '<p>Nothing waiting.</p>'}` : ''}
+    <h3>publish keys</h3>
+    <p class="note">A key lets a script or another tool add and update <b>your</b> apps without signing in (<code>PUT /api/epicenter/publish</code>, see epicenter/README.md). Treat it like a password.</p>
+    ${keys.map(k => `<div class="mine"><div class="grow">${esc(k.label || 'key')}<small>${esc(k.id)}… · made ${esc(ago(k.created))} · ${k.used ? 'used ' + esc(ago(k.used)) : 'never used'}</small></div><button class="btn danger" data-revoke="${esc(k.id)}">revoke</button></div>`).join('')}
+    <button class="btn text" data-newkey><span class="material-symbols-rounded">key</span>make a publish key</button>
     <p class="note">New releases are picked up on their own every 6 hours when a download has a <code>manifest</code> (an update.json next to it). Check now to skip the wait.</p>
     <div class="actions"><button class="btn text" data-refresh><span class="material-symbols-rounded">refresh</span>check for new versions</button><button class="btn tonal" data-close>close</button></div>`);
   m.root.addEventListener('click', async ev => {
-    const b = ev.target.closest('[data-edit],[data-del],[data-ok],[data-no],[data-refresh]'); if (!b) return;
+    const b = ev.target.closest('[data-edit],[data-del],[data-ok],[data-no],[data-refresh],[data-newkey],[data-revoke]'); if (!b) return;
     try {
+      if (b.hasAttribute('data-newkey')) {
+        const label = await oePrompt('What is this key for? (a name to recognise it by)', { maxLength: 40, placeholder: 'my other session' }); if (label === null) return;
+        const r = await authed('/api/epicenter/keys', 'POST', { label }); m.close(); showNewKey(r.key); return;
+      }
+      if (b.dataset.revoke) { if (await oeConfirm('Revoke this key? Anything using it stops working.', { danger: true, okLabel: 'revoke' })) { await authed('/api/epicenter/keys/revoke', 'POST', { id: b.dataset.revoke }); m.close(); toast('Revoked.'); showMine(); } return; }
       if (b.hasAttribute('data-refresh')) { const r = await authed('/api/epicenter/refresh', 'POST', {}); m.close(); toast(r.changed ? r.changed + ' updated.' : r.checked ? 'Everything is up to date.' : 'No download has a manifest to check.'); if (r.changed) loadAll(); }
       else if (b.dataset.edit) { const x = mine.find(y => y.id === b.dataset.edit); m.close(); showSubmit(x.app); }
       else if (b.dataset.del) { if (await oeConfirm('Remove this app from Epicenter?', { danger: true, okLabel: 'remove' })) { await authed('/api/epicenter/remove', 'POST', { id: b.dataset.del }); m.close(); toast('Removed.'); loadAll(); } }
@@ -490,6 +500,19 @@ async function showMine() {
       else if (b.dataset.no) { const note = await oePrompt('Reason (shown to the submitter):', { maxLength: 300 }); if (note === null) return; await authed('/api/epicenter/review', 'POST', { id: b.dataset.no, action: 'reject', note }); m.close(); toast('Rejected.'); }
     } catch (err) { toast(err.message); }
   });
+}
+
+// a new publish key is shown once: the server keeps only a hash
+function showNewKey(key) {
+  const m = modal(`
+    <div class="top"><div><h2>your publish key</h2><p>copy it now. it is not shown again.</p></div></div>
+    <label class="field"><span>key</span><input id="nk" readonly class="mono" value="${esc(key)}"></label>
+    <h3>use it</h3>
+    <p class="note">Add or update an app (only the fields you send change for an app you already have):</p>
+    <p class="note"><code>curl -X PUT https://oeper-ai.oeper.workers.dev/api/epicenter/publish -H "Authorization: Bearer YOUR_KEY" -H "Content-Type: application/json" -d '{"app":{"id":"com.example.app","version":"1.2","versionCode":12,"notes":"what is new"}}'</code></p>
+    <div class="actions"><button class="btn tonal" id="nkc"><span class="material-symbols-rounded">content_copy</span>copy</button><button class="btn filled" data-close>done</button></div>`);
+  m.root.querySelector('#nk').select();
+  m.root.querySelector('#nkc').addEventListener('click', async () => { try { await navigator.clipboard.writeText(key); toast('Key copied'); } catch { toast('Could not copy: select it and copy by hand'); } });
 }
 
 $('sourcesBtn').addEventListener('click', showSources);

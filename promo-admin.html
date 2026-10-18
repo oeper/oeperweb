@@ -256,7 +256,7 @@
     <div class="grid person" id="grantRow" style="margin-top:14px">
       <div class="field"><label>oeper+ days (−1 = for life)</label><input type="number" id="gDays" min="-1" value="30"></div>
       <div class="field"><label>Bonus tokens</label><input type="number" id="gBonus" min="0" value="0" step="1000"></div>
-      <div class="field"><label>&nbsp;</label><div class="actions"><button class="btn primary" id="gGo"><span class="material-symbols-rounded">card_giftcard</span>Give</button><button class="btn danger" id="gRevoke">Remove Plus</button></div></div>
+      <div class="field"><label>&nbsp;</label><div class="actions"><button class="btn primary" id="gGo"><span class="material-symbols-rounded">card_giftcard</span>Give</button><button class="btn danger" id="gRevoke">Remove Plus</button><button class="btn danger" id="gClearBonus">Reset bonus tokens</button></div></div>
     </div>
   </div>
 </div>
@@ -494,6 +494,11 @@ $('gGo').addEventListener('click', e => run(e.currentTarget, async () => {
 $('gRevoke').addEventListener('click', async e => {
   if (!(await oeConfirm('Remove oeper+ from ' + person + '?'))) return;
   run(e.currentTarget, async () => { await call('POST', '/api/admin/user/revoke', { email: person }); await showPerson(person); toast('oeper+ removed'); });
+});
+
+$('gClearBonus').addEventListener('click', async e => {
+  if (!(await oeConfirm('Reset the bonus tokens (and any usage boost) of ' + person + ' to zero? Their plan and daily allowance stay as they are.'))) return;
+  run(e.currentTarget, async () => { await call('POST', '/api/admin/user/clear-bonus', { email: person }); await showPerson(person); toast('Bonus tokens reset'); });
 });
 
 function gate() {

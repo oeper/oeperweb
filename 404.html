@@ -66,10 +66,9 @@
     background-image: var(--oe-bg-image, none);
     color: var(--md-sys-color-on-surface);
     -webkit-font-smoothing: antialiased;
-    display: flex; align-items: center; justify-content: center;
   }
 
-  .wrap { text-align: center; padding: 24px; max-width: 420px; }
+  .wrap { text-align: center; padding: 96px 24px 24px; max-width: 420px; margin: 0 auto; }
   .icon { font-size: 48px; color: var(--md-sys-color-on-surface-variant); margin-bottom: 16px; }
   h1 { font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(1.8rem, 5vw, 2.4rem); font-weight: 400; margin-bottom: 10px; }
   p { color: var(--md-sys-color-on-surface-variant); font-size: 15px; line-height: 1.5; margin-bottom: 24px; }
@@ -91,6 +90,8 @@
 </div>
 
 <script type="module">
+import { mountTopNav } from '/shared/topnav.js?v=46';
+mountTopNav();
 import { revealStatic } from '/shared/motion.js?v=3';
 revealStatic(document.querySelector('.wrap'));
 </script>

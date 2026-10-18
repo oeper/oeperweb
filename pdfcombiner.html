@@ -5,33 +5,34 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PDF Combiner — merge PDFs into one</title>
 <meta name="description" content="Combine multiple PDFs into a single file, entirely in your browser.">
+<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300..800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300..800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./shared/fonts.css?v=1">
 <style>
   :root {
-    --bg: #101014;
-    --surface: #17171c;
-    --surface-container: #1d1e24;
-    --surface-container-high: #26272f;
-    --surface-container-highest: #2f303a;
-    --on-surface: #e5e2e9;
-    --on-surface-variant: #a8aab3;
-    --outline: #3c3e46;
-    --outline-variant: #28292f;
-    --primary: #a9c7ff;
-    --on-primary: #00315e;
-    --primary-container: #234c7d;
-    --on-primary-container: #d6e3ff;
-    --tonal-a: #234c7d;
-    --tonal-b: #2c3d55;
-    --success: #9ed8a4;
-    --success-container: #1f3a26;
-    --warn: #f3d38b;
-    --warn-container: #4a3a10;
-    --error: #ffb4ab;
-    --error-container: #4c0f0a;
+    --bg: var(--md-sys-color-background, #101014);
+    --surface: var(--md-sys-color-surface, #17171c);
+    --surface-container: var(--md-sys-color-surface-variant, #1d1e24);
+    --surface-container-high: var(--md-sys-color-surface-variant, #26272f);
+    --surface-container-highest: var(--md-sys-color-hover-surface, #2f303a);
+    --on-surface: var(--md-sys-color-on-surface, #e5e2e9);
+    --on-surface-variant: var(--md-sys-color-on-surface-variant, #a8aab3);
+    --outline: var(--md-sys-color-outline, #3c3e46);
+    --outline-variant: var(--md-sys-color-outline-variant, #28292f);
+    --primary: var(--md-sys-color-primary, #a9c7ff);
+    --on-primary: var(--md-sys-color-on-primary, #00315e);
+    --primary-container: var(--md-sys-color-secondary-container, #234c7d);
+    --on-primary-container: var(--md-sys-color-on-secondary-container, #d6e3ff);
+    --tonal-a: var(--md-sys-color-secondary-container, #234c7d);
+    --tonal-b: var(--md-sys-color-surface-variant, #2c3d55);
+    --success: var(--md-sys-color-success, #9ed8a4);
+    --success-container: color-mix(in srgb, var(--md-sys-color-success, #9ed8a4) 22%, transparent);
+    --warn: var(--md-sys-color-error, #f3d38b);
+    --warn-container: color-mix(in srgb, var(--md-sys-color-error, #f3d38b) 18%, transparent);
+    --error: var(--md-sys-color-error, #ffb4ab);
+    --error-container: color-mix(in srgb, var(--md-sys-color-error, #ffb4ab) 20%, transparent);
     --radius-sm: 10px;
     --radius-md: 18px;
     --radius-lg: 28px;
@@ -52,12 +53,10 @@
 
   body {
     min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    padding: 40px 20px 80px;
+    background-image: var(--oe-bg-image, none);
   }
 
-  .app { width: 100%; max-width: 640px; }
+  .app { width: 100%; max-width: 640px; margin: 0 auto; padding: 40px 20px 80px; }
 
   .back-link {
     display: inline-flex; align-items: center; gap: 6px;
@@ -372,10 +371,6 @@
 
 <div class="app">
 
-  <a class="back-link" href="/">
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    oeper.dev
-  </a>
 
   <header class="app-header">
     <div class="logo-mark">
@@ -815,6 +810,8 @@
 })();
 </script>
 <script type="module">
+import { mountTopNav } from './shared/topnav.js?v=46';
+mountTopNav();
 import { revealStatic } from '/shared/motion.js?v=3';
 revealStatic(document.querySelector('main'));
 </script>

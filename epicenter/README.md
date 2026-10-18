@@ -57,3 +57,19 @@ marked as unreviewed.
 - **Rolling links + `manifest`** is how a publisher releases without touching the catalog: keep the download link stable (for GitHub: `https://github.com/owner/repo/releases/latest/download/App.apk`) and put an `update.json` (`{versionCode, versionName, size, sha256, notes}`) next to it. Epicenter reads the manifest every time the page/app opens; for community apps the worker also follows it by itself every 6 hours (version, notes, size and checksum only, never a link) and the publisher can press "check for new versions" in "my apps". A new version without a checksum in the manifest drops the old checksum so a good download is never refused.
 - Changing a link, name or anything else in a community entry means resubmitting it (the old entry stays live until an owner approves the change).
 - `GET /api/epicenter/manifest?url=` (worker) returns a manifest's cleaned fields; the website uses it because GitHub sends no CORS headers.
+
+## Publishing from a script (publish keys)
+
+Make a key in oeper.dev/epicenter > my apps > publish keys (shown once; only a hash is stored; up to 5; revoke any time). Then:
+
+```
+PUT https://oeper-ai.oeper.workers.dev/api/epicenter/publish
+Authorization: Bearer epk_...
+Content-Type: application/json
+
+{ "app": { "id": "com.example.app", "version": "1.2", "versionCode": 12, "notes": "what is new" } }
+```
+
+- A key only reaches apps its owner has. For an app you already have, only the fields you send change (`assets` replaces the whole list), so the line above is a complete release. A new app needs the full entry (id, name, summary, assets...).
+- The same checks as the form apply. Owners go live at once; everyone else waits for approval like a submission (`status: "pending"`).
+- Errors come back as `{ "error": "..." }` with 400 (bad entry) or 401 (missing/unknown key).

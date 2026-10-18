@@ -98,6 +98,8 @@ export class Ledger extends DurableObject {
     ctx.storage.sql.exec('CREATE INDEX IF NOT EXISTS shares_owner ON shares(owner)');
     // Epicenter (the app store): one row per app id. data = the approved entry (what everyone sees), pending = a submitted change waiting for an owner
     ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS epicenter (id TEXT PRIMARY KEY, owner TEXT NOT NULL, data TEXT, pending TEXT, status TEXT NOT NULL, note TEXT, created INTEGER, updated INTEGER)');
+    // Epicenter publish keys: only a hash is kept; a key lets a script add/update the apps its owner already owns (see handleEpicenter)
+    ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS epickeys (hash TEXT PRIMARY KEY, owner TEXT NOT NULL, label TEXT, created INTEGER, used INTEGER)');
     // each person's sealed Google connection (see google.js); the worker encrypts it, this only stores the text
     ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS google (email TEXT PRIMARY KEY, data TEXT NOT NULL)');
   }
@@ -159,6 +161,32 @@ export class Ledger extends DurableObject {
     const { app, changed } = apply(JSON.parse(row.data), results);
     if (changed) sql.exec('UPDATE epicenter SET data = ?, updated = ? WHERE id = ?', JSON.stringify(app), Date.now(), id);
     return changed;
+  }
+  epicKeyAdd(email, hash, label) {
+    const sql = this.ctx.storage.sql;
+    if (sql.exec('SELECT count(*) AS n FROM epickeys WHERE owner = ?', email).toArray()[0].n >= 5) return false;
+    sql.exec('INSERT INTO epickeys (hash, owner, label, created, used) VALUES (?, ?, ?, ?, NULL)', hash, email, String(label || '').slice(0, 40), Date.now());
+    return true;
+  }
+  epicKeyList(email) {
+    return this.ctx.storage.sql.exec('SELECT hash, label, created, used FROM epickeys WHERE owner = ? ORDER BY created DESC', email).toArray().map(r => ({ id: r.hash.slice(0, 10), label: r.label, created: r.created, used: r.used }));
+  }
+  epicKeyRevoke(email, id) {
+    const sql = this.ctx.storage.sql, row = sql.exec('SELECT hash FROM epickeys WHERE owner = ? AND substr(hash, 1, 10) = ?', email, String(id || '').slice(0, 10)).toArray()[0];
+    if (!row) return false;
+    sql.exec('DELETE FROM epickeys WHERE hash = ?', row.hash); return true;
+  }
+  /** The email a key belongs to (and remembers it was just used), or null. */
+  epicKeyOwner(hash) {
+    const sql = this.ctx.storage.sql, row = sql.exec('SELECT owner FROM epickeys WHERE hash = ?', hash).toArray()[0];
+    if (!row) return null;
+    sql.exec('UPDATE epickeys SET used = ? WHERE hash = ?', Date.now(), hash);
+    return row.owner;
+  }
+  /** One of [email]'s apps as it currently stands (a waiting change counts), or null. */
+  epicGetMine(email, id) {
+    const row = this.ctx.storage.sql.exec('SELECT data, pending FROM epicenter WHERE id = ? AND owner = ?', id, email).toArray()[0];
+    try { return row ? JSON.parse(row.pending || row.data) : null; } catch { return null; }
   }
   googleGet(email) { const r = this.ctx.storage.sql.exec('SELECT data FROM google WHERE email = ?', email).toArray()[0]; return r ? r.data : null; }
   googleSet(email, data) { this.ctx.storage.sql.exec('INSERT INTO google (email, data) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET data = excluded.data', email, data); return true; }
@@ -512,6 +540,15 @@ export class Ledger extends DurableObject {
     const email = String(rawEmail || '').trim().toLowerCase();
     const user = await this.#user(email);
     user.plusUntil = 0;
+    await this.ctx.storage.put('user:' + email, user);
+    return { email, ...userView(user) };
+  }
+  /** Sets a person's bonus tokens (and any usage boost) back to nothing; plan and daily allowance are untouched. */
+  async adminClearBonus(rawEmail) {
+    const email = String(rawEmail || '').trim().toLowerCase();
+    const user = await this.#user(email);
+    user.bonus = 0; user.boostPct = 0; user.boostUntil = 0;
+    user.history = [{ code: 'bonus reset', at: Date.now(), grant: { plusDays: 0, bonusTokens: 0, boostPercent: 0, boostDays: 0 }, source: 'admin' }, ...(user.history || [])].slice(0, 30);
     await this.ctx.storage.put('user:' + email, user);
     return { email, ...userView(user) };
   }
