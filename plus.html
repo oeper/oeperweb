@@ -183,7 +183,7 @@ function perks() {
 
 function render() {
   const user = getCurrentUser();
-  const member = !!user && hasPlus(user.email);
+  const member = !!user && (me && me.plan ? me.plan === 'plus' : hasPlus(user.email));
   const until = member ? ((me && me.plusUntil) || 0) : 0;
   const shop = (me && me.shop) || { month: { priceMYR: 20.99 }, year: { priceMYR: 189 } };
   const yearSave = Math.max(0, Math.round((1 - shop.year.priceMYR / (shop.month.priceMYR * 12)) * 100));
