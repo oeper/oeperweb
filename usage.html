@@ -151,8 +151,16 @@ async function refresh() {
   $('facts').innerHTML = `<b>${k(Math.min(me.used, me.limit))} of ${k(me.limit)}</b> tokens used today · resets at ${reset}` +
     (me.bonus ? `<br><b>${k(me.bonus)}</b> bonus tokens saved up (used after the daily allowance)` : '') +
     (me.images && me.images.limit ? `<br><b>${me.images.used} of ${me.images.limit}</b> pictures made today${plus ? '' : ' · <a href="/plus" style="color:var(--md-sys-color-primary)">get more with oeper+</a>'}` : '') +
+    (me.owner ? `<br><span class="muted">You are a site owner: ${me.ownerNormal ? 'your usage is counted like a normal member’s' : 'your usage is unlimited'}.</span> <a href="#" id="ownerMode" style="color:var(--md-sys-color-primary)">${me.ownerNormal ? 'make it unlimited again' : 'count me like a normal member'}</a>` : '') +
     (me.poolPct >= 80 ? '<br>epic AI is busy today: everyone together has used most of its capacity.' : '');
 }
+
+document.addEventListener('click', async e => {
+  const a = e.target.closest('#ownerMode'); if (!a) return;
+  e.preventDefault();
+  try { const me = await call('GET', '/api/usage'); await call('POST', '/api/admin/owner-mode', { normal: !me.ownerNormal }); } catch (err) { alert(err.message); }
+  refresh();
+});
 
 onAccountChange(() => { $('signedOut').hidden = !!who() || DEV_AS; refresh(); });
 if (DEV_AS) { $('signedOut').hidden = true; refresh(); }

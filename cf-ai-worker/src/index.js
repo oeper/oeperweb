@@ -879,9 +879,10 @@ async function handleChat(request, env) {
   if (body.app === 'epicai' && env.LEDGER) {
     try {
       const user = await userFromRequest(request, env);
-      if (user) who = { email: user.email, owner: isOwner(user) };
-      // the site's owners have no limit at all (and are not counted)
-      if (!isOwner(user)) {
+      const unlimited = await ownerUnlimited(env, user);
+      if (user) who = { email: user.email, owner: unlimited };
+      // the site's owners have no limit at all (and are not counted), unless they chose to be counted like a member (usage page)
+      if (!unlimited) {
         const r = await ledgerOf(env).check(user ? user.email : null, ip, body.quiet !== true);
         if (!r.ok) return json({ error: limitMessage(r), limit: r }, 429, request);
         meter = { email: user ? user.email : null, ip };
@@ -923,13 +924,22 @@ function limitMessage(r) {
 async function readBody(request) { try { return await request.json(); } catch { return {}; } }
 const asError = (err, request, status = 400) => json({ error: (err && err.message) || 'Something went wrong' }, status, request);
 
+/** Site owners are unlimited, unless an owner switched on "count me like a normal member" (Ledger ownerNormal). */
+async function ownerUnlimited(env, user) {
+  if (!isOwner(user)) return false;
+  try { return !(await ledgerOf(env).ownerNormal(user.email)); } catch { return true; }
+}
+
 async function handleUsage(request, env) {
   const user = await userFromRequest(request, env);
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const me = await ledgerOf(env).me(user ? user.email : null, ip);
   if (user) await syncPlusMarker(env, user.email, me);
-  // owners are never limited: show them as unlimited Plus
-  if (isOwner(user)) Object.assign(me, { plan: 'plus', limit: 1_000_000_000, used: 0, unlimited: true });
+  // owners are never limited: show them as unlimited Plus (unless they chose to be counted like a member)
+  if (isOwner(user)) {
+    me.owner = true; me.ownerNormal = await ledgerOf(env).ownerNormal(user.email);
+    if (!me.ownerNormal) Object.assign(me, { plan: 'plus', limit: 1_000_000_000, used: 0, unlimited: true });
+  }
   if (user) me.phoneVerified = !!user.phone || isOwner(user);
   return json(me, 200, request);
 }
@@ -951,7 +961,7 @@ async function handleImage(request, env) {
   const user = await userFromRequest(request, env);
   if (!user) return json({ error: 'Sign in to make pictures.', reason: 'signin' }, 401, request);
   const body = await readBody(request);
-  const r = await makeImage(env, ledgerOf(env), { email: user.email, owner: isOwner(user) }, { prompt: body.prompt, shape: body.shape, best: body.quality === 'best' }, text => moderateText(env, text));
+  const r = await makeImage(env, ledgerOf(env), { email: user.email, owner: await ownerUnlimited(env, user) }, { prompt: body.prompt, shape: body.shape, best: body.quality === 'best' }, text => moderateText(env, text));
   if (!r.ok) return json({ error: r.error, reason: r.reason, limit: r.limit, used: r.used }, r.reason === 'prompt' ? 400 : r.reason === 'refused' ? 422 : r.reason === 'failed' ? 502 : 429, request);
   return json({ ok: true, mime: r.mime, data: r.data, w: r.w, h: r.h, best: r.best, used: r.used, limit: r.limit }, 200, request);
 }
@@ -1237,6 +1247,7 @@ async function handleAdmin(request, env, url) {
     if (path.startsWith('feedback/') && m === 'DELETE') { await L.adminFeedbackDelete(decodeURIComponent(path.slice(9))); return json({ ok: true }, 200, request); }
     if (path === 'user' && m === 'GET') return json(await L.adminUser(url.searchParams.get('email')), 200, request);
     if (path === 'user/grant' && m === 'POST') { const b = await readBody(request); const r = await L.adminGrantUser(b.email, b.grant, user.email); await syncPlusMarker(env, r.email); return json(r, 200, request); }
+    if (path === 'owner-mode' && m === 'POST') { const b = await readBody(request); return json({ ok: true, ownerNormal: await L.setOwnerNormal(user.email, !!b.normal) }, 200, request); }
     if (path === 'user/clear-bonus' && m === 'POST') { const b = await readBody(request); return json(await L.adminClearBonus(b.email), 200, request); }
     if (path === 'user/revoke' && m === 'POST') { const b = await readBody(request); const r = await L.adminRevokePlus(b.email); await syncPlusMarker(env, r.email); return json(r, 200, request); }
   } catch (err) {

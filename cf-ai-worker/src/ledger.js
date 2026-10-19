@@ -551,6 +551,9 @@ export class Ledger extends DurableObject {
     await this.ctx.storage.put('user:' + email, user);
     return { email, ...userView(user) };
   }
+  /** An owner can choose to be counted like a normal member (real plan limits) instead of unlimited. */
+  async ownerNormal(email) { return !!(await this.ctx.storage.get('ownernormal:' + String(email || '').toLowerCase())); }
+  async setOwnerNormal(email, on) { const k = 'ownernormal:' + String(email || '').toLowerCase(); if (on) await this.ctx.storage.put(k, true); else await this.ctx.storage.delete(k); return !!on; }
   /** Sets a person's bonus tokens (and any usage boost) back to nothing; plan and daily allowance are untouched. */
   async adminClearBonus(rawEmail) {
     const email = String(rawEmail || '').trim().toLowerCase();
