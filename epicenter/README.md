@@ -61,7 +61,7 @@ marked as unreviewed.
 ## Where the files live (2026-10-19)
 
 Community apps keep their files on oeper.dev's file server (`https://fs.oeper.dev/epicenter/files/<app id>/<file>`, with a `<file>.json` manifest next to each file that the server writes itself); `cleanApp` refuses any other download or manifest address from non-owners (iOS App Store / TestFlight / AltStore links are exempt; site owners may link anywhere).
-Upload: `PUT https://fs.oeper.dev/epicenter/files/<id>/<name>` with `Authorization: Bearer <Firebase token or epk_ key>` and optional `x-version-name` / `x-version-code` / `x-notes` headers; the answer has `url`, `manifest`, `sha256`, `size`. `DELETE` removes. 100 MB a file, 1 GB an app. The same file name replaces the file, so the link means "newest build". The store page's "upload" button and `epicenter-release.mjs --id <id> --key epk_…` both do this and then publish.
+Upload: `PUT https://fs.oeper.dev/epicenter/files/<id>/<name>` with `Authorization: Bearer <Firebase token or epk_ key>` and optional `x-version-name` / `x-version-code` / `x-notes` headers; the answer has `url`, `manifest`, `sha256`, `size`. `DELETE` removes. 100 MB a file, 1 GB an app. The same file name replaces the file, so the link means "newest build". For an APK the id may be `_`: `forum-server/apkinfo.js` reads package name (= the Epicenter id), versionCode, versionName and minSdk out of the APK itself and the response carries them. The store page's "submit an app" dialog (choose file, name, summary) and `node epicenter-release.mjs app.apk` (key in `.epicenter-key`) both do this and then publish. The site owner's `RELEASE_KEY` (header `x-release-key`) is accepted too.
 
 ## Publishing from a script (publish keys)
 

@@ -2,8 +2,10 @@
 //
 //   PUT    /epicenter/files/<app id>/<file name>   body = the file (raw bytes)
 //          header  Authorization: Bearer <Firebase ID token>   or   Bearer epk_… (a publish key from "my apps")
-//          optional  x-version-name, x-version-code, x-notes   (written into the file's update manifest)
-//          -> { url, manifest, sha256, size }   (the manifest is <file name>.json next to the file, created for you)
+//          optional  x-version-name, x-version-code, x-notes   (written into the file's update manifest; an APK supplies its own)
+//          -> { id, url, manifest, sha256, size, versionName, versionCode, minSdk }   (the manifest is <file name>.json next to the file, created for you)
+//          For an APK the app id may be "_": the id, version and version code are read from the APK itself (its package name is the id).
+//          The site owner's RELEASE_KEY (header x-release-key) is accepted instead of Authorization.
 //   GET    /epicenter/files/<app id>/<file name>   public download (and the .json manifest, with CORS open)
 //   DELETE /epicenter/files/<app id>/<file name>   same Authorization as PUT; removes the file and its manifest
 //
@@ -16,6 +18,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { apkInfo } = require('./apkinfo');
 
 const API = (process.env.EPICENTER_API || 'https://oeper-ai.oeper.workers.dev').replace(/\/$/, '');
 const MAX_FILE = Number(process.env.EPICENTER_MAX_BYTES) || 100 * 1024 * 1024;
@@ -39,6 +42,12 @@ module.exports = function mountEpicenterFiles(app, { dataDir, publicBaseUrl }) {
 
   // asks the worker whether this caller may store files for this app id; { email, owner } or { error, status }
   async function allowed(req, id) {
+    const rk = req.get('x-release-key');
+    if (rk) {   // the site owner's own key (the same RELEASE_KEY the Searver / epic AI builds use)
+      const want = process.env.RELEASE_KEY || '';
+      const h = v => crypto.createHash('sha256').update(String(v)).digest();
+      return want.length >= 16 && crypto.timingSafeEqual(h(rk), h(want)) ? { ok: true, email: 'owner', owner: true } : { status: 403, error: 'Wrong release key.' };
+    }
     const auth = req.get('authorization');
     if (!auth) return { status: 401, error: 'Sign in, or send a publish key.' };
     try {
@@ -50,23 +59,26 @@ module.exports = function mountEpicenterFiles(app, { dataDir, publicBaseUrl }) {
   }
 
   app.put('/epicenter/files/:id/:name', async (req, res) => {
-    const id = String(req.params.id).toLowerCase(), name = req.params.name;
-    if (!ok(id, name)) return res.status(400).json({ error: 'Bad app id or file name (use letters, digits, dot, dash, underscore; an app file type like .apk or .exe).' });
-    const who = await allowed(req, id);
+    const given = String(req.params.id).toLowerCase(), name = req.params.name;
+    const auto = given === '_' && name.toLowerCase().endsWith('.apk');   // the APK itself says which app it is
+    if (auto ? !NAME_RE.test(name) : !ok(given, name)) return res.status(400).json({ error: 'Bad app id or file name (use letters, digits, dot, dash, underscore; an app file type like .apk or .exe).' });
+    if (!req.get('authorization') && !req.get('x-release-key')) { req.resume(); return res.status(401).json({ error: 'Sign in, or send a publish key.' }); }
+    // a known id is checked before the bytes are accepted; an "_" upload is staged and checked once the APK has named itself
+    let who = auto ? { owner: false } : await allowed(req, given);
     if (who.error) { req.resume(); return res.status(who.status).json({ error: who.error }); }
     const limit = who.owner ? Math.max(MAX_FILE, 500 * 1024 * 1024) : MAX_FILE;
     const declared = Number(req.get('content-length'));
     if (declared && declared > limit) { req.resume(); return res.status(413).json({ error: 'That file is too big (limit ' + Math.round(limit / 1048576) + ' MB).' }); }
-    const room = who.owner ? Infinity : MAX_APP - usedBy(id, name) - usedBy(id, name + '.json');
+    const room = auto || who.owner ? Infinity : MAX_APP - usedBy(given, name) - usedBy(given, name + '.json');
     if (declared && declared > room) { req.resume(); return res.status(413).json({ error: 'This app has used its storage (' + Math.round(MAX_APP / 1048576) + ' MB). Delete old files first.' }); }
 
-    fs.mkdirSync(dirOf(id), { recursive: true });
-    if (!holderOf(id)) fs.writeFileSync(path.join(dirOf(id), '.owner'), who.email);
-    const part = path.join(dirOf(id), name + '.part');
+    const stage = auto ? path.join(root, '.incoming') : dirOf(given);
+    fs.mkdirSync(stage, { recursive: true });
+    const part = path.join(stage, (auto ? crypto.randomBytes(8).toString('hex') + '-' : '') + name + '.part');
     const out = fs.createWriteStream(part);
     const hash = crypto.createHash('sha256');
     let size = 0, magic = Buffer.alloc(0), failed = false;
-    const fail = (code, msg) => { if (failed) return; failed = true; out.destroy(); fs.rm(part, { force: true }, () => {}); if (!res.headersSent) res.status(code).json({ error: msg }); };
+    const fail = (code, msg) => { if (failed) return; failed = true; out.destroy(); fs.rm(part, { force: true }, () => { if (!auto) fs.rmdir(stage, () => {}); }); if (!res.headersSent) res.status(code).json({ error: msg }); };
     req.on('data', chunk => {
       if (magic.length < 4) magic = Buffer.concat([magic, chunk.subarray(0, 4 - magic.length)]);
       hash.update(chunk); size += chunk.length;
@@ -76,19 +88,35 @@ module.exports = function mountEpicenterFiles(app, { dataDir, publicBaseUrl }) {
     req.on('error', () => fail(400, 'Upload interrupted.'));
     out.on('error', e => fail(500, e.message));
     req.pipe(out);
-    out.on('finish', () => {
+    out.on('finish', async () => {
       if (failed) return;
       const ext = name.split('.').pop().toLowerCase();
       if (size < 1024) return fail(400, 'That file is too small to be an app.');
       if (['apk', 'apks', 'xapk', 'apkm', 'ipa', 'zip', 'msix', 'appx'].includes(ext) && magic.toString('latin1', 0, 2) !== 'PK') return fail(400, 'That is not a valid .' + ext + ' file.');
       try {
+        let id = given, info = null;
+        if (ext === 'apk') {
+          info = apkInfo(part);
+          if (!info) return fail(400, 'That is not a readable Android app (.apk).');
+          if (auto) id = info.package.toLowerCase();
+          else if (id !== info.package.toLowerCase()) return fail(400, "The app id must be the APK's package name: " + info.package + '.');
+          if (!ID_RE.test(id)) return fail(400, "This app's package name (" + info.package + ') cannot be used as an Epicenter id.');
+        }
+        if (auto) {
+          who = await allowed(req, id);
+          if (who.error) return fail(who.status, who.error);
+          if (!who.owner && MAX_APP - usedBy(id, name) - usedBy(id, name + '.json') < size) return fail(413, 'This app has used its storage (' + Math.round(MAX_APP / 1048576) + ' MB). Delete old files first.');
+        }
+        fs.mkdirSync(dirOf(id), { recursive: true });
+        if (!holderOf(id)) fs.writeFileSync(path.join(dirOf(id), '.owner'), who.email);
         const final = path.join(dirOf(id), name);
         fs.renameSync(part, final);
         const sha256 = hash.digest('hex');
-        const code = Math.floor(Number(req.get('x-version-code'))) || 0;
-        const manifest = { versionName: String(req.get('x-version-name') || '').slice(0, 32) || undefined, versionCode: code > 0 ? code : undefined, size, sha256, notes: String(req.get('x-notes') || '').slice(0, 800) || undefined };
+        const code = info ? info.versionCode : Math.floor(Number(req.get('x-version-code'))) || 0;
+        const versionName = (info ? info.versionName : String(req.get('x-version-name') || '').slice(0, 32)) || undefined;
+        const manifest = { versionName, versionCode: code > 0 ? code : undefined, size, sha256, notes: String(req.get('x-notes') || '').slice(0, 800) || undefined };
         fs.writeFileSync(final + '.json', JSON.stringify(manifest));
-        res.json({ ok: true, url: base + '/' + id + '/' + name, manifest: base + '/' + id + '/' + name + '.json', sha256, size });
+        res.json({ ok: true, id, url: base + '/' + id + '/' + name, manifest: base + '/' + id + '/' + name + '.json', sha256, size, versionName, versionCode: code || undefined, minSdk: info && info.minSdk || undefined });
       } catch (e) { fail(500, e.message); }
     });
   });

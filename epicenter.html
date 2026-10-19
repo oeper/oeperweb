@@ -160,6 +160,15 @@
   .field textarea { min-height: 90px; resize: vertical; }
   .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--md-sys-color-primary); }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .drop { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; padding: 26px 16px; margin-bottom: 14px; border: 2px dashed var(--md-sys-color-outline); border-radius: 20px; cursor: pointer; color: var(--md-sys-color-on-surface); transition: background .15s, border-color .15s; }
+  .drop:hover, .drop.over { background: var(--md-sys-color-surface-variant); border-color: var(--md-sys-color-primary); }
+  .drop .material-symbols-rounded { font-size: 34px; color: var(--md-sys-color-primary); }
+  .drop b { font-weight: 500; font-size: 16px; } .drop small { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
+  .fchip { display: flex; align-items: center; gap: 12px; background: var(--md-sys-color-surface-variant); border-radius: 16px; padding: 8px 8px 8px 14px; margin-bottom: 8px; }
+  .fchip .grow { flex: 1; min-width: 0; font-size: 14px; color: var(--md-sys-color-on-surface); } .fchip small { display: block; font-size: 12px; color: var(--md-sys-color-on-surface-variant); overflow-wrap: anywhere; }
+  details.more { margin: 4px 0 12px; } details.more > summary { cursor: pointer; font-size: 14px; color: var(--md-sys-color-primary); padding: 6px 4px; margin-bottom: 8px; }
+  .iosrow { display: grid; grid-template-columns: 150px 1fr auto; gap: 8px; align-items: center; }
+  .iosrow select, .iosrow input { width: 100%; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14px; }
   .arow { display: grid; grid-template-columns: 110px 120px 1fr auto; gap: 8px; margin-bottom: 8px; align-items: center; }
   .arow .sub { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 100px 1fr; gap: 8px; }
   .arow input, .arow select { width: 100%; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); border: 1px solid var(--md-sys-color-outline); border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 13px; }
@@ -424,98 +433,109 @@ async function authed(path, method, body) {
   return j;
 }
 
-// submit (or edit) an app
-const FORMATS_BY = {
-  android: ['apk', 'apks', 'xapk', 'apkm'], ios: ['appstore', 'testflight', 'altstore', 'ipa'], windows: ['exe', 'msi', 'msix', 'appx', 'portable', 'zip'],
-  macos: ['dmg', 'pkg', 'app.zip', 'zip'], linux: ['appimage', 'deb', 'rpm', 'flatpak', 'snap', 'tar.gz', 'zip'],
-};
+// add (or update) an app: choose the file, give it a name, done. An APK tells Epicenter its own id and version, so nothing else needs typing.
+const EXT_KIND = [['app.zip', 'macos'], ['tar.gz', 'linux'], ['apk', 'android'], ['apks', 'android'], ['xapk', 'android'], ['apkm', 'android'], ['exe', 'windows'], ['msi', 'windows'], ['msix', 'windows'], ['appx', 'windows'],
+  ['dmg', 'macos'], ['pkg', 'macos'], ['deb', 'linux'], ['rpm', 'linux'], ['appimage', 'linux'], ['flatpak', 'linux'], ['snap', 'linux'], ['ipa', 'ios']];
 function showSubmit(existing) {
   const e = existing || {};
-  const assetRowHtml = (a = {}) => `<div class="arow">
-      <select class="a-plat">${PLATFORMS.map(p => `<option value="${p.id}"${(a.platform || me) === p.id ? ' selected' : ''}>${esc(p.label)}</option>`).join('')}</select>
-      <select class="a-fmt"></select>
-      <input class="a-url url" placeholder="https://… download link" value="${esc(a.url || '')}">
-      <button class="btn danger a-rm" type="button" aria-label="remove"><span class="material-symbols-rounded">close</span></button>
-      <div class="sub"><div class="up" style="grid-column:1 / -1"><label class="btn tonal up-btn"><span class="material-symbols-rounded">upload</span><span class="up-t">upload the file to oeper.dev</span><input type="file" class="a-file" hidden></label><span class="up-s note"></span></div><input class="a-sha" placeholder="SHA-256 (optional, advised)" value="${esc(a.sha256 || '')}"><input class="a-arch" placeholder="arch" value="${esc(a.arch || '')}"><input class="a-label" placeholder="button label (optional)" value="${esc(a.label || '')}"><input class="a-manifest" style="grid-column:1 / -1" placeholder="update manifest link: update.json (needed for every downloadable file)" value="${esc(a.manifest || '')}"></div></div>`;
+  let files = (e.assets || []).map(a => ({ ...a })), versionCode = e.versionCode || '', busy = false;
   const m = modal(`
-    <div class="top"><div><h2>${existing ? 'update your app' : 'submit an app'}</h2><p>an owner checks every entry before it shows up. your files are stored on oeper.dev (fill in the id first, then upload each file).</p></div><button class="btn text close" data-close aria-label="close"><span class="material-symbols-rounded">close</span></button></div>
+    <div class="top"><div><h2>${existing ? 'update your app' : 'add an app'}</h2><p>choose your app file. Epicenter keeps it on oeper.dev and works out the rest. An owner checks new apps before they show up.</p></div><button class="btn text close" data-close aria-label="close"><span class="material-symbols-rounded">close</span></button></div>
+    <label class="drop" id="f-drop"><span class="material-symbols-rounded">upload_file</span><b id="f-pick">choose your app file</b><small>or drop it here: APK, .exe, .msi, .dmg, .deb, .AppImage …</small><input type="file" id="f-file" hidden></label>
+    <div id="f-files"></div>
     <div class="row2"><label class="field"><span>name</span><input id="f-name" maxlength="60" value="${esc(e.name || '')}"></label>
-      <label class="field"><span>id (lowercase; for Android apps the package name)</span><input id="f-id" maxlength="64" value="${esc(e.id || '')}" ${existing ? 'readonly' : ''} placeholder="com.example.app"></label></div>
-    <label class="field"><span>one-line summary</span><input id="f-sum" maxlength="140" value="${esc(e.summary || '')}"></label>
-    <label class="field"><span>description (optional)</span><textarea id="f-desc" maxlength="4000">${esc(e.description || '')}</textarea></label>
-    <div class="field"><span>categories (up to 3)</span><div class="pills small" id="f-cats">${CATEGORIES.map(c => `<button type="button" class="pill${(e.categories || []).includes(c.id) ? ' active' : ''}" data-c="${c.id}"><span class="material-symbols-rounded">${c.icon}</span>${esc(c.label)}</button>`).join('')}</div></div>
-    <div class="row2"><label class="field"><span>website (https)</span><input id="f-home" value="${esc(e.homepage || '')}"></label><label class="field"><span>icon image (https, optional)</span><input id="f-icon" value="${esc(e.icon || '')}"></label></div>
-    <div class="row2"><label class="field"><span>version (e.g. 1.2.0)</span><input id="f-ver" maxlength="32" value="${esc(e.version || '')}"></label><label class="field"><span>version code (Android: the number in build.gradle)</span><input id="f-code" inputmode="numeric" maxlength="10" value="${esc(e.versionCode || '')}"></label></div>
-    <div class="row2"><label class="field"><span>author (optional)</span><input id="f-author" maxlength="60" value="${esc(e.author || '')}"></label></div>
-    <h3>downloads</h3>
-    <p class="note">Upload each file here: Epicenter keeps it on oeper.dev and makes the <b>update manifest</b> that tells people about new versions (upload a newer build with the same id to release it). App Store and TestFlight links are just pasted. <a href="/epicenter/developers" target="_blank" rel="noopener">How it works</a>.</p>
-    <div id="f-assets">${(e.assets && e.assets.length ? e.assets : [{}]).map(assetRowHtml).join('')}</div>
-    <button class="btn text" type="button" id="f-addasset"><span class="material-symbols-rounded">add</span>add a download</button>
-    <div class="warn"><span class="material-symbols-rounded">gpp_maybe</span><div>Only submit software you made or have the right to share. Entries that look harmful, misleading or pirated are rejected.</div></div>
+      <label class="field"><span>one-line summary</span><input id="f-sum" maxlength="140" value="${esc(e.summary || '')}"></label></div>
+    <details class="more"><summary>more options</summary>
+      <div class="row2"><label class="field"><span>id (an APK sets this itself)</span><input id="f-id" maxlength="64" value="${esc(e.id || '')}" ${existing ? 'readonly' : ''} placeholder="com.example.app"></label>
+        <label class="field"><span>version (an APK sets this itself)</span><input id="f-ver" maxlength="32" value="${esc(e.version || '')}"></label></div>
+      <label class="field"><span>description</span><textarea id="f-desc" maxlength="4000">${esc(e.description || '')}</textarea></label>
+      <div class="field"><span>categories (up to 3)</span><div class="pills small" id="f-cats">${CATEGORIES.map(c => `<button type="button" class="pill${(e.categories || []).includes(c.id) ? ' active' : ''}" data-c="${c.id}"><span class="material-symbols-rounded">${c.icon}</span>${esc(c.label)}</button>`).join('')}</div></div>
+      <div class="row2"><label class="field"><span>website (https)</span><input id="f-home" value="${esc(e.homepage || '')}"></label><label class="field"><span>icon image (https)</span><input id="f-icon" value="${esc(e.icon || '')}"></label></div>
+      <label class="field"><span>author</span><input id="f-author" maxlength="60" value="${esc(e.author || '')}"></label>
+      <div class="field"><span>iPhone: link to the App Store, TestFlight or AltStore page</span><div class="iosrow"><select id="f-ios"><option value="appstore">App Store</option><option value="testflight">TestFlight</option><option value="altstore">AltStore source</option></select><input id="f-iosurl" placeholder="https://…"><button class="btn tonal" type="button" id="f-iosadd">add</button></div></div>
+    </details>
+    <div class="warn"><span class="material-symbols-rounded">gpp_maybe</span><div>Only add software you made or have the right to share. Entries that look harmful, misleading or pirated are rejected.</div></div>
     <div class="msg" id="f-msg"></div>
-    <div class="actions"><button class="btn tonal" data-close>cancel</button><button class="btn filled" id="f-send">${existing ? 'resubmit' : 'submit'}</button></div>`);
-  const root = m.root, assets = root.querySelector('#f-assets');
-  const fillFormats = row => {
-    const p = row.querySelector('.a-plat').value, sel = row.querySelector('.a-fmt'), cur = sel.dataset.v || sel.value;
-    sel.innerHTML = FORMATS_BY[p].map(f => `<option value="${f}">${esc(FORMATS[f])}</option>`).join('');
-    if (FORMATS_BY[p].includes(cur)) sel.value = cur;
+    <div class="actions"><button class="btn tonal" data-close>cancel</button><button class="btn filled" id="f-send">${existing ? 'update' : 'add the app'}</button></div>`);
+  const root = m.root, q = s => root.querySelector(s), msg = q('#f-msg');
+  const say = (t, err) => { msg.className = 'msg' + (err ? ' err' : ''); msg.textContent = t; };
+
+  const renderFiles = () => {
+    q('#f-files').innerHTML = files.map((f, i) => `<div class="fchip"><span class="material-symbols-rounded">${PLATFORM[f.platform] ? PLATFORM[f.platform].icon : 'apps'}</span>
+      <div class="grow"><b>${esc(PLATFORM[f.platform] ? PLATFORM[f.platform].label : f.platform)} · ${esc(FORMATS[f.format] || f.format)}</b><small>${esc([fmtSize(f.size), f.sha256 ? 'checked' : ''].filter(Boolean).join(' · ') || f.url)}</small></div>
+      <button class="btn text" type="button" data-rm="${i}" aria-label="remove"><span class="material-symbols-rounded">close</span></button></div>`).join('');
+    q('#f-pick').textContent = files.length ? 'add another file' : 'choose your app file';
   };
-  const wire = (row, a = {}) => { row.querySelector('.a-fmt').dataset.v = a.format || ''; fillFormats(row); row.querySelector('.a-plat').addEventListener('change', () => { row.querySelector('.a-fmt').dataset.v = ''; fillFormats(row); }); };
-  [...assets.children].forEach((row, i) => wire(row, (e.assets || [])[i]));
-  root.querySelector('#f-addasset').addEventListener('click', () => { assets.insertAdjacentHTML('beforeend', assetRowHtml()); wire(assets.lastElementChild); });
-  // uploads go to oeper.dev's file server; the stored name is stable per platform so the link always means "newest build"
-  assets.addEventListener('change', async ev => {
-    const inp = ev.target.closest('.a-file'); if (!inp || !inp.files[0]) return;
-    const row = inp.closest('.arow'), file = inp.files[0], status = row.querySelector('.up-s'), id = root.querySelector('#f-id').value.trim().toLowerCase();
-    const plat = row.querySelector('.a-plat').value, fmt = row.querySelector('.a-fmt').value, arch = row.querySelector('.a-arch').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    const say = t => { status.textContent = t; };
-    if (!id) { say('Fill in the id first.'); inp.value = ''; return; }
-    if (['appstore', 'testflight', 'altstore'].includes(fmt)) { say('Paste the link for this one instead.'); inp.value = ''; return; }
-    const ext = fmt === 'portable' ? 'exe' : fmt;
-    const name = ['app', plat, arch].filter(Boolean).join('-') + '.' + ext;
+  renderFiles();
+  q('#f-files').addEventListener('click', ev => { const b = ev.target.closest('[data-rm]'); if (b) { files.splice(Number(b.dataset.rm), 1); renderFiles(); } });
+
+  async function upload(file) {
+    if (busy || !file) return;
+    const lower = file.name.toLowerCase(), kind = EXT_KIND.find(k => lower.endsWith('.' + k[0]));
+    if (!kind) return say('That is not an app file. Use an .apk, .exe, .msi, .dmg, .deb, .AppImage …', true);
+    const [format, platform] = kind, isApk = format === 'apk';
+    let id = q('#f-id').value.trim().toLowerCase();
+    if (!isApk && !id) {   // other files need an id: made from the name
+      id = q('#f-name').value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64);
+      if (id.length < 3) return say('Type the app’s name first.', true);
+      q('#f-id').value = id;
+    }
+    busy = true; say('Uploading 0%');
     try {
       const token = await getCurrentUser().getIdToken();
       const res = await new Promise((resolve, reject) => {
         const x = new XMLHttpRequest();
-        x.open('PUT', FILES + '/epicenter/files/' + encodeURIComponent(id) + '/' + name);
+        x.open('PUT', FILES + '/epicenter/files/' + (isApk ? '_' : encodeURIComponent(id)) + '/' + ['app', platform].join('-') + '.' + (format === 'portable' ? 'exe' : format));
         x.setRequestHeader('Authorization', 'Bearer ' + token);
         x.setRequestHeader('Content-Type', 'application/octet-stream');
-        x.setRequestHeader('x-version-name', root.querySelector('#f-ver').value.trim());
-        x.setRequestHeader('x-version-code', root.querySelector('#f-code').value.trim());
-        x.upload.onprogress = e2 => { if (e2.lengthComputable) say('Uploading ' + Math.round(e2.loaded * 100 / e2.total) + '%'); };
+        x.setRequestHeader('x-version-name', q('#f-ver').value.trim());
+        x.upload.onprogress = p => { if (p.lengthComputable) say('Uploading ' + Math.round(p.loaded * 100 / p.total) + '%'); };
         x.onload = () => { let j = {}; try { j = JSON.parse(x.responseText); } catch {} x.status === 200 ? resolve(j) : reject(new Error(j.error || 'Upload failed (' + x.status + ').')); };
-        x.onerror = () => reject(new Error('Could not reach the file server.'));
+        x.onerror = () => reject(new Error('Could not reach the file server. Try again in a minute.'));
         x.send(file);
       });
-      row.querySelector('.a-url').value = res.url; row.querySelector('.a-manifest').value = res.manifest; row.querySelector('.a-sha').value = res.sha256;
-      row.dataset.size = res.size; say('Uploaded (' + fmtSize(res.size) + ').');
-    } catch (err) { say(err.message); }
-    inp.value = '';
+      files = files.filter(f => !(f.platform === platform && f.format === format && (f.arch || '') === ''));
+      files.push({ platform, format, url: res.url, manifest: res.manifest, sha256: res.sha256, size: res.size, ...(res.minSdk ? { minSdk: res.minSdk } : {}) });
+      if (res.id) { q('#f-id').value = res.id; }
+      if (res.versionName) q('#f-ver').value = res.versionName;
+      if (res.versionCode) versionCode = res.versionCode;
+      if (isApk && !q('#f-name').value.trim()) { const last = res.id.split('.').pop(); q('#f-name').value = last.charAt(0).toUpperCase() + last.slice(1); }
+      renderFiles(); say('Uploaded. Add a name and a one-line summary, then press the button below.');
+    } catch (err) { say(err.message, true); }
+    busy = false;
+  }
+  q('#f-file').addEventListener('change', ev => { upload(ev.target.files[0]); ev.target.value = ''; });
+  const drop = q('#f-drop');
+  drop.addEventListener('dragover', ev => { ev.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', ev => { ev.preventDefault(); drop.classList.remove('over'); upload(ev.dataTransfer.files[0]); });
+
+  q('#f-iosadd').addEventListener('click', () => {
+    const url = q('#f-iosurl').value.trim(); if (!isHttps(url)) return say('Paste the https link for the iPhone page.', true);
+    const format = q('#f-ios').value; files = files.filter(f => !(f.platform === 'ios' && f.format === format)); files.push({ platform: 'ios', format, url });
+    q('#f-iosurl').value = ''; renderFiles();
   });
-  assets.addEventListener('click', ev => { const r = ev.target.closest('.a-rm'); if (r && assets.children.length > 1) r.closest('.arow').remove(); });
-  root.querySelector('#f-cats').addEventListener('click', ev => { const b = ev.target.closest('[data-c]'); if (!b) return; if (!b.classList.contains('active') && root.querySelectorAll('#f-cats .active').length >= 3) return; b.classList.toggle('active'); });
-  if (!existing) root.querySelector('#f-name').addEventListener('input', () => {
-    const idEl = root.querySelector('#f-id'); if (idEl.dataset.touched) return;
-    idEl.value = root.querySelector('#f-name').value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64);
-  });
-  root.querySelector('#f-id').addEventListener('input', ev => { ev.target.dataset.touched = '1'; });
-  root.querySelector('#f-send').addEventListener('click', async () => {
-    const msg = root.querySelector('#f-msg'), btn = root.querySelector('#f-send');
-    const v = s => root.querySelector(s).value.trim();
+  q('#f-cats').addEventListener('click', ev => { const b = ev.target.closest('[data-c]'); if (!b) return; if (!b.classList.contains('active') && root.querySelectorAll('#f-cats .active').length >= 3) return; b.classList.toggle('active'); });
+
+  q('#f-send').addEventListener('click', async () => {
+    if (busy) return say('Wait for the upload to finish.', true);
+    if (!files.length) return say('Choose your app file first.', true);
+    const v = s => q(s).value.trim(), btn = q('#f-send');
     const app = {
-      id: v('#f-id'), name: v('#f-name'), summary: v('#f-sum'), description: v('#f-desc'), homepage: v('#f-home'), icon: v('#f-icon'), version: v('#f-ver'), versionCode: v('#f-code'), author: v('#f-author'),
-      categories: [...root.querySelectorAll('#f-cats .active')].map(b => b.dataset.c),
-      assets: [...assets.children].map(r => ({ platform: r.querySelector('.a-plat').value, format: r.querySelector('.a-fmt').value, url: r.querySelector('.a-url').value.trim(), sha256: r.querySelector('.a-sha').value.trim(), arch: r.querySelector('.a-arch').value.trim(), size: r.dataset.size, label: r.querySelector('.a-label').value.trim(), manifest: r.querySelector('.a-manifest').value.trim() })).filter(a => a.url),
+      id: v('#f-id'), name: v('#f-name'), summary: v('#f-sum'), description: v('#f-desc'), homepage: v('#f-home'), icon: v('#f-icon'), version: v('#f-ver'), author: v('#f-author'),
+      categories: [...root.querySelectorAll('#f-cats .active')].map(b => b.dataset.c), assets: files,
     };
-    if (app.assets.some(a => a.platform === 'android')) app.package = app.id;
-    msg.className = 'msg'; msg.textContent = 'Sending…'; btn.disabled = true;
+    if (versionCode) app.versionCode = versionCode;
+    if (files.some(a => a.platform === 'android')) app.package = app.id;
+    say('Sending…'); btn.disabled = true;
     try {
       const r = await authed('/api/epicenter/submit', 'POST', { app });
-      m.close(); toast(r.status === 'approved' ? 'Published.' : 'Submitted. An owner will look at it.');
+      m.close(); toast(r.status === 'approved' ? 'Published.' : 'Added. An owner will look at it, then it is live.');
       if (r.status === 'approved') loadAll();
-    } catch (err) { msg.className = 'msg err'; msg.textContent = err.message; btn.disabled = false; }
+    } catch (err) { say(err.message, true); btn.disabled = false; }
   });
 }
+
 
 // my apps (+ the review queue for owners)
 async function showMine() {
