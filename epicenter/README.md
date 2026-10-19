@@ -73,3 +73,9 @@ Content-Type: application/json
 - A key only reaches apps its owner has. For an app you already have, only the fields you send change (`assets` replaces the whole list), so the line above is a complete release. A new app needs the full entry (id, name, summary, assets...).
 - The same checks as the form apply. Owners go live at once; everyone else waits for approval like a submission (`status: "pending"`).
 - Errors come back as `{ "error": "..." }` with 400 (bad entry) or 401 (missing/unknown key).
+
+## Required: an update manifest (2026-10-19)
+
+Every **downloadable** asset (any format except `pwa`, `link`, `store`, `appstore`, `testflight`, `altstore`) must carry a `manifest` that the worker can read, or a community submission / publish is refused (site owners are exempt; the curated oeper.dev list is not checked). Android manifests also need a `versionCode`. Developer guide with copy-paste code, the release script and a GitHub Action: oeper.dev/epicenter/developers (`epicenter/developers.html`, `epicenter/epicenter-release.mjs`, `epicenter/EpicenterUpdate.kt`).
+
+`GET /api/epicenter/latest?id=<app id>&platform=<platform>` is what an app calls to ask for its own newest release: `{id, name, version, versionCode, notes, updated, platform, format, url, sha256, size, page, deeplink}` (community apps and the curated list; the manifest is applied on top). `page` = `https://oeper.dev/epicenter#app=<id>` (opens the app's dialog), `deeplink` = `epicenter://app/<id>` (the Android Epicenter app should register this scheme).

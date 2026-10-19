@@ -1017,8 +1017,46 @@ async function epicenterPublish(request, env, L) {
   const current = await L.epicGetMine(email, String(given.id || '').toLowerCase());
   const r = cleanApp(current ? { ...current, ...given, id: current.id } : given, owner);
   if (r.error) return json({ error: r.error }, 400, request);
+  const bad = await requireManifests(r.app, owner);
+  if (bad) return json({ error: bad }, 400, request);
   const out = await L.epicSubmit(email, r.app, owner, owner);
   return json(out.ok ? { ...out, id: r.app.id } : { error: out.error }, out.ok ? 200 : 400, request);
+}
+
+// Every downloadable app must publish an update manifest, so Epicenter (and the app itself) can always find the newest version.
+// Web apps, store pages and TestFlight/App Store links update themselves and are exempt; site owners are exempt too.
+const SELF_UPDATING = ['pwa', 'link', 'store', 'appstore', 'testflight', 'altstore'];
+const DEV_GUIDE = 'https://oeper.dev/epicenter/developers';
+async function requireManifests(app, owner) {
+  if (owner) return null;
+  for (const a of app.assets) {
+    if (SELF_UPDATING.includes(a.format)) continue;
+    const label = a.platform + ' ' + a.format;
+    if (!a.manifest) return 'The ' + label + ' download needs an update manifest (an update.json link) so people get new versions. See ' + DEV_GUIDE;
+    const m = await fetchManifest(a.manifest);
+    if (!m) return 'The update manifest of the ' + label + ' download could not be read. It must be a public https link to JSON like {"versionName":"1.2","versionCode":12}. See ' + DEV_GUIDE;
+    if (a.platform === 'android' && !m.versionCode) return 'The manifest of the android download needs a versionCode (the number from your build.gradle). See ' + DEV_GUIDE;
+  }
+  return null;
+}
+
+// What an app calls to ask "is there a newer version of me?": GET /api/epicenter/latest?id=com.example.app&platform=android
+const FORMAT_RANK = ['apk', 'apks', 'xapk', 'apkm', 'exe', 'msi', 'msix', 'appx', 'portable', 'dmg', 'pkg', 'app.zip', 'appimage', 'deb', 'rpm', 'flatpak', 'snap', 'tar.gz', 'ipa', 'pwa', 'link', 'store', 'zip', 'other'];
+async function epicenterLatest(request, env, L) {
+  const q = new URL(request.url).searchParams, id = String(q.get('id') || '').trim().toLowerCase(), platform = String(q.get('platform') || '').trim().toLowerCase();
+  const headers = { 'Content-Type': 'application/json', ...corsHeaders(request) };
+  if (!id) return new Response(JSON.stringify({ error: 'Give an id: ?id=com.example.app' }), { status: 400, headers });
+  let app = (await L.epicCatalog()).find(a => a.id === id);
+  if (!app) {
+    try { const r = await fetch('https://oeper.dev/epicenter/index.json', { cf: { cacheTtl: 300 } }); app = ((await r.json()).apps || []).find(a => String(a.id).toLowerCase() === id); } catch { /* no curated list */ }
+  }
+  if (!app) return new Response(JSON.stringify({ error: 'No such app in Epicenter.' }), { status: 404, headers: { ...headers, 'Cache-Control': 'no-store' } });
+  const pool = (app.assets || []).filter(a => !platform || a.platform === platform).sort((a, b) => FORMAT_RANK.indexOf(a.format) - FORMAT_RANK.indexOf(b.format));
+  const asset = pool[0];
+  if (!asset) return new Response(JSON.stringify({ error: 'That app has no ' + platform + ' download.' }), { status: 404, headers: { ...headers, 'Cache-Control': 'no-store' } });
+  const out = { id: app.id, name: app.name, version: app.version || null, versionCode: app.versionCode || null, notes: app.notes || '', updated: app.releasedAt || app.updated || null, platform: asset.platform, format: asset.format, url: asset.url, sha256: asset.sha256 || null, size: asset.size || null, page: 'https://oeper.dev/epicenter#app=' + app.id, deeplink: 'epicenter://app/' + app.id };
+  if (asset.manifest) { const m = await fetchManifest(asset.manifest); if (m) Object.assign(out, { version: m.version || out.version, versionCode: m.versionCode || out.versionCode, notes: m.notes !== undefined ? m.notes : out.notes, sha256: m.sha256 || out.sha256, size: m.size || out.size }); }
+  return new Response(JSON.stringify(out), { headers: { ...headers, 'Cache-Control': 'public, max-age=60' } });
 }
 
 // Epicenter, the app store. Public: the approved catalog. Signed in: submit an app, see your own. Owners: review the queue.
@@ -1027,6 +1065,7 @@ async function handleEpicenter(request, env, route) {
   if (route === 'catalog' && get) {
     return new Response(JSON.stringify({ epicenter: 1, name: 'Epicenter community', apps: await L.epicCatalog() }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60', ...corsHeaders(request) } });
   }
+  if (route === 'latest' && get) return epicenterLatest(request, env, L);
   if (route === 'manifest' && get) {
     // the site cannot read a GitHub release's update.json itself (no CORS); the worker reads it and hands back only the cleaned fields
     const target = cleanUrl(new URL(request.url).searchParams.get('url') || '');
@@ -1042,6 +1081,8 @@ async function handleEpicenter(request, env, route) {
     const body = await readBody(request);
     const r = cleanApp(body && body.app, owner);
     if (r.error) return json({ error: r.error }, 400, request);
+    const bad = await requireManifests(r.app, owner);
+    if (bad) return json({ error: bad }, 400, request);
     const out = await L.epicSubmit(user.email, r.app, owner, owner);
     return json(out, out.ok ? 200 : 400, request);
   }

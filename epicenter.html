@@ -185,6 +185,7 @@
       <p>apps from oeper.dev and the community, for Android, Windows, macOS, Linux, iPhone and the web. you can add other sources too.</p>
     </div>
     <div class="head-actions">
+      <a class="btn tonal" href="/epicenter/developers"><span class="material-symbols-rounded">code</span>for developers</a>
       <button class="btn tonal" id="sourcesBtn"><span class="material-symbols-rounded">dns</span>sources</button>
       <button class="btn tonal" id="mineBtn"><span class="material-symbols-rounded">inventory_2</span>my apps</button>
       <button class="btn filled" id="submitBtn"><span class="material-symbols-rounded">add</span>submit an app</button>
@@ -261,6 +262,7 @@ async function loadAll() {
   apps = out;
   $('loading').textContent = '';
   render();
+  openFromHash();
   resolveManifests(apps).then(render);
 }
 
@@ -433,7 +435,7 @@ function showSubmit(existing) {
       <select class="a-fmt"></select>
       <input class="a-url url" placeholder="https://… download link" value="${esc(a.url || '')}">
       <button class="btn danger a-rm" type="button" aria-label="remove"><span class="material-symbols-rounded">close</span></button>
-      <div class="sub"><input class="a-sha" placeholder="SHA-256 (optional, advised)" value="${esc(a.sha256 || '')}"><input class="a-arch" placeholder="arch" value="${esc(a.arch || '')}"><input class="a-label" placeholder="button label (optional)" value="${esc(a.label || '')}"></div></div>`;
+      <div class="sub"><input class="a-sha" placeholder="SHA-256 (optional, advised)" value="${esc(a.sha256 || '')}"><input class="a-arch" placeholder="arch" value="${esc(a.arch || '')}"><input class="a-label" placeholder="button label (optional)" value="${esc(a.label || '')}"><input class="a-manifest" style="grid-column:1 / -1" placeholder="update manifest link: update.json (needed for every downloadable file)" value="${esc(a.manifest || '')}"></div></div>`;
   const m = modal(`
     <div class="top"><div><h2>${existing ? 'update your app' : 'submit an app'}</h2><p>an owner checks every entry before it shows up. your files stay where you host them: Epicenter only links to them.</p></div><button class="btn text close" data-close aria-label="close"><span class="material-symbols-rounded">close</span></button></div>
     <div class="row2"><label class="field"><span>name</span><input id="f-name" maxlength="60" value="${esc(e.name || '')}"></label>
@@ -444,6 +446,7 @@ function showSubmit(existing) {
     <div class="row2"><label class="field"><span>website (https)</span><input id="f-home" value="${esc(e.homepage || '')}"></label><label class="field"><span>icon image (https, optional)</span><input id="f-icon" value="${esc(e.icon || '')}"></label></div>
     <div class="row2"><label class="field"><span>version (optional)</span><input id="f-ver" maxlength="32" value="${esc(e.version || '')}"></label><label class="field"><span>author (optional)</span><input id="f-author" maxlength="60" value="${esc(e.author || '')}"></label></div>
     <h3>downloads</h3>
+    <p class="note">Every downloadable file needs an <b>update manifest</b> so people get new versions. Web apps and store links do not. <a href="/epicenter/developers" target="_blank" rel="noopener">How it works</a>.</p>
     <div id="f-assets">${(e.assets && e.assets.length ? e.assets : [{}]).map(assetRowHtml).join('')}</div>
     <button class="btn text" type="button" id="f-addasset"><span class="material-symbols-rounded">add</span>add a download</button>
     <div class="warn"><span class="material-symbols-rounded">gpp_maybe</span><div>Only submit software you made or have the right to share. Entries that look harmful, misleading or pirated are rejected.</div></div>
@@ -471,7 +474,7 @@ function showSubmit(existing) {
     const app = {
       id: v('#f-id'), name: v('#f-name'), summary: v('#f-sum'), description: v('#f-desc'), homepage: v('#f-home'), icon: v('#f-icon'), version: v('#f-ver'), author: v('#f-author'),
       categories: [...root.querySelectorAll('#f-cats .active')].map(b => b.dataset.c),
-      assets: [...assets.children].map(r => ({ platform: r.querySelector('.a-plat').value, format: r.querySelector('.a-fmt').value, url: r.querySelector('.a-url').value.trim(), sha256: r.querySelector('.a-sha').value.trim(), arch: r.querySelector('.a-arch').value.trim(), label: r.querySelector('.a-label').value.trim() })).filter(a => a.url),
+      assets: [...assets.children].map(r => ({ platform: r.querySelector('.a-plat').value, format: r.querySelector('.a-fmt').value, url: r.querySelector('.a-url').value.trim(), sha256: r.querySelector('.a-sha').value.trim(), arch: r.querySelector('.a-arch').value.trim(), label: r.querySelector('.a-label').value.trim(), manifest: r.querySelector('.a-manifest').value.trim() })).filter(a => a.url),
     };
     if (app.assets.some(a => a.platform === 'android')) app.package = app.id;
     msg.className = 'msg'; msg.textContent = 'Sending…'; btn.disabled = true;
@@ -542,6 +545,12 @@ function showNewKey(key) {
 $('sourcesBtn').addEventListener('click', showSources);
 $('submitBtn').addEventListener('click', async () => { if (!getCurrentUser()) { try { await signIn(); } catch {} } if (getCurrentUser()) showSubmit(); else toast('Sign in to submit an app.'); });
 $('mineBtn').addEventListener('click', async () => { if (!getCurrentUser()) { try { await signIn(); } catch {} } if (getCurrentUser()) showMine(); else toast('Sign in to see your apps.'); });
+// epicenter.html#app=<id> opens that app (this is what an app's "update available" button links to)
+function openFromHash() {
+  const m = /^#app=(.+)$/.exec(location.hash); if (!m || openFromHash.done) return;
+  const app = apps.find(a => a.id.toLowerCase() === decodeURIComponent(m[1]).toLowerCase());
+  if (app) { openFromHash.done = true; showApp(app); }
+}
 if (location.hash === '#submit') $('submitBtn').click();
 loadAll();
 </script>

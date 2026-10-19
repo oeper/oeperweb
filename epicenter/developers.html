@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Epicenter for developers — oeper.dev</title>
+<meta name="description" content="How to ship updates through Epicenter: an update manifest, a one-call update check for your app, a release script and a GitHub Action.">
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<script src="/shared/theme-boot.js?v=16" data-cfasync="false"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/fonts.css?v=1">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --md-sys-color-background: #111318; --md-sys-color-surface: #1a1c22; --md-sys-color-surface-variant: #2f353d; --md-sys-color-primary: #a8c7fa; --md-sys-color-on-primary: #062e6f; --md-sys-color-secondary-container: #33485d; --md-sys-color-on-secondary-container: #d2e4ff; --md-sys-color-on-surface: #e2e2e6; --md-sys-color-on-surface-variant: #c4c7c5; --md-sys-color-outline: #43474e; }
+  body { min-height: 100vh; background-color: var(--md-sys-color-background); background-image: var(--oe-bg-image, none); color: var(--md-sys-color-on-surface); font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif); -webkit-font-smoothing: antialiased; }
+  .page { max-width: 820px; margin: 0 auto; padding: 48px 24px 100px; }
+  h1 { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 400; letter-spacing: -.5px; display: flex; align-items: center; gap: 12px; }
+  h1 .material-symbols-rounded { color: var(--md-sys-color-primary); font-size: .85em; }
+  .lead { color: var(--md-sys-color-on-surface-variant); font-size: 16px; line-height: 1.55; margin: 10px 0 28px; }
+  h2 { font-size: 22px; font-weight: 500; margin: 36px 0 10px; display: flex; align-items: center; gap: 10px; }
+  .num { width: 28px; height: 28px; border-radius: 50%; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-size: 14px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  p, li { font-size: 15px; line-height: 1.6; color: var(--md-sys-color-on-surface-variant); }
+  p { margin: 8px 0; } ul { padding-left: 22px; margin: 8px 0; }
+  code { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); padding: 1px 6px; border-radius: 6px; font-size: 13px; }
+  .card { background: var(--md-sys-color-surface); border-radius: 24px; padding: 20px 22px; margin: 14px 0; backdrop-filter: var(--oe-glass-blur, none); -webkit-backdrop-filter: var(--oe-glass-blur, none); }
+  .rule { display: flex; gap: 14px; align-items: flex-start; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-radius: 20px; padding: 16px 18px; }
+  .rule p { color: inherit; margin: 0; } .rule .material-symbols-rounded { font-size: 26px; }
+  .code { position: relative; margin: 12px 0; }
+  .code .title { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin: 0 0 4px 4px; }
+  pre { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); border-radius: 16px; padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.5; font-family: ui-monospace, Menlo, Consolas, monospace; backdrop-filter: var(--oe-glass-blur, none); -webkit-backdrop-filter: var(--oe-glass-blur, none); }
+  .copy { position: absolute; top: 22px; right: 8px; border: none; border-radius: 100px; padding: 5px 12px; font: inherit; font-size: 12px; cursor: pointer; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); transition: transform .15s; }
+  .copy:active { transform: scale(.94); }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
+  .tab { border: none; border-radius: 8px; padding: 8px 14px; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant); transition: background-color .2s, color .2s; }
+  .tab.on { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+  .pane { display: none; animation: rise .25s both; } .pane.on { display: block; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .pane { animation: none; } }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 10px 0; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--md-sys-color-outline); color: var(--md-sys-color-on-surface-variant); vertical-align: top; }
+  th { color: var(--md-sys-color-on-surface); font-weight: 500; }
+  a { color: var(--md-sys-color-primary); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 100px; padding: 10px 18px; font-size: 14px; font-weight: 500; text-decoration: none; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
+  .btn.tonal { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1><span class="material-symbols-rounded">code</span>epicenter for developers</h1>
+  <p class="lead">Ship updates through Epicenter in three steps. It takes about five minutes, and after that every release is one command.</p>
+
+  <div class="rule"><span class="material-symbols-rounded">rule</span><p><b>The rule:</b> every downloadable app (APK, installer, disk image, package…) must give Epicenter an <b>update manifest</b>, a small JSON file at a link that never changes. Submissions without a readable manifest are refused. Web apps and store links (App Store, TestFlight) update themselves and are exempt.</p></div>
+
+  <h2><span class="num">1</span>Host an <code>update.json</code></h2>
+  <p>Put this next to your download, at an address you keep the same for every release (a GitHub release asset called <code>update.json</code> on a rolling tag works well). The helper in step 3 writes it for you.</p>
+  <div class="code"><div class="title">update.json</div><script type="text/plain">{
+  "versionName": "1.2.0",
+  "versionCode": 12,
+  "size": 18734211,
+  "sha256": "64 hex characters of the file",
+  "notes": "What is new in this version"
+}</script></div>
+  <ul>
+    <li><code>versionCode</code> is required for Android (the number in your <code>build.gradle</code>). Elsewhere <code>versionName</code> is enough.</li>
+    <li><code>sha256</code> is optional but advised: the Epicenter app refuses a download that does not match it. If you leave it out, nothing stale is checked.</li>
+    <li>Keep the <b>download link</b> stable too (for GitHub: <code>https://github.com/you/app/releases/latest/download/App.apk</code>) so only the manifest changes.</li>
+  </ul>
+
+  <h2><span class="num">2</span>Submit the app once</h2>
+  <p>On <a href="/epicenter">oeper.dev/epicenter</a> press <b>submit an app</b> and fill in the downloads. Every file has a <b>manifest</b> box: paste the <code>update.json</code> link there. An owner approves new apps; after that, new versions appear <b>by themselves</b>: Epicenter reads your manifest every 6 hours (and whenever someone opens the store).</p>
+
+  <h2><span class="num">3</span>Release with one command</h2>
+  <p>The helper measures your build, writes <code>update.json</code> and can tell Epicenter right away. Get it at <a href="/epicenter/epicenter-release.mjs">epicenter-release.mjs</a> (Node 18+, no installs).</p>
+  <div class="code"><div class="title">terminal</div><script type="text/plain">node epicenter-release.mjs --file app-release.apk --version 1.2.0 --code 12 --notes "Fixes and a new dark theme" --out update.json
+# then upload update.json to the manifest link, or let CI do it (below)</script></div>
+  <p>To skip the 6-hour wait, make a <b>publish key</b> (store page → my apps → publish keys) and add <code>--publish com.example.app --key epk_…</code>. A key can only touch apps you own.</p>
+
+  <h2><span class="num">4</span>Make your app check for updates</h2>
+  <p>One call answers “is there a newer version of me?” and works from any language:</p>
+  <div class="code"><div class="title">HTTP</div><script type="text/plain">GET https://oeper-ai.oeper.workers.dev/api/epicenter/latest?id=com.example.app&platform=android
+
+{ "id": "com.example.app", "version": "1.2.0", "versionCode": 12, "notes": "…",
+  "url": "https://…/App.apk", "sha256": "…", "size": 18734211,
+  "page": "https://oeper.dev/epicenter#app=com.example.app", "deeplink": "epicenter://app/com.example.app" }</script></div>
+  <div class="tabs" id="tabs"></div>
+  <div id="panes">
+    <div class="pane" data-tab="Android (Kotlin)"><p>Copy <a href="/epicenter/EpicenterUpdate.kt">EpicenterUpdate.kt</a> into your project (no libraries) and call it from your launch screen. <code>open</code> hands over to the Epicenter app for a one-tap update, or opens the store page if it is not installed.</p>
+      <div class="code"><div class="title">MainActivity.kt</div><script type="text/plain">EpicenterUpdate.check(this, "com.example.app") { update ->
+    if (update != null) {
+        AlertDialog.Builder(this)
+            .setTitle("Version ${update.version} is available")
+            .setMessage(update.notes)
+            .setPositiveButton("Update") { _, _ -> EpicenterUpdate.open(this, update) }
+            .setNegativeButton("Later", null)
+            .show()
+    }
+}</script></div></div>
+    <div class="pane" data-tab="Desktop / Electron / JS"><div class="code"><div class="title">update-check.js</div><script type="text/plain">const APP_ID = 'com.example.app';
+const PLATFORM = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'macos' : 'linux';
+
+export async function checkForUpdate(currentVersion) {
+  const res = await fetch(`https://oeper-ai.oeper.workers.dev/api/epicenter/latest?id=${APP_ID}&platform=${PLATFORM}`);
+  if (!res.ok) return null;                       // offline or not listed: stay quiet
+  const latest = await res.json();
+  const newer = latest.version && latest.version.localeCompare(currentVersion, undefined, { numeric: true }) > 0;
+  return newer ? latest : null;                   // latest.url is the download, latest.page the store page
+}</script></div></div>
+    <div class="pane" data-tab="Python"><div class="code"><div class="title">update_check.py</div><script type="text/plain">import json, urllib.request
+
+def check_for_update(current_code, app_id="com.example.app", platform="linux"):
+    url = f"https://oeper-ai.oeper.workers.dev/api/epicenter/latest?id={app_id}&platform={platform}"
+    try:
+        latest = json.load(urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "my-app"}), timeout=8))
+    except Exception:
+        return None                                  # offline or not listed
+    return latest if (latest.get("versionCode") or 0) > current_code else None</script></div></div>
+    <div class="pane" data-tab="Anything else"><p>It is one HTTPS GET that returns JSON (see above). Compare <code>versionCode</code> (or <code>version</code>) with your own and show your usual “update available” message with a button that opens <code>deeplink</code> or <code>page</code>. Never install silently.</p></div>
+  </div>
+
+  <h2><span class="num">5</span>Automate it (GitHub Actions)</h2>
+  <p>Add your publish key as a repository secret named <code>EPICENTER_KEY</code>. This builds, publishes the release files and tells Epicenter:</p>
+  <div class="code"><div class="title">.github/workflows/release.yml</div><script type="text/plain">name: release
+on:
+  push:
+    tags: ['v*']
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./gradlew assembleRelease                      # your build
+      - run: curl -fsSLO https://oeper.dev/epicenter/epicenter-release.mjs
+      - run: node epicenter-release.mjs --file app/build/outputs/apk/release/app-release.apk --version "${GITHUB_REF_NAME#v}" --code "${{ github.run_number }}" --notes "Release ${GITHUB_REF_NAME}" --out update.json --publish com.example.app
+        env: { EPICENTER_KEY: "${{ secrets.EPICENTER_KEY }}" }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            app/build/outputs/apk/release/app-release.apk
+            update.json</script></div>
+
+  <h2>Reference</h2>
+  <div class="card">
+    <table>
+      <tr><th>Call</th><th>What it does</th></tr>
+      <tr><td><code>GET /api/epicenter/latest?id=&amp;platform=</code></td><td>Newest release of an app (public, cached a minute). <code>platform</code>: android, windows, macos, linux, ios, web.</td></tr>
+      <tr><td><code>PUT /api/epicenter/publish</code></td><td>Add or update your app with a publish key. Only the fields you send change.</td></tr>
+      <tr><td><code>GET /api/epicenter/manifest?url=</code></td><td>Reads an <code>update.json</code> and returns the cleaned fields (what the website uses).</td></tr>
+    </table>
+    <p>API address: <code>https://oeper-ai.oeper.workers.dev</code>. The full catalog format is in <a href="/epicenter/README.md">epicenter/README.md</a>.</p>
+  </div>
+  <div class="row"><a class="btn" href="/epicenter#submit"><span class="material-symbols-rounded">add</span>submit an app</a><a class="btn tonal" href="/epicenter"><span class="material-symbols-rounded">storefront</span>back to epicenter</a></div>
+</div>
+
+<script type="module" data-cfasync="false">
+import { mountTopNav } from '/shared/topnav.js?v=46';
+mountTopNav();
+// code blocks: raw text in <script type="text/plain"> -> <pre> with a copy button
+document.querySelectorAll('.code > script[type="text/plain"]').forEach(s => {
+  const pre = document.createElement('pre'); pre.textContent = s.textContent.replace(/^\n/, '');
+  const btn = document.createElement('button'); btn.className = 'copy'; btn.textContent = 'copy';
+  btn.addEventListener('click', async () => { try { await navigator.clipboard.writeText(pre.textContent); btn.textContent = 'copied'; setTimeout(() => (btn.textContent = 'copy'), 1400); } catch { btn.textContent = 'select it'; } });
+  s.replaceWith(pre, btn);
+});
+// language tabs
+const panes = [...document.querySelectorAll('.pane')], tabs = document.getElementById('tabs');
+const pick = name => { panes.forEach(p => p.classList.toggle('on', p.dataset.tab === name)); [...tabs.children].forEach(t => t.classList.toggle('on', t.textContent === name)); };
+panes.forEach(p => { const b = document.createElement('button'); b.className = 'tab'; b.textContent = p.dataset.tab; b.addEventListener('click', () => pick(p.dataset.tab)); tabs.appendChild(b); });
+pick(panes[0].dataset.tab);
+</script>
+</body>
+</html>
