@@ -472,6 +472,7 @@ export function showStorageNotice() {
 
 export function mountTopNav(container) {
   injectStyles();
+  import('./epic-fab.js?v=2').then(m => m.mountEpicFab()).catch(() => {});   // the floating epic AI button (only when the epic AI switch is on)
   if (document.body) showStorageNotice(); else document.addEventListener('DOMContentLoaded', showStorageNotice);
   const el = document.createElement('div');
   el.innerHTML = `

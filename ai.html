@@ -651,7 +651,7 @@
 
 <script type="module" data-cfasync="false">
 import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification, signIn } from './shared/account.js?v=43';
-import { showStorageNotice } from './shared/topnav.js?v=46';
+import { showStorageNotice } from './shared/topnav.js?v=48';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { applySection, profilePrompt, PROFILE_MAX, GET_TO_KNOW } from './shared/ai-memory.js?v=1';
 import { recallPrompt } from './shared/ai-recall.js?v=1';
@@ -2369,6 +2369,17 @@ document.getElementById('clearBtn').addEventListener('click', () => {
       localStorage.setItem('epicAppPromptSeen', '1');
     }, 2500);
   } catch { /* storage blocked: better never to show it than to show it every time */ }
+})();
+
+// A question typed into the floating epic AI button on another page (shared/epic-fab.js) arrives here as a short-lived hand-off note: start a new chat with it.
+(function takeHandoff() {
+  let note = null;
+  try { note = JSON.parse(localStorage.getItem('oe-ai-handoff') || 'null'); localStorage.removeItem('oe-ai-handoff'); } catch { return; }
+  if (!note || typeof note.text !== 'string' || !note.text || Date.now() - (note.t || 0) > 5 * 60 * 1000) return;
+  startNewChat();
+  inputEl.value = note.text;
+  autoGrow();
+  sendMessage();
 })();
 </script>
 </body>
