@@ -100,6 +100,10 @@ export class Ledger extends DurableObject {
     ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS epicenter (id TEXT PRIMARY KEY, owner TEXT NOT NULL, data TEXT, pending TEXT, status TEXT NOT NULL, note TEXT, created INTEGER, updated INTEGER)');
     // Epicenter publish keys: only a hash is kept; a key lets a script add/update the apps its owner already owns (see handleEpicenter)
     ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS epickeys (hash TEXT PRIMARY KEY, owner TEXT NOT NULL, label TEXT, created INTEGER, used INTEGER)');
+    // Epicenter download counts (one per person-or-network per app per day) and star ratings / reviews (one per person per app)
+    ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS epicdl (id TEXT NOT NULL, who TEXT NOT NULL, day INTEGER NOT NULL, PRIMARY KEY (id, who, day))');
+    ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS epicdlcount (id TEXT PRIMARY KEY, n INTEGER NOT NULL)');
+    ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS epicrate (id TEXT NOT NULL, email TEXT NOT NULL, stars INTEGER NOT NULL, review TEXT, name TEXT, created INTEGER, updated INTEGER, PRIMARY KEY (id, email))');
     // each person's sealed Google connection (see google.js); the worker encrypts it, this only stores the text
     ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS google (email TEXT PRIMARY KEY, data TEXT NOT NULL)');
   }
@@ -125,6 +129,35 @@ export class Ledger extends DurableObject {
       // Epicenter lists installable apps only: drop web / pwa / link entries an earlier version accepted
       .map(app => ({ ...app, assets: (app.assets || []).filter(x => x.platform !== 'web' && !['pwa', 'link', 'store'].includes(x.format)) })).filter(app => app.assets.length);
   }
+  /** Counts a download once per [who] per app per day. Returns the new total. */
+  epicDownload(id, who) {
+    const sql = this.ctx.storage.sql, day = Math.floor(Date.now() / 86400_000);
+    const fresh = sql.exec('INSERT OR IGNORE INTO epicdl (id, who, day) VALUES (?, ?, ?)', id, who, day).rowsWritten > 0;
+    if (fresh) sql.exec('INSERT INTO epicdlcount (id, n) VALUES (?, 1) ON CONFLICT(id) DO UPDATE SET n = n + 1', id);
+    if (fresh && Math.random() < 0.02) sql.exec('DELETE FROM epicdl WHERE day < ?', day - 2);
+    return (sql.exec('SELECT n FROM epicdlcount WHERE id = ?', id).toArray()[0] || { n: 0 }).n;
+  }
+  /** { [id]: { downloads, rating, ratings } } for every app that has any. */
+  epicStats() {
+    const sql = this.ctx.storage.sql, out = {};
+    for (const r of sql.exec('SELECT id, n FROM epicdlcount').toArray()) out[r.id] = { downloads: r.n, rating: 0, ratings: 0 };
+    for (const r of sql.exec('SELECT id, count(*) AS c, avg(stars) AS a FROM epicrate GROUP BY id').toArray()) (out[r.id] = out[r.id] || { downloads: 0 }), Object.assign(out[r.id], { rating: Math.round(r.a * 10) / 10, ratings: r.c });
+    return out;
+  }
+  epicReviews(id, email) {
+    const sql = this.ctx.storage.sql;
+    const rows = sql.exec("SELECT email, stars, review, name, updated FROM epicrate WHERE id = ? ORDER BY length(coalesce(review, '')) > 0 DESC, updated DESC LIMIT 40", id).toArray();
+    const mineRow = rows.find(r => r.email === email);
+    return { reviews: rows.map(r => ({ stars: r.stars, review: r.review || '', name: r.name || 'Someone', updated: r.updated, mine: !!email && r.email === email })), mine: mineRow ? { stars: mineRow.stars, review: mineRow.review || '' } : null };
+  }
+  epicRate(id, email, stars, review, name) {
+    const sql = this.ctx.storage.sql, now = Date.now();
+    if (!stars) { sql.exec('DELETE FROM epicrate WHERE id = ? AND email = ?', id, email); return true; }
+    sql.exec('INSERT INTO epicrate (id, email, stars, review, name, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id, email) DO UPDATE SET stars = excluded.stars, review = excluded.review, name = excluded.name, updated = excluded.updated', id, email, stars, review, name, now, now);
+    return true;
+  }
+  /** Owners: remove somebody's review by the position shown in the list (matched on id + name + time). */
+  epicReviewRemove(id, name, updated) { this.ctx.storage.sql.exec('DELETE FROM epicrate WHERE id = ? AND name = ? AND updated = ?', id, name, updated); return true; }
   epicMine(email) {
     return this.ctx.storage.sql.exec('SELECT id, data, pending, status, note, updated FROM epicenter WHERE owner = ? ORDER BY updated DESC', email).toArray()
       .map(r => ({ id: r.id, status: r.status, note: r.note, updated: r.updated, live: !!r.data, app: JSON.parse(r.pending || r.data) }));

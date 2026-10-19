@@ -52,7 +52,7 @@ export async function verifyIdToken(token, now = Date.now(), loadKey = getKey) {
     const email = String(claims.email || '').toLowerCase();
     if (!email) return null;
     // oeper+ needs a verified phone: Firebase puts phone_number in the token once a phone is linked (the number itself is not kept)
-    return { email, uid: claims.sub, phone: !!claims.phone_number };
+    return { email, uid: claims.sub, phone: !!claims.phone_number, name: String(claims.name || '').slice(0, 60) };
   } catch {
     return null;
   }

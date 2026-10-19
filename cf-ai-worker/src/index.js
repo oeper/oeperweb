@@ -1123,6 +1123,19 @@ async function handleEpicenter(request, env, route) {
     return new Response(JSON.stringify(m || {}), { status: m ? 200 : 404, headers: { 'Content-Type': 'application/json', 'Cache-Control': m ? 'public, max-age=300' : 'no-store',...corsHeaders(request) } });
   }
   if (route === 'publish' && (request.method === 'PUT' || post)) return epicenterPublish(request, env, L);
+  if (route === 'stats' && get) return new Response(JSON.stringify({ stats: await L.epicStats() }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=30', ...corsHeaders(request) } });
+  if (route === 'download' && post) {
+    // the page tells us when someone presses a download button (the files themselves are served elsewhere); once per person/network per app per day
+    const body = await readBody(request), id = String((body && body.id) || '').toLowerCase();
+    if (!/^[a-z0-9][a-z0-9._-]{2,63}$/.test(id)) return json({ error: 'Bad app id.' }, 400, request);
+    const who = await sha256Hex((request.headers.get('cf-connecting-ip') || 'x') + '|' + id);
+    return json({ ok: true, downloads: await L.epicDownload(id, who) }, 200, request);
+  }
+  if (route === 'reviews' && get) {
+    const id = String(new URL(request.url).searchParams.get('id') || '').toLowerCase();
+    const u = request.headers.get('Authorization') ? await userFromRequest(request, env) : null;
+    return json(await L.epicReviews(id, u && u.email), 200, request);
+  }
   if (route === 'upload-check' && post) {
     // the files server (fs.oeper.dev) asks, with the uploader's own credentials (sign-in token or publish key), whether they may store files for this app id
     const km = /^Bearer (epk_[A-Za-z0-9_-]{20,64})$/.exec(request.headers.get('Authorization') || '');
@@ -1150,6 +1163,22 @@ async function handleEpicenter(request, env, route) {
     if (bad) return json({ error: bad }, 400, request);
     const out = await L.epicSubmit(user.email, r.app, owner, owner);
     return json(out, out.ok ? 200 : 400, request);
+  }
+  if (route === 'rate' && post) {
+    const body = await readBody(request), id = String((body && body.id) || '').toLowerCase();
+    if (!/^[a-z0-9][a-z0-9._-]{2,63}$/.test(id)) return json({ error: 'Bad app id.' }, 400, request);
+    const stars = Math.max(0, Math.min(5, Math.round(Number(body.stars) || 0)));
+    const review = clipText(body.review, 500).trim();
+    if (stars && review && (await moderateText(env, review).catch(() => ({}))).flagged) return json({ error: 'That review was not accepted. Please keep it kind and on topic.' }, 400, request);
+    const first = String(user.name || '').trim().split(/s+/)[0] || 'Someone';   // first name only, never the email
+    await L.epicRate(id, user.email, stars, review, first);
+    return json({ ok: true }, 200, request);
+  }
+  if (route === 'reviews/remove' && post) {
+    if (!owner) return json({ error: 'Owners only.' }, 403, request);
+    const body = await readBody(request);
+    await L.epicReviewRemove(String(body.id || '').toLowerCase(), String(body.name || ''), Number(body.updated) || 0);
+    return json({ ok: true }, 200, request);
   }
   if (route === 'refresh' && post) {
     // a publisher (or an owner, for everything) asks for the release check now instead of waiting for the next scheduled one

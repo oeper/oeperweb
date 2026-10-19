@@ -102,6 +102,16 @@
   .app-icon img { width: 100%; height: 100%; object-fit: cover; }
   .app-main { flex: 1; min-width: 0; }
   .app-main h3 { font-size: 18px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stats { display: flex; gap: 12px; font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin: 0 0 6px; }
+  .stat { display: inline-flex; align-items: center; gap: 3px; } .stat .material-symbols-rounded { font-size: 16px; } .stat small { opacity: .8; }
+  .reviews { display: grid; gap: 8px; margin-top: 6px; }
+  .review { background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface-variant); border-radius: 12px; padding: 10px 12px; font-size: 14px; line-height: 1.45; }
+  .review b { color: var(--md-sys-color-on-surface); } .review .st { color: var(--md-sys-color-primary); letter-spacing: 1px; margin-left: 6px; }
+  .review small { display: block; opacity: .75; margin-top: 2px; } .review p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .rate { display: grid; gap: 8px; margin-top: 8px; }
+  .rate .stars { display: flex; gap: 2px; } .rate .stars button { background: none; border: 0; cursor: pointer; padding: 2px; color: var(--md-sys-color-outline); line-height: 0; }
+  .rate .stars button.on { color: var(--md-sys-color-primary); } .rate .stars .material-symbols-rounded { font-size: 30px; font-variation-settings: 'FILL' 1; }
+  .rate textarea { width: 100%; min-height: 64px; resize: vertical; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--md-sys-color-outline); background: transparent; color: inherit; padding: 8px 10px; font: inherit; }
   .app-by { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin: 2px 0 6px; flex-wrap: wrap; }
   .app-main p { font-size: 14px; line-height: 1.45; color: var(--md-sys-color-on-surface-variant); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .plats { display: flex; gap: 6px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
@@ -271,6 +281,7 @@ async function loadAll() {
   });
   apps = out;
   $('loading').textContent = '';
+  try { stats = (await getJson(WORKER + '/api/epicenter/stats')).stats || {}; } catch { /* the store still works without the numbers */ }
   render();
   openFromHash();
   resolveManifests(apps).then(render);
@@ -281,6 +292,13 @@ function platPills() {
   const items = [...(PLATFORM[me] ? [{ id: 'mine', label: 'for my device', icon: PLATFORM[me] ? PLATFORM[me].icon : 'devices' }] : []), { id: 'all', label: 'all', icon: 'clear_all' }, ...PLATFORMS];
   $('platPills').innerHTML = items.map(p => `<button class="pill${platFilter === p.id ? ' active' : ''}" data-p="${p.id}"><span class="material-symbols-rounded">${p.icon}</span>${esc(p.label)}</button>`).join('');
   $('catPills').innerHTML = [{ id: '', label: 'any category', icon: 'category' }, ...CATEGORIES].map(c => `<button class="pill${catFilter === c.id ? ' active' : ''}" data-c="${c.id}"><span class="material-symbols-rounded">${c.icon}</span>${esc(c.label)}</button>`).join('');
+}
+let stats = {};   // { [appId]: { downloads, rating, ratings } } from the worker
+const kfmt = n => n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M' : n >= 1e3 ? (n / 1e3).toFixed(n >= 1e4 ? 0 : 1).replace(/\.0$/, '') + 'k' : String(n);
+function statLine(id) {
+  const s = stats[id]; if (!s) return '';
+  return (s.ratings ? `<span class="stat"><span class="material-symbols-rounded">star</span>${s.rating.toFixed(1)}<small>(${s.ratings})</small></span>` : '')
+    + (s.downloads ? `<span class="stat"><span class="material-symbols-rounded">download</span>${kfmt(s.downloads)}</span>` : '');
 }
 function trustBadge(a) {
   return a._trust === 'oeper' ? '<span class="badge oeper"><span class="material-symbols-rounded">verified</span>oeper.dev</span>'
@@ -305,6 +323,7 @@ function render() {
         <h3>${esc(a.name)}</h3>
         <div class="app-by">${trustBadge(a)}${fresh(a) ? '<span class="badge fresh">updated</span>' : ''}${a.author ? esc(a.author) : ''}${a.version ? ' · v' + esc(a.version) : ''}${when(a) ? ' · ' + ago(when(a)) : ''}</div>
         <p>${esc(a.summary)}</p>
+        ${stats[a.id] ? `<div class="stats">${statLine(a.id)}</div>` : ''}
         <div class="plats">${platformsOf(a).map(p => `<span class="plat${p === me ? ' mine' : ''}"><span class="material-symbols-rounded">${PLATFORM[p].icon}</span>${esc(PLATFORM[p].label)}</span>`).join('')}</div>
       </div>
       <button class="btn tonal get">get</button>
@@ -369,6 +388,7 @@ function showApp(app) {
       <div><h2>${esc(app.name)}</h2><div class="app-by">${trustBadge(app)}${app.author ? esc(app.author) : ''}${app.version ? ' · v' + esc(app.version) : ''}${when(app) ? ' · updated ' + ago(when(app)) : ''}${app.license ? ' · ' + esc(app.license) : ''}</div></div>
       <button class="btn text close" data-close aria-label="close"><span class="material-symbols-rounded">close</span></button></div>
     <p>${esc(app.summary)}</p>
+    <div class="stats" id="appStats">${statLine(app.id)}</div>
     ${warn}
     ${app.screenshots && app.screenshots.length ? `<div class="shots">${app.screenshots.map(s => `<img src="${esc(s)}" alt="" loading="lazy" referrerpolicy="no-referrer">`).join('')}</div>` : ''}
     ${app.description ? `<h3>about</h3><p class="desc">${esc(app.description)}</p>` : ''}
@@ -377,11 +397,56 @@ function showApp(app) {
     ${[...plats].sort((a, b) => (a === me ? -1 : 0) - (b === me ? -1 : 0)).map(p => assetsFor(app, p).map(a => assetRow(a, app)).join('')).join('')}
     ${androidNote}${otherNote}
     <p class="note">${Object.entries(HASH_HELP).filter(([k, v]) => v && plats.includes(k) && app.assets.some(a => a.platform === k && a.sha256)).map(([k, v]) => PLATFORM[k].label + ': ' + v).join('<br>')}</p>
+    <h3>ratings and reviews</h3><div id="revBox" class="note">loading…</div>
     <div class="actions">${app.homepage ? `<a class="btn text" href="${esc(app.homepage)}" target="_blank" rel="noopener"><span class="material-symbols-rounded">home</span>website</a>` : ''}${app.source ? `<a class="btn text" href="${esc(app.source)}" target="_blank" rel="noopener"><span class="material-symbols-rounded">code</span>source</a>` : ''}<button class="btn tonal" data-close>close</button></div>`);
+  loadReviews(m.root, app);
   m.root.addEventListener('click', async e => {
+    const dl = e.target.closest('.asset .acts a.btn');
+    if (dl) countDownload(app.id, m.root);
     const c = e.target.closest('[data-copy],[data-sha]'); if (!c) return;
     try { await navigator.clipboard.writeText(c.dataset.copy || c.dataset.sha); toast(c.dataset.sha ? 'Checksum copied' : 'Link copied'); } catch { toast('Could not copy'); }
   });
+}
+
+// download counts and ratings (the numbers live in the worker; the file itself comes from the files server)
+function countDownload(id, root) {
+  fetch(WORKER + '/api/epicenter/download', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }), keepalive: true })
+    .then(r => r.json()).then(j => { if (j && j.downloads) { stats[id] = Object.assign({ rating: 0, ratings: 0 }, stats[id], { downloads: j.downloads }); const el = root.querySelector('#appStats'); if (el) el.innerHTML = statLine(id); render(); } }).catch(() => {});
+}
+const starsText = n => '★'.repeat(n) + '☆'.repeat(5 - n);
+async function loadReviews(root, app) {
+  const box = root.querySelector('#revBox'); if (!box) return;
+  let data;
+  try {
+    const u = getCurrentUser();
+    const r = await fetch(WORKER + '/api/epicenter/reviews?id=' + encodeURIComponent(app.id), { headers: u ? { Authorization: 'Bearer ' + await u.getIdToken() } : {} });
+    data = await r.json();
+  } catch { box.textContent = 'Could not load reviews right now.'; return; }
+  let pick = data.mine ? data.mine.stars : 0;
+  const cu = getCurrentUser(), isOwner = !!(cu && isOwnerEmail(cu.email));
+  const list = (data.reviews || []).filter(x => x.review || !x.mine);
+  box.className = '';
+  box.innerHTML = (list.length ? '<div class="reviews">' + list.map(x => '<div class="review"><b>' + esc(x.name) + '</b><span class="st">' + starsText(x.stars) + '</span><small>' + ago(x.updated) + (isOwner ? ' · <a href="#" data-rm="' + esc(x.name) + '|' + x.updated + '">remove</a>' : '') + '</small>' + (x.review ? '<p>' + esc(x.review) + '</p>' : '') + '</div>').join('') + '</div>' : '<p class="note">No reviews yet.</p>')
+    + '<div class="rate"><b>' + (data.mine ? 'your rating' : 'rate this app') + '</b><div class="stars">' + [1, 2, 3, 4, 5].map(n => '<button data-star="' + n + '" aria-label="' + n + ' star' + (n > 1 ? 's' : '') + '"><span class="material-symbols-rounded">star</span></button>').join('') + '</div>'
+    + '<textarea maxlength="500" placeholder="say a little about it (optional)">' + esc(data.mine ? data.mine.review : '') + '</textarea>'
+    + '<div class="actions"><button class="btn filled" data-send>' + (data.mine ? 'update' : 'send') + '</button>' + (data.mine ? '<button class="btn text" data-unrate>remove mine</button>' : '') + '</div></div>';
+  const paint = () => box.querySelectorAll('[data-star]').forEach(b => b.classList.toggle('on', Number(b.dataset.star) <= pick));
+  paint();
+  const send = async stars => {
+    try { await authed('/api/epicenter/rate', 'POST', { id: app.id, stars, review: stars ? box.querySelector('textarea').value : '' }); toast(stars ? 'Thanks for rating.' : 'Removed.'); stats = (await getJson(WORKER + '/api/epicenter/stats')).stats || stats; render(); const el = root.querySelector('#appStats'); if (el) el.innerHTML = statLine(app.id); loadReviews(root, app); }
+    catch (err) { toast(err.message); }
+  };
+  box.onclick = e => {   // onclick, not addEventListener: loadReviews runs again after a send and must not stack handlers
+    const st = e.target.closest('[data-star]'); if (st) { pick = Number(st.dataset.star); paint(); return; }
+    if (e.target.closest('[data-send]')) { if (!pick) toast('Pick a number of stars first.'); else send(pick); }
+    if (e.target.closest('[data-unrate]')) send(0);
+    const rm = e.target.closest('[data-rm]');
+    if (rm) {
+      e.preventDefault();
+      const i = rm.dataset.rm.lastIndexOf('|');
+      authed('/api/epicenter/reviews/remove', 'POST', { id: app.id, name: rm.dataset.rm.slice(0, i), updated: Number(rm.dataset.rm.slice(i + 1)) }).then(() => loadReviews(root, app)).catch(err => toast(err.message));
+    }
+  };
 }
 
 // sources
