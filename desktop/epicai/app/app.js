@@ -2,6 +2,7 @@
 import * as acct from './acct.js';
 import * as api from './api.js';
 import { parseAiMarkdown, splitThinking, escHtml } from './md.js';
+import { hydrateDiagrams } from './ai-diagrams.js';
 import { injectCodeBlockStyles, wireCodeBlockCopy, copyToClipboard } from './code-block.js';
 import { compactChat, toWireMessages, SCREEN_HINT } from './prompt.js';
 import { readFileForAI, isImage } from './ai-files.js';
@@ -77,7 +78,7 @@ function renderAnswer(bubble, reasoning, content, done) {
     block.querySelector('.thinking-content-inner').textContent = thinking;
   } else if (block) block.remove();
   let a = bubble.querySelector('.answer-content');
-  if (answer) { if (!a) { a = el('div', 'answer-content'); bubble.appendChild(a); } a.innerHTML = parseAiMarkdown(answer); }
+  if (answer) { if (!a) { a = el('div', 'answer-content'); bubble.appendChild(a); } a.innerHTML = parseAiMarkdown(answer); hydrateDiagrams(a); }
   else if (a) a.remove();
   return answer;
 }

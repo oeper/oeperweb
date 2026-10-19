@@ -92,6 +92,10 @@
   .msg-bubble blockquote { margin: 6px 0; padding: 2px 12px; border-left: 3px solid var(--md-sys-color-primary); opacity: 0.85; color: inherit; }
   .msg-bubble blockquote p { margin: 4px 0; }
   .msg-bubble del { opacity: 0.65; }
+  .ai-diagram { margin: 10px 0; padding: 10px; border-radius: 14px; background: rgba(127,127,127,.10); overflow-x: auto; }
+  .ai-diagram .ai-diagram-wait, .ai-diagram .ai-diagram-fail { font-size: 13px; opacity: .7; }
+  .ai-diagram svg { max-width: 100%; height: auto; } .ai-diagram .ai-diagram-img { width: 100%; max-width: 640px; display: block; margin: 0 auto; }
+  .ai-diagram .ai-diagram-src { white-space: pre-wrap; font-size: 12px; opacity: .7; margin: 6px 0 0; }
   .msg-bubble .md-img { max-width: 100%; border-radius: 10px; margin: 6px 0; display: block; }
   .msg-bubble code { background: rgba(127,127,127,0.2); border-radius: 4px; padding: 1px 5px; font-size: 0.9em; }
   .msg-bubble .math-block { margin: 8px 0; overflow-x: auto; overflow-y: hidden; }
@@ -133,7 +137,8 @@ import { mountFooter } from './shared/footer.js?v=7';
 import { call, fmtDate } from './shared/codes-api.js?v=2';
 import { oeConfirm } from './shared/dialog.js?v=4';
 import { copyToClipboard, injectCodeBlockStyles } from './shared/code-block.js?v=3';
-import { escHtml, parseAiMarkdown, splitThinking } from './shared/ai-markdown.js?v=1';
+import { escHtml, parseAiMarkdown, splitThinking } from './shared/ai-markdown.js?v=2';
+import { hydrateDiagrams } from './shared/ai-diagrams.js?v=1';
 
 mountTopNav();
 mountFooter();
@@ -173,7 +178,7 @@ function render() {
     wrap.innerHTML = (m.role === 'user' ? '' : '<div class="msg-avatar">' + EPIC_MARK_SVG + '</div>') + '<div class="msg-col"><div class="msg-bubble"></div>' + renderPics(m.images) + '</div>';
     const bubble = wrap.querySelector('.msg-bubble');
     if (m.role === 'user') bubble.textContent = m.text;
-    else if (m.text) { const a = document.createElement('div'); a.className = 'answer-content'; a.innerHTML = parseAiMarkdown(splitThinking('', m.text, true).answer); bubble.append(a); }
+    else if (m.text) { const a = document.createElement('div'); a.className = 'answer-content'; a.innerHTML = parseAiMarkdown(splitThinking('', m.text, true).answer); bubble.append(a); hydrateDiagrams(a); }
     else bubble.remove();
     wrap.querySelectorAll('img[data-pic]').forEach(img => { const p = m.images[+img.dataset.pic]; img.src = 'data:' + p.mime + ';base64,' + p.data; });
     box.append(wrap);

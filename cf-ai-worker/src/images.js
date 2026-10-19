@@ -11,6 +11,9 @@
 
 const STANDARD = '@cf/black-forest-labs/flux-2-klein-4b';
 const BEST = 'google/nano-banana-2.1';
+// Switched off 2026-10-19: Nano Banana needs paid AI Gateway credits the account does not have, so every picture is made by the standard (free) model.
+// Flip to true (and add credits) to bring the "best quality" option back.
+const BEST_ENABLED = false;
 const STANDARD_NEURONS = 104.2; // 4 output tiles x 26.05
 const MAX_BYTES = 6 * 1024 * 1024;
 
@@ -89,7 +92,7 @@ export async function makeImage(env, ledger, who, args, guard) {
     if (g && g.flagged) return { ok: false, reason: 'refused', error: "That isn't something I can make a picture of." };
   } catch (err) { console.log('picture prompt check failed, continuing:', err && err.message); }
 
-  let r = await ledger.imageReserve(who.email, !!(args && args.best), !!who.owner, STANDARD_NEURONS);
+  let r = await ledger.imageReserve(who.email, BEST_ENABLED && !!(args && args.best), !!who.owner, STANDARD_NEURONS);
   if (!r.ok) return { ...r, error: imageLimitMessage(r) };
   let made = null;
   if (r.best) {

@@ -1,6 +1,7 @@
 // Markdown + reasoning splitting for epic AI replies: copied from ai.html (lines "escHtml" … "splitThinking"), so the desktop app renders
 // answers exactly like the website. If the parser changes there, copy it again. KaTeX is loaded as a global by index.html.
 import { codeBlockHtml } from './code-block.js';
+import { diagramPlaceholder, isDiagramKind } from './ai-diagrams.js';
 
 export function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -215,7 +216,7 @@ export function parseAiMarkdown(text) {
 
   let src = String(text || '').replace(/\r\n/g, '\n');
 
-  src = src.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => hold(codeBlockHtml(lang, code.replace(/\n$/, ''))));
+  src = src.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => hold(isDiagramKind(lang) && code.trim() ? diagramPlaceholder(lang.toLowerCase(), code.replace(/\n$/, '')) : codeBlockHtml(lang, code.replace(/\n$/, ''))));
 
   // $ must hug its content (no space right inside) so ordinary prose like
   // "$5 and $10" is never misread as the start of a math span.

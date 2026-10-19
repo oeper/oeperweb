@@ -211,6 +211,10 @@
   }
   .msg-bubble blockquote p { margin: 4px 0; }
   .msg-bubble del { opacity: 0.65; }
+  .ai-diagram { margin: 10px 0; padding: 10px; border-radius: 14px; background: rgba(127,127,127,.10); overflow-x: auto; }
+  .ai-diagram .ai-diagram-wait, .ai-diagram .ai-diagram-fail { font-size: 13px; opacity: .7; }
+  .ai-diagram svg { max-width: 100%; height: auto; } .ai-diagram .ai-diagram-img { width: 100%; max-width: 640px; display: block; margin: 0 auto; }
+  .ai-diagram .ai-diagram-src { white-space: pre-wrap; font-size: 12px; opacity: .7; margin: 6px 0 0; }
   .msg-bubble .md-img { max-width: 100%; border-radius: 10px; margin: 6px 0; display: block; }
   .msg-bubble code { background: rgba(127,127,127,0.2); border-radius: 4px; padding: 1px 5px; font-size: 0.9em; }
   .msg-bubble .math-block { margin: 8px 0; overflow-x: auto; overflow-y: hidden; }
@@ -655,7 +659,8 @@ import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import { observeList } from './shared/motion.js?v=3';
 import { beginUpload, updateUpload, finishUpload } from './shared/upload-queue.js?v=3';
 import { codeBlockHtml, copyToClipboard, injectCodeBlockStyles } from './shared/code-block.js?v=3';
-import { escHtml, parseAiMarkdown, splitThinking } from './shared/ai-markdown.js?v=1';
+import { escHtml, parseAiMarkdown, splitThinking } from './shared/ai-markdown.js?v=2';
+import { hydrateDiagrams, DIAGRAM_PROMPT } from './shared/ai-diagrams.js?v=1';
 import { googleConnectedCached, googleStatus } from './shared/google-link.js?v=1';
 import { call as workerCall } from './shared/codes-api.js?v=2';
 import { readFileForAI, FILE_ACCEPT, isImage } from './shared/ai-files.js?v=1';
@@ -768,6 +773,7 @@ function renderAssistantContent(bubble, reasoningBuf, contentBuf, done) {
       bubble.appendChild(answerEl);
     }
     answerEl.innerHTML = parseAiMarkdown(answer);
+    hydrateDiagrams(answerEl);
   } else {
     answerEl?.remove();
   }
@@ -2059,7 +2065,7 @@ async function toWireMessages(msgs, summary) {
     if (m.images && m.images.length) return { role: m.role, content: shortenForWire((m.content || '') + '\n[you drew ' + m.images.length + ' picture' + (m.images.length > 1 ? 's' : '') + ' here: ' + m.images.map(p => '"' + String(p.prompt || '').slice(0, 200) + '"').join(' ; ') + ']') };
     return { role: m.role, content: shortenForWire(m.content) };
   }));
-  let systemContent = SYSTEM_PROMPT;
+  let systemContent = SYSTEM_PROMPT + '\n\n' + DIAGRAM_PROMPT;
   if (summary) systemContent += `\n\nEarlier in this conversation (summarised, so you can carry on): ${summary}`;
   if (selfContext) systemContent += `\n\n${selfContext}`;
   if (memoryFacts.length) {

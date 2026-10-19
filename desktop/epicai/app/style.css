@@ -242,3 +242,9 @@ select, .dialog input[type=text] { background: var(--surface-3); color: var(--te
 .oe-menu button:hover { background: var(--hover); }
 .oe-menu button .ms { font-size: 19px; color: var(--muted); }
 .oe-menu button.danger, .oe-menu button.danger .ms { color: var(--error); }
+
+/* diagrams and charts (ai-diagrams.js) */
+.answer-content .ai-diagram { margin: 10px 0; padding: 10px; border-radius: 14px; background: rgba(127,127,127,.10); overflow-x: auto; }
+.ai-diagram .ai-diagram-wait, .ai-diagram .ai-diagram-fail { font-size: 13px; opacity: .7; }
+.ai-diagram svg { max-width: 100%; height: auto; } .ai-diagram .ai-diagram-img { width: 100%; max-width: 640px; display: block; margin: 0 auto; }
+.ai-diagram .ai-diagram-src { white-space: pre-wrap; font-size: 12px; opacity: .7; margin: 6px 0 0; }

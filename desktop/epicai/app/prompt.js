@@ -2,6 +2,7 @@
 import { askQuiet, urlToDataUrl } from './api.js';
 import { profilePrompt } from './ai-memory.js';
 import { recallPrompt } from './ai-recall.js';
+import { DIAGRAM_PROMPT } from './ai-diagrams.js';
 
 export const SYSTEM_PROMPT = `You are epic AI, oeper's own AI assistant, running here as the epic AI desktop app on the person's computer (Windows or macOS). Be concise but thorough when it actually helps. Format responses using Markdown — headings, **bold**, *italic*, ~~strikethrough~~, blockquotes, ordered/unordered/task lists, tables, horizontal rules, and fenced \`\`\` code blocks — whenever it improves readability, especially for code, structured data, or step-by-step instructions. For math and equations, use LaTeX: $...$ for inline math and $$...$$ on its own line for display/block equations — never describe an equation in plain words or ASCII art when LaTeX would render it properly. Never write <think> tags, "the user is asking...", or any other visible commentary about your own reasoning — go straight to the answer.
 
@@ -55,7 +56,7 @@ export async function toWireMessages(msgs, { summary, selfContext, memoryFacts, 
     if (m.images && m.images.length) return { role: m.role, content: shortenForWire((m.content || '') + '\n[you drew ' + m.images.length + ' picture' + (m.images.length > 1 ? 's' : '') + ' here: ' + m.images.map(p => '"' + String(p.prompt || '').slice(0, 200) + '"').join(' ; ') + ']') };
     return { role: m.role, content: shortenForWire(m.content) };
   }));
-  let system = SYSTEM_PROMPT;
+  let system = SYSTEM_PROMPT + '\n\n' + DIAGRAM_PROMPT;
   if (summary) system += `\n\nEarlier in this conversation (summarised, so you can carry on): ${summary}`;
   if (selfContext) system += `\n\n${selfContext}`;
   if (memoryFacts && memoryFacts.length) {

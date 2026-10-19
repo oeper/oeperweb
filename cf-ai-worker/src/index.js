@@ -784,7 +784,6 @@ const IMAGE_TOOLS = [
       properties: {
         prompt: { type: 'string', description: 'The full description of the picture, in English' },
         shape: { type: 'string', enum: ['square', 'wide', 'tall', 'landscape', 'portrait'], description: 'square 1:1 (default), wide 16:9 (wallpapers, slides, banners), tall 9:16 (phone wallpapers, stories), landscape 4:3, portrait 3:4' },
-        quality: { type: 'string', enum: ['standard', 'best'], description: 'Leave out for standard' },
       },
       required: ['prompt'],
     },

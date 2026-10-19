@@ -177,7 +177,7 @@ function perks() {
   const times = Math.max(2, Math.round(pl.plus.tokens / Math.max(1, pl.free.tokens)));
   return [
     ['chat', `about ${times}× the daily epic AI usage`, `${Math.round(pl.plus.tokens / 1000)}k tokens a day instead of ${Math.round(pl.free.tokens / 1000)}k, plus the first claim on epic AI when everyone is busy.`],
-    ['image', `${pl.plus.images} pictures a day instead of ${pl.free.images}`, `ask epic AI to draw anything, or make pictures in the One suite.${pl.plus.best ? ` ${pl.plus.best} of them a day come from our best-quality picture model.` : ''}`],
+    ['image', `${pl.plus.images} pictures a day instead of ${pl.free.images}`, `ask epic AI to draw anything, or make pictures in the One suite.`],
     ['add_circle', 'a + beside your name', 'shows on your posts, comments and messages across oeper.dev. you choose whether to show it.'],
   ].map(([ic, t, d]) => `<div class="perk"><div class="ic"><span class="material-symbols-rounded">${ic}</span></div><div><b>${esc(t)}</b><span class="d">${esc(d)}</span></div></div>`).join('');
 }

@@ -2,6 +2,7 @@
 // share.html (shared conversations). KaTeX is a global the page loads itself; code blocks come from code-block.js.
 // Whenever this file changes, bump the ?v=N on every import of it (grep for ai-markdown.js).
 import { codeBlockHtml } from './code-block.js?v=3';
+import { diagramPlaceholder, isDiagramKind } from './ai-diagrams.js?v=1';
 
 function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -216,7 +217,7 @@ function parseAiMarkdown(text) {
 
   let src = String(text || '').replace(/\r\n/g, '\n');
 
-  src = src.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => hold(codeBlockHtml(lang, code.replace(/\n$/, ''))));
+  src = src.replace(/```(\w*)\n?([\s\S]*?)```/g, (m, lang, code) => hold(isDiagramKind(lang) && code.trim() ? diagramPlaceholder(lang.toLowerCase(), code.replace(/\n$/, '')) : codeBlockHtml(lang, code.replace(/\n$/, ''))));
 
   // $ must hug its content (no space right inside) so ordinary prose like
   // "$5 and $10" is never misread as the start of a math span.
