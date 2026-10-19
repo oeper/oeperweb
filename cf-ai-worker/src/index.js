@@ -1024,8 +1024,8 @@ async function epicenterPublish(request, env, L) {
 }
 
 // Every downloadable app must publish an update manifest, so Epicenter (and the app itself) can always find the newest version.
-// Web apps, store pages and TestFlight/App Store links update themselves and are exempt; site owners are exempt too.
-const SELF_UPDATING = ['pwa', 'link', 'store', 'appstore', 'testflight', 'altstore'];
+// App Store / TestFlight / AltStore links update themselves and are exempt; site owners are exempt too.
+const SELF_UPDATING = ['appstore', 'testflight', 'altstore'];
 const DEV_GUIDE = 'https://oeper.dev/epicenter/developers';
 async function requireManifests(app, owner) {
   if (owner) return null;
@@ -1041,7 +1041,7 @@ async function requireManifests(app, owner) {
 }
 
 // What an app calls to ask "is there a newer version of me?": GET /api/epicenter/latest?id=com.example.app&platform=android
-const FORMAT_RANK = ['apk', 'apks', 'xapk', 'apkm', 'exe', 'msi', 'msix', 'appx', 'portable', 'dmg', 'pkg', 'app.zip', 'appimage', 'deb', 'rpm', 'flatpak', 'snap', 'tar.gz', 'ipa', 'pwa', 'link', 'store', 'zip', 'other'];
+const FORMAT_RANK = ['apk', 'apks', 'xapk', 'apkm', 'exe', 'msi', 'msix', 'appx', 'portable', 'dmg', 'pkg', 'app.zip', 'appimage', 'deb', 'rpm', 'flatpak', 'snap', 'tar.gz', 'ipa', 'zip', 'other'];
 async function epicenterLatest(request, env, L) {
   const q = new URL(request.url).searchParams, id = String(q.get('id') || '').trim().toLowerCase(), platform = String(q.get('platform') || '').trim().toLowerCase();
   const headers = { 'Content-Type': 'application/json', ...corsHeaders(request) };

@@ -2,14 +2,13 @@
 // The shared catalog format is the same one epicenter/index.json and any custom source uses; see epicenter/README.md.
 // Nothing here fetches the submitted links: they are only stored and shown, after an owner approved the entry.
 
-export const PLATFORMS = ['android', 'ios', 'windows', 'macos', 'linux', 'web'];
+export const PLATFORMS = ['android', 'ios', 'windows', 'macos', 'linux'];
 export const FORMATS = [
   'apk', 'apks', 'xapk', 'apkm',                                  // Android
   'ipa', 'altstore', 'testflight', 'appstore',                    // iOS
   'exe', 'msi', 'msix', 'appx', 'portable',                       // Windows
   'dmg', 'pkg', 'app.zip',                                        // macOS
   'deb', 'rpm', 'appimage', 'flatpak', 'snap', 'tar.gz',          // Linux
-  'pwa', 'link', 'store',                                         // web / any store page
   'zip', 'other',
 ];
 export const CATEGORIES = ['ai', 'games', 'tools', 'productivity', 'media', 'social', 'developer', 'education', 'utilities', 'other'];
@@ -64,7 +63,7 @@ export function cleanApp(input, owner) {
     const minSdk = Math.floor(Number(x.minSdk)); if (minSdk >= 1 && minSdk <= 99) asset.minSdk = minSdk;
     assets.push(asset);
   }
-  if (!assets.length) return { error: 'Add at least one download (or a web / store link).' };
+  if (!assets.length) return { error: 'Add at least one download. Epicenter is for apps you install (apk, exe, dmg ...), not web pages.' };
 
   const app = { id, name, summary, categories, assets };
   const description = clip(a.description, 4000); if (description) app.description = description;

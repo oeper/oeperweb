@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Epicenter — oeper.dev</title>
-<meta name="description" content="Epicenter: the oeper.dev app store. Find, download and update apps for Android, Windows, macOS, Linux, iPhone and the web.">
+<meta name="description" content="Epicenter: the oeper.dev app store. Find, download and update apps for Android, Windows, macOS, Linux and iPhone.">
 <meta property="og:title" content="Epicenter — oeper.dev">
 <meta property="og:description" content="The oeper.dev app store for every platform.">
 <meta property="og:image" content="https://oeper.dev/icon.png">
@@ -182,7 +182,7 @@
   <header class="header">
     <div>
       <h1><span class="material-symbols-rounded">storefront</span>epicenter</h1>
-      <p>apps from oeper.dev and the community, for Android, Windows, macOS, Linux, iPhone and the web. you can add other sources too.</p>
+      <p>apps from oeper.dev and the community, for Android, Windows, macOS, Linux and iPhone. you can add other sources too.</p>
     </div>
     <div class="head-actions">
       <a class="btn tonal" href="/epicenter/developers"><span class="material-symbols-rounded">code</span>for developers</a>
@@ -215,7 +215,7 @@ import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
 import {
   WORKER, PLATFORMS, PLATFORM, FORMATS, CATEGORIES, CATEGORY, ANDROID_FORMATS, detectPlatform, githubToApp, parseRepo, isHttps,
   normalizeCatalog, platformsOf, assetsFor, fmtSize, matches, resolveManifests,
-} from './shared/epicenter-core.js?v=2';
+} from './shared/epicenter-core.js?v=3';
 mountTopNav();
 mountFooter();
 
@@ -268,7 +268,7 @@ async function loadAll() {
 
 // ── page ──
 function platPills() {
-  const items = [...(me !== 'web' ? [{ id: 'mine', label: 'for my device', icon: PLATFORM[me] ? PLATFORM[me].icon : 'devices' }] : []), { id: 'all', label: 'all', icon: 'clear_all' }, ...PLATFORMS];
+  const items = [...(PLATFORM[me] ? [{ id: 'mine', label: 'for my device', icon: PLATFORM[me] ? PLATFORM[me].icon : 'devices' }] : []), { id: 'all', label: 'all', icon: 'clear_all' }, ...PLATFORMS];
   $('platPills').innerHTML = items.map(p => `<button class="pill${platFilter === p.id ? ' active' : ''}" data-p="${p.id}"><span class="material-symbols-rounded">${p.icon}</span>${esc(p.label)}</button>`).join('');
   $('catPills').innerHTML = [{ id: '', label: 'any category', icon: 'category' }, ...CATEGORIES].map(c => `<button class="pill${catFilter === c.id ? ' active' : ''}" data-c="${c.id}"><span class="material-symbols-rounded">${c.icon}</span>${esc(c.label)}</button>`).join('');
 }
@@ -329,8 +329,8 @@ function modal(html, onMount) {
   if (onMount) onMount(scrim.firstElementChild, close);
   return { close, root: scrim.firstElementChild };
 }
-const OPEN_FORMATS = ['pwa', 'link', 'store', 'appstore', 'testflight', 'altstore'];
-const HASH_HELP = { windows: 'In PowerShell: <code>Get-FileHash file.exe -Algorithm SHA256</code>', macos: 'In Terminal: <code>shasum -a 256 file.dmg</code>', linux: 'In a terminal: <code>sha256sum file</code>', android: 'The Epicenter app checks this for you.', ios: '', web: '' };
+const OPEN_FORMATS = ['appstore', 'testflight', 'altstore'];
+const HASH_HELP = { windows: 'In PowerShell: <code>Get-FileHash file.exe -Algorithm SHA256</code>', macos: 'In Terminal: <code>shasum -a 256 file.dmg</code>', linux: 'In a terminal: <code>sha256sum file</code>', android: 'The Epicenter app checks this for you.', ios: '' };
 
 function assetRow(a, app) {
   const open = OPEN_FORMATS.includes(a.format), rec = a.platform === me;
@@ -353,7 +353,7 @@ function showApp(app) {
     : app._trust === 'community' ? `<div class="warn" style="background:var(--md-sys-color-surface-variant);color:var(--md-sys-color-on-surface-variant)"><span class="material-symbols-rounded">how_to_reg</span><div>Submitted by the community and approved by oeper.dev. Approval is a quick check of the entry, not a security audit of the app.</div></div>` : '';
   const androidNote = me === 'android' && app.assets.some(a => a.platform === 'android' && ANDROID_FORMATS.includes(a.format))
     ? '<p class="note">On Android, open the downloaded file and allow your browser to install apps when asked. The Epicenter app does this and updates in one tap.</p>' : '';
-  const otherNote = me !== 'web' && !plats.includes(me) && !plats.includes('web') ? `<p class="note">There is no ${esc(PLATFORM[me] ? PLATFORM[me].label : 'version for this device')} version. Use the link button to send a link to the right device.</p>` : '';
+  const otherNote = PLATFORM[me] && !plats.includes(me) ? `<p class="note">There is no ${esc(PLATFORM[me] ? PLATFORM[me].label : 'version for this device')} version. Use the link button to send a link to the right device.</p>` : '';
   const m = modal(`
     <div class="top"><div class="app-icon">${iconHtml(app)}</div>
       <div><h2>${esc(app.name)}</h2><div class="app-by">${trustBadge(app)}${app.author ? esc(app.author) : ''}${app.version ? ' · v' + esc(app.version) : ''}${when(app) ? ' · updated ' + ago(when(app)) : ''}${app.license ? ' · ' + esc(app.license) : ''}</div></div>
@@ -426,7 +426,7 @@ async function authed(path, method, body) {
 // submit (or edit) an app
 const FORMATS_BY = {
   android: ['apk', 'apks', 'xapk', 'apkm'], ios: ['appstore', 'testflight', 'altstore', 'ipa'], windows: ['exe', 'msi', 'msix', 'appx', 'portable', 'zip'],
-  macos: ['dmg', 'pkg', 'app.zip', 'zip'], linux: ['appimage', 'deb', 'rpm', 'flatpak', 'snap', 'tar.gz', 'zip'], web: ['pwa', 'link', 'store'],
+  macos: ['dmg', 'pkg', 'app.zip', 'zip'], linux: ['appimage', 'deb', 'rpm', 'flatpak', 'snap', 'tar.gz', 'zip'],
 };
 function showSubmit(existing) {
   const e = existing || {};
@@ -446,7 +446,7 @@ function showSubmit(existing) {
     <div class="row2"><label class="field"><span>website (https)</span><input id="f-home" value="${esc(e.homepage || '')}"></label><label class="field"><span>icon image (https, optional)</span><input id="f-icon" value="${esc(e.icon || '')}"></label></div>
     <div class="row2"><label class="field"><span>version (optional)</span><input id="f-ver" maxlength="32" value="${esc(e.version || '')}"></label><label class="field"><span>author (optional)</span><input id="f-author" maxlength="60" value="${esc(e.author || '')}"></label></div>
     <h3>downloads</h3>
-    <p class="note">Every downloadable file needs an <b>update manifest</b> so people get new versions. Web apps and store links do not. <a href="/epicenter/developers" target="_blank" rel="noopener">How it works</a>.</p>
+    <p class="note">Every downloadable file needs an <b>update manifest</b> so people get new versions. App Store and TestFlight links do not. <a href="/epicenter/developers" target="_blank" rel="noopener">How it works</a>.</p>
     <div id="f-assets">${(e.assets && e.assets.length ? e.assets : [{}]).map(assetRowHtml).join('')}</div>
     <button class="btn text" type="button" id="f-addasset"><span class="material-symbols-rounded">add</span>add a download</button>
     <div class="warn"><span class="material-symbols-rounded">gpp_maybe</span><div>Only submit software you made or have the right to share. Entries that look harmful, misleading or pirated are rejected.</div></div>

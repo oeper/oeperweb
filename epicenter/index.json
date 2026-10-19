@@ -10,55 +10,50 @@
       "summary": "oeper's own AI assistant: chat, read your screen, control your phone, talk, draw and work with your documents.",
       "description": "epic AI answers questions, reads what is on your screen, can operate other apps for you, speaks and listens, draws pictures, remembers what you tell it and works with oneWord documents. On Android it can also be your phone's assistant. One account syncs your chats and memory across the website, the desktop apps and the phone app.",
       "icon": "https://oeper.dev/epicai-icon.svg",
-      "categories": ["ai", "productivity"],
+      "categories": [
+        "ai",
+        "productivity"
+      ],
       "homepage": "https://oeper.dev/ai",
       "author": "oeper",
       "assets": [
-        { "platform": "android", "format": "apk", "url": "https://oeper.dev/download/epic-ai-android.apk", "manifest": "https://github.com/oeper/releases/releases/download/epicai-latest/update.json", "minSdk": 31, "arch": "universal" },
-        { "platform": "windows", "format": "exe", "label": "Installer", "arch": "x64", "url": "https://oeper.dev/download/epic-ai-windows.exe" },
-        { "platform": "windows", "format": "portable", "label": "Portable", "arch": "x64", "url": "https://oeper.dev/download/epic-ai-windows-portable.exe" },
-        { "platform": "macos", "format": "dmg", "label": "Apple silicon", "arch": "arm64", "url": "https://oeper.dev/download/epic-ai-mac-apple-silicon.dmg" },
-        { "platform": "macos", "format": "dmg", "label": "Intel", "arch": "x64", "url": "https://oeper.dev/download/epic-ai-mac-intel.dmg" },
-        { "platform": "web", "format": "pwa", "url": "https://oeper.dev/ai" }
+        {
+          "platform": "android",
+          "format": "apk",
+          "url": "https://oeper.dev/download/epic-ai-android.apk",
+          "manifest": "https://github.com/oeper/releases/releases/download/epicai-latest/update.json",
+          "minSdk": 31,
+          "arch": "universal"
+        },
+        {
+          "platform": "windows",
+          "format": "exe",
+          "label": "Installer",
+          "arch": "x64",
+          "url": "https://oeper.dev/download/epic-ai-windows.exe"
+        },
+        {
+          "platform": "windows",
+          "format": "portable",
+          "label": "Portable",
+          "arch": "x64",
+          "url": "https://oeper.dev/download/epic-ai-windows-portable.exe"
+        },
+        {
+          "platform": "macos",
+          "format": "dmg",
+          "label": "Apple silicon",
+          "arch": "arm64",
+          "url": "https://oeper.dev/download/epic-ai-mac-apple-silicon.dmg"
+        },
+        {
+          "platform": "macos",
+          "format": "dmg",
+          "label": "Intel",
+          "arch": "x64",
+          "url": "https://oeper.dev/download/epic-ai-mac-intel.dmg"
+        }
       ]
-    },
-    {
-      "id": "oeper.one",
-      "name": "one",
-      "summary": "An office suite in your browser: documents, spreadsheets, slides, notes, PDFs, translation and more.",
-      "description": "one is oneWord, oneSheet, oneSlide, oneIdea, onePDF, oneLang (translator), oneDraw and oneSite in one installable web app. Files stay in your browser unless you turn on cloud saving to your oeper.dev account. Install it from your browser's menu to use it like an app.",
-      "icon": "https://oeper.dev/one/icons/icon-192.png",
-      "categories": ["productivity"],
-      "homepage": "https://oeper.dev/one",
-      "author": "oeper",
-      "assets": [{ "platform": "web", "format": "pwa", "url": "https://oeper.dev/one" }]
-    },
-    {
-      "id": "oeper.chess",
-      "name": "Chess",
-      "summary": "Full-rules chess: pass-and-play, against a built-in AI, or live against another oeper.dev user.",
-      "categories": ["games"],
-      "homepage": "https://oeper.dev/chess",
-      "author": "oeper",
-      "assets": [{ "platform": "web", "format": "pwa", "url": "https://oeper.dev/chess" }]
-    },
-    {
-      "id": "oeper.composer",
-      "name": "Music Composer",
-      "summary": "Write a melody on a grid and play it back.",
-      "categories": ["media", "tools"],
-      "homepage": "https://oeper.dev/composer",
-      "author": "oeper",
-      "assets": [{ "platform": "web", "format": "pwa", "url": "https://oeper.dev/composer" }]
-    },
-    {
-      "id": "oeper.qrmaker",
-      "name": "QR maker",
-      "summary": "Make QR codes for links, text and Wi-Fi, right in the browser.",
-      "categories": ["tools", "utilities"],
-      "homepage": "https://oeper.dev/qrmaker",
-      "author": "oeper",
-      "assets": [{ "platform": "web", "format": "pwa", "url": "https://oeper.dev/qrmaker" }]
     },
     {
       "id": "oeper.pock.status",
@@ -66,10 +61,18 @@
       "summary": "A better status widget for the MacBook touch bar (needs Pock).",
       "description": "Double-click Status.pock.zip to unzip it, then choose Status.pock and click Install Widget, then Install.",
       "icon": "https://raw.githubusercontent.com/oeper/pock.status/refs/heads/main/image.png",
-      "categories": ["utilities"],
+      "categories": [
+        "utilities"
+      ],
       "homepage": "https://github.com/oeper/pock.status",
       "author": "oeper",
-      "assets": [{ "platform": "macos", "format": "zip", "url": "https://github.com/oeper/pock.status/raw/refs/heads/main/Status.pock.zip" }]
+      "assets": [
+        {
+          "platform": "macos",
+          "format": "zip",
+          "url": "https://github.com/oeper/pock.status/raw/refs/heads/main/Status.pock.zip"
+        }
+      ]
     },
     {
       "id": "oeper.pock.trafficlight",
@@ -77,20 +80,18 @@
       "summary": "Window control buttons for the MacBook touch bar (needs Pock).",
       "description": "Double-click traffic-light.pock.zip to unzip it, then choose traffic-light.pock and click Install Widget, then Install.",
       "icon": "https://raw.githubusercontent.com/oeper/traffic-lights/refs/heads/main/image.png",
-      "categories": ["utilities"],
+      "categories": [
+        "utilities"
+      ],
       "homepage": "https://github.com/oeper/traffic-lights",
       "author": "oeper",
-      "assets": [{ "platform": "macos", "format": "zip", "url": "https://github.com/oeper/traffic-lights/raw/refs/heads/main/traffic-light.pock.zip" }]
-    },
-    {
-      "id": "dev.oeper.epicenter",
-      "package": "dev.oeper.epicenter",
-      "name": "Epicenter",
-      "summary": "The oeper.dev app store: browse, install and update apps from oeper.dev, the community and sources you add.",
-      "categories": ["tools"],
-      "homepage": "https://oeper.dev/epicenter",
-      "author": "oeper",
-      "assets": [{ "platform": "web", "format": "pwa", "url": "https://oeper.dev/epicenter" }]
+      "assets": [
+        {
+          "platform": "macos",
+          "format": "zip",
+          "url": "https://github.com/oeper/traffic-lights/raw/refs/heads/main/traffic-light.pock.zip"
+        }
+      ]
     }
   ]
 }

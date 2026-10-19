@@ -7,7 +7,6 @@ export const PLATFORMS = [
   { id: 'macos', label: 'macOS', icon: 'laptop_mac' },
   { id: 'linux', label: 'Linux', icon: 'terminal' },
   { id: 'ios', label: 'iPhone / iPad', icon: 'phone_iphone' },
-  { id: 'web', label: 'Web', icon: 'language' },
 ];
 export const PLATFORM = Object.fromEntries(PLATFORMS.map(p => [p.id, p]));
 
@@ -17,7 +16,7 @@ export const FORMATS = {
   exe: 'Installer (.exe)', msi: 'Installer (.msi)', msix: 'MSIX', appx: 'APPX', portable: 'Portable (.exe)',
   dmg: 'Disk image (.dmg)', pkg: 'Installer (.pkg)', 'app.zip': 'App (.zip)',
   deb: 'Debian / Ubuntu (.deb)', rpm: 'Fedora / RHEL (.rpm)', appimage: 'AppImage', flatpak: 'Flatpak', snap: 'Snap', 'tar.gz': 'Archive (.tar.gz)',
-  pwa: 'Web app', link: 'Link', store: 'Store page', zip: 'Archive (.zip)', other: 'File',
+  zip: 'Archive (.zip)', other: 'File',
 };
 // which format to put first on a platform
 const ORDER = {
@@ -26,7 +25,6 @@ const ORDER = {
   macos: ['dmg', 'pkg', 'app.zip', 'zip'],
   linux: ['appimage', 'deb', 'rpm', 'flatpak', 'snap', 'tar.gz', 'zip'],
   ios: ['appstore', 'testflight', 'altstore', 'ipa'],
-  web: ['pwa', 'link', 'store'],
 };
 export const CATEGORIES = [
   { id: 'ai', label: 'AI', icon: 'auto_awesome' }, { id: 'games', label: 'Games', icon: 'sports_esports' },
@@ -48,7 +46,7 @@ export function detectPlatform(ua = navigator.userAgent, nav = navigator) {
   if (/Win/i.test(p) || /Windows/i.test(ua)) return 'windows';
   if (/Mac/i.test(p) || /Macintosh/i.test(ua)) return 'macos';
   if (/Linux|X11/i.test(p + ua)) return 'linux';
-  return 'web';
+  return 'other';   // not a device Epicenter has apps for
 }
 
 /** Where a file from a GitHub release belongs, from its name: { platform, format, arch } or null when it isn't an app file. */
@@ -77,7 +75,6 @@ export function githubToApp(repo, release, info) {
     const d = /^sha256:([0-9a-f]{64})$/i.exec(a.digest || ''); if (d) x.sha256 = d[1].toLowerCase();
     assets.push(x);
   }
-  if (!assets.length && info.homepage) assets.push({ platform: 'web', format: 'link', url: info.homepage });
   return {
     id: 'github:' + repo.toLowerCase(), name: info.name || repo.split('/')[1], summary: (info.description || 'From GitHub ' + repo).slice(0, 140),
     description: (release.body || '').slice(0, 4000), homepage: info.html_url, source: info.html_url, author: (info.owner && info.owner.login) || repo.split('/')[0],

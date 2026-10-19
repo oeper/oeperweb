@@ -121,7 +121,9 @@ export class Ledger extends DurableObject {
   }
   epicCatalog() {
     return this.ctx.storage.sql.exec('SELECT id, data, updated FROM epicenter WHERE data IS NOT NULL ORDER BY updated DESC').toArray()
-      .map(r => { try { return { ...JSON.parse(r.data), updated: r.updated }; } catch { return null; } }).filter(Boolean);
+      .map(r => { try { return { ...JSON.parse(r.data), updated: r.updated }; } catch { return null; } }).filter(Boolean)
+      // Epicenter lists installable apps only: drop web / pwa / link entries an earlier version accepted
+      .map(app => ({ ...app, assets: (app.assets || []).filter(x => x.platform !== 'web' && !['pwa', 'link', 'store'].includes(x.format)) })).filter(app => app.assets.length);
   }
   epicMine(email) {
     return this.ctx.storage.sql.exec('SELECT id, data, pending, status, note, updated FROM epicenter WHERE owner = ? ORDER BY updated DESC', email).toArray()

@@ -36,14 +36,14 @@ release file is sorted by its extension.
 ```
 
 - `id`: unique; for Android apps use the package name. `package` is needed for Android assets (installed version and updates are found by it).
-- `platform`: android, ios, windows, macos, linux, web.
+- `platform`: android, ios, windows, macos, linux. Epicenter is for apps you install (apk, exe, dmg ...), not web pages: web, pwa and link entries are refused.
 - `sha256` is optional but strongly advised: the Android app refuses a download that does not match it.
 - `manifest` (optional): a small JSON `{versionCode, versionName, size, sha256, notes}` that overrides the version, size and checksum of the file
   (for "latest" links, such as the one `./gradlew publishUpdate` refreshes for epic AI).
 
 Formats: Android `apk` `apks` `xapk` `apkm` (split bundles install too) · iOS `ipa` `altstore` (an AltStore / SideStore source) `testflight` `appstore` ·
 Windows `exe` `msi` `msix` `appx` `portable` · macOS `dmg` `pkg` `app.zip` · Linux `deb` `rpm` `appimage` `flatpak` `snap` `tar.gz` ·
-any platform: `pwa` (an installable web app) `link` / `store` (a store page) `zip` `other`.
+any platform: `zip` `other`.
 
 Categories: ai, games, tools, productivity, media, social, developer, education, utilities, other.
 
@@ -76,6 +76,6 @@ Content-Type: application/json
 
 ## Required: an update manifest (2026-10-19)
 
-Every **downloadable** asset (any format except `pwa`, `link`, `store`, `appstore`, `testflight`, `altstore`) must carry a `manifest` that the worker can read, or a community submission / publish is refused (site owners are exempt; the curated oeper.dev list is not checked). Android manifests also need a `versionCode`. Developer guide with copy-paste code, the release script and a GitHub Action: oeper.dev/epicenter/developers (`epicenter/developers.html`, `epicenter/epicenter-release.mjs`, `epicenter/EpicenterUpdate.kt`).
+Every **downloadable** asset (any format except `appstore`, `testflight`, `altstore`) must carry a `manifest` that the worker can read, or a community submission / publish is refused (site owners are exempt; the curated oeper.dev list is not checked). Android manifests also need a `versionCode`. Developer guide with copy-paste code, the release script and a GitHub Action: oeper.dev/epicenter/developers (`epicenter/developers.html`, `epicenter/epicenter-release.mjs`, `epicenter/EpicenterUpdate.kt`).
 
 `GET /api/epicenter/latest?id=<app id>&platform=<platform>` is what an app calls to ask for its own newest release: `{id, name, version, versionCode, notes, updated, platform, format, url, sha256, size, page, deeplink}` (community apps and the curated list; the manifest is applied on top). `page` = `https://oeper.dev/epicenter#app=<id>` (opens the app's dialog), `deeplink` = `epicenter://app/<id>` (the Android Epicenter app should register this scheme).

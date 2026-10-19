@@ -87,17 +87,34 @@
   "page": "https://oeper.dev/epicenter#app=com.example.app", "deeplink": "epicenter://app/com.example.app" }</script></div>
   <div class="tabs" id="tabs"></div>
   <div id="panes">
-    <div class="pane" data-tab="Android (Kotlin)"><p>Copy <a href="/epicenter/EpicenterUpdate.kt">EpicenterUpdate.kt</a> into your project (no libraries) and call it from your launch screen. <code>open</code> hands over to the Epicenter app for a one-tap update, or opens the store page if it is not installed.</p>
+    <div class="pane" data-tab="Android (Kotlin)"><p>Copy <a href="/epicenter/EpicenterUpdate.kt">EpicenterUpdate.kt</a> into your project (no libraries) and call it from your launch screen. <code>install</code> downloads the new APK itself, checks its SHA-256 and that it is your app, and hands it to Android's installer: <b>the Epicenter app does not have to be installed</b>. Add the <code>INTERNET</code> and <code>REQUEST_INSTALL_PACKAGES</code> permissions to your manifest, and sign every release with the same key. (<code>open</code> instead hands over to the Epicenter app, or the store page.)</p>
       <div class="code"><div class="title">MainActivity.kt</div><script type="text/plain">EpicenterUpdate.check(this, "com.example.app") { update ->
     if (update != null) {
         AlertDialog.Builder(this)
             .setTitle("Version ${update.version} is available")
             .setMessage(update.notes)
-            .setPositiveButton("Update") { _, _ -> EpicenterUpdate.open(this, update) }
+            .setPositiveButton("Update") { _, _ ->
+                EpicenterUpdate.install(this, update) { state ->
+                    when (state) {
+                        is EpicenterUpdate.State.Downloading -> progress.text = "Downloading ${state.percent}%"
+                        EpicenterUpdate.State.NeedsPermission -> toast("Allow installing, then press Update again")
+                        is EpicenterUpdate.State.Failed -> toast(state.reason)
+                        else -> {}
+                    }
+                }
+            }
             .setNegativeButton("Later", null)
             .show()
     }
-}</script></div></div>
+}</script></div>
+      <p style="margin-top:14px"><b>Prompt for your Claude / AI coding session</b> (paste it into the session that works on your app; replace the package name):</p>
+      <div class="code"><div class="title">prompt</div><script type="text/plain">Add the oeper.dev Epicenter update system to my Android app (package com.example.app).
+1. Download https://oeper.dev/epicenter/EpicenterUpdate.kt and copy it into the project unchanged (it is self-contained, no libraries).
+2. AndroidManifest.xml: add the permissions INTERNET and REQUEST_INSTALL_PACKAGES.
+3. On launch (the main activity), call EpicenterUpdate.check(this, "com.example.app") { update -> ... }. When update is not null, show a dialog with the version and update.notes; "Update" calls EpicenterUpdate.install(this, update) { state -> ... } and shows download progress (State.Downloading), asks to press Update again after State.NeedsPermission, and shows State.Failed(reason).
+4. Release flow: bump versionCode/versionName, build a release APK signed with the SAME key as before, upload it somewhere public (https, e.g. a GitHub release asset), then run: node epicenter-release.mjs (from https://oeper.dev/epicenter/epicenter-release.mjs) to write update.json {versionName, versionCode, size, sha256, notes} and host it next to the APK. With a publish key: --publish com.example.app --key epk_... pushes it to Epicenter at once.
+5. The app must be listed in Epicenter with a manifest link to that update.json (my apps > submit at oeper.dev/epicenter), once.
+Docs: https://oeper.dev/epicenter/developers. Do not require the Epicenter app to be installed.</script></div></div>
     <div class="pane" data-tab="Desktop / Electron / JS"><div class="code"><div class="title">update-check.js</div><script type="text/plain">const APP_ID = 'com.example.app';
 const PLATFORM = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'macos' : 'linux';
 
@@ -146,7 +163,7 @@ jobs:
   <div class="card">
     <table>
       <tr><th>Call</th><th>What it does</th></tr>
-      <tr><td><code>GET /api/epicenter/latest?id=&amp;platform=</code></td><td>Newest release of an app (public, cached a minute). <code>platform</code>: android, windows, macos, linux, ios, web.</td></tr>
+      <tr><td><code>GET /api/epicenter/latest?id=&amp;platform=</code></td><td>Newest release of an app (public, cached a minute). <code>platform</code>: android, windows, macos, linux, ios.</td></tr>
       <tr><td><code>PUT /api/epicenter/publish</code></td><td>Add or update your app with a publish key. Only the fields you send change.</td></tr>
       <tr><td><code>GET /api/epicenter/manifest?url=</code></td><td>Reads an <code>update.json</code> and returns the cleaned fields (what the website uses).</td></tr>
     </table>
