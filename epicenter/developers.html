@@ -66,17 +66,20 @@
   <ul>
     <li><code>versionCode</code> is required for Android (the number in your <code>build.gradle</code>). Elsewhere <code>versionName</code> is enough.</li>
     <li><code>sha256</code> is optional but advised: the Epicenter app refuses a download that does not match it. If you leave it out, nothing stale is checked.</li>
-    <li>Keep the <b>download link</b> stable too (for GitHub: <code>https://github.com/you/app/releases/latest/download/App.apk</code>) so only the manifest changes.</li>
+    <li>You normally do not write this by hand: <b>Epicenter keeps your app files on oeper.dev</b> and creates the manifest when you upload (step 2 and 3). The link of an uploaded file stays the same every release.</li>
   </ul>
 
   <h2><span class="num">2</span>Submit the app once</h2>
-  <p>On <a href="/epicenter">oeper.dev/epicenter</a> press <b>submit an app</b> and fill in the downloads. Every file has a <b>manifest</b> box: paste the <code>update.json</code> link there. An owner approves new apps; after that, new versions appear <b>by themselves</b>: Epicenter reads your manifest every 6 hours (and whenever someone opens the store).</p>
+  <p>On <a href="/epicenter">oeper.dev/epicenter</a> press <b>submit an app</b> , fill in the id, name, version and version code, and use <b>upload the file to oeper.dev</b> on every download (APK, installer, disk image…). The file and its manifest are stored on oeper.dev (up to 100 MB a file, 1 GB an app). An owner approves new apps; after that, uploading a new build releases it.</p>
 
   <h2><span class="num">3</span>Release with one command</h2>
-  <p>The helper measures your build, writes <code>update.json</code> and can tell Epicenter right away. Get it at <a href="/epicenter/epicenter-release.mjs">epicenter-release.mjs</a> (Node 18+, no installs).</p>
-  <div class="code"><div class="title">terminal</div><script type="text/plain">node epicenter-release.mjs --file app-release.apk --version 1.2.0 --code 12 --notes "Fixes and a new dark theme" --out update.json
-# then upload update.json to the manifest link, or let CI do it (below)</script></div>
-  <p>To skip the 6-hour wait, make a <b>publish key</b> (store page → my apps → publish keys) and add <code>--publish com.example.app --key epk_…</code>. A key can only touch apps you own.</p>
+  <p>The helper uploads your build to oeper.dev, writes its manifest and publishes the release. Make a <b>publish key</b> first (store page → my apps → publish keys). Get the helper at <a href="/epicenter/epicenter-release.mjs">epicenter-release.mjs</a> (Node 18+, no installs).</p>
+  <div class="code"><div class="title">terminal</div><script type="text/plain"># every release (the platform is guessed from the file type; each platform keeps its own stored file):
+node epicenter-release.mjs --file app-release.apk --version 1.2.0 --code 12 --notes "Fixes and a new dark theme" --id com.example.app --key epk_…
+
+# the first time also describe the app:
+#   --title "My App" --summary "One line about it" --category tools --icon https://… --homepage https://…</script></div>
+  <p>A key can only touch apps you own. Without <code>--id</code> the helper only writes <code>update.json</code> for you to host yourself (owners' own hosting).</p>
 
   <h2><span class="num">4</span>Make your app check for updates</h2>
   <p>One call answers “is there a newer version of me?” and works from any language:</p>
@@ -112,8 +115,7 @@
 1. Download https://oeper.dev/epicenter/EpicenterUpdate.kt and copy it into the project unchanged (it is self-contained, no libraries).
 2. AndroidManifest.xml: add the permissions INTERNET and REQUEST_INSTALL_PACKAGES.
 3. On launch (the main activity), call EpicenterUpdate.check(this, "com.example.app") { update -> ... }. When update is not null, show a dialog with the version and update.notes; "Update" calls EpicenterUpdate.install(this, update) { state -> ... } and shows download progress (State.Downloading), asks to press Update again after State.NeedsPermission, and shows State.Failed(reason).
-4. Release flow: bump versionCode/versionName, build a release APK signed with the SAME key as before, upload it somewhere public (https, e.g. a GitHub release asset), then run: node epicenter-release.mjs (from https://oeper.dev/epicenter/epicenter-release.mjs) to write update.json {versionName, versionCode, size, sha256, notes} and host it next to the APK. With a publish key: --publish com.example.app --key epk_... pushes it to Epicenter at once.
-5. The app must be listed in Epicenter with a manifest link to that update.json (my apps > submit at oeper.dev/epicenter), once.
+4. Release flow: bump versionCode/versionName, build a release APK signed with the SAME key as before, then run: node epicenter-release.mjs --file <apk> --version X --code N --notes "..." --id com.example.app --key $EPICENTER_KEY (script from https://oeper.dev/epicenter/epicenter-release.mjs). It uploads the APK to oeper.dev, where Epicenter keeps every app, creates the update manifest and publishes the release. The first release also needs --title "App name" --summary "one line". The publish key (epk_...) comes from oeper.dev/epicenter > my apps > publish keys: ask me for it, never commit it.
 Docs: https://oeper.dev/epicenter/developers. Do not require the Epicenter app to be installed.</script></div></div>
     <div class="pane" data-tab="Desktop / Electron / JS"><div class="code"><div class="title">update-check.js</div><script type="text/plain">const APP_ID = 'com.example.app';
 const PLATFORM = process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'macos' : 'linux';
@@ -138,7 +140,7 @@ def check_for_update(current_code, app_id="com.example.app", platform="linux"):
   </div>
 
   <h2><span class="num">5</span>Automate it (GitHub Actions)</h2>
-  <p>Add your publish key as a repository secret named <code>EPICENTER_KEY</code>. This builds, publishes the release files and tells Epicenter:</p>
+  <p>Add your publish key as a repository secret named <code>EPICENTER_KEY</code>. This builds, uploads the APK to oeper.dev and publishes the release:</p>
   <div class="code"><div class="title">.github/workflows/release.yml</div><script type="text/plain">name: release
 on:
   push:
@@ -151,13 +153,9 @@ jobs:
       - uses: actions/checkout@v4
       - run: ./gradlew assembleRelease                      # your build
       - run: curl -fsSLO https://oeper.dev/epicenter/epicenter-release.mjs
-      - run: node epicenter-release.mjs --file app/build/outputs/apk/release/app-release.apk --version "${GITHUB_REF_NAME#v}" --code "${{ github.run_number }}" --notes "Release ${GITHUB_REF_NAME}" --out update.json --publish com.example.app
+      - run: node epicenter-release.mjs --file app/build/outputs/apk/release/app-release.apk --version "${GITHUB_REF_NAME#v}" --code "${{ github.run_number }}" --notes "Release ${GITHUB_REF_NAME}" --id com.example.app
         env: { EPICENTER_KEY: "${{ secrets.EPICENTER_KEY }}" }
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            app/build/outputs/apk/release/app-release.apk
-            update.json</script></div>
+</script></div>
 
   <h2>Reference</h2>
   <div class="card">

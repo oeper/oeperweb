@@ -13,6 +13,10 @@ export const FORMATS = [
 ];
 export const CATEGORIES = ['ai', 'games', 'tools', 'productivity', 'media', 'social', 'developer', 'education', 'utilities', 'other'];
 
+// Community apps keep their files on oeper.dev's file server (fs.oeper.dev); only site owners may link elsewhere.
+export const HOSTED_PREFIX = 'https://fs.oeper.dev/epicenter/files/';
+const STORE_FORMATS = ['appstore', 'testflight', 'altstore'];   // iOS store links: nothing to host
+
 const ID_RE = /^[a-z0-9][a-z0-9._-]{2,63}$/;
 const PACKAGE_RE = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/i;
 const clip = (v, n) => String(v == null ? '' : v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').trim().slice(0, n);
@@ -54,11 +58,13 @@ export function cleanApp(input, owner) {
     if (!FORMATS.includes(format)) return { error: `Unknown file format “${format}”. Use: ${FORMATS.join(', ')}.` };
     const url = cleanUrl(x.url);
     if (!url) return { error: `Every download needs a public https link (${platform} ${format}).` };
+    if (!owner && !STORE_FORMATS.includes(format) && !url.startsWith(HOSTED_PREFIX)) return { error: 'Files are kept on oeper.dev: upload the ' + platform + ' ' + format + ' file with the Upload button (or the release script) instead of linking elsewhere.' };
     const asset = { platform, format, url };
     const arch = clip(x.arch, 20).toLowerCase(); if (arch) asset.arch = arch;
     const sha = clip(x.sha256, 64).toLowerCase(); if (sha) { if (!/^[0-9a-f]{64}$/.test(sha)) return { error: 'A SHA-256 checksum is 64 hex characters.' }; asset.sha256 = sha; }
     const size = Math.floor(Number(x.size)); if (size > 0 && size < 20 * 1024 ** 3) asset.size = size;
     const manifest = x.manifest ? cleanUrl(x.manifest) : ''; if (manifest) asset.manifest = manifest;
+    if (manifest && !owner && !manifest.startsWith(HOSTED_PREFIX)) return { error: 'The update manifest must be hosted on oeper.dev too (the upload makes one for you).' };
     const label = clip(x.label, 40); if (label) asset.label = label;
     const minSdk = Math.floor(Number(x.minSdk)); if (minSdk >= 1 && minSdk <= 99) asset.minSdk = minSdk;
     assets.push(asset);

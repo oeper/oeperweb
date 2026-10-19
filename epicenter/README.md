@@ -58,6 +58,11 @@ marked as unreviewed.
 - Changing a link, name or anything else in a community entry means resubmitting it (the old entry stays live until an owner approves the change).
 - `GET /api/epicenter/manifest?url=` (worker) returns a manifest's cleaned fields; the website uses it because GitHub sends no CORS headers.
 
+## Where the files live (2026-10-19)
+
+Community apps keep their files on oeper.dev's file server (`https://fs.oeper.dev/epicenter/files/<app id>/<file>`, with a `<file>.json` manifest next to each file that the server writes itself); `cleanApp` refuses any other download or manifest address from non-owners (iOS App Store / TestFlight / AltStore links are exempt; site owners may link anywhere).
+Upload: `PUT https://fs.oeper.dev/epicenter/files/<id>/<name>` with `Authorization: Bearer <Firebase token or epk_ key>` and optional `x-version-name` / `x-version-code` / `x-notes` headers; the answer has `url`, `manifest`, `sha256`, `size`. `DELETE` removes. 100 MB a file, 1 GB an app. The same file name replaces the file, so the link means "newest build". The store page's "upload" button and `epicenter-release.mjs --id <id> --key epk_…` both do this and then publish.
+
 ## Publishing from a script (publish keys)
 
 Make a key in oeper.dev/epicenter > my apps > publish keys (shown once; only a hash is stored; up to 5; revoke any time). Then:

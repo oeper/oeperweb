@@ -16,6 +16,7 @@ dbhosting-bots/
 dbhosting-state.json
 dbhosting-credits.json
 app-releases/
+epicenter-files/
 file-link-secret.txt
 translate-usage.json
 translator/model/

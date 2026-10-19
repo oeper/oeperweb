@@ -186,6 +186,10 @@ export class Ledger extends DurableObject {
     return row.owner;
   }
   /** One of [email]'s apps as it currently stands (a waiting change counts), or null. */
+  epicOwnerOf(id) {
+    const row = this.ctx.storage.sql.exec('SELECT owner FROM epicenter WHERE id = ?', id).toArray()[0];
+    return row ? row.owner : null;
+  }
   epicGetMine(email, id) {
     const row = this.ctx.storage.sql.exec('SELECT data, pending FROM epicenter WHERE id = ? AND owner = ?', id, email).toArray()[0];
     try { return row ? JSON.parse(row.pending || row.data) : null; } catch { return null; }

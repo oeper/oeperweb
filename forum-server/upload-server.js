@@ -327,6 +327,9 @@ const dbhosting = require('./dbhosting')(app, {
 // oneLang's own translator (NLLB on this machine, see translator/) — see translate-proxy.js.
 require('./translate-proxy')(app, { verifyFirebaseToken, isOwner, dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname });
 
+// Epicenter's app files (oeper.dev/epicenter): uploads by signed-in users or publish keys, public downloads — see epicenter-files.js.
+require('./epicenter-files')(app, { dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname, publicBaseUrl: PUBLIC_BASE_URL });
+
 // New Searver Android builds pushed from the developer's PC (needs RELEASE_KEY in .env) — see app-release.js.
 require('./app-release')(app, { dataDir: process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : __dirname });
 

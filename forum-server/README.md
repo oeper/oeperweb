@@ -636,3 +636,12 @@ regardless, so if these drift out of sync the site will just show a
 slightly wrong notice, not actually let anything oversized through. Update
 both sides to keep the notices accurate, restart the server, and push
 `files.html`.
+
+## Epicenter app files (`epicenter-files.js`)
+
+oeper.dev/epicenter keeps every community app on this server. `PUT /epicenter/files/<app id>/<file name>` (Firebase sign-in token or an `epk_` publish key
+in `Authorization: Bearer`) stores the file under `epicenter-files/<id>/` (gitignored) and writes `<file name>.json` (versionName, versionCode, size, sha256,
+notes from the `x-version-name` / `x-version-code` / `x-notes` headers) next to it; `GET` is public, `DELETE` needs the same auth. Who may use an id is decided
+by the Epicenter worker (`POST /api/epicenter/upload-check`); the first uploader of an id is remembered in `epicenter-files/<id>/.owner`. `.env`:
+`EPICENTER_API` (default the production worker), `EPICENTER_MAX_BYTES` (per file, default 100 MB, which is also Cloudflare's upload limit through the tunnel;
+site owners get 500 MB but the tunnel still caps it), `EPICENTER_APP_MAX_BYTES` (per app, default 1 GB). Needs Node 18+ (global `fetch`). `git pull` + restart to enable.

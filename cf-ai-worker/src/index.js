@@ -1015,6 +1015,11 @@ async function epicenterPublish(request, env, L) {
   if (!given) return json({ error: 'Send { "app": { ... } }.' }, 400, request);
   const owner = OWNER_EMAILS.includes(email);
   const current = await L.epicGetMine(email, String(given.id || '').toLowerCase());
+  // a release of one file keeps the app's other downloads: assets with the same platform + format + arch are replaced, the rest stay
+  if (current && Array.isArray(given.assets) && Array.isArray(current.assets)) {
+    const k = x => [x.platform, x.format, x.arch || ''].join('|'), fresh = new Set(given.assets.map(k));
+    given.assets = [...current.assets.filter(x => !fresh.has(k(x))), ...given.assets];
+  }
   const r = cleanApp(current ? { ...current, ...given, id: current.id } : given, owner);
   if (r.error) return json({ error: r.error }, 400, request);
   const bad = await requireManifests(r.app, owner);
@@ -1073,6 +1078,21 @@ async function handleEpicenter(request, env, route) {
     return new Response(JSON.stringify(m || {}), { status: m ? 200 : 404, headers: { 'Content-Type': 'application/json', 'Cache-Control': m ? 'public, max-age=300' : 'no-store',...corsHeaders(request) } });
   }
   if (route === 'publish' && (request.method === 'PUT' || post)) return epicenterPublish(request, env, L);
+  if (route === 'upload-check' && post) {
+    // the files server (fs.oeper.dev) asks, with the uploader's own credentials (sign-in token or publish key), whether they may store files for this app id
+    const km = /^Bearer (epk_[A-Za-z0-9_-]{20,64})$/.exec(request.headers.get('Authorization') || '');
+    let email = km ? await L.epicKeyOwner(await sha256Hex(km[1])) : null;
+    if (!km) { const u = await userFromRequest(request, env); email = u ? u.email : null; }
+    if (!email) return json({ error: 'Sign in, or use a publish key.' }, 401, request);
+    const body = await readBody(request);
+    const id = String((body && body.id) || '').toLowerCase();
+    const isOwn = OWNER_EMAILS.includes(email);
+    if (!/^[a-z0-9][a-z0-9._-]{2,63}$/.test(id)) return json({ error: 'Bad app id.' }, 400, request);
+    if (!isOwn && /^(dev.oeper|oeper|epic|epicenter)/.test(id)) return json({ error: 'That id is reserved.' }, 403, request);
+    const holder = await L.epicOwnerOf(id);
+    if (holder && holder !== email && !isOwn) return json({ error: 'That app id belongs to someone else.' }, 403, request);
+    return json({ ok: true, email, owner: isOwn }, 200, request);
+  }
   const user = await userFromRequest(request, env);
   if (!user) return json({ error: 'Sign in first.' }, 401, request);
   const owner = isOwner(user);
