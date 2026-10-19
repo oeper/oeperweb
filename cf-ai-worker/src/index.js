@@ -4,6 +4,7 @@ import { setPlusUntil, serviceAccountConfigured } from './firestore-admin.js';
 import { makeImage } from './images.js';
 import { readWebpage } from './webpage.js';
 import { cleanApp, cleanUrl, fetchManifest, applyManifests } from './epicenter.js';
+import { handleSearver } from './searver.js';
 import { GOOGLE_TOOLS, googleToolStatus, runGoogleTool, googleConfigured, googleStartUrl, googleCallback, googleStatus, googleDisconnect } from './google.js';
 export { Ledger };
 
@@ -1474,6 +1475,7 @@ export default {
       if (url.pathname === '/api/redeem' && request.method === 'POST') return handleRedeem(request, env);
       if (url.pathname === '/api/image' && request.method === 'POST') return handleImage(request, env);
       if (url.pathname === '/api/feedback' && request.method === 'POST') return handleFeedback(request, env);
+      if (url.pathname.startsWith('/api/searver/')) return handleSearver(request, env, url.pathname.slice('/api/searver/'.length));
       if (url.pathname.startsWith('/api/epicenter/')) return handleEpicenter(request, env, url.pathname.slice('/api/epicenter/'.length));
       if (url.pathname === '/api/google/callback' && request.method === 'GET') return googleCallback(env, ledgerOf(env), url);
       if (url.pathname === '/api/google/status' && request.method === 'GET') return handleGoogle(request, env, 'status');

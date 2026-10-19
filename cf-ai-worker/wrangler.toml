@@ -28,3 +28,8 @@ new_sqlite_classes = ["Ledger"]
 # Epicenter: follow new app releases (update manifests) every 6 hours
 [triggers]
 crons = ["0 */6 * * *"]
+
+# Searver's private release channel (src/searver.js): builds of the owner's phone-server app, key-protected, no public access
+[[r2_buckets]]
+binding = "RELEASES"
+bucket_name = "searver-releases"

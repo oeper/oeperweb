@@ -152,6 +152,8 @@ before = score(eval_rows)
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 from transformers import Trainer, TrainingArguments
 
+if hasattr(model, 'peft_config'):      # this cell was run before (it failed half-way): start again from the plain model
+    model = model.unload()
 model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
 model = get_peft_model(model, LoraConfig(
     r=16, lora_alpha=32, lora_dropout=0.05, task_type='CAUSAL_LM',
@@ -175,7 +177,7 @@ def collate(batch):            # batch size is 1: gradient accumulation does the
 
 args = TrainingArguments(
     output_dir='/content/run', per_device_train_batch_size=1, gradient_accumulation_steps=8,
-    num_train_epochs=EPOCHS, learning_rate=1e-4, lr_scheduler_type='cosine', warmup_ratio=0.05,
+    num_train_epochs=EPOCHS, learning_rate=1e-4, lr_scheduler_type='cosine', warmup_steps=20,
     fp16=True, logging_steps=10, save_strategy='no', report_to='none', remove_unused_columns=False,
     gradient_checkpointing=True, optim='paged_adamw_8bit')
 Trainer(model=model, args=args, train_dataset=Ds(train_rows), data_collator=collate).train()
