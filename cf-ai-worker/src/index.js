@@ -136,6 +136,7 @@ function toolStatus(name, args) {
   const clip = s => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 60);
   switch (name) {
     case 'google_doc_create': case 'google_doc_read': case 'google_doc_append': case 'google_sheet_read': case 'google_sheet_write': case 'google_sheet_create': return googleToolStatus(name);
+    case 'search_images': return args && args.query ? `Finding pictures of "${clip(args.query)}"` : 'Finding pictures';
     case 'search_web': return args && args.query ? `Searching the web for "${clip(args.query)}"` : 'Searching the web';
     case 'read_webpage': { let host = ''; try { host = new URL(String(args && args.url)).hostname.replace(/^www\./, ''); } catch {} return host ? `Reading ${clip(host)}` : 'Reading a web page'; }
     case 'lookup_oeper_user': return args && args.handle ? `Looking up @${clip(String(args.handle).replace(/^@/, ''))}` : 'Looking up a profile';
@@ -417,7 +418,7 @@ function streamToolLoop(env, initialMessages, tools, quiet, meter, thinkForce, w
             // Tell the browser what is happening during the gap while a tool runs
             // (clients that don't know about `status` events just ignore them).
             send({ status: toolStatus(call.function.name, args) });
-            if (call.function.name === 'search_web' || call.function.name === 'read_webpage') searched = true;
+            if (call.function.name === 'search_web' || call.function.name === 'read_webpage' || call.function.name === 'search_images') searched = true;
             // None of the memory tools have anywhere to actually persist to
             // — this Worker has no Firestore write credentials, deliberately
             // (see the firestoreGetDoc comment above: reads work
@@ -521,6 +522,29 @@ async function searchWeb(args, env, ctx) {
   }
 }
 
+// Pictures from the web (Brave image search). The thumbnails are served by Brave's own proxy (imgs.search.brave.com), so showing them
+// does not make the person's device contact the original sites; the page link is the original source.
+async function searchImages(args, env, ctx) {
+  if (!env.BRAVE_API_KEY) return JSON.stringify({ error: 'web search is not configured on this deployment' });
+  const query = (args && args.query || '').trim();
+  if (!query) return JSON.stringify({ error: 'empty query' });
+  try {
+    const base = `https://api.search.brave.com/res/v1/images/search?q=${encodeURIComponent(query)}&count=8&safesearch=strict`;
+    const init = { headers: { Accept: 'application/json', 'X-Subscription-Token': env.BRAVE_API_KEY } };
+    const cc = ctx && ctx.country && BRAVE_COUNTRIES.has(ctx.country) ? ctx.country : '';
+    let res = await fetch(cc ? `${base}&country=${cc}` : base, init);
+    if (!res.ok && cc) res = await fetch(base, init);
+    if (!res.ok) return JSON.stringify({ error: `picture search failed (HTTP ${res.status})` });
+    const data = await res.json();
+    const images = ((data.results) || []).map(r => ({ title: String(r.title || '').slice(0, 100), thumbnail: r.thumbnail && r.thumbnail.src, page: r.url, source: r.source }))
+      .filter(r => (r.thumbnail || '').startsWith('https://') && /^https?:\/\//.test(r.page || '')).slice(0, 5);
+    if (!images.length) return JSON.stringify({ error: 'no pictures found for that search' });
+    return JSON.stringify({ images, how_to_show: 'Show 2 to 4 of these in your answer, each on its own line as markdown ![short description](thumbnail) using the thumbnail address exactly as given (never invent or change an address), and under them name the source as a link [source name](page). Do not describe a picture you cannot see beyond what its title says.' });
+  } catch (err) {
+    return JSON.stringify({ error: 'picture search failed: ' + err.message });
+  }
+}
+
 // ── Live oeper.dev user lookups ──────────────────────────────────────
 // Firestore's REST API respects the project's own security rules, and
 // users/{email} + handles/{handle} are both public-read (allow read: if
@@ -602,6 +626,17 @@ async function lookupOeperUser(args) {
 // instead: TOOL_FUNCTIONS maps a tool name to its handler for manual
 // dispatch once a tool_calls response comes back.
 const TOOLS = [
+  {
+    name: 'search_images',
+    description: "Find pictures on the web and show them in the answer. Use it when the user asks to see a picture, photo or image of something, what something looks like (a landmark, animal, plant, product, person in the news, artwork, flag, map), or when a picture clearly helps more than words. Not for making new pictures (that is generate_image) and not for text facts (that is search_web).",
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'What to find pictures of, as a short search phrase' },
+      },
+      required: ['query'],
+    },
+  },
   {
     name: 'search_web',
     description: 'Search the live web. You MUST call this before answering whenever you are not sure of a fact (names, dates, numbers, prices, versions, specific people, products, places or events), for anything recent or that may have changed since training, and whenever the user asks you to look something up. Never guess instead of searching. Returns up to 5 results, each with a title, url, and short snippet.',
@@ -784,6 +819,7 @@ async function updateProfile() { return JSON.stringify({ ok: true }); }
 async function setFollow() { return JSON.stringify({ ok: true }); }
 const TOOL_FUNCTIONS = {
   search_web: searchWeb,
+  search_images: searchImages,
   read_webpage: readWebpage,
   lookup_oeper_user: lookupOeperUser,
   remember_fact: rememberFact,

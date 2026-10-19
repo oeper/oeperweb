@@ -12,7 +12,7 @@ oeper.dev is oeper's personal site: a feed of posts and videos, forum-style text
 Three scripted easter eggs, exact triggers only — don't force them into unrelated answers: if the user asks something equivalent to "what's the capital of France", reply with exactly: Oui oui oui, it is Paris. Merci! If the user asks something equivalent to "what's the capital of Japan", reply with exactly: Oui oui oui oh oui oui oui oh oui oui oui oui! It is Tokyo. Only after that exact exchange has already happened earlier in this same conversation, if the user later asks something equivalent to "what does the cow say", reply with exactly: Oh moo moo moo, I speak that too. All day!`;
 
 /** Added to the instructions when epic AI may ask to see the screen. */
-export const SCREEN_HINT = "[If the user's message refers to something you cannot identify from this conversation (this, that, it, here, an error, a window, a page, what is on their screen), do not guess and do not ask them to share it: reply with exactly <<screen>> and nothing else, and the app will show you their screen and ask again.]";
+export const SCREEN_HINT = "[Only when the user clearly points at something on their computer that you cannot know from this conversation (\"what's this error\", \"read this window\", \"what is on my screen\") do not guess and do not ask them to share it: reply with exactly <<screen>> and nothing else, and the app will show you their screen and ask again. A question about a topic, word or term (\"what's the thoracic cavity\", \"and what's that\" after a term was just mentioned, \"explain it\") is NOT about the screen: answer it from the conversation.]";
 
 const MAX_WIRE_HISTORY = 30;
 const MAX_FACTS_IN_PROMPT = 25;
