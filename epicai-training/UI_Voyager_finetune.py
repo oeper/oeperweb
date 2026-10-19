@@ -20,6 +20,7 @@ BASE = 'MarsXL/UI-Voyager'
 MAX_TRAIN = 3000     # examples used for training at most
 EPOCHS = 2
 import os, glob
+CK = OUT_DIR + '/checkpoints'   # training saves here every 40 steps and picks up from the newest one after a disconnect
 os.makedirs(OUT_DIR, exist_ok=True)
 print(glob.glob(DRIVE_DIR + '/*.zip'))
 
@@ -143,7 +144,13 @@ def score(rows_, n=60):
     print(f'hit rate {hits}/{len(rows_)} = {100 * hits / len(rows_):.0f}%   (unreadable answers: {fmt_bad})')
     return hits / len(rows_)
 
-before = score(eval_rows)
+BASE_FILE = OUT_DIR + '/baseline.json'
+if os.path.exists(BASE_FILE):
+    before = json.load(open(BASE_FILE))['hit']
+    print('baseline from an earlier run:', before)
+else:
+    before = score(eval_rows)
+    json.dump({'hit': before}, open(BASE_FILE, 'w'))
 
 # %% [markdown]
 # ## 4. Train the LoRA (language model only, the vision part stays frozen)
@@ -176,42 +183,69 @@ def collate(batch):            # batch size is 1: gradient accumulation does the
     return full
 
 args = TrainingArguments(
-    output_dir='/content/run', per_device_train_batch_size=1, gradient_accumulation_steps=8,
+    output_dir=CK, per_device_train_batch_size=1, gradient_accumulation_steps=8,
     num_train_epochs=EPOCHS, learning_rate=1e-4, lr_scheduler_type='cosine', warmup_steps=20,
-    fp16=True, logging_steps=10, save_strategy='no', report_to='none', remove_unused_columns=False,
-    gradient_checkpointing=True, optim='paged_adamw_8bit')
-Trainer(model=model, args=args, train_dataset=Ds(train_rows), data_collator=collate).train()
+    fp16=True, logging_steps=10, save_strategy='steps', save_steps=40, save_total_limit=2,   # a checkpoint on Drive every 40 steps
+    report_to='none', remove_unused_columns=False, gradient_checkpointing=True, optim='paged_adamw_8bit')
+trainer = Trainer(model=model, args=args, train_dataset=Ds(train_rows), data_collator=collate)
+ckpts = sorted(glob.glob(CK + '/checkpoint-*'), key=lambda p: int(p.rsplit('-', 1)[1]))
+if ckpts: print('resuming from', ckpts[-1])
+trainer.train(resume_from_checkpoint=ckpts[-1] if ckpts else None)
 model.save_pretrained(OUT_DIR + '/lora')
 print('LoRA saved to', OUT_DIR + '/lora')
 
 # %%
 after = score(eval_rows)
-print(f'before {100 * before:.0f}%  ->  after {100 * after:.0f}%')
+summary = f'before {100 * before:.0f}%  ->  after {100 * after:.0f}%   ({len(train_rows)} train examples, {EPOCHS} epochs)'
+print(summary)
+open(OUT_DIR + '/RESULT.txt', 'w').write('TRAINING FINISHED\n' + summary + '\n')   # look for this file in Drive, even from your phone
 
 # %% [markdown]
 # ## 5. Merge into a normal model, then make a GGUF for LM Studio
-# Only worth doing if "after" is clearly better than "before". The conversion is the least tested part: if it fails, send me the error.
+# Only worth keeping if "after" is clearly better than "before". This part is the least tested: every step is wrapped, so a failure here never stops the run
+# (the trained LoRA and RESULT.txt are already safe on Drive); what happened is written to `RESULT.txt`.
 
 # %%
-import gc
-del model; gc.collect(); torch.cuda.empty_cache()
-from peft import PeftModel
-base16 = Qwen3VLForConditionalGeneration.from_pretrained(BASE, torch_dtype=torch.float16, device_map='cpu')
-merged = PeftModel.from_pretrained(base16, OUT_DIR + '/lora').merge_and_unload()
-merged.save_pretrained('/content/merged', safe_serialization=True)
-processor.save_pretrained('/content/merged')
-print('merged')
+import gc, subprocess, traceback
+
+def sh(cmd):
+    print('$', cmd)
+    r = subprocess.run(cmd, shell=True)
+    print('exit code', r.returncode)
+    return r.returncode == 0
+
+status = 'GGUF: not made'
+try:
+    del model, trainer
+    gc.collect(); torch.cuda.empty_cache()
+    from peft import PeftModel
+    base16 = Qwen3VLForConditionalGeneration.from_pretrained(BASE, torch_dtype=torch.float16, device_map='cpu')
+    merged = PeftModel.from_pretrained(base16, OUT_DIR + '/lora').merge_and_unload()
+    merged.save_pretrained('/content/merged', safe_serialization=True)
+    processor.save_pretrained('/content/merged')
+    print('merged')
+    L = '/content/llama.cpp'
+    ok = (sh(f'git clone -q --depth 1 https://github.com/ggml-org/llama.cpp {L}')
+          and sh(f'pip -q install -r {L}/requirements/requirements-convert_hf_to_gguf.txt')
+          and sh(f'python {L}/convert_hf_to_gguf.py /content/merged --outfile /content/ui-voyager-ft-f16.gguf --outtype f16')
+          and sh(f'python {L}/convert_hf_to_gguf.py /content/merged --outfile /content/mmproj-ui-voyager-ft-f16.gguf --outtype f16 --mmproj')
+          and sh(f'cmake -S {L} -B {L}/build -DGGML_CUDA=OFF -DLLAMA_CURL=OFF > /dev/null')
+          and sh(f'cmake --build {L}/build --target llama-quantize -j 4 > /dev/null')
+          and sh(f'{L}/build/bin/llama-quantize /content/ui-voyager-ft-f16.gguf /content/ui-voyager-ft-Q4_K_M.gguf Q4_K_M')
+          and sh(f'cp /content/ui-voyager-ft-Q4_K_M.gguf /content/mmproj-ui-voyager-ft-f16.gguf "{OUT_DIR}/"'))
+    status = 'GGUF: made, in the out folder (ui-voyager-ft-Q4_K_M.gguf + mmproj-ui-voyager-ft-f16.gguf)' if ok else 'GGUF: a step failed, see the notebook output (the LoRA itself is fine)'
+except Exception:
+    traceback.print_exc()
+    status = 'GGUF: failed with an error, see the notebook output (the LoRA itself is fine)'
+open(OUT_DIR + '/RESULT.txt', 'a').write(status + '\n')
+print(status)
+
+# %% [markdown]
+# ## 6. Hand the GPU back
+# Ends the Colab session so it stops using your free GPU time. Set to False to keep it open.
 
 # %%
-!git clone -q --depth 1 https://github.com/ggml-org/llama.cpp /content/llama.cpp
-!pip -q install -r /content/llama.cpp/requirements/requirements-convert_hf_to_gguf.txt
-!python /content/llama.cpp/convert_hf_to_gguf.py /content/merged --outfile /content/ui-voyager-ft-f16.gguf --outtype f16
-!python /content/llama.cpp/convert_hf_to_gguf.py /content/merged --outfile /content/mmproj-ui-voyager-ft-f16.gguf --outtype f16 --mmproj
-
-# %%
-!cmake -S /content/llama.cpp -B /content/llama.cpp/build -DGGML_CUDA=OFF -DLLAMA_CURL=OFF > /dev/null
-!cmake --build /content/llama.cpp/build --target llama-quantize -j 4 > /dev/null
-!/content/llama.cpp/build/bin/llama-quantize /content/ui-voyager-ft-f16.gguf /content/ui-voyager-ft-Q4_K_M.gguf Q4_K_M
-!cp /content/ui-voyager-ft-Q4_K_M.gguf /content/mmproj-ui-voyager-ft-f16.gguf "{OUT_DIR}/"
-!ls -la "{OUT_DIR}"
-print('Download both .gguf files from Drive and put them in one folder under LM Studio\'s models directory.')
+AUTO_DISCONNECT = True
+if AUTO_DISCONNECT:
+    from google.colab import runtime
+    runtime.unassign()
