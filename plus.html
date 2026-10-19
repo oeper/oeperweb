@@ -173,7 +173,7 @@ async function load() {
 }
 
 function perks() {
-  const pl = (me && me.plans) || { free: { tokens: 50000, images: 4 }, plus: { tokens: 240000, images: 15, best: 3 } };
+  const pl = (me && me.plans) || { free: { tokens: 75000, images: 4 }, plus: { tokens: 480000, images: 15, best: 3 } };
   const times = Math.max(2, Math.round(pl.plus.tokens / Math.max(1, pl.free.tokens)));
   return [
     ['chat', `about ${times}× the daily epic AI usage`, `${Math.round(pl.plus.tokens / 1000)}k tokens a day instead of ${Math.round(pl.free.tokens / 1000)}k, plus the first claim on epic AI when everyone is busy.`],

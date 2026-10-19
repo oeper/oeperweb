@@ -24,7 +24,7 @@ const MAX_FAILS_PER_IP = 40; // per network address (many people can share one)
 export const DEFAULT_CONFIG = {
   // Tokens per person per day, input + output (guests are counted by network address). A typical epic AI turn is about 3,000 to 4,000 tokens,
   // because the whole chat is read again on every message, so 25,000 is roughly 7 turns.
-  limits: { guest: { tokens: 10000, messages: 5 }, free: { tokens: 50000 }, plus: { tokens: 240000 } },
+  limits: { guest: { tokens: 10000, messages: 5 }, free: { tokens: 75000 }, plus: { tokens: 480000 } },
   // Everyone together: how many neurons epic AI may spend per day (Cloudflare's free plan is 10,000 for the whole account, shared with the
   // One suite, study tools and moderation). The last reservePct of the pool is kept for Plus people.
   pool: { neurons: 7000, reservePct: 20 },
@@ -231,6 +231,11 @@ export class Ledger extends DurableObject {
 
   async #config() {
     const c = (await this.ctx.storage.get('config')) || {};
+    // 2026-10-19: the defaults went from 50k / 240k to 75k / 480k. A saved config that still holds the old, untouched defaults moves with them (changed numbers are kept)
+    if (c.limits && c.limits.free && c.limits.free.tokens === 50000 && c.limits.plus && c.limits.plus.tokens === 240000) {
+      c.limits = { ...c.limits, free: { ...c.limits.free, tokens: 75000 }, plus: { ...c.limits.plus, tokens: 480000 } };
+      await this.ctx.storage.put('config', c);
+    }
     return {
       limits: { ...DEFAULT_CONFIG.limits, ...(c.limits || {}) },
       pool: { ...DEFAULT_CONFIG.pool, ...(c.pool || {}) },
