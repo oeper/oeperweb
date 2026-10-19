@@ -58,7 +58,7 @@ print('train', len(train_rows), 'eval', len(eval_rows))
 from PIL import ImageDraw
 import re
 def centre(r):
-    m = re.search(r'"coordinate": \[(\d+), (\d+)\]', r['messages'][1]['content'])
+    m = re.search(r'"coordinate":\s*\[\s*(\d+)\s*,\s*(\d+)', r['messages'][1]['content'])
     return int(m.group(1)), int(m.group(2))
 for r in train_rows[:3]:
     im = Image.open(r['image_path']).convert('RGB'); w, h = im.size
