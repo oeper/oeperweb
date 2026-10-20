@@ -5,6 +5,7 @@ import { makeImage } from './images.js';
 import { readWebpage } from './webpage.js';
 import { cleanApp, cleanUrl, fetchManifest, applyManifests } from './epicenter.js';
 import { handleSearver } from './searver.js';
+import { handleSearch } from './search.js';
 import { GOOGLE_TOOLS, googleToolStatus, runGoogleTool, googleConfigured, googleStartUrl, googleCallback, googleStatus, googleDisconnect } from './google.js';
 export { Ledger };
 
@@ -1457,6 +1458,9 @@ export default {
     // merge-with-Firestore-config logic for the model dropdown still works
     // unchanged; admin.html can still add extra Workers AI model ids via
     // config/aiModels if you ever want to offer a choice.
+    // oeper.dev site search as a public API (search.js, documented at /search-api); answers its own CORS headers (any origin may GET)
+    if (url.pathname === '/api/search' || url.pathname.startsWith('/api/search/')) return handleSearch(request, env, url.pathname.slice('/api/search'.length).replace(/^\//, ''), env.LEDGER ? ledgerOf(env) : null);
+
     if (url.pathname === '/api/models' && request.method === 'GET') {
       return json({ models: [] }, 200, request);
     }

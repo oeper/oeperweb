@@ -13,7 +13,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&family=Freehand&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./shared/fonts.css?v=1">
-
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
@@ -47,7 +46,7 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  .page { position: relative; max-width: 680px; margin: 0 auto; padding: 40px 24px 100px; }
+  .page { position: relative; max-width: 760px; margin: 0 auto; padding: 40px 24px 100px; }
 
   .search-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
   .search-logo { display: flex; align-items: center; flex-shrink: 0; color: var(--md-sys-color-primary); }
@@ -63,35 +62,35 @@
   }
   .search-bar-input:focus { box-shadow: 0 0 0 2px var(--md-sys-color-primary); }
 
-  .result-section { margin-bottom: 36px; }
-  .result-section-heading {
-    display: flex; align-items: center; gap: 8px; font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif);
-    font-size: 13px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; color: var(--md-sys-color-on-surface-variant);
-    margin-bottom: 4px; padding-bottom: 10px; border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  }
-  .result-section-heading .material-symbols-rounded { font-size: 16px; }
-  .result-note { font-size: 12px; color: var(--md-sys-color-on-surface-variant); margin: 10px 0 4px; }
-
-  .result-row { display: block; padding: 14px 8px; border-radius: 12px; text-decoration: none; color: inherit; }
-  a.result-row:hover { background: var(--md-sys-color-hover-surface); }
-  .result-breadcrumb { font-size: 13px; color: var(--oe-search-url-color); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .result-title { font-size: 18px; color: var(--md-sys-color-primary); margin-bottom: 4px; line-height: 1.3; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 18px; }
+  .chip { font: inherit; font-size: 13px; font-weight: 500; border: 1px solid var(--md-sys-color-outline); background: transparent; color: var(--md-sys-color-on-surface-variant); border-radius: 999px; padding: 6px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+  .chip:hover { background: var(--md-sys-color-hover-surface, rgba(255,255,255,.06)); }
+  .chip.on { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent; }
+  .chip small { opacity: .7; font-weight: 400; }
+  .meta { font-size: 13px; color: var(--md-sys-color-on-surface-variant); margin: 0 4px 6px; }
+  .note { margin: 0 4px 14px; font-size: 14px; color: var(--md-sys-color-on-surface-variant); }
+  .note a, .empty-note a { color: var(--md-sys-color-primary); cursor: pointer; font-weight: 500; text-decoration: none; }
+  .result-row { display: flex; gap: 14px; padding: 14px 10px; border-radius: 14px; text-decoration: none; color: inherit; }
+  a.result-row:hover, a.result-row:focus-visible { background: var(--md-sys-color-hover-surface, rgba(255,255,255,.06)); }
+  .result-icon { width: 38px; height: 38px; border-radius: 50%; flex: none; display: grid; place-items: center; overflow: hidden; background: var(--md-sys-color-surface-variant); }
+  .result-icon img { width: 100%; height: 100%; object-fit: cover; }
+  .result-icon .material-symbols-rounded { font-size: 20px; color: var(--md-sys-color-on-surface-variant); }
+  .result-main { min-width: 0; flex: 1; }
+  .result-breadcrumb { font-size: 12.5px; color: var(--oe-search-url-color); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .result-title { font-size: 18px; color: var(--md-sys-color-primary); margin-bottom: 3px; line-height: 1.3; }
   .result-row:hover .result-title { text-decoration: underline; }
   .result-snippet { font-size: 14px; line-height: 1.5; color: var(--md-sys-color-on-surface-variant); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
+  mark { background: color-mix(in srgb, var(--md-sys-color-primary) 28%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .more { display: block; margin: 14px auto; font: inherit; font-weight: 500; border: 0; border-radius: 999px; padding: 10px 24px; background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); cursor: pointer; }
   .empty-note { color: var(--md-sys-color-on-surface-variant); font-size: 14px; padding: 24px 8px; }
-  .empty-note a { color: var(--md-sys-color-primary); }
-
-  .search-prompt { text-align: center; padding: 80px 24px; color: var(--md-sys-color-on-surface-variant); }
-  .search-prompt .material-symbols-rounded { font-size: 40px; opacity: 0.5; margin-bottom: 12px; }
-
-  /* ── Wide desktop layout ── */
-  @media (min-width: 1100px) {
-    .page { max-width: 1240px; }
-    .search-header { max-width: 680px; }
-    #content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 48px; align-items: start; }
-    #content > .search-prompt, #content > .empty-note, #content > .result-section:only-child { grid-column: 1 / -1; }
-  }
+  .search-prompt { text-align: center; padding: 48px 8px 24px; color: var(--md-sys-color-on-surface-variant); }
+  .search-prompt > .material-symbols-rounded { font-size: 40px; opacity: 0.5; margin-bottom: 12px; }
+  .quick { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-top: 18px; text-align: left; }
+  .quick a { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); text-decoration: none; font-size: 14px; border: 1px solid var(--md-sys-color-outline); }
+  .quick a:hover { background: var(--md-sys-color-surface-variant); }
+  .quick .material-symbols-rounded { color: var(--md-sys-color-primary); font-size: 20px; }
+  .api-note { text-align: center; font-size: 12.5px; color: var(--md-sys-color-on-surface-variant); margin-top: 28px; }
+  .api-note a { color: var(--md-sys-color-primary); }
 </style>
 </head>
 <body>
@@ -99,221 +98,108 @@
 <div class="page">
   <div class="search-header">
     <a class="search-logo" href="/"><svg viewBox="0 0 98 118" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M97.21 104.246C99.8214 110.812 94.9842 117.941 87.918 117.941H10.0098C2.94348 117.941 -1.89373 110.812 0.717769 104.246L24.9966 43.2019C25.2993 42.4406 26.0357 41.941 26.855 41.941H71.0728C71.892 41.941 72.6284 42.4406 72.9312 43.2019L97.21 104.246ZM39.6719 6.30428C43.0151 -2.10143 54.9127 -2.10143 58.2559 6.30428L65.3744 24.2018C65.8967 25.515 64.9293 26.941 63.516 26.941H34.4117C32.9985 26.941 32.031 25.515 32.5533 24.2018L39.6719 6.30428Z"/></svg></a>
-    <div class="search-bar-wrap">
+    <form class="search-bar-wrap" id="searchForm" action="/search" method="GET" autocomplete="off">
       <span class="material-symbols-rounded">search</span>
-      <input type="text" class="search-bar-input" id="searchInput" placeholder="search oeper.dev and the web…" autocomplete="off">
-    </div>
+      <input type="text" class="search-bar-input" id="searchInput" name="q" placeholder="search oeper.dev…  ( / )" autocomplete="off" enterkeyhint="search">
+    </form>
   </div>
-
+  <div class="chips" id="chips" hidden></div>
   <div id="content"></div>
+  <p class="api-note">search is also an API: <a href="/search-api">use it from your own code</a></p>
 </div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav, HIDDEN_PAGES, hiddenPageRank } from './shared/topnav.js?v=49';
-import { reveal, observeList } from './shared/motion.js?v=3';
-import { mountFooter } from './shared/footer.js?v=7';
-import { db } from './shared/account.js?v=43';
-import {
-  collection, query, orderBy, limit, getDocs,
-} from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+import { mountTopNav } from './shared/topnav.js?v=50';
+import { mountFooter } from './shared/footer.js?v=8';
+import { search, quickLinks, rememberSearch, recents, highlight, escHtml, queryTerms, TYPE_META } from './shared/site-search.js?v=1';
 
 mountTopNav();
-reveal(document.querySelector('.search-header'));
-observeList(document.getElementById('content'));
 mountFooter();
 
-// Fill these in to turn on the "from the web" section (see the README
-// note in this repo, or ask whoever set up this site) — a Google
-// Custom Search JSON API key + a Programmable Search Engine ID
-// (https://programmablesearchengine.google.com, configured to search the
-// entire web). Both are safe to ship in this public, static file as long
-// as the API key is restricted by HTTP referrer (oeper.dev only) in
-// Google Cloud Console — same trust model as the Firebase config already
-// public in shared/account.js. Free tier is 100 queries/day.
-const GOOGLE_SEARCH_API_KEY = '';
-const GOOGLE_SEARCH_CX = '';
+const content = document.getElementById('content'), input = document.getElementById('searchInput'), chips = document.getElementById('chips');
+const params = new URLSearchParams(location.search);
+let q = (params.get('q') || '').trim(), type = params.get('type') || '', offset = 0, ctrl = null, lastOriginal = '', exact = false;
+const PAGE = 20;
+input.value = q;
 
-function escHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function excerpt(text, maxLen) {
-  if (!text) return '';
-  const t = text.trim().replace(/\s+/g, ' ');
-  return t.length > maxLen ? t.slice(0, maxLen).trim() + '…' : t;
+const crumb = r => 'oeper.dev › ' + (r.section ? r.section : (TYPE_META[r.type] ? TYPE_META[r.type].plural : r.type)) + (r.by ? ' › ' + r.by : '');
+function rowHtml(r, terms) {
+  const meta = TYPE_META[r.type] || { icon: 'article' };
+  const icon = r.photo ? `<img src="${escHtml(r.photo)}" alt="" referrerpolicy="no-referrer">` : `<span class="material-symbols-rounded">${escHtml(r.icon || meta.icon)}</span>`;
+  return `<a class="result-row" href="${escHtml(r.url)}"><span class="result-icon">${icon}</span><span class="result-main"><div class="result-breadcrumb">${escHtml(crumb(r))}</div><div class="result-title">${highlight(r.title, terms)}</div>${r.snippet ? `<div class="result-snippet">${highlight(r.snippet, terms)}</div>` : ''}</span></a>`;
+}
+function url() {
+  const u = new URLSearchParams();
+  if (q) u.set('q', q);
+  if (type) u.set('type', type);
+  return '/search' + (u.toString() ? '?' + u : '');
+}
+function go(newQ, newType, replace) {
+  if (!replace) exact = false;
+  q = newQ; type = newType || ''; input.value = q;
+  history[replace ? 'replaceState' : 'pushState'](null, '', url());
+  run();
 }
 
-const content = document.getElementById('content');
-const searchInput = document.getElementById('searchInput');
-const params = new URLSearchParams(window.location.search);
-const initialQ = params.get('q') || '';
-searchInput.value = initialQ;
+async function home() {
+  chips.hidden = true;
+  const quick = await quickLinks(), rec = recents();
+  content.innerHTML = `<div class="search-prompt"><span class="material-symbols-rounded">search</span><p>search pages, tools, docs, posts, videos, people and apps on oeper.dev.</p>
+    ${rec.length ? `<div class="chips" style="justify-content:center;margin:16px 0 0">${rec.map(r => `<a class="chip" href="/search?q=${encodeURIComponent(r)}"><span class="material-symbols-rounded" style="font-size:16px">history</span>${escHtml(r)}</a>`).join('')}</div>` : ''}
+    <div class="quick">${quick.map(r => `<a href="${escHtml(r.url)}"><span class="material-symbols-rounded">${escHtml(r.icon || 'web')}</span>${escHtml(r.title)}</a>`).join('')}</div></div>`;
+}
 
-searchInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const q = searchInput.value.trim();
-    history.pushState(null, '', q ? `/search?q=${encodeURIComponent(q)}` : '/search');
-    runSearch(q);
+function renderChips(data) {
+  const counts = data.counts || {};
+  const all = Object.values(counts).reduce((a, b) => a + b, 0);
+  if (!all && !type) { chips.hidden = true; return; }
+  chips.hidden = false;
+  chips.innerHTML = `<button class="chip${type ? '' : ' on'}" data-type="">all <small>${all}</small></button>` +
+    Object.keys(TYPE_META).filter(t => counts[t]).map(t => `<button class="chip${type === t ? ' on' : ''}" data-type="${t}">${escHtml(TYPE_META[t].plural)} <small>${counts[t]}</small></button>`).join('');
+}
+chips.addEventListener('click', e => { const b = e.target.closest('.chip'); if (b) go(q, b.dataset.type); });
+
+async function run(more) {
+  document.title = q ? `${q} — Search — oeper.dev` : 'Search — oeper.dev';
+  if (!q) { offset = 0; return home(); }
+  if (ctrl) ctrl.abort();
+  ctrl = new AbortController();
+  if (!more) { offset = 0; content.innerHTML = '<div class="empty-note">searching…</div>'; }
+  let data;
+  try { data = await search(q, { type, limit: PAGE, offset, exact, signal: ctrl.signal }); } catch (e) { if (e.name !== 'AbortError') content.innerHTML = '<div class="empty-note">search could not be reached. try again in a moment.</div>'; return; }
+  rememberSearch(q);
+  const terms = data.terms && data.terms.length ? data.terms : queryTerms(q);
+  if (!more) renderChips(data);
+  const list = (data.results || []).map(r => rowHtml(r, terms)).join('');
+  if (more) { const old = content.querySelector('.more'); if (old) old.remove(); content.insertAdjacentHTML('beforeend', list); }
+  else {
+    let html = '';
+    lastOriginal = data.originalQuery || '';
+    if (data.corrected) html += `<div class="note">showing results for <strong>${escHtml(data.corrected)}</strong>. <a data-exact>search for ${escHtml(data.originalQuery)} instead</a></div>`;
+    else if (data.didYouMean) html += `<div class="note">did you mean <a data-dym="${escHtml(data.didYouMean)}">${escHtml(data.didYouMean)}</a>?</div>`;
+    if (data.offline) html += '<div class="note">search is offline right now: only pages can be found.</div>';
+    html += data.total
+      ? `<div class="meta">${data.total} result${data.total === 1 ? '' : 's'}${data.took ? ' · ' + data.took + ' ms' : ''}</div>` + list
+      : `<div class="empty-note">nothing found for "${escHtml(q)}"${type ? ` in ${escHtml(TYPE_META[type] ? TYPE_META[type].plural : type)}` : ''}. try fewer or different words${type ? ', or <a data-all>search everything</a>' : ''}.</div>`;
+    content.innerHTML = html;
   }
+  offset += (data.results || []).length;
+  if (data.total > offset) content.insertAdjacentHTML('beforeend', '<button class="more" type="button">show more</button>');
+}
+content.addEventListener('click', e => {
+  if (e.target.closest('.more')) return run(true);
+  const d = e.target.closest('[data-dym]'); if (d) return go(d.dataset.dym, type);
+  if (e.target.closest('[data-exact]')) { exact = true; return go(lastOriginal, type, true); }
+  if (e.target.closest('[data-all]')) go(q, '');
 });
 
-function matchRank(name, q) {
-  const idx = (name || '').toLowerCase().indexOf(q);
-  if (idx === -1) return -1;
-  return idx === 0 ? 0 : 1;
-}
-function keywordRank(fields, q) {
-  const words = q.split(/\s+/).filter(Boolean);
-  if (!words.length) return -1;
-  let phraseTier = -1;
-  let hits = 0;
-  fields.forEach(({ text, weight }) => {
-    const hay = (text || '').toLowerCase();
-    if (!hay) return;
-    const tier = hay === q ? 0 : hay.startsWith(q) ? 1 : hay.includes(q) ? 2 : -1;
-    if (tier !== -1) phraseTier = phraseTier === -1 ? tier : Math.min(phraseTier, tier);
-    words.forEach(w => { if (hay.includes(w)) hits += weight; });
-  });
-  if (phraseTier !== -1) return phraseTier;
-  if (hits === 0) return -1;
-  return 12 - Math.min(hits, 10);
-}
-
-// Same bounded corpus approach as topnav.js's dropdown search (300 posts/
-// videos/users) — an unbounded fetch doesn't stay fast as the site grows.
-// This page shows more results than the dropdown (30 vs 8), but pulls
-// from the same underlying slice.
-let corpusPromise = null;
-function loadCorpus() {
-  if (!corpusPromise) {
-    corpusPromise = Promise.allSettled([
-      getDocs(query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(300))),
-      getDocs(query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(300))),
-      getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(300))),
-    ]).then(([postsR, videosR, usersR]) => ({
-      posts: postsR.status === 'fulfilled' ? postsR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
-      videos: videosR.status === 'fulfilled' ? videosR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
-      users: usersR.status === 'fulfilled' ? usersR.value.docs.map(d => ({ email: d.id, ...d.data() })) : [],
-    }));
-  }
-  return corpusPromise;
-}
-
-async function searchOeper(qRaw) {
-  const q = qRaw.trim().toLowerCase();
-  const corpus = await loadCorpus();
-  const results = [];
-
-  HIDDEN_PAGES.forEach(page => {
-    const rank = hiddenPageRank(page, q);
-    if (rank !== -1) results.push({
-      rank, breadcrumb: 'oeper.dev › ' + page.name, title: page.name,
-      snippet: 'a page on oeper.dev not linked anywhere in the site — you found it by searching.',
-      url: page.url,
-    });
-  });
-  corpus.users.forEach(u => {
-    if (!u.handle) return;
-    const name = u.displayName || u.handle;
-    const rank = Math.min(
-      matchRank(name, q) === -1 ? 99 : matchRank(name, q),
-      matchRank(u.handle, q) === -1 ? 99 : matchRank(u.handle, q)
-    );
-    if (rank < 99) results.push({
-      rank, breadcrumb: `oeper.dev › profile › @${u.handle}`, title: name,
-      snippet: `@${u.handle}'s profile on oeper.dev.`, url: `/profile?u=${encodeURIComponent(u.handle)}`,
-    });
-  });
-  corpus.posts.forEach(p => {
-    const rank = keywordRank([{ text: p.title, weight: 3 }, { text: p.body, weight: 1 }], q);
-    if (rank !== -1) results.push({
-      rank, breadcrumb: 'oeper.dev › feed', title: p.title || excerpt(p.body, 60) || '(untitled post)',
-      snippet: excerpt(p.body, 180), url: `/feed?post=${p.id}`,
-    });
-  });
-  corpus.videos.forEach(v => {
-    const rank = keywordRank([{ text: v.title, weight: 3 }, { text: v.description, weight: 1 }], q);
-    if (rank !== -1) results.push({
-      rank, breadcrumb: 'oeper.dev › videos', title: v.title || '(untitled video)',
-      snippet: excerpt(v.description, 180), url: `/videos?video=${v.id}`,
-    });
-  });
-
-  results.sort((a, b) => a.rank - b.rank);
-  return results.slice(0, 30);
-}
-
-async function searchWeb(qRaw) {
-  if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_CX) return { configured: false, items: [] };
-  const url = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(GOOGLE_SEARCH_API_KEY)}&cx=${encodeURIComponent(GOOGLE_SEARCH_CX)}&q=${encodeURIComponent(qRaw)}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  if (!res.ok) throw new Error((data.error && data.error.message) || `HTTP ${res.status}`);
-  return { configured: true, items: data.items || [] };
-}
-
-function resultRowHtml(r) {
-  return `
-    <a class="result-row" href="${r.url}"${r.external ? ' target="_blank" rel="noopener"' : ''}>
-      <div class="result-breadcrumb">${escHtml(r.breadcrumb)}</div>
-      <div class="result-title">${escHtml(r.title)}</div>
-      ${r.snippet ? `<div class="result-snippet">${escHtml(r.snippet)}</div>` : ''}
-    </a>
-  `;
-}
-
-async function runSearch(qRaw) {
-  const q = qRaw.trim();
-  document.title = q ? `${q} — Search — oeper.dev` : 'Search — oeper.dev';
-  if (!q) {
-    content.innerHTML = `
-      <div class="search-prompt">
-        <span class="material-symbols-rounded">search</span>
-        <p>search oeper.dev — and the web, if that's set up.</p>
-      </div>
-    `;
-    return;
-  }
-
-  content.innerHTML = `
-    <div class="result-section">
-      <div class="result-section-heading"><span class="material-symbols-rounded">home</span>from oeper.dev</div>
-      <div id="oeperResults" class="empty-note">searching…</div>
-    </div>
-    <div class="result-section">
-      <div class="result-section-heading"><span class="material-symbols-rounded">public</span>from the web</div>
-      <div id="webResults" class="empty-note">searching…</div>
-    </div>
-  `;
-
-  searchOeper(q).then(results => {
-    const el = document.getElementById('oeperResults');
-    if (!el) return;
-    if (!results.length) { el.innerHTML = `no oeper.dev results for "${escHtml(q)}".`; return; }
-    el.outerHTML = `<div id="oeperResults">${results.map(resultRowHtml).join('')}</div>`;
-    observeList(document.getElementById('oeperResults'));
-  }).catch(err => {
-    const el = document.getElementById('oeperResults');
-    if (el) el.textContent = 'could not search oeper.dev: ' + err.message;
-  });
-
-  searchWeb(q).then(({ configured, items }) => {
-    const el = document.getElementById('webResults');
-    if (!el) return;
-    if (!configured) {
-      el.innerHTML = `web search isn't set up yet — needs a Google Custom Search API key and search engine ID.`;
-      return;
-    }
-    if (!items.length) { el.innerHTML = `no web results for "${escHtml(q)}".`; return; }
-    const rows = items.map(it => resultRowHtml({
-      breadcrumb: it.displayLink || it.link, title: it.title, snippet: it.snippet, url: it.link, external: true,
-    })).join('');
-    el.outerHTML = `<div id="webResults">${rows}</div>`;
-    observeList(document.getElementById('webResults'));
-  }).catch(err => {
-    const el = document.getElementById('webResults');
-    if (el) el.textContent = 'could not search the web: ' + err.message;
-  });
-}
-
-runSearch(initialQ);
+document.getElementById('searchForm').addEventListener('submit', e => { e.preventDefault(); go(input.value.trim(), type); input.blur(); });
+document.addEventListener('keydown', e => {
+  const typing = /^(input|textarea|select)$/i.test(e.target.tagName) || e.target.isContentEditable;
+  if ((e.key === '/' && !typing) || ((e.key === 'k' || e.key === 'K') && (e.ctrlKey || e.metaKey))) { e.preventDefault(); input.focus(); input.select(); }
+});
+addEventListener('popstate', () => { const p = new URLSearchParams(location.search); q = (p.get('q') || '').trim(); type = p.get('type') || ''; input.value = q; run(); });
+run();
 </script>
 </body>
 </html>

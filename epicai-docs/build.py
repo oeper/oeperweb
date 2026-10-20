@@ -79,7 +79,7 @@ page = f'''<!DOCTYPE html>
   </article>
 </main>
 <script type="module" data-cfasync="false">
-import {{ mountTopNav }} from '/shared/topnav.js?v=49';
+import {{ mountTopNav }} from '/shared/topnav.js?v=50';
 mountTopNav();
 </script>
 </body>

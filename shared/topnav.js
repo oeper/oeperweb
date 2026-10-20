@@ -11,7 +11,8 @@
 import {
   mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange, signIn,
 } from './account.js?v=43';
-import './settings-sync.js?v=3'; // keeps this person's settings the same on every device (can be switched off in settings)
+import './settings-sync.js?v=4'; // keeps this person's settings the same on every device (can be switched off in settings)
+import { attachSearchBox } from './site-search.js?v=1'; // the search box (API, recents, keyboard), shared with the home page and /search
 import {
   collection, query, orderBy, limit, getDocs, onSnapshot, where, doc, updateDoc, writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
@@ -43,14 +44,6 @@ export const HIDDEN_PAGES = [
   { keywords: ['pdf combiner', 'combine pdf', 'combine pdfs', 'merge pdf', 'merge pdfs', 'pdf merge', 'join pdf'], name: 'PDF combiner', url: '/pdfcombiner', icon: 'merge' },
   { keywords: ['pdf splitter', 'split pdf', 'split pdfs', 'split pdf by size', 'pdf split'], name: 'PDF splitter', url: '/pdfsplitbysize', icon: 'call_split' },
 ];
-export function hiddenPageRank(page, q) {
-  let best = -1;
-  page.keywords.forEach(k => {
-    const tier = k === q ? 0 : k.startsWith(q) ? 1 : k.includes(q) ? 2 : -1;
-    if (tier !== -1 && (best === -1 || tier < best)) best = tier;
-  });
-  return best;
-}
 
 const NAV_ITEMS = [
   { id: 'home', title: 'home', icon: 'home', url: 'https://oeper.dev/', path: '/' },
@@ -711,7 +704,8 @@ function initSearch(navEl) {
   const mobileBtn = navEl.querySelector('#oeNavMobileSearchBtn');
   const mobileClose = navEl.querySelector('#oeNavSearchMobileClose');
 
-  function closeDropdown() { dropdown.classList.remove('open'); }
+  // the search itself (API, recents, quick links, keyboard) lives in site-search.js and is shared with the home page and /search
+  const box = attachSearchBox({ input: searchInput, dropdown });
 
   mobileBtn.addEventListener('click', () => {
     searchWrap.classList.add('mobile-open');
@@ -719,135 +713,20 @@ function initSearch(navEl) {
   });
   mobileClose.addEventListener('click', () => {
     searchWrap.classList.remove('mobile-open');
-    closeDropdown();
+    box.close();
   });
 
-  let corpusPromise = null;
-  function loadCorpus() {
-    if (corpusPromise) return corpusPromise;
-    corpusPromise = Promise.allSettled([
-      getDocs(query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(300))),
-      getDocs(query(collection(db, 'videos'), orderBy('createdAt', 'desc'), limit(300))),
-      getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(300))),
-    ]).then(([postsR, videosR, usersR]) => ({
-      posts: postsR.status === 'fulfilled' ? postsR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
-      videos: videosR.status === 'fulfilled' ? videosR.value.docs.map(d => ({ id: d.id, ...d.data() })) : [],
-      users: usersR.status === 'fulfilled' ? usersR.value.docs.map(d => ({ email: d.id, ...d.data() })) : [],
-    }));
-    return corpusPromise;
-  }
-
-  function matchRank(name, q) {
-    const idx = (name || '').toLowerCase().indexOf(q);
-    if (idx === -1) return -1;
-    return idx === 0 ? 0 : 1;
-  }
-
-  // Keyword-aware rank across multiple weighted fields (title counts more
-  // than body/description). The old behavior only tested the whole typed
-  // query as one contiguous phrase against a single field — a post had to
-  // contain that exact phrase to ever show up, and once it had a title its
-  // body was never searched at all. This still ranks an exact/phrase match
-  // above everything (tiers 0-2, matching matchRank's convention so people-
-  // search and content-search sort together), but falls back to scoring how
-  // many of the typed words appear anywhere across the given fields, so
-  // "website comment" can still find a post that says "please comment on
-  // this website" even though that's not a contiguous match.
-  function keywordRank(fields, q) {
-    const words = q.split(/\s+/).filter(Boolean);
-    if (!words.length) return -1;
-    let phraseTier = -1;
-    let hits = 0;
-    fields.forEach(({ text, weight }) => {
-      const hay = (text || '').toLowerCase();
-      if (!hay) return;
-      const tier = hay === q ? 0 : hay.startsWith(q) ? 1 : hay.includes(q) ? 2 : -1;
-      if (tier !== -1) phraseTier = phraseTier === -1 ? tier : Math.min(phraseTier, tier);
-      words.forEach(w => { if (hay.includes(w)) hits += weight; });
-    });
-    if (phraseTier !== -1) return phraseTier;
-    if (hits === 0) return -1;
-    return 12 - Math.min(hits, 10);
-  }
-
-  async function runSearch(qRaw) {
-    const q = qRaw.trim().toLowerCase();
-    if (!q) { closeDropdown(); return; }
-    dropdown.innerHTML = '<div class="oe-spinner-row"><span class="oe-loading-indicator small"></span>Searching…</div>';
-    dropdown.classList.add('open');
-
-    let corpus;
-    try { corpus = await loadCorpus(); } catch { corpus = { posts: [], videos: [], users: [] }; }
-    if (searchInput.value.trim().toLowerCase() !== q) return;
-
-    const results = [];
-    HIDDEN_PAGES.forEach(page => {
-      const rank = hiddenPageRank(page, q);
-      if (rank !== -1) results.push({ rank, name: page.name, sub: 'page', url: page.url, icon: page.icon });
-    });
-    corpus.users.forEach(u => {
-      if (!u.handle) return;
-      const name = u.displayName || u.handle;
-      const rank = Math.min(
-        matchRank(name, q) === -1 ? 99 : matchRank(name, q),
-        matchRank(u.handle, q) === -1 ? 99 : matchRank(u.handle, q)
-      );
-      if (rank < 99) results.push({ rank, name, sub: 'in people', url: `/profile?u=${encodeURIComponent(u.handle)}`, photo: getProfile(u.email, u.displayName, u.photoURL).photo, icon: 'person' });
-    });
-    corpus.posts.forEach(p => {
-      const name = p.title || p.body || '';
-      const rank = keywordRank([{ text: p.title, weight: 3 }, { text: p.body, weight: 1 }], q);
-      if (rank !== -1) results.push({ rank, name, sub: 'in feed', url: `/feed?post=${p.id}`, icon: 'forum' });
-    });
-    corpus.videos.forEach(v => {
-      const rank = keywordRank([{ text: v.title, weight: 3 }, { text: v.description, weight: 1 }], q);
-      if (rank !== -1) results.push({ rank, name: v.title || '', sub: 'in videos', url: `/videos?video=${v.id}`, icon: 'smart_display' });
-    });
-
-    results.sort((a, b) => a.rank - b.rank);
-    const top = results.slice(0, 8);
-    const seeAllRow = `
-      <a class="oe-nsd-row oe-nsd-see-all" href="/search?q=${encodeURIComponent(qRaw.trim())}">
-        <div class="oe-nsd-icon"><span class="material-symbols-rounded">search</span></div>
-        <div class="oe-nsd-main"><span class="oe-nsd-name">see all results for "${escHtml(qRaw.trim())}"</span></div>
-      </a>
-    `;
-
-    if (top.length === 0) {
-      dropdown.innerHTML = `<div class="oe-nsd-empty">no results for "${escHtml(qRaw.trim())}"</div>` + seeAllRow;
-      return;
-    }
-    dropdown.innerHTML = top.map(r => `
-      <a class="oe-nsd-row" href="${r.url}">
-        <div class="oe-nsd-icon">${r.photo ? `<img src="${r.photo}" alt="">` : `<span class="material-symbols-rounded">${r.icon}</span>`}</div>
-        <div class="oe-nsd-main"><span class="oe-nsd-name">${escHtml(r.name)}</span> <span class="oe-nsd-cat">${r.sub}</span></div>
-      </a>
-    `).join('') + seeAllRow;
-  }
-
-  let debounceTimer = null;
-  searchInput.addEventListener('input', () => {
-    clearTimeout(debounceTimer);
-    const q = searchInput.value.trim();
-    if (!q) { closeDropdown(); return; }
-    debounceTimer = setTimeout(() => runSearch(q), 220);
+  // press / (or Ctrl/Cmd+K) anywhere to start searching
+  document.addEventListener('keydown', e => {
+    const typing = /^(input|textarea|select)$/i.test(e.target.tagName) || e.target.isContentEditable;
+    const palette = (e.key === 'k' || e.key === 'K') && (e.ctrlKey || e.metaKey);
+    const slash = e.key === '/' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey;
+    if (!palette && !slash) return;
+    e.preventDefault();
+    if (getComputedStyle(searchWrap).display === 'none') mobileBtn.click();
+    else { searchInput.focus(); searchInput.select(); }
   });
-  searchInput.addEventListener('focus', () => {
-    if (searchInput.value.trim()) dropdown.classList.add('open');
-  });
-  searchInput.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeDropdown();
-    if (e.key === 'Enter') {
-      // Enter always goes to the full results page (search.html), same as
-      // Google itself — clicking an actual suggestion in the dropdown is
-      // the way to jump straight to one specific thing instead.
-      const q = searchInput.value.trim();
-      if (q) window.location.href = `/search?q=${encodeURIComponent(q)}`;
-    }
-  });
-  document.addEventListener('click', e => {
-    if (!dropdown.contains(e.target) && e.target !== searchInput) closeDropdown();
-  });
+  searchInput.placeholder = 'search oeper.dev…  ( / )';
 }
 
 // ── Notifications bell ──────────────────────────────────────
