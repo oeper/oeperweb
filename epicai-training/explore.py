@@ -53,15 +53,18 @@ def device_ready():
 
 def start_emulator(avd):
     print('starting emulator', avd, '(first boot can take a few minutes)')
-    subprocess.Popen([EMU, '-avd', avd, '-no-snapshot-save', '-no-audio', '-gpu', 'swiftshader_indirect'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    log = open(os.path.join(HERE, 'emulator.log'), 'w')
+    subprocess.Popen([EMU, '-avd', avd, '-no-snapshot-save', '-no-audio'], stdout=log, stderr=subprocess.STDOUT)
     t0 = time.time()
-    adb('wait-for-device', timeout=300)
-    while time.time() - t0 < 400:
-        if shell('getprop sys.boot_completed').strip() == '1':
-            break
-        time.sleep(3)
+    while time.time() - t0 < 900:      # a cold boot on a busy PC can take 10 minutes; "offline" just means Android is still starting
+        try:
+            if shell('getprop sys.boot_completed', timeout=15).strip() == '1':
+                break
+        except subprocess.TimeoutExpired:
+            pass
+        time.sleep(5)
     else:
-        sys.exit('the emulator did not finish booting')
+        sys.exit('the emulator did not finish booting (see emulator.log)')
     shell('settings put global window_animation_scale 0; settings put global transition_animation_scale 0; settings put global animator_duration_scale 0')
     shell('input keyevent 82')    # unlock
     time.sleep(2)
@@ -215,6 +218,9 @@ def main():
             while time.time() < app_end:
                 nodes = dump()
                 if not nodes:
+                    if not device_ready():
+                        print('the emulator is gone (it crashed or was closed): saving what was collected')
+                        raise KeyboardInterrupt
                     stuck += 1
                     shell('input keyevent 4'); time.sleep(1)
                     if stuck > 4: launch(app); stuck = 0
