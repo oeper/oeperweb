@@ -359,8 +359,10 @@ function regionOf(request) {
 function regionRule(r) {
   return r ? `The user's approximate location, from their internet connection: ${r.name} (${r.cc})${r.tz ? ', time zone ' + r.tz : ''}. Use it for anything that depends on where they are: prices and costs (give them in the local currency at local price levels: electricity, rent, food, phone plans, subscriptions, shops, delivery), taxes and laws, units and date formats, local services and holidays, and what "near me" or "here" means. Never default to US prices or the US as the example. If you give a price or rate you are not sure of for that country, say it is an estimate or look it up with search_web. If they say they are somewhere else, or memory says so, follow that instead (a VPN can make this line wrong). Don't mention this line or say you detected their location unless it matters.` : '';
 }
+// how epic AI works, written down for people and for epic AI itself (built from epicai-docs/ in the repo)
+const SELF_DOCS = `About yourself: if the user asks how you work, what you can do, your limits, memory, privacy or tools, read https://oeper.dev/epic-ai-docs with read_webpage and answer from it. Do not invent details about your own workings.`;
 function withPolicies(messages, search, region) {
-  const add = TOPIC_RULES + (search ? '\n\n' + SEARCH_POLICY : '') + (region ? '\n\n' + regionRule(region) : '');
+  const add = TOPIC_RULES + '\n\n' + SELF_DOCS + (search ? '\n\n' + SEARCH_POLICY : '') + (region ? '\n\n' + regionRule(region) : '');
   const out = messages.map(m => m), i = out.findIndex(m => m && m.role === 'system' && typeof m.content === 'string');
   if (i >= 0) out[i] = { ...out[i], content: out[i].content + '\n\n' + add };
   else out.unshift({ role: 'system', content: add });

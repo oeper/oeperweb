@@ -37,6 +37,7 @@ export const HIDDEN_PAGES = [
   { keywords: ['music composer', 'composer', 'melody', 'melody maker', 'music maker', 'piano'], name: 'music composer', url: '/composer', icon: 'piano' },
   { keywords: ['one', 'office', 'office suite', 'oneword', 'onesheet', 'oneslide', 'oneidea', 'onepdf', 'word', 'docs', 'documents', 'spreadsheet', 'spreadsheets', 'sheets', 'excel', 'slides', 'presentation', 'powerpoint', 'pdf editor', 'edit pdf', 'annotate pdf'], name: 'one', url: '/one', icon: 'apps' },
   { keywords: ['qr', 'qr code', 'qr codes', 'qr maker', 'qr generator', 'qrcode'], name: 'QR maker', url: '/qrmaker', icon: 'qr_code_2' },
+  { keywords: ['epic ai docs', 'how epic ai works', 'epic ai documentation', 'epic ai help', 'epic ai limits', 'epic ai privacy', 'epic ai memory', 'epic ai tools'], name: 'how epic AI works', url: '/epic-ai-docs', icon: 'menu_book' },
   { keywords: ['epicenter', 'app store', 'apps', 'store', 'download apps', 'f-droid', 'apk', 'install apps'], name: 'epicenter', url: '/epicenter', icon: 'storefront' },
   { keywords: ['discord bot', 'discord bots', 'bot hosting', 'host a bot', 'discord bot hosting', 'dbhosting', 'bot maker', 'bots'], name: 'discord bot hosting', url: '/dbhosting', icon: 'smart_toy' },
   { keywords: ['pdf combiner', 'combine pdf', 'combine pdfs', 'merge pdf', 'merge pdfs', 'pdf merge', 'join pdf'], name: 'PDF combiner', url: '/pdfcombiner', icon: 'merge' },
