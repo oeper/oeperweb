@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>sign in to epic ai for your browser — oeper.dev</title>
+<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
+<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --bg: #111318; --surface: #1a1c22; --on: #e2e2e6; --muted: #c4c7c5; --primary: #a8c7fa; --on-primary: #062e6f; --error: #ffb4ab; --outline: #43474e; }
+  body { min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--on); font-family: 'Google Sans', 'Roboto Flex', sans-serif; padding: 24px; -webkit-font-smoothing: antialiased; }
+  .card { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--outline); border-radius: 28px; padding: 32px 28px; text-align: center; }
+  h1 { font-size: 24px; font-weight: 500; margin-bottom: 8px; }
+  p { color: var(--muted); font-size: 15px; line-height: 1.5; margin-bottom: 20px; }
+  button { font: inherit; font-weight: 500; font-size: 15px; border: 0; border-radius: 999px; padding: 12px 26px; background: var(--primary); color: var(--on-primary); cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .err { color: var(--error); margin-top: 14px; font-size: 14px; }
+  .who { display: flex; align-items: center; gap: 12px; justify-content: center; margin-bottom: 18px; }
+  .who img { width: 44px; height: 44px; border-radius: 50%; }
+  .small { font-size: 12.5px; color: var(--muted); margin-top: 18px; }
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <h1>sign in to epic ai for your browser</h1>
+  <p id="msg">use your oeper.dev account so the browser extension shares your plan and usage with the website and the app.</p>
+  <div id="who" class="who" style="display:none"><img id="pic" alt=""><span id="name"></span></div>
+  <button id="go" disabled>loading…</button>
+  <div class="err" id="err"></div>
+  <p class="small">this gives the epic ai browser extension on this computer access to your oeper.dev account. you can sign out in the extension any time. if you did not open this from the extension, close this tab.</p>
+</div>
+<script type="module">
+import { auth, signIn, onAccountChange, getCurrentUser } from './shared/account.js?v=43';
+
+const state = new URLSearchParams(location.search).get('state') || '';
+const $ = id => document.getElementById(id);
+const go = $('go');
+let sent = false;
+
+if (!/^[0-9a-f]{16,64}$/.test(state)) {
+  $('card').innerHTML = '<h1>open this from the extension</h1><p>this page only works when it is opened by the epic ai browser extension\'s sign in button.</p>';
+} else {
+  // the extension's content script listens for this message (same page only) and keeps nothing but the refresh token
+  function handOver(user) {
+    if (sent) return;
+    sent = true;
+    window.postMessage({ epicaiExtAuth: true, state, rt: user.refreshToken || '', email: user.email || '', name: user.displayName || '', photo: user.photoURL || '' }, location.origin);
+    $('msg').textContent = 'signed in. this tab will close by itself; if it does not, the extension is not installed or the sign in link has expired.';
+    go.textContent = 'try again'; go.disabled = false;
+    go.onclick = () => { sent = false; handOver(auth.currentUser || user); };
+  }
+  function render(user) {
+    if (user) {
+      $('who').style.display = 'flex';
+      $('pic').src = user.photoURL || ''; $('pic').style.display = user.photoURL ? '' : 'none';
+      $('name').textContent = user.displayName || user.email;
+      $('msg').textContent = 'continue as this account?';
+      go.textContent = 'continue'; go.disabled = false;
+      go.onclick = () => handOver(auth.currentUser || user);
+    } else {
+      $('who').style.display = 'none';
+      go.textContent = 'sign in with google'; go.disabled = false;
+      go.onclick = async () => {
+        go.disabled = true; $('err').textContent = '';
+        try { await signIn(); } catch (e) { $('err').textContent = 'sign in failed: ' + (e && e.message || e); go.disabled = false; }
+      };
+    }
+  }
+  onAccountChange(user => render(user || getCurrentUser()));
+}
+</script>
+</body>
+</html>

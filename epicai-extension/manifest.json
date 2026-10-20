@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "epic AI for the browser",
+  "version": "0.1.0",
+  "description": "epic AI in a side panel: ask about the page, or let it do things in your browser for you. Can also be the hands for MCP apps.",
+  "minimum_chrome_version": "116",
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "action": { "default_title": "epic AI", "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" } },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "background": { "service_worker": "background.js" },
+  "permissions": ["activeTab", "tabs", "scripting", "storage", "sidePanel", "alarms"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    { "matches": ["https://oeper.dev/ext-auth*"], "js": ["auth-bridge.js"], "run_at": "document_idle" }
+  ],
+  "commands": { "_execute_action": { "suggested_key": { "default": "Ctrl+Shift+E", "mac": "Command+Shift+E" }, "description": "Open epic AI" } }
+}

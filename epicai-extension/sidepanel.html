@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>epic AI</title>
+<link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+<header>
+  <svg class="mark" viewBox="0 0 381 486" aria-hidden="true"><rect x="2" y="2" width="80" height="300" rx="40" fill="currentColor"/><rect x="297" y="2" width="80" height="300" rx="40" fill="currentColor"/><path d="M40 421C140 454.333 240 454.333 340 421" fill="none" stroke="currentColor" stroke-width="80" stroke-linecap="round"/></svg>
+  <h1>epic AI</h1>
+  <div class="seg" id="mode" role="tablist">
+    <button data-mode="act" class="on" title="epic AI does things in your browser">Do</button>
+    <button data-mode="ask" title="Ask about the page you are on">Ask</button>
+  </div>
+  <button class="icon" id="newchat" title="New chat" aria-label="New chat">＋</button>
+  <button class="icon" id="gear" title="Settings" aria-label="Settings">⚙</button>
+</header>
+
+<main id="log"></main>
+
+<section id="settings" hidden>
+  <div class="card">
+    <h2>Account</h2>
+    <div id="acct"></div>
+    <div id="usage" class="muted"></div>
+  </div>
+  <div class="card">
+    <h2>Stay out of these sites</h2>
+    <p class="muted">One per line, e.g. <code>mybank.com</code>. epic AI will refuse to read or act on them.</p>
+    <textarea id="blocked" rows="3" spellcheck="false" placeholder="mybank.com"></textarea>
+    <button id="saveBlocked" class="tonal">Save</button>
+  </div>
+  <div class="card">
+    <h2>MCP bridge</h2>
+    <p class="muted">Lets MCP apps (Claude Code, Claude Desktop, …) use your browser through this extension. Off unless you switch it on. A glowing border and a Stop button show on the tab they control, and risky clicks still ask you here.</p>
+    <label class="switch"><input type="checkbox" id="bridgeOn"> <span>Allow the local bridge</span></label>
+    <div class="row"><input id="bridgeToken" type="text" spellcheck="false" placeholder="Bridge key (from the bridge's first start)"><button id="saveBridge" class="tonal">Save</button></div>
+    <div id="bridgeState" class="muted"></div>
+  </div>
+  <button id="closeSettings" class="tonal wide">Close</button>
+</section>
+
+<footer>
+  <label id="pagectl" class="muted" hidden><input type="checkbox" id="withPage" checked> Use this page</label>
+  <div class="composer">
+    <textarea id="input" rows="1" placeholder="What should I do in your browser?"></textarea>
+    <button id="send" class="primary" aria-label="Send">➤</button>
+    <button id="stop" class="primary stop" aria-label="Stop" hidden>■</button>
+  </div>
+</footer>
+<script src="sidepanel.js"></script>
+</body>
+</html>
