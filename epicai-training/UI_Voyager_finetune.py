@@ -220,8 +220,15 @@ import gc, subprocess, traceback
 
 def sh(cmd):
     print('$', cmd)
-    r = subprocess.run(cmd, shell=True)
-    print('exit code', r.returncode)
+    r = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    tail = '
+'.join(r.stdout.strip().split('
+')[-30:])
+    print(tail); print('exit code', r.returncode)
+    open(OUT_DIR + '/gguf-log.txt', 'a').write('$ ' + cmd + '
+' + tail + '
+exit code ' + str(r.returncode) + '
+')   # readable from the PC through Drive
     return r.returncode == 0
 
 status = 'GGUF: not made'
@@ -246,7 +253,8 @@ try:
     status = 'GGUF: made, in the out folder (ui-voyager-ft-Q4_K_M.gguf + mmproj-ui-voyager-ft-f16.gguf)' if ok else 'GGUF: a step failed, see the notebook output (the LoRA itself is fine)'
 except Exception:
     traceback.print_exc()
-    status = 'GGUF: failed with an error, see the notebook output (the LoRA itself is fine)'
+    open(OUT_DIR + '/gguf-log.txt', 'a').write(traceback.format_exc())
+    status = 'GGUF: failed with an error, see gguf-log.txt (or run the make_gguf notebook; the LoRA itself is fine)'
 open(OUT_DIR + '/RESULT.txt', 'a').write(status + '\n')
 print(status)
 
