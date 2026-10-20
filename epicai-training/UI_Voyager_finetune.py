@@ -20,6 +20,9 @@ BASE = 'MarsXL/UI-Voyager'
 MAX_TRAIN = 3000     # examples used for training at most
 EPOCHS = 2
 import os, glob
+# Hugging Face downloads stalled for over an hour on the new 'xet' downloader: use the plain one, and give up on a silent connection after 60 s so it retries
+os.environ['HF_HUB_DISABLE_XET'] = '1'
+os.environ['HF_HUB_DOWNLOAD_TIMEOUT'] = '60'
 CK = OUT_DIR + '/checkpoints'   # training saves here every 40 steps and picks up from the newest one after a disconnect
 os.makedirs(OUT_DIR, exist_ok=True)
 print(glob.glob(DRIVE_DIR + '/*.zip'))
@@ -103,6 +106,13 @@ Rules:
 - If finishing, use action=terminate in the tool call.
 - If the user query is to find an answer to a specific question and you have determined, provided or confirmed the answer, use action=terminate and status=success in the tool call to end the task."""
 
+from huggingface_hub import snapshot_download
+for attempt in range(1, 6):
+    try:
+        snapshot_download(BASE, max_workers=4)
+        break
+    except Exception as e:
+        print('download attempt', attempt, 'failed:', repr(e)[:200], '- retrying')
 processor = AutoProcessor.from_pretrained(BASE)
 model = Qwen3VLForConditionalGeneration.from_pretrained(
     BASE, torch_dtype=torch.float16, device_map='auto',
