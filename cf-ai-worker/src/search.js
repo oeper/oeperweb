@@ -145,18 +145,21 @@ function fuzzyIn(q, ws) {
 }
 function scoreItem(it, terms, phrase, now) {
   let sum = 0, matched = 0;
-  for (const q of terms) {
+  // as-you-type: a short last word ("epic ai li") is probably unfinished, so it can add to the score but is not required
+  const optionalLast = terms.length > 1 && terms[terms.length - 1].length <= 3;
+  const required = terms.length - (optionalLast ? 1 : 0);
+  terms.forEach((q, ti) => {
     let s = fieldScore(q, it.tw, it.t, 10, 7, 4)
       + fieldScore(q, it.kw, it.kn, 8, 6, 3)
       + (q.length < 3 ? 0 : fieldScore(q, it.dw, it.de, 3, 2, 1.5))
       + (it.bo && q.length >= 3 ? fieldScore(q, it.bw, it.bo, 1.5, 1, 0.6) : 0);
     if (!s && (fuzzyIn(q, it.tw) || fuzzyIn(q, it.kw))) s = 2.5;
-    if (s) matched++;
+    if (s && !(optionalLast && ti === terms.length - 1)) matched++;
     sum += s;
-  }
-  const need = Math.max(1, Math.ceil(terms.length * 0.6));
+  });
+  const need = Math.max(1, Math.ceil(required * 0.6));
   if (matched < need) return 0;
-  let score = sum * (matched / terms.length);
+  let score = sum * (matched / required);
   if (terms.length > 1) {
     if (it.t.includes(phrase)) score += 12;
     if (it.kn.includes(phrase)) score += 8;
