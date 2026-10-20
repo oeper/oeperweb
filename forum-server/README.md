@@ -1,5 +1,9 @@
 # Forum + personal file storage server
 
+> **Moving this server to another computer (mini PC, laptop, VPS)?** See [MIGRATION.md](MIGRATION.md): `migrate.js` copies everything through a
+> key-protected, time-limited door, and `pc/install-windows.ps1` / `pc/install-linux.sh` set the new machine up. Folder locations come from `paths.js`
+> (override with `USER_FILES_DIR`, `VIDEO_DIR`, `PROJECT_DIR`, `MESSAGE_DIR`, ... in `.env`).
+
 A tiny Node server backing `files.html` (personal cloud storage — anyone
 signed in can upload; each account only sees its own files; owners see
 everyone's for moderation) and the forum:

@@ -30,6 +30,8 @@ function loadDotEnv() {
   }
 }
 loadDotEnv();
+// every data folder in one place (Android shared storage on a phone, <data dir>/storage/* anywhere else): see paths.js
+const DIRS = require('./paths').resolveDirs(process.env, __dirname);
 
 // ── Configuration — edit these ──────────────────────────────────
 const PORT = process.env.PORT || 8787;
@@ -101,9 +103,7 @@ const REPORT_COOLDOWN_SECONDS = 10;
 // /upload). These are never publicly listed as a directory — only reachable
 // via the specific URL a post/comment embeds. Needs termux-setup-storage
 // (see forum-server/README.md) so Termux can write to shared storage.
-const UPLOAD_DIR = process.env.UPLOAD_DIR
-  ? path.resolve(process.env.UPLOAD_DIR)
-  : '/storage/emulated/0/Download/forum';
+const UPLOAD_DIR = DIRS.forum;
 
 // Where files.html's personal file storage saves uploads — any signed-in
 // user, not just owners, plus the occasional anonymous upload. /my-files
@@ -115,7 +115,7 @@ const UPLOAD_DIR = process.env.UPLOAD_DIR
 // since static serving covers the whole folder. Uploaded files get random
 // generated names, so this mainly matters for pre-existing files with
 // predictable names.
-const USER_FILES_DIR = process.env.USER_FILES_DIR || '/storage/emulated/0/Documents';
+const USER_FILES_DIR = DIRS.files;
 
 // Tiny JSON-file "database" recording who uploaded each file.html file, so
 // /my-files can filter to just the requesting account's own uploads.
@@ -135,16 +135,16 @@ const ANON_FILE = process.env.ANON_FILE || path.join(__dirname, 'anon-uploads.js
 // since actual video files blow past MAX_ATTACHMENT_BYTES fast. Shares a
 // folder with forum attachments by default. Metadata (title/description/
 // votes) lives in Firestore; this only stores the raw file and hands back a URL.
-const VIDEO_DIR = process.env.VIDEO_DIR || '/storage/emulated/0/Download/forum';
+const VIDEO_DIR = DIRS.videos;
 const MAX_VIDEO_BYTES = Number(process.env.MAX_VIDEO_BYTES) || 300 * 1024 * 1024; // 300MB
 
 // User-uploaded projects (projects.html) — any signed-in user.
-const PROJECT_DIR = process.env.PROJECT_DIR || '/storage/emulated/0/Download/projects';
+const PROJECT_DIR = DIRS.projects;
 const MAX_PROJECT_BYTES = Number(process.env.MAX_PROJECT_BYTES) || 100 * 1024 * 1024; // 100MB
 
 // Chat attachments (messages.html) — currently just voice messages, any
 // signed-in user, kept small since these are short recordings not files.
-const MESSAGE_DIR = process.env.MESSAGE_DIR || '/storage/emulated/0/Download/messages';
+const MESSAGE_DIR = DIRS.messages;
 const MAX_MESSAGE_BYTES = Number(process.env.MAX_MESSAGE_BYTES) || 20 * 1024 * 1024; // 20MB
 // ──────────────────────────────────────────────────────────────
 
@@ -225,6 +225,8 @@ function folderAncestors(p) {
 
 const app = express();
 app.set('trust proxy', true); // needed so req.ip reflects the real visitor through the Cloudflare Tunnel, not the local tunnel connection
+// Moving to another computer: maintenance mode + the key-protected /migrate/* door (off unless MIGRATE_KEY and MIGRATE_UNTIL are in .env): see migrate.js.
+require('./migrate').mount(app, { dirs: DIRS, base: __dirname });
 // Searver app remote control (before the body parsers) — see remote-proxy.js.
 require('./remote-proxy')(app);
 app.use(cors({ origin: ALLOWED_ORIGINS }));
