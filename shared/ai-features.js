@@ -140,17 +140,86 @@ export function htmlToText(html) {
   doc.querySelectorAll('p,div,h1,h2,h3,h4,h5,h6,li,tr,blockquote,pre').forEach(b => b.append('\n'));
   return (doc.body.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
 }
+// oneWord has no LaTeX/KaTeX: an equation is saved as plain readable Unicode in its own <span class="eq"> (same idea as the Android app's Latex.toText).
+const SUP = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '+': '⁺', '-': '⁻', '=': '⁼', '(': '⁽', ')': '⁾', n: 'ⁿ', i: 'ⁱ', m: 'ᵐ', x: 'ˣ', a: 'ᵃ', b: 'ᵇ', c: 'ᶜ', d: 'ᵈ', e: 'ᵉ', k: 'ᵏ', p: 'ᵖ', t: 'ᵗ' };
+const SUB = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉', '+': '₊', '-': '₋', '=': '₌', '(': '₍', ')': '₎', a: 'ₐ', e: 'ₑ', i: 'ᵢ', n: 'ₙ', x: 'ₓ', m: 'ₘ', t: 'ₜ', k: 'ₖ' };
+const TEX_WORDS = { times: '×', cdot: '·', div: '÷', pm: '±', mp: '∓', le: '≤', leq: '≤', ge: '≥', geq: '≥', ne: '≠', neq: '≠', approx: '≈', equiv: '≡', infty: '∞', degree: '°', circ: '°', rightarrow: '→', to: '→', leftarrow: '←', Rightarrow: '⇒', sum: '∑', prod: '∏', int: '∫', partial: '∂', nabla: '∇', in: '∈', cup: '∪', cap: '∩', angle: '∠', triangle: '△', therefore: '∴', ldots: '…', dots: '…', pi: 'π', alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', Delta: 'Δ', theta: 'θ', lambda: 'λ', mu: 'μ', sigma: 'σ', Sigma: 'Σ', omega: 'ω', Omega: 'Ω', phi: 'φ', epsilon: 'ε', rho: 'ρ', tau: 'τ', eta: 'η', quad: ' ', qquad: ' ' };
+export function latexToText(tex) {
+  const script = (str, map, mark) => {
+    const t = str.trim();
+    return t && [...t].every(ch => map[ch]) ? [...t].map(ch => map[ch]).join('') : mark + (t.length > 1 ? '(' + t + ')' : t);
+  };
+  // a {...} group or a single token starting at i: [content, nextIndex]
+  const group = (src, i) => {
+    if (src[i] === '{') {
+      let depth = 1, j = i + 1;
+      while (j < src.length && depth) { if (src[j] === '{') depth++; else if (src[j] === '}') depth--; j++; }
+      return [src.slice(i + 1, j - 1), j];
+    }
+    if (src[i] === '\\') { const m = /^\\[A-Za-z]+/.exec(src.slice(i)); const len = m ? m[0].length : 2; return [src.slice(i, i + len), i + len]; }
+    return [src[i] || '', i + 1];
+  };
+  const wrap = a => (a.length > 1 && /[^\w.]/.test(a) ? '(' + a + ')' : a);
+  const conv = src => {
+    let out = '', i = 0;
+    while (i < src.length) {
+      const ch = src[i];
+      if (ch === '\\') {
+        const m = /^\\([A-Za-z]+|.)/.exec(src.slice(i));
+        const name = m[1]; i += m[0].length;
+        if (name === 'frac' || name === 'dfrac' || name === 'tfrac') {
+          const [a, ia] = group(src, i); const [b, ib] = group(src, ia); i = ib;
+          out += wrap(conv(a)) + '/' + wrap(conv(b));
+        } else if (name === 'sqrt') {
+          let root = '';
+          if (src[i] === '[') { const e = src.indexOf(']', i); root = src.slice(i + 1, e); i = e + 1; }
+          const [a, ia] = group(src, i); i = ia;
+          const A = conv(a);
+          const r = root === '' || root === '2' ? '√' : root === '3' ? '∛' : root === '4' ? '∜' : script(root, SUP, '') + '√';
+          out += r + (A.length > 1 ? '(' + A + ')' : A);
+        } else if (['text', 'mathrm', 'textbf', 'mathbf', 'operatorname', 'mathit'].includes(name)) {
+          const [a, ia] = group(src, i); i = ia; out += conv(a);
+        } else if (name === 'left' || name === 'right') {
+          if (src[i] === '.') i++;
+        } else if (name === ',' || name === ';' || name === ':' || name === ' ') {
+          out += ' ';
+        } else if (name === '!') {
+          // thin negative space: nothing
+        } else if (name.length === 1 && !/[A-Za-z]/.test(name)) {
+          out += name;
+        } else out += TEX_WORDS[name] !== undefined ? TEX_WORDS[name] : name;
+      } else if (ch === '^' || ch === '_') {
+        const [a, ia] = group(src, i + 1); i = ia;
+        out += script(conv(a), ch === '^' ? SUP : SUB, ch);
+      } else if (ch === '{') {
+        const [a, ia] = group(src, i); i = ia; out += conv(a);
+      } else if (ch === '}' || ch === '\n') { i++; }
+      else { out += ch; i++; }
+    }
+    return out;
+  };
+  return conv(String(tex || '')).replace(/\s+/g, ' ').trim();
+}
 // Only structural/inline tags survive; everything else (scripts, styles, event
 // handlers, the chat UI's wrappers) is dropped, keeping the text.
 const KEEP = new Set(['P', 'H1', 'H2', 'H3', 'H4', 'UL', 'OL', 'LI', 'STRONG', 'B', 'EM', 'I', 'U', 'CODE', 'PRE', 'BLOCKQUOTE', 'BR', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'A', 'HR']);
 export function sanitizeForOne(html) {
   const doc = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html');
+  // KaTeX output (visual copy + MathML copy) would come out doubled once the tags are stripped: swap each formula for its readable text first
+  doc.body.querySelectorAll('.katex').forEach(k => {
+    const src = k.querySelector('annotation[encoding="application/x-tex"]');
+    const eq = doc.createElement('span');
+    eq.className = 'eq';
+    eq.textContent = src ? latexToText(src.textContent) : (k.textContent || '');
+    (k.closest('.katex-display') || k).replaceWith(eq);
+  });
   const walk = node => {
     for (const child of [...node.childNodes]) {
       if (child.nodeType === 3) continue;
       if (child.nodeType !== 1) { child.remove(); continue; }
       if (['SCRIPT', 'STYLE', 'BUTTON', 'SVG', 'IFRAME', 'OBJECT'].includes(child.tagName) || child.classList.contains('material-symbols-rounded')) { child.remove(); continue; }
       walk(child);
+      if (child.tagName === 'SPAN' && child.className === 'eq') continue;
       if (!KEEP.has(child.tagName)) { child.replaceWith(...child.childNodes); continue; }
       for (const a of [...child.attributes]) {
         if (child.tagName === 'A' && a.name === 'href' && /^https?:/i.test(a.value)) continue;
