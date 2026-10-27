@@ -140,6 +140,9 @@
     opacity: 0; transform: translateY(-6px) scale(0.97); pointer-events: none; transition: opacity 0.15s, transform 0.15s;
   }
   .kebab-menu.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+  /* the row whose menu is open rises above the rows below it (glass themes give every row its own stacking context, which hid the menu behind the next row) */
+  .kebab-raised { position: relative; z-index: 40; }
+  .file-tile.kebab-raised { overflow: visible; }
   .kebab-item {
     display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border-radius: 9px; border: none;
     background: transparent; color: var(--md-sys-color-on-surface); font-size: 13px; cursor: pointer; text-align: left; font-family: inherit;
@@ -636,6 +639,7 @@ function isOwnSpace() {
 // ── Kebab menus (file/folder row actions) ───────────────────
 function closeAllKebabMenus() {
   document.querySelectorAll('.kebab-menu.open').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.kebab-raised').forEach(r => r.classList.remove('kebab-raised'));
 }
 document.addEventListener('click', closeAllKebabMenus);
 function buildKebabMenu(items) {
@@ -653,12 +657,13 @@ function buildKebabMenu(items) {
     e.stopPropagation();
     const willOpen = !menu.classList.contains('open');
     closeAllKebabMenus();
-    if (willOpen) menu.classList.add('open');
+    if (willOpen) { menu.classList.add('open'); const row = wrap.closest('.file-card, .folder-card, .file-tile'); if (row) row.classList.add('kebab-raised'); }
   });
   wrap.querySelectorAll('.kebab-item').forEach((el, i) => {
     el.addEventListener('click', e => {
       e.stopPropagation();
       menu.classList.remove('open');
+      const row = wrap.closest('.kebab-raised'); if (row) row.classList.remove('kebab-raised');
       items[i].onClick();
     });
   });
