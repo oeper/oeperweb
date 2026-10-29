@@ -100,6 +100,7 @@
   .signin p { color: var(--md-sys-color-on-surface-variant); font-size: 14px; margin-bottom: 14px; }
   .muted { color: var(--md-sys-color-on-surface-variant); font-size: 13px; }
 </style>
+<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 <div class="page">
@@ -137,7 +138,7 @@
 
 <script type="module" data-cfasync="false">
 import { onAccountChange, mountAccountBar } from './shared/account.js?v=43';
-import { mountTopNav } from './shared/topnav.js?v=50';
+import { mountTopNav } from './shared/topnav.js?v=51';
 import { mountFooter } from './shared/footer.js?v=8';
 import { call, who, fmtDate, DEV_AS } from './shared/codes-api.js?v=2';
 import { verifyPhone } from './shared/phone-verify.js?v=1';

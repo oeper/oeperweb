@@ -366,6 +366,7 @@
     .app { max-width: 860px; }
   }
 </style>
+<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 
@@ -810,7 +811,7 @@
 })();
 </script>
 <script type="module">
-import { mountTopNav } from './shared/topnav.js?v=50';
+import { mountTopNav } from './shared/topnav.js?v=51';
 mountTopNav();
 import { revealStatic } from '/shared/motion.js?v=3';
 revealStatic(document.querySelector('main'));

@@ -125,6 +125,7 @@
   .fb.done { opacity: .55; }
   .person ul { margin: 6px 0 0 18px; color: var(--md-sys-color-on-surface-variant); font-size: 13px; }
 </style>
+<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 
@@ -265,7 +266,7 @@
 
 <script type="module" data-cfasync="false">
 import { onAccountChange, mountAccountBar } from './shared/account.js?v=43';
-import { mountTopNav } from './shared/topnav.js?v=50';
+import { mountTopNav } from './shared/topnav.js?v=51';
 import { mountFooter } from './shared/footer.js?v=8';
 import { oeConfirm } from './shared/dialog.js?v=4';
 import { call, who, isOwner, fmtDate, DEV_AS } from './shared/codes-api.js?v=2';

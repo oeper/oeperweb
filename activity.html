@@ -117,6 +117,7 @@
     #content > .signin-note, #content > .loading-note, #content > .empty-note { grid-column: 1 / -1; }
   }
 </style>
+<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 
@@ -129,7 +130,7 @@
 
 <script type="module" data-cfasync="false">
 import { onAccountChange, db } from './shared/account.js?v=43';
-import { mountTopNav } from './shared/topnav.js?v=50';
+import { mountTopNav } from './shared/topnav.js?v=51';
 import { mountFooter } from './shared/footer.js?v=8';
 import { observeList } from './shared/motion.js?v=3';
 import {

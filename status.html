@@ -94,6 +94,7 @@
     .status-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
   }
 </style>
+<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 
@@ -114,7 +115,7 @@
 
 <script type="module" data-cfasync="false">
 import { SERVER_ENDPOINT } from './shared/account.js?v=43';
-import { mountTopNav } from './shared/topnav.js?v=50';
+import { mountTopNav } from './shared/topnav.js?v=51';
 import { revealStatic } from './shared/motion.js?v=3';
 mountTopNav();
 revealStatic(document.querySelector('.page'));

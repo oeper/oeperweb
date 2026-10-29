@@ -122,6 +122,7 @@
   .qr-empty-note .material-symbols-rounded { font-size: 40px; opacity: 0.5; margin-bottom: 10px; display: block; }
   .action-row { display: flex; gap: 10px; width: 100%; max-width: 320px; }
 </style>
+<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 
@@ -222,7 +223,7 @@
 </div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=50';
+import { mountTopNav } from './shared/topnav.js?v=51';
 import { revealStatic } from './shared/motion.js?v=3';
 mountTopNav();
 revealStatic(document.querySelector('.page'));

@@ -11,6 +11,7 @@
 import {
   mountAccountBar, db, getCurrentUser, getProfile, ensureProfileLoaded, handleOf, onAccountChange, signIn,
 } from './account.js?v=43';
+import './motion-global.js?v=1'; // site-wide motion: eased interactions, blocks rising into view, image fades, typing placeholders
 import './settings-sync.js?v=4'; // keeps this person's settings the same on every device (can be switched off in settings)
 import { attachSearchBox } from './site-search.js?v=1'; // the search box (API, recents, keyboard), shared with the home page and /search
 import {
@@ -479,7 +480,7 @@ export function mountTopNav(container) {
       </a>
       <div class="oe-nav-search-wrap" id="oeNavSearchWrap">
         <span class="material-symbols-rounded oe-nav-search-icon">search</span>
-        <input class="oe-nav-search-input" id="oeNavSearchInput" type="text" placeholder="search oeper.dev…" autocomplete="off">
+        <input class="oe-nav-search-input" id="oeNavSearchInput" type="text" data-oe-typing="search oeper.dev…|try “chess”|try “qr code”|try “discord bot”|try “epic AI limits”|try “translate”" placeholder="search oeper.dev…" autocomplete="off">
         <button class="oe-nav-search-mobile-close" id="oeNavSearchMobileClose" aria-label="Close search"><span class="material-symbols-rounded">close</span></button>
         <div class="oe-nav-search-dropdown" id="oeNavSearchDropdown"></div>
       </div>

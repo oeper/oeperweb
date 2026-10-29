@@ -194,6 +194,7 @@
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   @media (max-width: 480px) { .page { padding: 40px 16px 90px; } .app-card { padding: 14px; gap: 12px; } .get { display: none; } }
 </style>
+<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 
@@ -227,7 +228,7 @@
 <div class="toast" id="toast"></div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=50';
+import { mountTopNav } from './shared/topnav.js?v=51';
 import { mountFooter } from './shared/footer.js?v=8';
 import { getCurrentUser, onAccountChange, signIn, isOwnerEmail } from './shared/account.js?v=43';
 import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';

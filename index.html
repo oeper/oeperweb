@@ -722,6 +722,7 @@
     .home-feed > .home-feed-load-more, .home-feed > .home-feed-empty { grid-column: 1 / -1; justify-self: center; }
   }
 </style>
+<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 
@@ -803,7 +804,7 @@
     db, getProfile, handleOf, ensureProfileLoaded, officialBadgeHtml, getCurrentUser, sendNotification,
     onAccountChange, SERVER_ENDPOINT, MAX_IMAGE_BYTES, uploadFile, linkifyMentions, resolveUidsToEmails,
   } from './shared/account.js?v=43';
-  import { mountTopNav } from './shared/topnav.js?v=50';
+  import { mountTopNav } from './shared/topnav.js?v=51';
   import { mountFooter } from './shared/footer.js?v=8';
   import { createDropdown } from './shared/dropdown.js?v=2';
   import { oeAlert, oeConfirm, oePrompt } from './shared/dialog.js?v=4';
@@ -2154,7 +2155,7 @@ PAGES.forEach((page, index) => {
         <form class="home-search-form" id="homeSearchForm" action="/search" method="GET" autocomplete="off">
           <div class="home-search-wrap">
             <span class="material-symbols-rounded home-search-icon">search</span>
-            <input class="home-search-input" type="text" name="q" id="homeSearchInput" placeholder="search oeper.dev…" autocomplete="off">
+            <input class="home-search-input" type="text" name="q" id="homeSearchInput" data-oe-typing="search oeper.dev…|try “chess”|try “qr code”|try “discord bot”|try “epic AI limits”|try “translate”" placeholder="search oeper.dev…" autocomplete="off">
             <div class="home-search-dropdown" id="homeSearchDropdown"></div>
           </div>
         </form>

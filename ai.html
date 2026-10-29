@@ -556,6 +556,7 @@
   @media (min-width: 900px) { .chats-panel .chat-row, .chats-panel .drawer-row, .chats-panel .new-chat-btn, .chats-panel .chats-search { animation: none !important; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001s !important; animation-delay: 0s !important; transition-duration: .001s !important; } }
 </style>
+<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 
@@ -651,7 +652,7 @@
 
 <script type="module" data-cfasync="false">
 import { db, SERVER_ENDPOINT, getCurrentUser, onAccountChange, ensureProfileLoaded, getProfile, handleOf, sendNotification, signIn } from './shared/account.js?v=43';
-import { showStorageNotice } from './shared/topnav.js?v=50';
+import { showStorageNotice } from './shared/topnav.js?v=51';
 import { createDropdown } from './shared/dropdown.js?v=2';
 import { applySection, profilePrompt, PROFILE_MAX, GET_TO_KNOW } from './shared/ai-memory.js?v=1';
 import { recallPrompt } from './shared/ai-recall.js?v=1';

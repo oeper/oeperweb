@@ -123,6 +123,7 @@
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   @media (max-width: 600px) { .page { padding: 36px 16px 120px; } .msg-col { max-width: 88%; } .toast { bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 32px); } }
 </style>
+<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 
@@ -132,7 +133,7 @@
 <div class="toast" id="toast"></div>
 
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=50';
+import { mountTopNav } from './shared/topnav.js?v=51';
 import { mountFooter } from './shared/footer.js?v=8';
 import { call, fmtDate } from './shared/codes-api.js?v=2';
 import { oeConfirm } from './shared/dialog.js?v=4';

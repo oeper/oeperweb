@@ -107,6 +107,7 @@
   .chip[aria-pressed="true"] { background: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-color: transparent; }
   .fine { color: var(--md-sys-color-on-surface-variant); font-size: 12.5px; line-height: 1.6; margin-top: 12px; }
 </style>
+<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 <div class="page">
@@ -130,7 +131,7 @@
   </div>
 </div>
 <script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=50';
+import { mountTopNav } from './shared/topnav.js?v=51';
 import { mountFooter } from './shared/footer.js?v=8';
 import { call } from './shared/codes-api.js?v=2';
 mountTopNav();

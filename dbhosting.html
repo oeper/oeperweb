@@ -171,6 +171,7 @@
   .note { font-size: 13px; color: var(--md-sys-color-on-surface-variant); line-height: 1.6; margin-top: 28px; }
   .note code, .hint code { background: var(--md-sys-color-surface-variant); padding: 1px 6px; border-radius: 6px; font-size: 12px; }
 </style>
+<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 
@@ -189,7 +190,7 @@
 
 <script type="module" data-cfasync="false">
 import { SERVER_ENDPOINT, getCurrentUser, onAccountChange, signIn } from './shared/account.js?v=43';
-import { mountTopNav } from './shared/topnav.js?v=50';
+import { mountTopNav } from './shared/topnav.js?v=51';
 import { mountFooter } from './shared/footer.js?v=8';
 import { oeConfirm, oePrompt, oeAlert } from './shared/dialog.js?v=4';
 import { revealStatic } from './shared/motion.js?v=3';

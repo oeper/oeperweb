@@ -45,6 +45,7 @@
   .try button { font: inherit; font-weight: 500; border: 0; border-radius: 999px; padding: 10px 20px; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); cursor: pointer; }
   #tryOut { max-height: 340px; }
 </style>
+<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 <main class="page">
@@ -114,7 +115,7 @@ r = requests.get('https://oeper-ai.oeper.workers.dev/api/search', params={'q': '
 print([x['title'] for x in r.json()['results']])</pre>
 </main>
 <script type="module" data-cfasync="false">
-import { mountTopNav } from '/shared/topnav.js?v=50';
+import { mountTopNav } from '/shared/topnav.js?v=51';
 mountTopNav();
 const out = document.getElementById('tryOut'), qi = document.getElementById('tryQ');
 async function go() { out.textContent = 'searching…'; try { const r = await fetch('https://oeper-ai.oeper.workers.dev/api/search?limit=3&q=' + encodeURIComponent(qi.value)); out.textContent = JSON.stringify(await r.json(), null, 2); } catch (e) { out.textContent = 'could not reach the API: ' + e.message; } }
