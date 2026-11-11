@@ -15,6 +15,7 @@
 // the ledger also keeps a shared daily neuron pool for epic AI, and stops everyone when it is empty, so epic AI can never eat the rest of the allowance.
 
 import { DurableObject } from 'cloudflare:workers';
+import { JB_TABLES, runJb } from './jeebot.js';
 
 const DAY_MS = 86400_000;
 const KEY_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L, they get misread
@@ -106,7 +107,11 @@ export class Ledger extends DurableObject {
     ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS epicrate (id TEXT NOT NULL, email TEXT NOT NULL, stars INTEGER NOT NULL, review TEXT, name TEXT, created INTEGER, updated INTEGER, PRIMARY KEY (id, email))');
     // each person's sealed Google connection (see google.js); the worker encrypts it, this only stores the text
     ctx.storage.sql.exec('CREATE TABLE IF NOT EXISTS google (email TEXT PRIMARY KEY, data TEXT NOT NULL)');
+    // jeebot hub (jeebot.js): the owner's jb conversations, drafts and settings, shared by the WhatsApp bot and the epic AI app
+    for (const q of JB_TABLES) ctx.storage.sql.exec(q);
   }
+  /** jeebot hub operations (jeebot.js); one Durable Object call each so the outbox and approvals never race. */
+  jb(op, a) { return runJb(this.ctx.storage.sql, op, a); }
   /** [auto]: a site owner's own submission goes live straight away. */
   epicSubmit(email, app, auto, ownerAny) {
     const sql = this.ctx.storage.sql, now = Date.now();

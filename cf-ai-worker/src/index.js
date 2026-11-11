@@ -6,6 +6,7 @@ import { readWebpage } from './webpage.js';
 import { cleanApp, cleanUrl, fetchManifest, applyManifests } from './epicenter.js';
 import { handleSearver } from './searver.js';
 import { handleSearch } from './search.js';
+import { handleJeebot } from './jeebot.js';
 import { GOOGLE_TOOLS, googleToolStatus, runGoogleTool, googleConfigured, googleStartUrl, googleCallback, googleStatus, googleDisconnect } from './google.js';
 export { Ledger };
 
@@ -1493,6 +1494,7 @@ export default {
       if (sm && request.method === 'GET') return handleShareGet(request, env, sm[1]);
       if (sm && request.method === 'DELETE') return handleShareDelete(request, env, sm[1]);
       if (url.pathname.startsWith('/api/admin/')) return handleAdmin(request, env, url);
+      if (url.pathname.startsWith('/api/jb/')) return handleJeebot(request, env, url.pathname.slice('/api/jb/'.length), ledgerOf(env));
     }
 
     return json({ error: 'Not found' }, 404, request);
