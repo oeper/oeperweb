@@ -106,6 +106,8 @@
   .btn:disabled { opacity: .45; cursor: default; }
   .btn.primary { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); padding: 12px 26px; }
   .btn .material-symbols-rounded { font-size: 20px; }
+  .audionote { margin: 6px 2px 0; padding: 10px 14px; border-radius: 12px; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-error); font-size: 13px; line-height: 1.5; }
+  .audionote[hidden] { display: none; }
   .opts { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; margin: 6px 2px 0; font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
   .opts label { display: inline-flex; align-items: center; gap: 8px; }
   .opts select {
@@ -157,6 +159,7 @@
     <button class="btn" id="sayBtn"><span class="material-symbols-rounded">record_voice_over</span>say a line</button>
     <button class="btn" id="playBtn"><span class="material-symbols-rounded">touch_app</span>play it</button>
   </div>
+  <p class="audionote" id="audioNote" role="status" hidden></p>
   <div class="opts">
     <label>voice
       <select id="voiceSel">
@@ -165,7 +168,7 @@
         <option value="160">high</option>
       </select>
     </label>
-    <label>volume <input type="range" id="vol" min="0" max="100" value="55" aria-label="Volume"></label>
+    <label>volume <input type="range" id="vol" min="0" max="100" value="60" aria-label="Volume"></label>
     <label><input type="checkbox" id="plainChk"> plain text (no visuals)</label>
   </div>
 
@@ -194,7 +197,7 @@ revealStatic(document.querySelector('.page'));
 </script>
 
 <script type="module" data-cfasync="false">
-import * as Syn from './shared/nospeaker-synth.js?v=1';
+import * as Syn from './shared/nospeaker-synth.js?v=2';
 
 const $ = (id) => document.getElementById(id);
 const cv = $('cv'), g = cv.getContext('2d');
@@ -203,20 +206,22 @@ const el = { label: $('sceneLabel'), cap: $('caption'), sr: $('sr'), sayRow: $('
   voice: $('voiceSel'), vol: $('vol'), plainChk: $('plainChk'), stage: $('stage') };
 
 // ---------------------------------------------------------------- audio plumbing
-let ctx = null, master = null, analyser = null, waveData = null, specData = null;
+let ctx = null, comp = null, master = null, analyser = null, waveData = null, specData = null;
 function audio() {
   if (!ctx) {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     master = ctx.createGain();
     analyser = ctx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.6;
     waveData = new Float32Array(analyser.fftSize); specData = new Uint8Array(analyser.frequencyBinCount);
-    master.connect(analyser); analyser.connect(ctx.destination);
+    comp = ctx.createDynamicsCompressor(); // keeps the loud parts from clipping so the master can be turned up
+    comp.threshold.value = -14; comp.ratio.value = 6; comp.attack.value = 0.003; comp.release.value = 0.12;
+    master.connect(comp); comp.connect(analyser); analyser.connect(ctx.destination);
     setVolume();
   }
-  if (ctx.state !== 'running') ctx.resume();
+  if (ctx.state !== 'running') ctx.resume().catch(() => {});
   return ctx;
 }
-function setVolume() { if (master) master.gain.value = Math.pow(el.vol.value / 100, 1.6) * 1.2; }
+function setVolume() { if (master) master.gain.value = Math.pow(el.vol.value / 100, 1.6) * 2.4; }
 el.vol.addEventListener('input', setVolume);
 try { const v = localStorage.getItem('oe-nospeaker-vol'); if (v) el.vol.value = v; } catch {}
 el.vol.addEventListener('change', () => { try { localStorage.setItem('oe-nospeaker-vol', el.vol.value); } catch {} });
@@ -639,9 +644,19 @@ function setRunning(on) {
 function resetRun() { skipReq = false; jump = false; stopAll = false; stats.cycles = 0; stats.scenes = 0; stats.started = nowT(); el.plain.textContent = ''; S.voice = null; clearCaption(); }
 const live = () => !stopAll && !jump;
 
+// If the browser keeps the sound context suspended, say so instead of playing silently.
+function checkSound() {
+  const note = $('audioNote');
+  setTimeout(() => {
+    if (!ctx) return;
+    if (ctx.state === 'running') { note.hidden = true; return; }
+    note.hidden = false;
+    note.textContent = 'Your browser is keeping this page silent (sound is ' + ctx.state + '). In Opera GX / Chrome: click the lock or site icon in the address bar, set Sound to Allow, then reload and press start again. Also check the tab is not muted and the volume slider is up.';
+  }, 700);
+}
 async function show() {
   if (running) return;
-  audio(); resetRun(); setRunning(true);
+  audio(); checkSound(); resetRun(); setRunning(true);
   try {
     // 1. intro: prepare the voices (a real loading bar)
     enter('intro', 1, 'LOADING');
@@ -650,6 +665,7 @@ async function show() {
     const greeting = Syn.greetingLine();
     caption('NO SPEAKER. No speech engine here, just two tones. Turn the volume down first.', 4);
     S.progress = 0; S.progressLabel = 'tuning two oscillators';
+    { const b = Syn.blip(sr()); stats.cycles += b.cycles; await playSamples(b.samples); }
     const t0 = performance.now();
     await sleep(0.5);
     const voices = {};
@@ -711,7 +727,7 @@ async function show() {
 }
 async function single(kind) {
   if (running) return;
-  audio(); resetRun(); setRunning(true);
+  audio(); checkSound(); resetRun(); setRunning(true);
   try {
     if (kind === 'sweep') { enter('sweep', 4, 'SWEEP'); caption('sweep 100 Hz → 4 kHz', 1); await sweepPart(); await sleep(0.4); }
     else if (kind === 'say') { enter('say', 9, 'SAY ANYTHING'); S.voice = null; await sayAnything(50, 0); }

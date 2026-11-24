@@ -363,7 +363,7 @@ function thump(out, sr, startT, amp) {
   for (let i = 0; i < n && s0 + i < out.length; i++) {
     const t = i / sr;
     ph += (TAU * (120 + 780 * Math.exp(-t / 0.02))) / sr;
-    out[s0 + i] += Math.sin(ph) * amp * Math.exp(-t / 0.05) * 0.8;
+    out[s0 + i] += (Math.sin(ph) + 0.5 * Math.sin(2 * ph) + 0.3 * Math.sin(3 * ph)) * amp * Math.exp(-t / 0.05) * 0.6;
   }
 }
 
@@ -523,3 +523,15 @@ export function sparkle(sr) {
 
 /** The ten notes of the touch pad, left to right. */
 export const TOUCH_SCALE = ['G5', 'A5', 'B5', 'C6', 'E6', 'F6', 'G6', 'A6', 'B6', 'C7'].map((n) => ({ name: n, hz: hz(n) }));
+
+/** A short two-note blip so you hear right away that the sound is on. */
+export function blip(sr) {
+  const out = buf(sr, 0.3);
+  let at = 0, cycles = 0;
+  for (const f of [880, 1320]) {
+    const len = 0.11, s0 = Math.floor(at * sr), cnt = Math.floor(len * sr);
+    for (let i = 0; i < cnt; i++) out[s0 + i] += Math.sin(TAU * f * (i / sr)) * 0.5 * Math.min(1, i / 60, (cnt - i) / 200);
+    cycles += f * len; at += len;
+  }
+  return { samples: out, duration: at, cycles: Math.round(cycles) };
+}
