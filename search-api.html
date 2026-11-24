@@ -115,7 +115,7 @@ r = requests.get('https://oeper-ai.oeper.workers.dev/api/search', params={'q': '
 print([x['title'] for x in r.json()['results']])</pre>
 </main>
 <script type="module" data-cfasync="false">
-import { mountTopNav } from '/shared/topnav.js?v=52';
+import { mountTopNav } from '/shared/topnav.js?v=53';
 mountTopNav();
 const out = document.getElementById('tryOut'), qi = document.getElementById('tryQ');
 async function go() { out.textContent = 'searching…'; try { const r = await fetch('https://oeper-ai.oeper.workers.dev/api/search?limit=3&q=' + encodeURIComponent(qi.value)); out.textContent = JSON.stringify(await r.json(), null, 2); } catch (e) { out.textContent = 'could not reach the API: ' + e.message; } }

@@ -41,7 +41,6 @@ PAGES = {
     'chess': dict(name='chess', icon='chess', desc='play chess.', keywords=['chess game', 'play chess', 'checkmate']),
     'composer': dict(name='music composer', icon='piano', desc='a melody grid: place notes, add a harmony echo, play.', keywords=['melody', 'music maker', 'piano', 'compose']),
     'qrmaker': dict(name='QR maker', icon='qr_code_2', desc='make QR codes for free, no sign-up.', keywords=['qr code', 'qr generator', 'qrcode']),
-    'nospeaker': dict(name='no speaker', icon='graphic_eq', desc='a voice made of two tones: it talks, sweeps, sings, raps and plays by touch.', keywords=['nospeaker', 'voice synth', 'talking', 'tone show', 'synth']),
     'pdfcombiner': dict(name='PDF combiner', icon='merge', desc='merge several PDFs into one.', keywords=['merge pdf', 'combine pdf', 'join pdf']),
     'pdfsplitbysize': dict(name='PDF splitter', icon='call_split', desc='split a big PDF into smaller files by size.', keywords=['split pdf', 'pdf splitter', 'cut pdf']),
     'downloads': dict(name='downloads', icon='download', desc='files and software to download.', keywords=['download', 'software', 'assets', 'pock']),

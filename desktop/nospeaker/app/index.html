@@ -3,21 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>No speaker — oeper.dev</title>
-<meta name="description" content="A talking, singing, rapping tone show with no speech engine: a voice made of two tones, a sweep, a melody, a beat, a touch instrument. Web edition of nospeaker.">
-<meta property="og:title" content="No speaker — oeper.dev">
-<meta property="og:description" content="A voice made of two tones, a sweep, a melody, a beat and a touch instrument.">
-<meta property="og:image" content="https://oeper.dev/icon.png">
-<meta property="og:url" content="https://oeper.dev/nospeaker">
-<meta property="og:type" content="website">
-<link rel="icon" href="https://oeper.dev/icon.svg" type="image/svg+xml">
-<link rel="alternate icon" href="https://oeper.dev/icon.ico?v=3" type="image/x-icon">
-<script src="./shared/theme-boot.js?v=16" data-cfasync="false"></script>
+<title>No speaker</title>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300;8..144,400;8..144,500;8..144,600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./shared/fonts.css?v=1">
 
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -42,21 +29,19 @@
   body {
     min-height: 100vh;
     background-color: var(--md-sys-color-background);
-    font-family: var(--oe-font-override, 'Google Sans', 'Roboto Flex', sans-serif);
-    background-image: var(--oe-bg-image, none);
-    color: var(--md-sys-color-on-surface);
+    font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+        color: var(--md-sys-color-on-surface);
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
   }
-  .page { position: relative; max-width: 960px; margin: 0 auto; padding: 56px 24px 100px; }
+  .page { position: relative; max-width: 960px; margin: 0 auto; padding: 28px 24px 48px; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
   .header { margin-bottom: 22px; }
   .header h1 {
-    font-family: var(--oe-font-override, 'Google Sans', 'Product Sans', sans-serif); font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400;
+    font-family: system-ui, 'Segoe UI', Roboto, sans-serif; font-size: clamp(2.5rem, 6vw, 3.5rem); font-weight: 400;
     margin-bottom: 10px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 12px;
   }
-  .header h1 .material-symbols-rounded { font-size: 0.8em; color: var(--md-sys-color-primary); }
   .header p { color: var(--md-sys-color-on-surface-variant); font-size: 15px; line-height: 1.55; max-width: 62ch; }
 
   .stage { background: var(--md-sys-color-surface); border-radius: 24px; overflow: hidden; }
@@ -105,7 +90,6 @@
   .btn:hover:not(:disabled) { background-color: var(--md-sys-state-hover, rgba(255,255,255,.08)); }
   .btn:disabled { opacity: .45; cursor: default; }
   .btn.primary { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); padding: 12px 26px; }
-  .btn .material-symbols-rounded { font-size: 20px; }
   .audionote { margin: 6px 2px 0; padding: 10px 14px; border-radius: 12px; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-error); font-size: 13px; line-height: 1.5; }
   .audionote[hidden] { display: none; }
   .opts { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; margin: 6px 2px 0; font-size: 13px; color: var(--md-sys-color-on-surface-variant); }
@@ -125,14 +109,13 @@
   .note a { color: var(--md-sys-color-primary); }
   kbd { font: 12px ui-monospace, Menlo, Consolas, monospace; border: 1px solid var(--md-sys-color-outline); border-radius: 6px; padding: 1px 6px; }
 </style>
-<script type="module" src="/shared/motion-global.js?v=1"></script>
 </head>
 <body>
 
 <div class="page">
   <header class="header">
-    <h1><span class="material-symbols-rounded">graphic_eq</span>No speaker</h1>
-    <p>A voice built from two tones, with no speech engine behind it. It wakes up, talks, sweeps through its range, sings, raps over a beat and lets you play it by touch. Web edition of <a href="https://github.com/os6/nospeaker" target="_blank" rel="noopener" style="color:var(--md-sys-color-primary)">nospeaker</a>.</p>
+    <h1>No speaker</h1>
+    <p>A voice built from two tones, with no speech engine behind it. It wakes up, talks, sweeps through its range, sings, raps over a beat and lets you play it by touch. An app version of <a href="https://github.com/os6/nospeaker" target="_blank" rel="noopener" style="color:var(--md-sys-color-primary)">nospeaker</a>.</p>
   </header>
 
   <section class="stage" id="stage" aria-label="No speaker show">
@@ -148,16 +131,16 @@
     <div class="caption" id="caption"></div>
     <div class="say-row" id="sayRow">
       <input id="sayIn" type="text" maxlength="140" autocomplete="off" spellcheck="false" aria-label="A line for it to say (tab types the suggestion)">
-      <button class="btn" id="sayGo"><span class="material-symbols-rounded">campaign</span>say it</button>
+      <button class="btn" id="sayGo">say it</button>
     </div>
     <div class="sr-only" id="sr" aria-live="polite"></div>
   </section>
 
   <div class="controls">
-    <button class="btn primary" id="startBtn"><span class="material-symbols-rounded">play_arrow</span>start the show</button>
-    <button class="btn" id="sweepBtn"><span class="material-symbols-rounded">swap_calls</span>sweep</button>
-    <button class="btn" id="sayBtn"><span class="material-symbols-rounded">record_voice_over</span>say a line</button>
-    <button class="btn" id="playBtn"><span class="material-symbols-rounded">touch_app</span>play it</button>
+    <button class="btn primary" id="startBtn">start the show</button>
+    <button class="btn" id="sweepBtn">sweep</button>
+    <button class="btn" id="sayBtn">say a line</button>
+    <button class="btn" id="playBtn">play it</button>
   </div>
   <p class="audionote" id="audioNote" role="status" hidden></p>
   <div class="opts">
@@ -183,21 +166,14 @@
     </div>
     <div class="note">
       <h2>what this is, and isn't</h2>
-      <p>The original nospeaker makes a MacBook's trackpad motor buzz at up to 4,000 times a second so that the glass itself talks. A web page cannot reach that motor, so this edition plays the same sounds through your normal speakers. The voice is two tones restarted on every beat of the pitch, hiss sounds are bursts of high tones, and a small built-in rule set turns your text into sounds, so it mispronounces unusual words. It is robotic on purpose.</p>
+      <p>The original nospeaker makes a MacBook's trackpad motor buzz at up to 4,000 times a second so that the glass itself talks. Windows PCs and most other computers have no such motor, so this app plays the same sounds through your normal speakers. The voice is two tones restarted on every beat of the pitch, hiss sounds are bursts of high tones, and a small built-in rule set turns your text into sounds, so it mispronounces unusual words. It is robotic on purpose.</p>
       <p style="margin-top:10px">Based on <a href="https://github.com/os6/nospeaker" target="_blank" rel="noopener">os6/nospeaker</a> by a90.com, MIT licence.</p>
     </div>
   </div>
 </div>
 
-<script type="module" data-cfasync="false">
-import { mountTopNav } from './shared/topnav.js?v=52';
-import { revealStatic } from './shared/motion.js?v=3';
-mountTopNav();
-revealStatic(document.querySelector('.page'));
-</script>
-
-<script type="module" data-cfasync="false">
-import * as Syn from './shared/nospeaker-synth.js?v=2';
+<script type="module">
+import * as Syn from './synth.js';
 
 const $ = (id) => document.getElementById(id);
 const cv = $('cv'), g = cv.getContext('2d');
@@ -380,7 +356,7 @@ function draw(ts) {
       break;
     }
     case 'intro': {
-      title(c, 'NO SPEAKER', 'web edition · after nospeaker by a90.com');
+      title(c, 'NO SPEAKER', 'after nospeaker by a90.com');
       const w = Math.min(W - 80, 420), x = (W - w) / 2, y = H * 0.62;
       g.strokeStyle = c.line; g.lineWidth = 1; g.strokeRect(x, y, w, 12);
       g.fillStyle = c.accent; g.fillRect(x + 2, y + 2, (w - 4) * S.progress, 8);
@@ -644,14 +620,14 @@ function setRunning(on) {
 function resetRun() { skipReq = false; jump = false; stopAll = false; stats.cycles = 0; stats.scenes = 0; stats.started = nowT(); el.plain.textContent = ''; S.voice = null; clearCaption(); }
 const live = () => !stopAll && !jump;
 
-// If the browser keeps the sound context suspended, say so instead of playing silently.
+// If the system keeps the sound context suspended, say so instead of playing silently.
 function checkSound() {
   const note = $('audioNote');
   setTimeout(() => {
     if (!ctx) return;
     if (ctx.state === 'running') { note.hidden = true; return; }
     note.hidden = false;
-    note.textContent = 'Your browser is keeping this page silent (sound is ' + ctx.state + '). In Opera GX / Chrome: click the lock or site icon in the address bar, set Sound to Allow, then reload and press start again. Also check the tab is not muted and the volume slider is up.';
+    note.textContent = 'The app\'s sound is ' + ctx.state + '. Check that it is not muted in the Windows volume mixer, that the right output device is selected and that the volume slider here is up.';
   }, 700);
 }
 async function show() {

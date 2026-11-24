@@ -1,0 +1,33 @@
+{
+  "name": "no-speaker-desktop",
+  "version": "1.0.0",
+  "productName": "No speaker",
+  "description": "A voice made of two tones: it talks, sweeps, sings, raps and plays by touch. After os6/nospeaker.",
+  "author": "oeper <hello@oeper.dev>",
+  "license": "MIT",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "dev.oeper.nospeaker.desktop",
+    "productName": "No speaker",
+    "artifactName": "No-speaker-${os}-${arch}.${ext}",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "app/**"],
+    "win": { "target": ["nsis", "portable"], "signAndEditExecutable": false },
+    "nsis": { "oneClick": true, "perMachine": false, "artifactName": "No-speaker-Setup.${ext}" },
+    "portable": { "artifactName": "No-speaker-Portable.${ext}" },
+    "mac": {
+      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }, { "target": "zip", "arch": ["arm64", "x64"] }],
+      "category": "public.app-category.music",
+      "identity": "-"
+    }
+  }
+}
